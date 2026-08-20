@@ -110,6 +110,23 @@ def _requerir_token(request: Request) -> str:
     return token
 
 
+def _requerir_token_sse(request: Request) -> str:
+    """
+    Como ``_requerir_token``, pero también acepta ``?player_token=`` —
+    ``EventSource``, la API nativa del navegador para SSE, no puede enviar
+    cabeceras personalizadas, así que es la única forma en que el cliente
+    web puede autenticar esta ruta en particular. El resto de rutas siguen
+    siendo estrictamente de cabecera, para no exponer el token en URLs
+    (logs de acceso, historial) donde no hace falta.
+    """
+    token = request.headers.get("X-Player-Token") or request.query_params.get("player_token")
+    if not token:
+        raise UnknownPlayerTokenError(
+            "Falta el token de jugador (cabecera X-Player-Token o parámetro player_token)."
+        )
+    return token
+
+
 async def _cuerpo_json(request: Request) -> Dict[str, Any]:
     try:
         cuerpo = await request.json()
@@ -284,7 +301,7 @@ def crear_app() -> Starlette:
         """
         room_id = request.path_params["room_id"]
         try:
-            token = _requerir_token(request)
+            token = _requerir_token_sse(request)
             sesion = salas.obtener(room_id)
             sesion.asiento_por_token(token)
             engine = _requerir_partida_iniciada(sesion)

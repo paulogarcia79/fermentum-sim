@@ -41,14 +41,22 @@ export const store: Store = reactive({
 })
 
 let manejadorEstado: number | undefined
-let manejadorEventos: number | undefined
+let manejadorEventosRespaldo: number | undefined
+let fuenteEventos: EventSource | null = null
+
+// Cadencia de respaldo una vez que SSE es la via principal de empuje --
+// mas lenta que el 1s de la Milestone 4 porque ya no es la unica forma en
+// que el cliente se entera de cambios; sigue existiendo para el caso en
+// que la conexion SSE falle en silencio (ver iniciarEventSource).
+const INTERVALO_RESPALDO_ESTADO_MS = 4000
+const INTERVALO_RESPALDO_EVENTOS_MS = 15000
 
 export function establecerSesion(s: Sesion): void {
   store.sesion = s
 }
 
 export function cerrarSesion(): void {
-  detenerPolling()
+  detenerTransmisionEnVivo()
   store.sesion = null
   store.estado = null
   store.eventos = []
@@ -93,17 +101,57 @@ export async function refrescarEventos(): Promise<void> {
   }
 }
 
-export function iniciarPolling(): void {
-  detenerPolling()
-  manejadorEstado = window.setInterval(refrescarEstado, 1000)
-  manejadorEventos = window.setInterval(refrescarEventos, 1000)
+/**
+ * Abre la conexión SSE (Milestone 5) a GET /games/{id}/events/stream. El
+ * navegador (EventSource) no puede enviar cabeceras personalizadas, así
+ * que el token va como ?player_token= en la URL -- ver
+ * server/app.py:_requerir_token_sse. Cada evento recibido dispara de
+ * inmediato un refrescarEstado() (el evento casi siempre implica que el
+ * estado cambió; no tiene sentido esperar al próximo tick de respaldo).
+ *
+ * EventSource reconecta solo, con backoff propio del navegador, y reenvía
+ * Last-Event-ID automáticamente para retomar donde se quedó -- por eso el
+ * polling de eventos (arriba) se mantiene solo como respaldo lento, no
+ * como vía principal.
+ */
+function iniciarEventSource(): void {
+  if (!store.sesion) return
+  fuenteEventos?.close()
+
+  const url =
+    `/games/${store.sesion.roomId}/events/stream` +
+    `?since=${store.ultimoSeqVisto}&player_token=${encodeURIComponent(store.sesion.token)}`
+  const es = new EventSource(url)
+
+  es.onmessage = (mensaje) => {
+    try {
+      const evento = JSON.parse(mensaje.data)
+      store.eventos.push(evento)
+      const seq = Number(mensaje.lastEventId)
+      if (!Number.isNaN(seq)) store.ultimoSeqVisto = seq
+    } catch {
+      return
+    }
+    void refrescarEstado()
+  }
+
+  fuenteEventos = es
 }
 
-export function detenerPolling(): void {
+export function iniciarPolling(): void {
+  detenerTransmisionEnVivo()
+  iniciarEventSource()
+  manejadorEstado = window.setInterval(refrescarEstado, INTERVALO_RESPALDO_ESTADO_MS)
+  manejadorEventosRespaldo = window.setInterval(refrescarEventos, INTERVALO_RESPALDO_EVENTOS_MS)
+}
+
+export function detenerTransmisionEnVivo(): void {
   if (manejadorEstado !== undefined) window.clearInterval(manejadorEstado)
-  if (manejadorEventos !== undefined) window.clearInterval(manejadorEventos)
+  if (manejadorEventosRespaldo !== undefined) window.clearInterval(manejadorEventosRespaldo)
   manejadorEstado = undefined
-  manejadorEventos = undefined
+  manejadorEventosRespaldo = undefined
+  fuenteEventos?.close()
+  fuenteEventos = null
 }
 
 export async function despacharAccion(

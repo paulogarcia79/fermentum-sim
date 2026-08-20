@@ -88,10 +88,25 @@ any frontend" proof, kept as a permanent regression test rather than a throwaway
 0-PA disabling costed actions but not free ones, emergency-protocol availability by resource, and
 already-used actions reporting disabled.
 
-The `web/` frontend has no automated tests of its own yet (Milestone 4 shipped `vue-tsc -b`
-type-checking and a clean production build as its verification; there was no browser available to
-verify actual rendering/interaction in that session — treat the UI as type-check-clean but not
-yet visually confirmed until someone opens it).
+`tests/test_sse.py` covers the SSE push mechanism (Milestone 5, `GET /games/{id}/events/stream`):
+error paths (missing token, room not found, game not started) via a plain non-streaming `.get()`,
+and — the actual load-bearing test — `GameSession.difundir_evento` fanning out to every
+subscriber queue, plus `RoomManager.iniciar` correctly wiring it as the engine's `event_sink`.
+Starlette's `TestClient` cannot exercise the endpoint end-to-end: it hangs on a genuinely
+open-ended `StreamingResponse` generator regardless of whether a concurrent action is involved
+(confirmed experimentally). Backlog delivery with correct `id:`/`data:` SSE framing was verified
+manually against a real running `uvicorn` process with `curl`; a live push arriving on an
+already-open connection was not confirmed the same way in that session due to unrelated
+background-process/shell tooling failures in the sandbox — a real, narrow verification gap (the
+live-push code path is structurally identical to the already-verified backlog path, same
+formatting function, same queue proven correct by the unit test, but it wasn't watched happen
+live). Worth closing with a real browser or a fresh `curl` session before trusting it fully.
+
+The `web/` frontend was confirmed working in a real browser after Milestone 4 (room creation
+through to actual gameplay) — the only environment issue hit was a Node version mismatch (Vite 8
+needs Node ≥20.19/≥22.12; fixed via `web/.nvmrc` + `nvm alias default`, see git history). It has
+no automated tests of its own; verification is `vue-tsc -b` + a clean production build plus that
+manual browser confirmation.
 
 ## Architecture
 
@@ -138,8 +153,10 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   mass advance, structural collapse, every bake — manual or auto-collapse, both go through
   `resolver_horneado` — metabolic decay, contamination onset, game over with its reason).
   `GameEngine` always keeps the full log (`engine.eventos`) and optionally forwards each event,
-  at emission time, to an injected `event_sink` (e.g. for a future server to broadcast to
-  clients). `main.py`'s `_reporte_fermentacion` is built entirely from
+  at emission time, to an injected `event_sink` — this is what `server/sessions.py`'s
+  `GameSession.difundir_evento` plugs into (Milestone 5) to push events to connected SSE clients
+  live, with no polling needed on the happy path. `main.py`'s `_reporte_fermentacion` is built
+  entirely from
   `engine.eventos[since_index:]` — there's no before/after snapshot-diffing anywhere in the
   codebase anymore; an automatic event (like a structural collapse costing a player several
   points with no action on their part) is always something the engine explicitly said happened,
@@ -165,7 +182,15 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
 - **`server/`** — the headless HTTP backend (Starlette + uvicorn; see `server/app.py`'s module
   docstring for the transport/concurrency reasoning). `sessions.py` holds `RoomManager`/
   `GameSession`/`Seat` — in-memory rooms, no accounts, a room code + a per-player secret token is
-  the entire identity/reconnect mechanism. `commands.py` holds `resolver_comando`, which maps a
+  the entire identity/reconnect mechanism. `GameSession.difundir_evento` (Milestone 5) fans out
+  each emitted event to every SSE subscriber for that room; it's registered as the engine's
+  `event_sink` in `RoomManager.iniciar`, and registration + backlog-read happen under the same
+  session lock that guards all engine mutation, so there's no race between "just subscribed" and
+  "already emitted" — see `GET /games/{id}/events/stream` in `app.py`, which resumes from
+  `Last-Event-ID` or `?since=N`/`?player_token=` (the browser's native `EventSource` can't send
+  custom headers, so this one route accepts the token as a query param too — every other route
+  stays strictly header-only). Polling (`GET /games/{id}/events?since=N`) remains the permanent
+  reconnect/catch-up path, not replaced by SSE. `commands.py` holds `resolver_comando`, which maps a
   wire action id + params to the right `ActionManager` call (resolving what HTTP can't carry
   directly — Acción B's recipe via `carpeta_index`, `TecnologiaID`/`TipoHarina` from plain
   strings) and **owns `ACCIONES_QUE_TERMINAN_TURNO`**, the per-action turn-ending table the
@@ -184,9 +209,13 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   (`src/store.ts`) updated wholesale from the server's full-snapshot responses — no Pinia/Vuex,
   no optimistic updates (submit an action, wait for the response, render it; the server is the
   only rules authority and a turn-based game has no latency budget worth spending complexity on).
-  `src/types.ts` hand-mirrors the `server/views.py` JSON shape — there's no shared schema, so a
-  backend field rename needs a matching edit there. `src/components/acciones/` has one component
-  per player action, mirroring `main.py`'s `_params_accion_*` functions, reading
+  `iniciarPolling()` opens an `EventSource` against `/events/stream` (Milestone 5) — each pushed
+  event immediately triggers a state refetch — plus slow fallback polling (state every 4s, events
+  every 15s) in case the SSE connection silently fails; `EventSource`'s own auto-reconnect with
+  `Last-Event-ID` handles the common disconnect case already, so the fallback poll is a safety net,
+  not the primary path. `src/types.ts` hand-mirrors the `server/views.py` JSON shape — there's no
+  shared schema, so a backend field rename needs a matching edit there. `src/components/acciones/`
+  has one component per player action, mirroring `main.py`'s `_params_accion_*` functions, reading
   `acciones_disponibles` from the state to decide what's clickable rather than reimplementing
   `ActionManager`'s rules. The Phase III report renders as a mandatory dismissible modal
   (`FermentationReportModal.vue`), not a log line — an automatic structural collapse can cost a

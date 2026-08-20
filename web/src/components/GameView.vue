@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted } from 'vue'
-import { detenerPolling, store } from '../store'
+import { detenerTransmisionEnVivo, store } from '../store'
 import ClimaBanner from './ClimaBanner.vue'
 import MercadoPanel from './MercadoPanel.vue'
 import MiTablero from './MiTablero.vue'
@@ -14,7 +14,7 @@ const estado = computed(() => store.estado!)
 const miIndice = computed(() => store.sesion!.playerIndex)
 const esMiTurno = computed(() => estado.value.jugador_en_turno_idx === miIndice.value)
 
-onUnmounted(() => detenerPolling())
+onUnmounted(() => detenerTransmisionEnVivo())
 </script>
 
 <template>
