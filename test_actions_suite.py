@@ -60,20 +60,27 @@ receta_av = next(r for r in RECIPE_CATALOG.values() if r.grado == Grado.AVANZADA
 
 # ========================================================================
 print("--- A: Alimentar ---")
-p1.reserva_harina = [TipoHarina.BLANCA]
+p1.reserva_harina = {"Blanca": 100, "Centeno": 0, "Integral": 0}
 p1.reserva_agua = 10
 p1.puntos_accion = 2
+p1.accion_alimentar_usada = False
 v0, a0 = p1.vitalidad, p1.acidez
 
-manager.accion_A_alimentar(p1)
+manager.accion_A_alimentar(p1, tipo_harina="Blanca")
 check("A full: +1 vit", lambda: None if p1.vitalidad == v0 + 1 else (_ for _ in ()).throw(AssertionError()))
 check("A full: +1 acid", lambda: None if p1.acidez == a0 + 1 else (_ for _ in ()).throw(AssertionError()))
 
-p1.puntos_accion = 1
-xraises(InvalidActionError, "A sin recursos", lambda: manager.accion_A_alimentar(p1, False, False))
+xraises(InvalidActionError, "A doble uso en mismo dia", lambda: manager.accion_A_alimentar(p1, tipo_harina="Blanca"))
+
+p1.accion_alimentar_usada = False
+xraises(InvalidActionError, "A sin recursos", lambda: manager.accion_A_alimentar(p1, usar_harina=False, usar_agua=False))
+
+# Accion A es gratuita (0 PA, ACTIONS_REGISTRY.md SS3) -- debe funcionar incluso sin PA.
 p1.puntos_accion = 0
-xraises(NotEnoughActionPointsError, "A sin PA", lambda: manager.accion_A_alimentar(p1))
-p1.puntos_accion = 1
+manager.accion_A_alimentar(p1, tipo_harina="Blanca")
+check("A funciona con 0 PA (accion gratuita)", lambda: None if p1.accion_alimentar_usada else (_ for _ in ()).throw(AssertionError()))
+
+p1.accion_alimentar_usada = False
 p1.reserva_agua = 0
 xraises(MissingResourceError, "A agua insuficiente", lambda: manager.accion_A_alimentar(p1, usar_harina=False, usar_agua=True))
 
@@ -84,7 +91,8 @@ p1.acidez = 3
 p1.puntos_accion = 2
 p1.dados_inoculo = 3
 p1.carpeta_proyectos = [receta_b]
-p1.reserva_harina = [receta_b.harina_base]
+p1.reserva_harina = {"Blanca": 0, "Centeno": 0, "Integral": 0}
+p1.reserva_harina[receta_b.harina_base.value] = 100
 p1.reserva_agua = receta_b.tokens_agua + 5
 p1.estaciones_fermentacion = [None, None, None]
 
@@ -98,7 +106,8 @@ p1.puntos_accion = 2
 xraises(RuleViolationError, "B receta no en carpeta", lambda: manager.accion_B_iniciar_receta(p1, receta_b))
 
 p1.carpeta_proyectos = [receta_b]
-p1.reserva_harina = [receta_b.harina_base]
+p1.reserva_harina = {"Blanca": 0, "Centeno": 0, "Integral": 0}
+p1.reserva_harina[receta_b.harina_base.value] = 100
 p1.reserva_agua = 200
 p1.estaciones_fermentacion = [slot, slot, slot]
 p1.puntos_accion = 2
@@ -129,11 +138,11 @@ if idx is not None:
     manager.accion_C_adquirir_insumos(p1, indice_slot=idx)
     check("C normal: PA consumido", lambda: None if p1.puntos_accion == pa_antes - 1 else (_ for _ in ()).throw(AssertionError()))
 
-ph = len(p1.reserva_harina)
+ph = p1.reserva_harina["Blanca"]
 p1.puntos_accion = 2
 p1.datos_investigacion = 5
 manager.accion_C_adquirir_insumos(p1, urgencia=True, harina_urgencia=TipoHarina.BLANCA)
-check("C urgencia harina: +1 harina", lambda: None if len(p1.reserva_harina) == ph + 1 else (_ for _ in ()).throw(AssertionError()))
+check("C urgencia harina: +100 Blanca", lambda: None if p1.reserva_harina["Blanca"] == ph + 100 else (_ for _ in ()).throw(AssertionError()))
 check("C urgencia harina: -1 dato", lambda: None if p1.datos_investigacion == 4 else (_ for _ in ()).throw(AssertionError()))
 
 p1.puntos_accion = 1
@@ -263,14 +272,14 @@ p1.vitalidad = 0
 p1.acidez = 0
 p1.en_estado_contaminacion = True
 p1.puntos_accion = 2
-p1.reserva_harina = [TipoHarina.BLANCA, TipoHarina.INTEGRAL]
+p1.reserva_harina = {"Blanca": 20, "Centeno": 0, "Integral": 0}
 p1.reserva_agua = 5
 
 manager.accion_H_recultivo_manual(p1)
 check("H: vitalidad=1", lambda: None if p1.vitalidad == 1 else (_ for _ in ()).throw(AssertionError()))
 check("H: acidez=1", lambda: None if p1.acidez == 1 else (_ for _ in ()).throw(AssertionError()))
 check("H: contaminacion limpia", lambda: None if not p1.en_estado_contaminacion else (_ for _ in ()).throw(AssertionError()))
-check("H: harina consumida (-2)", lambda: None if len(p1.reserva_harina) == 0 else (_ for _ in ()).throw(AssertionError()))
+check("H: harina consumida (-20%)", lambda: None if sum(p1.reserva_harina.values()) == 0 else (_ for _ in ()).throw(AssertionError()))
 check("H: agua consumida (-2)", lambda: None if p1.reserva_agua == 3 else (_ for _ in ()).throw(AssertionError()))
 
 p1.puntos_accion = 1
