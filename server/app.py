@@ -13,12 +13,15 @@ Elegido Starlette + uvicorn sobre FastAPI/pydantic y sobre Flask:
   · Flask es WSGI: una conexión de streaming de larga duración (SSE, cuando
     llegue en la Milestone 5) ocuparía un worker completo.
 
-Transporte: POST + polling (``GET /games/{id}/events?since=N``), no
-WebSockets — el servidor empuja pocas veces por minuto, los comandos ya
-obtienen códigos de estado HTTP reales, y no hace falta un esquema de
-correlación de request-id como con WS. SSE llega en la Milestone 5 como
-optimización de latencia pura; el polling se mantiene después como ruta de
-reconexión.
+Transporte: POST + ``GET /games/{id}/events/stream`` (Server-Sent Events,
+Milestone 5) con ``GET /games/{id}/events?since=N`` (polling) como ruta de
+reconexión/respaldo permanente — no WebSockets: los comandos ya obtienen
+códigos de estado HTTP reales sobre POST normal, y SSE reconecta solo con
+``Last-Event-ID`` sin necesidad de ningún esquema de correlación de
+request-id como haría falta con WS. Cada ``GameSession`` reenvía sus
+eventos en vivo a los clientes SSE conectados vía
+``GameSession.difundir_evento``, pasada como ``event_sink`` al
+``GameEngine`` de esa sala (ver ``server/sessions.py``).
 
 **Concurrencia — restricción de despliegue**: este servidor asume un único
 proceso con un único worker de uvicorn (``uvicorn.run(..., workers=1)`` o
@@ -32,16 +35,18 @@ entre validar y mutar.
 """
 from __future__ import annotations
 
+import asyncio
 import json
-from typing import Any, Dict, List, Tuple, Type
+from typing import Any, AsyncIterator, Dict, List, Tuple, Type
 
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response, StreamingResponse
 from starlette.routing import Route
 
 from actions import ActionManager
 from engine import GameEngine
+from events import GameEvent
 from exceptions import (
     FermentumError,
     GameAlreadyOverError,
@@ -155,6 +160,21 @@ def _requerir_turno_del_jugador(engine: GameEngine, asiento: Seat) -> None:
         raise NotYourTurnError(f"No es el turno de '{asiento.nombre}'.")
 
 
+def _evento_a_dict(ev: GameEvent) -> Dict[str, Any]:
+    return {
+        "tipo": ev.tipo.value,
+        "dia": ev.dia,
+        "jugador_idx": ev.jugador_idx,
+        "datos": ev.datos,
+        "mensaje": ev.mensaje,
+    }
+
+
+def _formatear_sse(seq: int, evento: GameEvent) -> str:
+    payload = json.dumps(_evento_a_dict(evento), ensure_ascii=False)
+    return f"id: {seq}\ndata: {payload}\n\n"
+
+
 def crear_app() -> Starlette:
     """Construye la aplicación Starlette con un ``RoomManager`` propio."""
     salas = RoomManager()
@@ -246,19 +266,72 @@ def crear_app() -> Starlette:
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(
-            {
-                "seq": seq_actual,
-                "eventos": [
-                    {
-                        "tipo": ev.tipo.value,
-                        "dia": ev.dia,
-                        "jugador_idx": ev.jugador_idx,
-                        "datos": ev.datos,
-                        "mensaje": ev.mensaje,
-                    }
-                    for ev in eventos_nuevos
-                ],
-            }
+            {"seq": seq_actual, "eventos": [_evento_a_dict(ev) for ev in eventos_nuevos]}
+        )
+
+    async def flujo_eventos(request: Request) -> Response:
+        """
+        SSE (Server-Sent Events): empuja cada evento nuevo de la sala en
+        cuanto se emite, en vez de que el cliente tenga que sondear
+        ``GET /games/{id}/events``. El polling sigue existiendo como ruta
+        de reconexión/respaldo permanente (Milestone 5 solo lo complementa,
+        no lo reemplaza).
+
+        Resume desde ``Last-Event-ID`` (enviado automáticamente por
+        ``EventSource`` al reconectar) o, si no está presente, desde
+        ``?since=N`` (para un primer connect, o un cliente sin soporte
+        nativo de ``EventSource``, p. ej. ``curl``).
+        """
+        room_id = request.path_params["room_id"]
+        try:
+            token = _requerir_token(request)
+            sesion = salas.obtener(room_id)
+            sesion.asiento_por_token(token)
+            engine = _requerir_partida_iniciada(sesion)
+        except (FermentumError, RoomError) as exc:
+            return _respuesta_error(exc)
+
+        id_resumen = request.headers.get("Last-Event-ID") or request.query_params.get("since")
+        try:
+            desde = int(id_resumen) if id_resumen else 0
+        except ValueError:
+            desde = 0
+
+        cola: "asyncio.Queue[GameEvent]" = asyncio.Queue()
+        # Suscribirse y leer el backlog bajo el mismo lock que protege toda
+        # mutación del motor: ninguna emisión concurrente puede colarse
+        # entre "ya me suscribí" y "ya leí lo que había hasta ahora" (ver
+        # GameSession.difundir_evento).
+        async with sesion.lock:
+            sesion.suscriptores.append(cola)
+            backlog = list(engine.eventos[desde:])
+
+        async def generador() -> AsyncIterator[str]:
+            seq = desde
+            try:
+                for evento in backlog:
+                    seq += 1
+                    yield _formatear_sse(seq, evento)
+                while True:
+                    try:
+                        evento = await asyncio.wait_for(cola.get(), timeout=15)
+                    except asyncio.TimeoutError:
+                        yield ": keepalive\n\n"  # evita que un proxy cierre la conexión inactiva
+                        continue
+                    seq += 1
+                    yield _formatear_sse(seq, evento)
+            finally:
+                if cola in sesion.suscriptores:
+                    sesion.suscriptores.remove(cola)
+
+        return StreamingResponse(
+            generador(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",  # nginx: no bufferear el stream
+            },
         )
 
     async def enviar_accion(request: Request) -> JSONResponse:
@@ -321,6 +394,7 @@ def crear_app() -> Starlette:
             Route("/games/{room_id}/start", iniciar_sala, methods=["POST"]),
             Route("/games/{room_id}/state", obtener_estado, methods=["GET"]),
             Route("/games/{room_id}/events", obtener_eventos, methods=["GET"]),
+            Route("/games/{room_id}/events/stream", flujo_eventos, methods=["GET"]),
             Route("/games/{room_id}/actions", enviar_accion, methods=["POST"]),
             Route("/games/{room_id}/pass", pasar, methods=["POST"]),
         ]

@@ -24,6 +24,7 @@ from typing import Dict, List, Optional, Tuple
 
 from bootstrap import create_game
 from engine import GameEngine
+from events import GameEvent
 from server.errors import (
     NotHostError,
     RoomFullError,
@@ -66,6 +67,19 @@ class GameSession:
     sala específica (validar → despachar → mutar → construir la vista de
     respuesta) — necesario porque múltiples jugadores pueden enviar
     peticiones concurrentes contra la misma partida.
+
+    ``suscriptores``: colas de los clientes SSE conectados actualmente a
+    ``GET /games/{id}/events/stream`` (Milestone 5). ``difundir_evento`` se
+    pasa como ``event_sink`` a ``GameEngine`` (vía ``bootstrap.create_game``
+    en ``RoomManager.iniciar``), así que cada evento emitido por el motor
+    llega en vivo a cada suscriptor sin que nadie tenga que sondear
+    ``engine.eventos``. Como toda emisión ocurre de forma síncrona dentro
+    de un handler que ya sostiene ``lock`` (fase de mutación, sin ningún
+    ``await`` de por medio — ver ``server/app.py``), y una ruta SSE se
+    registra en ``suscriptores`` sosteniendo ese mismo ``lock``, no hay
+    ninguna ventana de carrera entre "ya me suscribí" y "ya leí el
+    backlog": ambas cosas ocurren atómicamente respecto a cualquier
+    mutación concurrente.
     """
 
     id: str
@@ -74,6 +88,7 @@ class GameSession:
     seats: List[Seat] = field(default_factory=list)
     engine: Optional[GameEngine] = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
+    suscriptores: List["asyncio.Queue[GameEvent]"] = field(default_factory=list)
 
     def asiento_por_token(self, token: str) -> Seat:
         """
@@ -89,6 +104,12 @@ class GameSession:
         raise UnknownPlayerTokenError(
             f"Token de jugador desconocido para la sala {self.id!r}."
         )
+
+    def difundir_evento(self, evento: GameEvent) -> None:
+        """``EventSink`` de ``GameEngine``: reenvía el evento a cada cliente
+        SSE conectado a esta sala ahora mismo."""
+        for cola in self.suscriptores:
+            cola.put_nowait(evento)
 
 
 class RoomManager:
@@ -156,7 +177,7 @@ class RoomManager:
             raise RoomNotJoinableError(f"La sala {room_id!r} ya fue iniciada.")
 
         nombres = [asiento.nombre for asiento in sesion.seats]
-        sesion.engine = create_game(nombres)
+        sesion.engine = create_game(nombres, event_sink=sesion.difundir_evento)
         sesion.engine.iniciar_dia()
         sesion.status = RoomStatus.EN_CURSO
         return sesion
