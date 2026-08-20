@@ -1,0 +1,52 @@
+"""
+server/views.py — Vista de Estado Redactada para Clientes Remotos
+=====================================================================
+Construye el dict JSON que se envía a los clientes HTTP a partir de
+``serialization.snapshot()``, con dos cambios:
+
+  1. **Redacción**: ``Environment.mazo_clima`` (el mazo de clima restante,
+     en orden) y ``Market.mazo_recetas`` (el mazo de recetas restante) se
+     reemplazan por su longitud. Son la única información del estado del
+     juego que ningún jugador conocería en la partida física — el resto
+     (cartas de clima ya reveladas, recetas ya vistas en el mercado,
+     carpetas de proyectos de cualquier jugador) es información pública
+     según las reglas (ACTIONS_REGISTRY.md §2G: la Carpeta de Proyectos es
+     boca arriba). Enviar ``snapshot()`` sin este paso le daría a cualquier
+     jugador conocimiento perfecto de las próximas cartas de clima y
+     recetas — la única forma en que "serializar todo" es activamente
+     incorrecta aquí.
+  2. **Campos de turno/fase**: añade lo que un cliente necesita para saber
+     de quién es el turno y si su propia solicitud podría estar basada en
+     un estado obsoleto (``fase_actual``, ``turno_nonce``,
+     ``jugador_en_turno_idx``, ``jefe_investigador_idx``) — datos que viven
+     en el motor, no en las entidades de dominio serializables.
+"""
+from __future__ import annotations
+
+from typing import Any, Dict
+
+from engine import GameEngine
+from serialization import snapshot
+
+
+def game_state_view(engine: GameEngine) -> Dict[str, Any]:
+    """Construye la vista de estado redactada de una partida en curso."""
+    estado = snapshot(engine)
+
+    entorno = estado["environment"]
+    entorno["cartas_clima_restantes"] = len(entorno.pop("mazo_clima"))
+
+    mercado = estado["market"]
+    mercado["mazo_recetas_restantes"] = len(mercado.pop("mazo_recetas"))
+
+    jugador_activo = engine.jugador_activo
+    jefe = engine.jefe_investigador
+
+    estado["fase_actual"] = engine.fase_actual.value
+    estado["turno_nonce"] = engine.turno_nonce
+    estado["jugador_en_turno_idx"] = (
+        engine.players.index(jugador_activo) if jugador_activo is not None else None
+    )
+    estado["jefe_investigador_idx"] = engine.players.index(jefe) if jefe is not None else None
+
+    return estado

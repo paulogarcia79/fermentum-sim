@@ -117,3 +117,15 @@ class MarketSlotEmptyError(FermentumError):
     Se lanza cuando un jugador intenta tomar un recurso de un slot de
     mercado que ya fue reclamado por otro jugador en este mismo día.
     """
+
+
+class NotYourTurnError(FermentumError):
+    """
+    Se lanza cuando se intenta resolver una acción o pase de turno para un
+    jugador que no es el ``jugador_activo`` actual de ``GameEngine``.
+
+    Pensada para la capa de servidor (``server/commands.py``), que debe
+    verificar la identidad del jugador que envía cada comando antes de
+    despacharlo a ``ActionManager`` — la CLI no la usa porque su callback
+    de turno solo se invoca para el jugador correcto.
+    """
