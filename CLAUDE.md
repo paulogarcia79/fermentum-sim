@@ -249,6 +249,19 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   player several points with no action on their part, and they need to be told, not left to infer
   it from state changing between polls.
 
+  **Session persistence / reconnect**: `store.ts` saves `Sesion` (room id + player token) to
+  `localStorage` on every `establecerSesion` call. Without this, closing the browser mid-game was
+  a dead end — the backend was already designed for reconnect (per-player tokens valid for the
+  room's lifetime, state independent of any live connection), but `join` only works while a room
+  is still in `lobby`, so a player who lost their in-memory session had no way back into a game
+  already in progress. `App.vue` calls `intentarReconectar()` once on mount, before deciding
+  which view to show: it verifies the saved room still exists and the token is still accepted by
+  the server (never trusts the cached copy blindly), and either restores just `store.sesion` (room
+  still in `lobby` — `LobbyView.vue`'s own `onMounted` then resumes the waiting-room view from
+  that) or restores the full game state and starts SSE/polling (room already started — lands
+  straight in `GameView`). Any failure at any step (room gone, token rejected) just clears the
+  stored session and falls back to the normal create/join form.
+
 `agents.py` is currently an empty placeholder file.
 
 ### Error handling
