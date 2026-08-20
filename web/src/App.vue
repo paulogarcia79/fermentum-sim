@@ -1,16 +1,29 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import LobbyView from './components/LobbyView.vue'
 import GameView from './components/GameView.vue'
-import { store } from './store'
+import { intentarReconectar, store } from './store'
+
+const reconectando = ref(true)
+
+// Si cerraste el navegador a mitad de partida, la sesión (sala + tu token)
+// sigue en localStorage -- se intenta recuperar una sola vez al arrancar,
+// antes de decidir si mostrar el lobby o el tablero directamente.
+onMounted(async () => {
+  await intentarReconectar()
+  reconectando.value = false
+})
 
 const enPartida = computed(() => store.sesion !== null && store.estado !== null)
 </script>
 
 <template>
   <main class="app-shell">
-    <GameView v-if="enPartida" />
-    <LobbyView v-else />
+    <p v-if="reconectando" class="reconectando">Cargando…</p>
+    <template v-else>
+      <GameView v-if="enPartida" />
+      <LobbyView v-else />
+    </template>
   </main>
 </template>
 
@@ -43,6 +56,12 @@ body {
   padding: 1rem;
   max-width: 1100px;
   margin: 0 auto;
+}
+
+.reconectando {
+  text-align: center;
+  color: var(--color-texto-tenue);
+  margin-top: 4rem;
 }
 
 button {

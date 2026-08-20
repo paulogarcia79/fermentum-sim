@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import * as api from '../api'
 import { ApiFallo } from '../api'
 import { establecerSesion, iniciarPolling, refrescarEstado, store } from '../store'
@@ -14,6 +14,22 @@ const salaCreada = ref<{ roomId: string; hostToken: string; nombre: string } | n
 const metadata = ref<SalaMetadata | null>(null)
 let intervaloLobby: number | undefined
 
+async function entrarASalaDeEspera(roomId: string, hostToken: string, nombreJugador: string) {
+  salaCreada.value = { roomId, hostToken, nombre: nombreJugador }
+  await refrescarMetadata()
+  intervaloLobby = window.setInterval(refrescarMetadata, 1500)
+}
+
+// Si App.vue ya recuperó una sesión guardada (localStorage, ver
+// store.ts:intentarReconectar) y la sala seguía en LOBBY, store.sesion ya
+// está poblado al montar este componente -- solo hace falta retomar la
+// sala de espera con esos datos, sin volver a crear/unirse.
+onMounted(() => {
+  if (store.sesion) {
+    void entrarASalaDeEspera(store.sesion.roomId, store.sesion.hostToken ?? '', store.sesion.nombre)
+  }
+})
+
 async function crear() {
   if (!nombre.value.trim()) {
     error.value = 'Escribe tu nombre primero.'
@@ -23,7 +39,6 @@ async function crear() {
   error.value = null
   try {
     const r = await api.crearSala(nombre.value.trim())
-    salaCreada.value = { roomId: r.room_id, hostToken: r.host_token, nombre: nombre.value.trim() }
     establecerSesion({
       roomId: r.room_id,
       token: r.player_token,
@@ -31,8 +46,7 @@ async function crear() {
       hostToken: r.host_token,
       nombre: nombre.value.trim(),
     })
-    await refrescarMetadata()
-    intervaloLobby = window.setInterval(refrescarMetadata, 1500)
+    await entrarASalaDeEspera(r.room_id, r.host_token, nombre.value.trim())
   } catch (e) {
     error.value = e instanceof ApiFallo ? e.message : 'No se pudo crear la sala.'
   } finally {
@@ -50,7 +64,6 @@ async function unirse() {
   const roomId = codigoSala.value.trim().toUpperCase()
   try {
     const r = await api.unirseSala(roomId, nombre.value.trim())
-    salaCreada.value = { roomId, hostToken: '', nombre: nombre.value.trim() }
     establecerSesion({
       roomId,
       token: r.player_token,
@@ -58,8 +71,7 @@ async function unirse() {
       hostToken: null,
       nombre: nombre.value.trim(),
     })
-    await refrescarMetadata()
-    intervaloLobby = window.setInterval(refrescarMetadata, 1500)
+    await entrarASalaDeEspera(roomId, '', nombre.value.trim())
   } catch (e) {
     error.value = e instanceof ApiFallo ? e.message : 'No se pudo unir a la sala.'
   } finally {

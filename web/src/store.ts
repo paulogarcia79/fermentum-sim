@@ -51,8 +51,42 @@ let fuenteEventos: EventSource | null = null
 const INTERVALO_RESPALDO_ESTADO_MS = 4000
 const INTERVALO_RESPALDO_EVENTOS_MS = 15000
 
+// La sesion (sala + token de jugador) se guarda en localStorage para que
+// cerrar la pestaña/el navegador a mitad de partida no deje al jugador sin
+// forma de volver a entrar -- unirse a una sala solo funciona mientras
+// esta en LOBBY, asi que sin esto, cerrar el navegador durante una
+// partida en curso dejaba el asiento inaccesible para siempre.
+const CLAVE_SESION_LOCAL = 'fermentum-sesion'
+
+function guardarSesionLocal(s: Sesion): void {
+  try {
+    localStorage.setItem(CLAVE_SESION_LOCAL, JSON.stringify(s))
+  } catch {
+    // localStorage puede fallar (modo privado, cuota agotada) -- no es
+    // critico, solo se pierde la posibilidad de reconectar automaticamente.
+  }
+}
+
+function cargarSesionLocal(): Sesion | null {
+  try {
+    const crudo = localStorage.getItem(CLAVE_SESION_LOCAL)
+    return crudo ? (JSON.parse(crudo) as Sesion) : null
+  } catch {
+    return null
+  }
+}
+
+function borrarSesionLocal(): void {
+  try {
+    localStorage.removeItem(CLAVE_SESION_LOCAL)
+  } catch {
+    return
+  }
+}
+
 export function establecerSesion(s: Sesion): void {
   store.sesion = s
+  guardarSesionLocal(s)
 }
 
 export function cerrarSesion(): void {
@@ -63,6 +97,39 @@ export function cerrarSesion(): void {
   store.ultimoSeqVisto = 0
   store.error = null
   store.reporteDiaPendiente = null
+  borrarSesionLocal()
+}
+
+/**
+ * Se llama una vez al arrancar la app (ver App.vue). Si hay una sesión
+ * guardada en localStorage, verifica contra el servidor que la sala
+ * todavía existe y que el token todavía es válido antes de darla por
+ * buena -- si cualquiera de las dos cosas falla (sala borrada por
+ * limpieza de inactividad, token ya no reconocido), descarta la sesión
+ * guardada en silencio y el usuario simplemente ve el formulario normal
+ * de crear/unirse.
+ *
+ * Si la sala sigue en LOBBY, solo restaura `store.sesion` -- LobbyView es
+ * quien retoma la sala de espera a partir de ahí. Si ya está en curso (o
+ * terminada), además restaura el estado del juego y arranca SSE/polling,
+ * dejando a App.vue mostrar GameView directamente sin pasar por el lobby.
+ */
+export async function intentarReconectar(): Promise<void> {
+  const guardada = cargarSesionLocal()
+  if (!guardada) return
+  try {
+    const metadata = await api.verSala(guardada.roomId)
+    if (metadata.status === 'lobby') {
+      store.sesion = guardada
+      return
+    }
+    const estadoRemoto = await api.obtenerEstado(guardada.roomId, guardada.token)
+    store.sesion = guardada
+    aplicarEstado(estadoRemoto)
+    iniciarPolling()
+  } catch {
+    borrarSesionLocal()
+  }
 }
 
 export function aplicarEstado(nuevo: GameStateView): void {
