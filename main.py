@@ -24,21 +24,19 @@ from __future__ import annotations
 
 import math
 import os
-import random
 import sys
 from typing import List, Optional, Tuple
 
 from actions import ActionManager
-from engine import GameEngine, Market
+from bootstrap import create_game
+from engine import GameEngine
 from events import EventoTipo, GameEvent
 from exceptions import FermentumError
 from models import (
-    Environment,
     FermentationSlot,
     Grado,
     HorneadoRecord,
     Player,
-    RECIPE_CATALOG,
     TecnologiaID,
     TipoHarina,
     seleccionar_receta_inicial,
@@ -850,12 +848,11 @@ def setup_game(nombres: Optional[List[str]] = None) -> GameEngine:
     """
     Inicializa todos los componentes del juego y devuelve un GameEngine listo.
 
-    Proceso:
-      1. Crear el entorno (mazo de clima barajado, temp 20°C).
-      2. Crear el mercado central (mazo de recetas, 4 slots visibles, 3 lotes).
-      3. Asignar una receta básica aleatoria a cada jugador.
-      4. Crear los jugadores con Player.crear_dia_1().
-      5. Instanciar GameEngine con inyección de dependencias.
+    Wrapper de CLI sobre ``bootstrap.create_game``: su única responsabilidad
+    propia es rellenar nombres por defecto cuando el usuario no proporciona
+    ninguno. La construcción real de la partida vive en ``bootstrap.py`` para
+    que otros llamadores (p. ej. un futuro servidor) no necesiten importar
+    este módulo de CLI.
 
     Args:
         nombres: Lista de nombres de jugadores. Si None se usan defaults.
@@ -866,24 +863,7 @@ def setup_game(nombres: Optional[List[str]] = None) -> GameEngine:
     if nombres is None:
         nombres = ["Investigador α", "Investigador β"]
 
-    # Entorno
-    env = Environment.crear_inicial()
-
-    # Mercado
-    market = Market.crear_inicial()
-
-    # Jugadores — cada uno recibe una receta básica distinta si hay stock
-    basicas_disponibles = list({r.id: r for r in
-                                 [v for v in RECIPE_CATALOG.values() if v.grado == Grado.BASICA]
-                                 }.values())
-    random.shuffle(basicas_disponibles)
-
-    players: List[Player] = []
-    for i, nombre in enumerate(nombres):
-        receta = basicas_disponibles[i % len(basicas_disponibles)]
-        players.append(Player.crear_dia_1(nombre, receta, player_index=i))
-
-    return GameEngine(players=players, environment=env, market=market)
+    return create_game(nombres)
 
 
 # ===========================================================================
