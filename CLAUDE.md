@@ -94,13 +94,20 @@ and — the actual load-bearing test — `GameSession.difundir_evento` fanning o
 subscriber queue, plus `RoomManager.iniciar` correctly wiring it as the engine's `event_sink`.
 Starlette's `TestClient` cannot exercise the endpoint end-to-end: it hangs on a genuinely
 open-ended `StreamingResponse` generator regardless of whether a concurrent action is involved
-(confirmed experimentally). Backlog delivery with correct `id:`/`data:` SSE framing was verified
-manually against a real running `uvicorn` process with `curl`; a live push arriving on an
-already-open connection was not confirmed the same way in that session due to unrelated
-background-process/shell tooling failures in the sandbox — a real, narrow verification gap (the
-live-push code path is structurally identical to the already-verified backlog path, same
-formatting function, same queue proven correct by the unit test, but it wasn't watched happen
-live). Worth closing with a real browser or a fresh `curl` session before trusting it fully.
+(confirmed experimentally). Confirmed working live in a real browser (Milestone 5 follow-up): an
+action from one player updates another player's screen without waiting for a poll tick.
+
+`tests/test_robustness.py` covers the three Milestone 6 additions: force-pass (rejects before the
+inactivity threshold, succeeds after it, rejects with no active turn), `RoomManager.limpiar_inactivas`
+(removes only genuinely idle rooms, respects the longer EN_CURSO threshold, deletes the matching
+disk snapshot), and the persistence round-trip (`server/persistence.py`: save → `cargar_todas()` →
+the restored session is still genuinely playable, not just readable — confirmed with a real
+`pasar_turno()` call after reload — plus a corrupted/version-mismatched file being discarded
+cleanly). `tests/conftest.py` has an autouse fixture redirecting `persistence.DATA_DIR` to a temp
+path per test, since `RoomManager` now persists to disk on every mutation — without it, the test
+suite would write real files into the repo's own `data/games/`. The full persist → kill process →
+start a new process → reload → keep playing cycle was also verified against two real `uvicorn`
+processes, not just in-process.
 
 The `web/` frontend was confirmed working in a real browser after Milestone 4 (room creation
 through to actual gameplay) — the only environment issue hit was a Node version mismatch (Vite 8
@@ -182,7 +189,27 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
 - **`server/`** — the headless HTTP backend (Starlette + uvicorn; see `server/app.py`'s module
   docstring for the transport/concurrency reasoning). `sessions.py` holds `RoomManager`/
   `GameSession`/`Seat` — in-memory rooms, no accounts, a room code + a per-player secret token is
-  the entire identity/reconnect mechanism. `GameSession.difundir_evento` (Milestone 5) fans out
+  the entire identity/reconnect mechanism. `Seat.last_seen` is bumped on every authenticated
+  request (in `GameSession.asiento_por_token`, the one choke point every route passes through) and
+  backs two Milestone 6 features: any seated player can `POST /games/{id}/force-pass` to pass the
+  active player's turn once they've been silent for `UMBRAL_INACTIVIDAD_SEGUNDOS` (90s — the
+  server decides eligibility, the client just offers the button), and
+  `RoomManager.limpiar_inactivas()` (run on a background loop from `app.py`'s lifespan) drops
+  rooms idle longer than a per-status threshold (LOBBY/EN_CURSO/TERMINADA get very different
+  grace periods — an active game is kept for hours, an unstarted lobby for 30 minutes).
+  `persistence.py` pickles each `GameSession` to `data/games/{id}.pkl` after every mutation
+  (`RoomManager.guardar`) and reloads them at process startup (`app.py`'s lifespan again) — chosen
+  over hand-written JSON because `GameEngine`'s internal turn-state (`Fase`, order, cursor, nonce,
+  who's already passed) has no serialization-oriented accessors, and `pickle` round-trips the
+  whole object graph — including the circular `GameEngine._event_sink → GameSession.difundir_evento`
+  reference — with no custom code; confirmed by actually restarting a live `uvicorn` process
+  mid-game and continuing to play. `GameSession.__getstate__`/`__setstate__` exclude `lock` and
+  `suscriptores` from the pickle and rebuild them fresh on load, since neither an `asyncio.Lock`
+  nor an SSE client's `asyncio.Queue` means anything outside the process/event loop that created
+  them. Accepted limitation, stated rather than hidden: a pickle is fragile across class-shape
+  changes, so a version mismatch on load discards that one file with a log message instead of
+  crashing startup — a deploy that changes `Player`/`GameSession`'s fields can end in-progress
+  games. `GameSession.difundir_evento` (Milestone 5) fans out
   each emitted event to every SSE subscriber for that room; it's registered as the engine's
   `event_sink` in `RoomManager.iniciar`, and registration + backlog-read happen under the same
   session lock that guards all engine mutation, so there's no race between "just subscribed" and
