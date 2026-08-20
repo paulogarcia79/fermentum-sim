@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
+from events import EventoTipo, EventSink, GameEvent
 from exceptions import (
     GameAlreadyOverError,
     InsufficientPlayersError,
@@ -387,6 +388,7 @@ class GameEngine:
         players: List[Player],
         environment: Environment,
         market: Optional[Market] = None,
+        event_sink: Optional[EventSink] = None,
     ) -> None:
         """
         Inicializa el motor de juego con inyección de dependencias.
@@ -396,6 +398,11 @@ class GameEngine:
             environment: Estado del entorno global (temperatura, mazo de clima, día).
             market: Estado del mercado central. Si ``None``, se crea automáticamente
                 con ``Market.crear_inicial()``.
+            event_sink: Invocable opcional ``(GameEvent) -> None`` al que se
+                reenvía cada evento en el momento en que se emite (p. ej.
+                para transmitirlo a clientes conectados). El motor conserva
+                el registro completo en ``self.eventos`` independientemente
+                de si se proporciona un sink.
 
         Raises:
             InsufficientPlayersError: Si se proporciona una lista de jugadores vacía.
@@ -412,6 +419,10 @@ class GameEngine:
         # Estado interno del turno actual
         self._jefe_investigador: Optional[Player] = None
         self._partida_terminada: bool = False
+
+        # Registro de eventos (ver events.py).
+        self._eventos: List[GameEvent] = []
+        self._event_sink: Optional[EventSink] = event_sink
 
         # Máquina de estado de turno no bloqueante (ver clase Fase).
         self._fase: Fase = Fase.PREPARACION
@@ -490,6 +501,35 @@ class GameEngine:
         estado de turno que ya cambió.
         """
         return self._turno_nonce
+
+    @property
+    def eventos(self) -> List[GameEvent]:
+        """
+        Registro completo de eventos emitidos durante la partida hasta el
+        momento (ver ``events.py``), en orden de emisión. Un llamador que
+        solo quiera los eventos nuevos desde su última lectura puede
+        recordar ``len(engine.eventos)`` y volver a leer desde ese índice.
+        """
+        return list(self._eventos)
+
+    def _emit(
+        self,
+        tipo: EventoTipo,
+        jugador_idx: Optional[int] = None,
+        datos: Optional[Dict[str, object]] = None,
+        mensaje: str = "",
+    ) -> None:
+        """Registra un ``GameEvent`` y lo reenvía a ``self._event_sink`` si hay uno."""
+        evento = GameEvent(
+            tipo=tipo,
+            dia=self._environment.dia_actual,
+            jugador_idx=jugador_idx,
+            datos=datos or {},
+            mensaje=mensaje,
+        )
+        self._eventos.append(evento)
+        if self._event_sink is not None:
+            self._event_sink(evento)
 
     # ==================================================================
     # BUCLE PRINCIPAL
@@ -596,18 +636,43 @@ class GameEngine:
         """
         # Paso 1: Determinar Investigador Jefe
         self._jefe_investigador = self._determinar_investigador_jefe()
+        self._emit(
+            EventoTipo.JEFE_ASIGNADO,
+            jugador_idx=self._players.index(self._jefe_investigador),
+            datos={"nombre": self._jefe_investigador.nombre},
+            mensaje=f"{self._jefe_investigador.nombre} es el Investigador Jefe hoy.",
+        )
 
         # Paso 2: Reset del entorno al inicio del día
         self._environment.resetear_temperatura_base()
         self._environment.efecto_pasivo_activo = EfectoClimatico.NINGUNO
+        temp_antes: int = self._environment.temperatura_actual
 
         # Paso 3: Resolver carta de clima
         carta: Optional[ClimateCard] = self._robar_carta_clima()
         if carta is not None:
             self._resolver_carta_clima(carta)
+            self._emit(
+                EventoTipo.CLIMA_REVELADO,
+                datos={
+                    "carta_id": carta.id,
+                    "carta_nombre": carta.nombre,
+                    "modificador_termico": carta.modificador_termico,
+                    "temp_antes": temp_antes,
+                    "temp_despues": self._environment.temperatura_actual,
+                    "efecto_pasivo": carta.efecto_pasivo.value,
+                    "efecto_biologico": carta.efecto_biologico.value,
+                },
+                mensaje=f"Carta de clima revelada: {carta.nombre} "
+                        f"({carta.modificador_termico:+d}°C).",
+            )
 
         # Paso 4: Protocolo de Refresco del mercado
         self._market.protocolo_refresco()
+        self._emit(
+            EventoTipo.MERCADO_REFRESCADO,
+            mensaje="El mercado central se refrescó.",
+        )
 
     def _determinar_investigador_jefe(self) -> Player:
         """
@@ -651,6 +716,12 @@ class GameEngine:
         # Si con esta carta el mazo quedó vacío, el día de hoy es el último.
         if self._environment.mazo_agotado:
             self._partida_terminada = True
+            self._emit(
+                EventoTipo.FIN_DE_PARTIDA,
+                datos={"motivo": "mazo_agotado"},
+                mensaje="El mazo de clima se agotó. La partida termina al "
+                        "concluir este día.",
+            )
 
         return carta
 
@@ -937,6 +1008,8 @@ class GameEngine:
         Args:
             player: Jugador cuyas masas activas deben avanzar.
         """
+        jugador_idx: int = self._players.index(player)
+
         # Recopilar índices activos ANTES de iterar para evitar mutación concurrente.
         # Un colapso durante la iteración libera un slot, lo que invalida el iterador.
         indices_activos: List[int] = [
@@ -954,8 +1027,22 @@ class GameEngine:
                 continue
 
             # Calcular el avance de esta masa usando la fórmula de cinética.
+            posicion_antes: int = slot.posicion_track
             avance: int = slot.calcular_avance(self._environment.temperatura_actual)
             slot.posicion_track += avance
+            self._emit(
+                EventoTipo.MASA_AVANZO,
+                jugador_idx=jugador_idx,
+                datos={
+                    "estacion_idx": idx,
+                    "receta_nombre": slot.recipe.nombre,
+                    "posicion_antes": posicion_antes,
+                    "posicion_despues": slot.posicion_track,
+                    "avance": avance,
+                },
+                mensaje=f"'{slot.recipe.nombre}' avanzó {posicion_antes} → "
+                        f"{slot.posicion_track} (+{avance}).",
+            )
 
             # Evaluar gatillo de Colapso Estructural (CLIMATE_LOGIC.md §3 regla 2).
             if slot.recipe.esta_sobrefermentada(slot.posicion_track):
@@ -973,8 +1060,25 @@ class GameEngine:
             de -3 PM (gestionado automáticamente por ``Player.ajustar_vitalidad``).
         """
         delta: int = self._environment.desgaste_vitalidad_fase_3
-        for player in self._players:
+        for jugador_idx, player in enumerate(self._players):
+            vit_antes: int = player.vitalidad
+            contaminado_antes: bool = player.en_estado_contaminacion
+
             player.ajustar_vitalidad(delta)
+
+            self._emit(
+                EventoTipo.DESGASTE,
+                jugador_idx=jugador_idx,
+                datos={"delta": delta, "vitalidad_antes": vit_antes, "vitalidad_despues": player.vitalidad},
+                mensaje=f"{player.nombre} sufre desgaste metabólico: "
+                        f"Vitalidad {vit_antes} → {player.vitalidad}.",
+            )
+            if player.en_estado_contaminacion and not contaminado_antes:
+                self._emit(
+                    EventoTipo.CONTAMINACION,
+                    jugador_idx=jugador_idx,
+                    mensaje=f"¡{player.nombre} entró en estado de Contaminación!",
+                )
 
     # ==================================================================
     # RESOLUCIÓN DE HORNEADO (API pública para actions.py — Acción F)
@@ -1060,14 +1164,46 @@ class GameEngine:
         player.dados_inoculo = min(3, player.dados_inoculo + 1)  # Recuperar dado
         player.datos_investigacion += datos_obtenidos  # Acreditar datos
 
+        jugador_idx: int = self._players.index(player)
         if fue_colapso:
             player.archivo_colapsos.append(record)
+            self._emit(
+                EventoTipo.HORNEADO,
+                jugador_idx=jugador_idx,
+                datos={
+                    "receta_nombre": recipe.nombre,
+                    "puntos_totales": record.puntos_totales,
+                    "fue_colapso": True,
+                    "datos_generados": datos_obtenidos,
+                },
+                mensaje=f"Colapso estructural: '{recipe.nombre}' se horneó de "
+                        f"emergencia por {record.puntos_totales} pts.",
+            )
         else:
             player.archivo_horneado_exitoso.append(record)
+            self._emit(
+                EventoTipo.HORNEADO,
+                jugador_idx=jugador_idx,
+                datos={
+                    "receta_nombre": recipe.nombre,
+                    "puntos_totales": record.puntos_totales,
+                    "fue_colapso": False,
+                    "datos_generados": datos_obtenidos,
+                },
+                mensaje=f"Horneado exitoso: '{recipe.nombre}' por "
+                        f"{record.puntos_totales} pts.",
+            )
             # Evaluar gatillo de fin de partida por quinta receta exitosa.
             # (PLAYER_STATE.md §3: len(archivo_horneado_exitoso) >= 5)
             if len(player.archivo_horneado_exitoso) >= 5:
                 self._partida_terminada = True
+                self._emit(
+                    EventoTipo.FIN_DE_PARTIDA,
+                    jugador_idx=jugador_idx,
+                    datos={"motivo": "quinta_receta"},
+                    mensaje=f"¡{player.nombre} horneó su quinta receta exitosa! "
+                            "La partida termina al concluir este día.",
+                )
 
         return record
 

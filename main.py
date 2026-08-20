@@ -30,6 +30,7 @@ from typing import List, Optional, Tuple
 
 from actions import ActionManager
 from engine import GameEngine, Market
+from events import EventoTipo, GameEvent
 from exceptions import FermentumError
 from models import (
     Environment,
@@ -715,17 +716,20 @@ def _renderizar_resultado_horneado(record: HorneadoRecord) -> None:
 
 def _reporte_fermentacion(
     players: List[Player],
-    snapshots_antes: List[dict],
+    eventos_dia: List[GameEvent],
     dia: int,
     temp: int,
 ) -> None:
     """
-    Imprime el «Reporte de Fermentación» tras la Fase III.
-    Compara el estado de las masas antes y después del avance automático.
+    Imprime el «Reporte de Fermentación» del día que acaba de concluir,
+    construido a partir del registro de eventos que el motor emitió durante
+    el día (events.py) — no de un diff de snapshots de estado antes/después
+    (ver GameEngine.eventos / GameEngine._emit).
 
     Args:
         players: Lista de jugadores.
-        snapshots_antes: Lista de dicts con estado previo de cada jugador.
+        eventos_dia: Eventos emitidos por el motor durante este día
+            (``engine.eventos[idx_antes_del_dia:]``).
         dia: Número de día que acaba de terminar.
         temp: Temperatura final tras aplicar la carta de clima.
     """
@@ -734,68 +738,58 @@ def _reporte_fermentacion(
     print(f"  Temperatura: {temp}°C  →  Avance base por turno: {avance_base} casillas\n")
 
     for i, player in enumerate(players):
-        snap = snapshots_antes[i]
+        eventos_jugador = [ev for ev in eventos_dia if ev.jugador_idx == i]
         print(_c(_C.BOLD, f"  {player.nombre}"))
 
-        # Masas horneadas automáticamente durante la Fase III (colapsos)
-        colapsos_nuevos = len(player.archivo_colapsos) - snap["n_colapsos"]
-        exitosos_nuevos = len(player.archivo_horneado_exitoso) - snap["n_exitosos"]
+        # Masas horneadas automáticamente durante la Fase III (colapsos),
+        # luego horneados exitosos (manuales o en zona óptima) — mismo orden
+        # que la implementación anterior basada en archivo_colapsos/archivo_horneado_exitoso.
+        for ev in eventos_jugador:
+            if ev.tipo == EventoTipo.HORNEADO and ev.datos["fue_colapso"]:
+                pts_str = _c(_C.RED, str(ev.datos["puntos_totales"]))
+                print(f"    ⚠ COLAPSO: '{ev.datos['receta_nombre']}'  →  {pts_str} pts  (auto-horneado)")
 
-        if colapsos_nuevos > 0:
-            records_colapso = player.archivo_colapsos[-colapsos_nuevos:]
-            for rec in records_colapso:
-                pts_str = _c(_C.RED, str(rec.puntos_totales))
-                print(f"    ⚠ COLAPSO: '{rec.recipe.nombre}'  →  {pts_str} pts  (auto-horneado)")
-
-        if exitosos_nuevos > 0:
-            records_exitosos = player.archivo_horneado_exitoso[-exitosos_nuevos:]
-            for rec in records_exitosos:
-                pts_str = _c(_C.GREEN, str(rec.puntos_totales))
-                print(f"    ✔ Horneado exitoso: '{rec.recipe.nombre}'  →  {pts_str} pts")
+        for ev in eventos_jugador:
+            if ev.tipo == EventoTipo.HORNEADO and not ev.datos["fue_colapso"]:
+                pts_str = _c(_C.GREEN, str(ev.datos["puntos_totales"]))
+                print(f"    ✔ Horneado exitoso: '{ev.datos['receta_nombre']}'  →  {pts_str} pts")
 
         # Desgaste de vitalidad
-        vit_antes = snap["vitalidad"]
-        vit_despues = player.vitalidad
-        delta_vit = vit_despues - vit_antes
-        delta_str = _c(_C.RED if delta_vit < 0 else _C.GREEN, f"{delta_vit:+d}")
-        print(f"    Vitalidad cultivo: {vit_antes} → {vit_despues}  ({delta_str})")
+        desgaste = next((ev for ev in eventos_jugador if ev.tipo == EventoTipo.DESGASTE), None)
+        if desgaste is not None:
+            vit_antes = desgaste.datos["vitalidad_antes"]
+            vit_despues = desgaste.datos["vitalidad_despues"]
+            delta_vit = vit_despues - vit_antes
+            delta_str = _c(_C.RED if delta_vit < 0 else _C.GREEN, f"{delta_vit:+d}")
+            print(f"    Vitalidad cultivo: {vit_antes} → {vit_despues}  ({delta_str})")
 
-        if player.en_estado_contaminacion and not snap["contaminado"]:
+        if any(ev.tipo == EventoTipo.CONTAMINACION for ev in eventos_jugador):
             _warn(f"  ¡{player.nombre} entró en estado de Contaminación!")
 
         # Masas activas restantes
         masas = player.masas_activas
         if masas:
+            avances_por_estacion = {
+                ev.datos["estacion_idx"]: ev.datos
+                for ev in eventos_jugador
+                if ev.tipo == EventoTipo.MASA_AVANZO
+            }
             for idx, slot in masas:
-                avance_real: Optional[int] = snap["posiciones"].get(idx)
-                if avance_real is not None:
-                    delta = slot.posicion_track - avance_real
+                avance = avances_por_estacion.get(idx)
+                if avance is not None:
                     print(f"    Est-{idx+1:02d}: '{slot.recipe.nombre}'  "
-                          f"pos {avance_real} → {slot.posicion_track}  "
-                          f"(avanzó +{delta})")
+                          f"pos {avance['posicion_antes']} → {avance['posicion_despues']}  "
+                          f"(avanzó +{avance['avance']})")
                 else:
-                    # Masa iniciada durante esta Fase II — no había snapshot previo
+                    # Defensivo: Fase III procesa todas las masas activas del
+                    # día, así que toda masa activa debería tener un evento
+                    # MASA_AVANZO. Respaldo por si ese invariante cambia.
                     print(f"    Est-{idx+1:02d}: '{slot.recipe.nombre}'  "
                           f"nueva → pos {slot.posicion_track}")
         else:
             print(_c(_C.DIM, "    Sin masas activas."))
 
         print()
-
-
-def _snapshot_jugador(player: Player) -> dict:
-    """Captura el estado relevante de un jugador antes de la Fase III."""
-    return {
-        "vitalidad": player.vitalidad,
-        "contaminado": player.en_estado_contaminacion,
-        "n_exitosos": len(player.archivo_horneado_exitoso),
-        "n_colapsos": len(player.archivo_colapsos),
-        "posiciones": {
-            i: slot.posicion_track
-            for i, slot in enumerate(player.estaciones_fermentacion)
-            if slot is not None
-        },
-    }
 
 
 # ===========================================================================
@@ -933,8 +927,8 @@ def main() -> None:
         dia = engine.environment.dia_actual
         _header(f"DÍA {dia} DE LABORATORIO")
 
-        # -- Capturar snapshots ANTES de la Fase III (para el reporte) --
-        snapshots: List[dict] = [_snapshot_jugador(p) for p in players]
+        # -- Índice del registro de eventos ANTES del día (para el reporte) --
+        idx_eventos_inicio = len(engine.eventos)
 
         # -- Ejecutar el día completo --
         # engine.ejecutar_dia_laboratorio orquesta:
@@ -952,10 +946,11 @@ def main() -> None:
             _err(f"Error crítico del motor: {exc}")
             break
 
-        # -- Reporte de Fermentación --
+        # -- Reporte de Fermentación (construido a partir del registro de
+        #    eventos del día, no de un diff de snapshots) --
         _reporte_fermentacion(
             players,
-            snapshots,
+            engine.eventos[idx_eventos_inicio:],
             dia=dia,
             temp=engine.environment.temperatura_actual,
         )
