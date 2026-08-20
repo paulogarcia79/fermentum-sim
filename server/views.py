@@ -20,11 +20,18 @@ Construye el dict JSON que se envía a los clientes HTTP a partir de
      un estado obsoleto (``fase_actual``, ``turno_nonce``,
      ``jugador_en_turno_idx``, ``jefe_investigador_idx``) — datos que viven
      en el motor, no en las entidades de dominio serializables.
+  3. **Disponibilidad de acciones**: ``acciones_disponibles``, una lista
+     por jugador (ver ``disponibilidad.py``) para que un cliente pueda
+     habilitar/deshabilitar sus propios botones sin reimplementar ninguna
+     regla — la vista es la misma para cualquier solicitante (no hay
+     información oculta entre jugadores en este juego), así que cada
+     cliente simplemente indexa por su propio ``player_index``.
 """
 from __future__ import annotations
 
 from typing import Any, Dict
 
+from disponibilidad import acciones_disponibles
 from engine import GameEngine
 from serialization import snapshot
 
@@ -48,5 +55,8 @@ def game_state_view(engine: GameEngine) -> Dict[str, Any]:
         engine.players.index(jugador_activo) if jugador_activo is not None else None
     )
     estado["jefe_investigador_idx"] = engine.players.index(jefe) if jefe is not None else None
+    estado["acciones_disponibles"] = [
+        acciones_disponibles(engine, jugador) for jugador in engine.players
+    ]
 
     return estado
