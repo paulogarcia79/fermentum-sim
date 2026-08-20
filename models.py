@@ -279,6 +279,31 @@ class HorneadoRecord:
         bonus = self.recipe.bono_sabor_pts if self.bono_sabor_aplicado else 0
         return self.puntos_base + bonus
 
+    @property
+    def puntos_bono_sabor(self) -> int:
+        """Puntos de Maestría otorgados por el Bono de Sabor (0 si no se aplicó)."""
+        return self.recipe.bono_sabor_pts if self.bono_sabor_aplicado else 0
+
+    @property
+    def datos_generados(self) -> int:
+        """Alias de ``datos_obtenidos`` (Datos de Investigación ganados al hornear)."""
+        return self.datos_obtenidos
+
+    @property
+    def zona_resultado(self) -> str:
+        """
+        Zona del track de fermentación en la que se resolvió este horneado.
+
+        Un colapso (automático o manual desde zona sobrefermentada) siempre
+        resuelve en "colapso", replicando la lógica de puntuación de
+        ``GameEngine._calcular_puntos_zona``.
+        """
+        if self.fue_colapso or self.recipe.esta_sobrefermentada(self.posicion_final):
+            return "colapso"
+        if self.recipe.esta_en_zona_optima(self.posicion_final):
+            return "optima"
+        return "baja"
+
 
 @dataclass
 class Technologies:
