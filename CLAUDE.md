@@ -6,12 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A simulation of **Fermentum**, a 1-4 player Eurogame about resource management and
 engine-building (fermenting bread), being ported from a single-process CLI to an online
-multiplayer web app: the Python rules engine is kept as-is and a thin HTTP layer is added on top,
-rather than porting the rules to another stack. The core simulation
-(`models.py`/`engine.py`/`actions.py`/`bootstrap.py`/`events.py`/`serialization.py`/`main.py`)
-has zero external dependencies — everything is stdlib Python 3.12. The optional `server/` package
-(headless HTTP backend) needs `starlette`+`uvicorn`, kept in its own `pyproject.toml` dependency
-group so a CLI-only checkout never has to install a web framework. `pytest`+`httpx` are dev-only.
+multiplayer web app: the Python rules engine is kept as-is and a thin HTTP layer + a Vue 3
+frontend are added on top, rather than porting the rules to another stack. The core simulation
+(`models.py`/`engine.py`/`actions.py`/`bootstrap.py`/`events.py`/`serialization.py`/
+`disponibilidad.py`/`main.py`) has zero external dependencies — everything is stdlib Python 3.12.
+The optional `server/` package (headless HTTP backend) needs `starlette`+`uvicorn`, kept in its
+own `pyproject.toml` dependency group so a CLI-only checkout never has to install a web
+framework. `pytest`+`httpx` are dev-only. `web/` (Vue 3 + TypeScript + Vite, see `web/README.md`)
+is a fully separate npm project with its own dependencies — nothing in the Python side depends on
+it or on Node being installed.
 
 The full game rules live in `context/*.md` and are the source of truth for behavior:
 
@@ -45,6 +48,13 @@ python3 test_actions_suite.py
 
 # Run the headless HTTP backend (single worker only — see server/app.py's concurrency note)
 .venv/bin/uvicorn server.app:app --host 127.0.0.1 --port 8000 --workers 1
+
+# Run the web client (separate terminal, needs the backend above already running) — see
+# web/README.md. vite.config.ts proxies /games/* to :8000 so no CORS setup is needed in dev.
+cd web && npm install && npm run dev
+
+# Type-check + production build the web client
+cd web && npm run build
 ```
 
 `tests/test_golden_game.py` is a characterization test: it plays a fully deterministic game
@@ -73,6 +83,15 @@ via Starlette's `TestClient` (real ASGI routing/JSON parsing, no direct calls in
 rejection, an action, both players passing to trigger the automatic Fase III → next-day Fase I
 transition, and polling `/events`. This was the Milestone 3 "de-risk the server before building
 any frontend" proof, kept as a permanent regression test rather than a throwaway script.
+
+`tests/test_disponibilidad.py` covers `disponibilidad.acciones_disponibles` — Day-1 defaults,
+0-PA disabling costed actions but not free ones, emergency-protocol availability by resource, and
+already-used actions reporting disabled.
+
+The `web/` frontend has no automated tests of its own yet (Milestone 4 shipped `vue-tsc -b`
+type-checking and a clean production build as its verification; there was no browser available to
+verify actual rendering/interaction in that session — treat the UI as type-check-clean but not
+yet visually confirmed until someone opens it).
 
 ## Architecture
 
@@ -137,6 +156,12 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   with no schema library because every domain dataclass already serializes cleanly and every
   domain enum is `str, Enum` (so e.g. `TipoHarina.BLANCA` is already a `str` and needs no
   conversion for `json.dumps`).
+- **`disponibilidad.py`** — `acciones_disponibles(engine, player) -> List[{id, habilitada, motivo}]`:
+  cheap per-action checks (PA, contamination gate, empty carpeta/stations, market emptiness, tech
+  already installed) so a remote client can enable/disable its own buttons without reimplementing
+  `ActionManager`'s rules. Not authoritative — an action reported "enabled" can still fail at
+  submit time for reasons this module doesn't check (e.g. exact recipe resource cost);
+  `ActionManager` remains the only real validation.
 - **`server/`** — the headless HTTP backend (Starlette + uvicorn; see `server/app.py`'s module
   docstring for the transport/concurrency reasoning). `sessions.py` holds `RoomManager`/
   `GameSession`/`Seat` — in-memory rooms, no accounts, a room code + a per-player secret token is
@@ -147,10 +172,26 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   turn-economy rule above deferred to this layer. `views.py` builds the client-facing state via
   `serialization.snapshot()` with the one redaction that matters — `Environment.mazo_clima` /
   `Market.mazo_recetas` (the hidden future decks) become counts, since everything else in this
-  game is public information. `app.py` wires it all into routes and maps the `FermentumError` /
+  game is public information — plus `disponibilidad.acciones_disponibles` per player and
+  `puntos_maestria_final`/`calcular_ranking_final` (both `@property`/methods, not dataclass
+  fields, so `dataclasses.asdict` wouldn't include them — computed here instead of in the
+  frontend, same reasoning as action availability: don't duplicate `CORE_MECHANICS.md` §3's
+  scoring formula in TypeScript). `app.py` wires it all into routes and maps the `FermentumError` /
   `server/errors.py` `RoomError` hierarchies to HTTP status codes via one `isinstance` walk.
   Nothing in `models.py`/`engine.py`/`actions.py`/`bootstrap.py`/`events.py`/`serialization.py`
   imports anything from `server/` — the dependency only goes one way.
+- **`web/`** — the frontend (Vue 3 + TypeScript + Vite; see `web/README.md`). One reactive store
+  (`src/store.ts`) updated wholesale from the server's full-snapshot responses — no Pinia/Vuex,
+  no optimistic updates (submit an action, wait for the response, render it; the server is the
+  only rules authority and a turn-based game has no latency budget worth spending complexity on).
+  `src/types.ts` hand-mirrors the `server/views.py` JSON shape — there's no shared schema, so a
+  backend field rename needs a matching edit there. `src/components/acciones/` has one component
+  per player action, mirroring `main.py`'s `_params_accion_*` functions, reading
+  `acciones_disponibles` from the state to decide what's clickable rather than reimplementing
+  `ActionManager`'s rules. The Phase III report renders as a mandatory dismissible modal
+  (`FermentationReportModal.vue`), not a log line — an automatic structural collapse can cost a
+  player several points with no action on their part, and they need to be told, not left to infer
+  it from state changing between polls.
 
 `agents.py` is currently an empty placeholder file.
 
