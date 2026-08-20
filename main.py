@@ -562,8 +562,10 @@ def _ejecutar_turno_jugador(engine: GameEngine, player: Player) -> None:
         opcion = input("  Tu elección (1 acción o P=pasar turno): ").strip().upper()
 
         if opcion == "P":
-            # El jugador cede todos sus PA restantes para el resto del día.
-            player.puntos_accion = 0
+            # El jugador cede todos sus PA restantes y renuncia a cualquier
+            # acción gratuita pendiente por el resto del día (engine.py:
+            # pasar_turno / _jugador_elegible).
+            engine.pasar_turno(player)
             print(_c(_C.DIM, "  → Turno abandonado. Se ceden los PA restantes.\n"))
             return
 

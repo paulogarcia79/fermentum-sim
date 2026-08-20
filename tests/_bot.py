@@ -37,7 +37,13 @@ def heuristic_turn(engine: "GameEngine", player: "Player", manager: "ActionManag
         except FermentumError:
             continue
 
-    player.puntos_accion = 0
+    # Sin acciones legales disponibles: pasar_turno() (no una asignacion
+    # directa a puntos_accion) es obligatorio aqui -- marca al jugador como
+    # renunciado por el resto del dia (engine.py:_jugador_elegible). Sin
+    # esto, un jugador sin PA ni recursos pero con accion_alimentar_usada
+    # o horas_extras_usadas aun en False seguiria siendo "elegible" para
+    # una proxima vuelta indefinidamente.
+    engine.pasar_turno(player)
 
 
 def _intentar_hornear(player: "Player", manager: "ActionManager") -> bool:

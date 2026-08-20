@@ -24,12 +24,14 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
+from enum import Enum
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from exceptions import (
     GameAlreadyOverError,
     InsufficientPlayersError,
     MarketSlotEmptyError,
+    PhaseViolationError,
 )
 from models import (
     ClimateCard,
@@ -328,6 +330,26 @@ class Market:
 TurnCallback = Callable[["GameEngine", Player], None]
 
 
+class Fase(str, Enum):
+    """
+    Fase actual del Día de Laboratorio, expuesta por ``GameEngine.fase_actual``.
+
+    Sostiene la máquina de estado de turno no bloqueante (``iniciar_dia``,
+    ``jugador_activo``, ``terminar_turno_actual``, ``pasar_turno``,
+    ``resolver_fase_III``) que coexiste con la ruta bloqueante original
+    (``ejecutar_dia_laboratorio`` con callback síncrono, usada por la CLI).
+    Ambas rutas comparten la misma implementación de ronda de turnos
+    (``_preparar_fase_II`` / ``_avanzar_a_siguiente_elegible``) para que no
+    puedan divergir en su comportamiento.
+    """
+
+    PREPARACION = "preparacion"
+    FASE_I = "fase_i"
+    FASE_II = "fase_ii"
+    FASE_III = "fase_iii"
+    TERMINADA = "terminada"
+
+
 class GameEngine:
     """
     Orquesta el bucle principal del juego Fermentum: el «Día de Laboratorio».
@@ -391,6 +413,13 @@ class GameEngine:
         self._jefe_investigador: Optional[Player] = None
         self._partida_terminada: bool = False
 
+        # Máquina de estado de turno no bloqueante (ver clase Fase).
+        self._fase: Fase = Fase.PREPARACION
+        self._turno_orden: List[int] = []  # Índices en self._players.
+        self._turno_cursor: int = 0
+        self._turno_nonce: int = 0
+        self._turno_pasado: Set[int] = set()  # Índices que ya ejecutaron pasar_turno() hoy.
+
     # ==================================================================
     # PROPIEDADES PÚBLICAS DE ESTADO (solo lectura)
     # ==================================================================
@@ -428,6 +457,40 @@ class GameEngine:
         """
         return self._partida_terminada
 
+    @property
+    def fase_actual(self) -> Fase:
+        """Fase actual del Día de Laboratorio (ver clase ``Fase``)."""
+        return self._fase
+
+    @property
+    def jugador_activo(self) -> Optional[Player]:
+        """
+        Jugador cuyo turno está activo en la Fase II actual, o ``None`` si
+        la Fase II no está en curso o su ronda de turnos ya se agotó (todos
+        los jugadores sin PA y sin acciones gratuitas pendientes).
+
+        Un jugador sigue siendo elegible para una visita mientras tenga
+        ``puntos_accion > 0`` **o** aún no haya usado su Acción A (Alimentar)
+        u Horas Extras este día — ambas acciones gratuitas no terminan el
+        turno de quien las usa, así que un jugador sin PA conserva su vuelta
+        exclusivamente para poder usarlas (salvo que ya haya pasado
+        explícitamente con ``pasar_turno``, lo que cede el resto del día).
+        """
+        if self._fase != Fase.FASE_II:
+            return None
+        return self._players[self._turno_orden[self._turno_cursor]]
+
+    @property
+    def turno_nonce(self) -> int:
+        """
+        Contador que se incrementa cada vez que se cierra una visita de
+        turno (``terminar_turno_actual`` / ``pasar_turno``). Sirve como
+        guarda de "sumisión obsoleta" para llamadores externos (p. ej. un
+        servidor) que necesitan detectar una acción enviada contra un
+        estado de turno que ya cambió.
+        """
+        return self._turno_nonce
+
     # ==================================================================
     # BUCLE PRINCIPAL
     # ==================================================================
@@ -443,7 +506,11 @@ class GameEngine:
         Ejecuta las tres fases de forma secuencial y estricta:
           1. :meth:`fase_I_ambiente`   — clima, jerarquía y refresco de mercado.
           2. :meth:`fase_II_accion`    — turnos intercalados de jugadores (round-robin).
-          3. :meth:`fase_III_fermentacion` — cinética biológica y desgaste.
+          3. :meth:`resolver_fase_III` — cinética biológica, desgaste y evaluación de fin.
+
+        Este método SIEMPRE se detiene al final del día actual (no encadena
+        automáticamente al Día siguiente) para preservar el punto de pausa
+        que la CLI usa entre días (main.py: reporte + "Pulsa Enter…").
 
         Incluso si se activa un gatillo de fin de partida durante la Fase II o III,
         el día en curso se completa íntegramente antes de retornar ``True``
@@ -476,11 +543,36 @@ class GameEngine:
         if on_fase_i_complete is not None:
             on_fase_i_complete(self)
         self.fase_II_accion(ejecutar_turno_jugador)
-        self.fase_III_fermentacion()
+        return self.resolver_fase_III()
 
-        fin: bool = self._evaluar_fin_de_juego()
-        self._environment.dia_actual += 1
-        return fin
+    def iniciar_dia(self) -> None:
+        """
+        Inicia el Día de Laboratorio actual sin bloquear a la espera de
+        turnos: ejecuta la Fase I (automática) y deja el motor listo con el
+        cursor de turno de Fase II posicionado en el primer jugador elegible.
+
+        Alternativa no bloqueante a ``ejecutar_dia_laboratorio`` para
+        llamadores externos (p. ej. un servidor) que necesitan resolver el
+        turno de cada jugador en una llamada independiente en vez de un
+        callback síncrono. Tras llamar a este método, se consulta
+        ``jugador_activo`` y se resuelven acciones hasta que sea ``None``,
+        y luego se llama a ``resolver_fase_III()``.
+
+        Comparte ``_preparar_fase_II()`` con ``fase_II_accion()`` (la ruta
+        bloqueante) para que ambas rutas no puedan divergir en el reset de
+        PA/orden de turno ni en la condición de elegibilidad.
+
+        Raises:
+            GameAlreadyOverError: Si la partida ya terminó.
+        """
+        if self._partida_terminada:
+            raise GameAlreadyOverError(
+                f"La partida ya terminó en el Día {self._environment.dia_actual - 1}. "
+                "No se pueden ejecutar más Días de Laboratorio."
+            )
+
+        self.fase_I_ambiente()
+        self._preparar_fase_II()
 
     # ==================================================================
     # FASE I: AMBIENTE
@@ -601,39 +693,195 @@ class GameEngine:
         ejecutar_turno_jugador: Optional[TurnCallback] = None,
     ) -> None:
         """
-        Fase II: Acción — turnos intercalados (round-robin) hasta agotar todos los PA
-        (CORE_MECHANICS.md §2).
+        Fase II: Acción — turnos intercalados (round-robin) hasta que ningún
+        jugador tenga PA ni acciones gratuitas pendientes (CORE_MECHANICS.md §2).
 
         Flujo:
-          1. Se reinician los Puntos de Acción de **todos** los jugadores (2 PA c/u).
-          2. Mientras algún jugador tenga PA > 0, se itera sobre el orden de turno.
-             Por cada jugador con PA > 0 se invoca el callback UNA SOLA VEZ;
-             el jugador ejecuta 1 acción (o pasa cediendo sus PA restantes).
-          3. El bucle termina cuando ningún jugador tiene PA disponibles.
+          1. ``_preparar_fase_II()`` reinicia PA/flags y calcula el orden de
+             turno (delegado, compartido con la ruta no bloqueante).
+          2. Mientras exista un ``jugador_activo``, se invoca el callback UNA
+             SOLA VEZ; si el callback no cerró la visita él mismo (p. ej.
+             llamando a ``pasar_turno``), se cierra aquí con
+             ``terminar_turno_actual()`` — una invocación de callback por
+             vuelta como máximo, igual que el comportamiento original.
+          3. El bucle termina cuando ``jugador_activo`` es ``None``.
+
+        Un jugador con 0 PA conserva su elegibilidad mientras aún no haya
+        usado su Acción A u Horas Extras este día (ver ``jugador_activo``);
+        el callback puede usar esa visita para ejecutar la acción gratuita
+        pendiente. Este es el único cambio de comportamiento observable
+        frente a la implementación original: antes, un jugador sin PA nunca
+        volvía a ser visitado, y por lo tanto no podía alimentar su cultivo
+        ni usar Horas Extras una vez agotados sus PA por otras vías.
 
         Args:
             ejecutar_turno_jugador: Callback ``(engine, player) -> None`` invocado
                 una vez por jugador por vuelta del round-robin. ``None`` durante
-                pruebas de integración del bucle de fases.
+                pruebas de integración del bucle de fases (equivalente a una
+                Fase II sin jugadores: la ronda se da por agotada de inmediato).
+        """
+        self._preparar_fase_II()
+
+        if ejecutar_turno_jugador is None:
+            self._fase = Fase.FASE_III
+            return
+
+        while (player := self.jugador_activo) is not None:
+            nonce_antes = self._turno_nonce
+            ejecutar_turno_jugador(self, player)
+            # Si el callback ya cerró la visita él mismo (llamando a
+            # terminar_turno_actual()/pasar_turno() directamente -- p. ej.
+            # la Acción P de la CLI, ver main.py), el nonce ya cambió y no
+            # se debe cerrar una segunda vez.
+            if self._turno_nonce == nonce_antes:
+                self.terminar_turno_actual()
+
+    # ==================================================================
+    # MÁQUINA DE ESTADO DE TURNO (API no bloqueante, Fase II)
+    # ==================================================================
+
+    def _preparar_fase_II(self) -> None:
+        """
+        Prepara el estado de turno para la Fase II del día actual: resetea
+        los indicadores de acciones gratuitas usadas y los PA de todos los
+        jugadores, calcula el orden de turno del día (Investigador Jefe
+        primero), y posiciona el cursor en el primer jugador elegible.
+
+        Compartido por ``fase_II_accion()`` (ruta bloqueante, usada por la
+        CLI) e ``iniciar_dia()`` (ruta de estado explícito) para que ambas
+        no puedan divergir en esta lógica.
         """
         orden: List[Player] = self._orden_de_turno()
 
-        # Paso 0: Reiniciar flag de Acción A para todos los jugadores.
         for player in orden:
             player.accion_alimentar_usada = False
-
-        # Paso 1: Asignar 2 PA a todos antes de iniciar el round-robin.
         for player in orden:
             player.resetear_puntos_accion()
 
-        if ejecutar_turno_jugador is None:
-            return
+        self._turno_orden = [self._players.index(p) for p in orden]
+        self._turno_cursor = 0
+        self._turno_pasado = set()
+        self._avanzar_a_siguiente_elegible(desde=0, incluir_actual=True)
 
-        # Paso 2: Round-robin hasta que todos tengan 0 PA.
-        while any(p.puntos_accion > 0 for p in orden):
-            for player in orden:
-                if player.puntos_accion > 0:
-                    ejecutar_turno_jugador(self, player)
+    def _jugador_elegible(self, indice: int) -> bool:
+        """
+        True si el jugador en ``self._players[indice]`` conserva una visita
+        pendiente en la ronda de Fase II actual.
+
+        Un jugador que ejecutó ``pasar_turno`` este día nunca vuelve a ser
+        elegible (cede el resto del día, incluidas sus acciones gratuitas
+        pendientes). En caso contrario, es elegible si tiene PA disponibles
+        o si aún no ha usado Acción A u Horas Extras hoy.
+        """
+        if indice in self._turno_pasado:
+            return False
+        player = self._players[indice]
+        return (
+            player.puntos_accion > 0
+            or not player.accion_alimentar_usada
+            or not player.horas_extras_usadas
+        )
+
+    def _avanzar_a_siguiente_elegible(self, desde: int, incluir_actual: bool) -> None:
+        """
+        Busca, a partir de la posición ``desde`` en ``self._turno_orden``, el
+        siguiente jugador elegible, dando como máximo una vuelta completa.
+
+        Si ``incluir_actual`` es True, la posición ``desde`` misma se
+        considera candidata (usado al preparar la Fase II); si es False, la
+        búsqueda arranca en ``desde + 1`` (usado al cerrar la visita de un
+        jugador, para no re-seleccionarlo salvo que dé la vuelta completa y
+        siga siendo el único elegible).
+
+        Actualiza ``self._turno_cursor`` a la posición encontrada y deja
+        ``self._fase`` en ``FASE_II``; si nadie es elegible, la ronda de
+        Fase II quedó agotada y ``self._fase`` pasa a ``FASE_III``.
+        """
+        n = len(self._turno_orden)
+        inicio = desde if incluir_actual else desde + 1
+        for offset in range(n):
+            candidato = (inicio + offset) % n
+            if self._jugador_elegible(self._turno_orden[candidato]):
+                self._turno_cursor = candidato
+                self._fase = Fase.FASE_II
+                return
+        self._fase = Fase.FASE_III
+
+    def terminar_turno_actual(self) -> None:
+        """
+        Cierra la visita del jugador activo y avanza el cursor de turno al
+        siguiente jugador elegible (ver ``_avanzar_a_siguiente_elegible``).
+        Si ya no queda ningún jugador elegible, la Fase II termina y la fase
+        pasa a ``FASE_III``.
+
+        Debe llamarse exactamente una vez por cada visita completada — tras
+        una acción (gratuita o no) o tras un pase explícito
+        (``pasar_turno``, que ya delega en este método).
+
+        Raises:
+            PhaseViolationError: Si la Fase II del día actual no está en
+                curso (p. ej. se llama sin haber preparado la Fase II, o
+                después de que ya terminó).
+        """
+        if self._fase != Fase.FASE_II:
+            raise PhaseViolationError(
+                "terminar_turno_actual() solo puede llamarse durante la Fase II "
+                f"en curso. Fase actual: {self._fase.value!r}."
+            )
+        self._turno_nonce += 1
+        self._avanzar_a_siguiente_elegible(desde=self._turno_cursor, incluir_actual=False)
+
+    def pasar_turno(self, player: Player) -> None:
+        """
+        Pasa el turno del jugador activo: cede todos los PA restantes y
+        renuncia también a cualquier acción gratuita (Acción A, Horas
+        Extras) que aún no haya usado este día — a diferencia de agotar los
+        PA por otras vías, un pase explícito es una renuncia total al resto
+        del día, no solo a las acciones de costo en PA (ver
+        ``_jugador_elegible``). Equivalente a la opción "P" de la CLI
+        (``main.py:_ejecutar_turno_jugador``).
+
+        Args:
+            player: Debe ser el jugador actualmente activo
+                (``self.jugador_activo``); ver esa propiedad.
+        """
+        player.puntos_accion = 0
+        self._turno_pasado.add(self._turno_orden[self._turno_cursor])
+        self.terminar_turno_actual()
+
+    def resolver_fase_III(self) -> bool:
+        """
+        Resuelve la Fase III (Fermentación): avance de masas, colapsos
+        automáticos y desgaste metabólico (``fase_III_fermentacion``),
+        evalúa el fin de partida e incrementa el contador de días.
+
+        Deja el motor en ``Fase.TERMINADA`` si la partida concluyó, o de
+        vuelta en ``Fase.PREPARACION`` — listo para que un llamador externo
+        invoque ``iniciar_dia()`` (o ``ejecutar_dia_laboratorio``) para el
+        siguiente Día de Laboratorio. A propósito NO encadena
+        automáticamente la Fase I del día siguiente, para no romper la
+        pausa/reporte por día que usa la CLI entre días.
+
+        Returns:
+            True si la partida terminó con este día, False si el motor
+            quedó listo para iniciar un nuevo día.
+
+        Raises:
+            PhaseViolationError: Si la Fase II del día actual aún no ha
+                concluido (``jugador_activo`` no es ``None``).
+        """
+        if self._fase != Fase.FASE_III:
+            raise PhaseViolationError(
+                "resolver_fase_III() solo puede llamarse cuando la Fase II del "
+                f"día actual concluyó. Fase actual: {self._fase.value!r}."
+            )
+
+        self.fase_III_fermentacion()
+        fin: bool = self._evaluar_fin_de_juego()
+        self._environment.dia_actual += 1
+
+        self._fase = Fase.TERMINADA if fin else Fase.PREPARACION
+        return fin
 
     # ==================================================================
     # FASE III: FERMENTACIÓN
