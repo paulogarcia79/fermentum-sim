@@ -36,6 +36,7 @@ entre validar y mutar.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 from typing import Any, AsyncIterator, Dict, List, Tuple, Type
 
@@ -58,9 +59,12 @@ from exceptions import (
     ResourceDeficitError,
     RuleViolationError,
 )
+from server import persistence
 from server.commands import resolver_comando
 from server.errors import (
+    NoActiveTurnError,
     NotHostError,
+    PlayerNotInactiveError,
     RoomError,
     RoomFullError,
     RoomNotFoundError,
@@ -92,6 +96,8 @@ _MAPEO_ERRORES: List[Tuple[Type[Exception], int, str]] = [
     (RoomNotJoinableError, 409, "sala_no_disponible"),
     (NotHostError, 403, "no_es_host"),
     (UnknownPlayerTokenError, 401, "token_desconocido"),
+    (NoActiveTurnError, 409, "sin_turno_activo"),
+    (PlayerNotInactiveError, 409, "jugador_no_inactivo"),
     (RoomError, 400, "error_de_sala"),  # respaldo genérico
 ]
 
@@ -190,6 +196,40 @@ def _evento_a_dict(ev: GameEvent) -> Dict[str, Any]:
 def _formatear_sse(seq: int, evento: GameEvent) -> str:
     payload = json.dumps(_evento_a_dict(evento), ensure_ascii=False)
     return f"id: {seq}\ndata: {payload}\n\n"
+
+
+INTERVALO_LIMPIEZA_SEGUNDOS = 10 * 60
+"""Cada cuánto corre RoomManager.limpiar_inactivas() en segundo plano (Milestone 6)."""
+
+
+def _crear_lifespan(salas: RoomManager):
+    """
+    Construye el context manager de ciclo de vida de la app (Milestone 6):
+    al arrancar, recarga las salas persistidas en disco
+    (``server/persistence.py``); mientras corre, limpia periódicamente las
+    salas sin actividad reciente (``RoomManager.limpiar_inactivas``); al
+    apagar, cancela esa tarea de limpieza en segundo plano con limpieza.
+    """
+
+    @contextlib.asynccontextmanager
+    async def lifespan(_app: Starlette) -> AsyncIterator[None]:
+        for sesion in persistence.cargar_todas():
+            salas.restaurar(sesion)
+
+        async def limpiar_periodicamente() -> None:
+            while True:
+                await asyncio.sleep(INTERVALO_LIMPIEZA_SEGUNDOS)
+                salas.limpiar_inactivas()
+
+        tarea = asyncio.create_task(limpiar_periodicamente())
+        try:
+            yield
+        finally:
+            tarea.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await tarea
+
+    return lifespan
 
 
 def crear_app() -> Starlette:
@@ -380,6 +420,7 @@ def crear_app() -> Starlette:
                 manager = ActionManager(engine)
                 resolver_comando(engine, manager, jugador, accion, params)
                 _avanzar_fase_si_corresponde(sesion)
+                salas.guardar(sesion)
                 vista = game_state_view(engine)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
@@ -398,6 +439,31 @@ def crear_app() -> Starlette:
                 jugador = engine.players[asiento.player_index]
                 engine.pasar_turno(jugador)
                 _avanzar_fase_si_corresponde(sesion)
+                salas.guardar(sesion)
+                vista = game_state_view(engine)
+        except (FermentumError, RoomError) as exc:
+            return _respuesta_error(exc)
+        return JSONResponse(vista)
+
+    async def forzar_pase(request: Request) -> JSONResponse:
+        """
+        Cualquier jugador sentado en la sala (no hace falta ser el host, ni
+        el jugador inactivo) puede pedir que se pase el turno del jugador
+        activo si lleva ``UMBRAL_INACTIVIDAD_SEGUNDOS`` sin ninguna
+        petición autenticada — destraba una partida cuando alguien se
+        desconectó a mitad de su turno, en vez de dejarla congelada.
+        """
+        room_id = request.path_params["room_id"]
+        try:
+            token = _requerir_token(request)
+            sesion = salas.obtener(room_id)
+            sesion.asiento_por_token(token)  # valida que quien pide sea un jugador de la sala
+            engine = _requerir_partida_iniciada(sesion)
+
+            async with sesion.lock:
+                sesion.forzar_pase_por_inactividad()
+                _avanzar_fase_si_corresponde(sesion)
+                salas.guardar(sesion)
                 vista = game_state_view(engine)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
@@ -414,7 +480,9 @@ def crear_app() -> Starlette:
             Route("/games/{room_id}/events/stream", flujo_eventos, methods=["GET"]),
             Route("/games/{room_id}/actions", enviar_accion, methods=["POST"]),
             Route("/games/{room_id}/pass", pasar, methods=["POST"]),
-        ]
+            Route("/games/{room_id}/force-pass", forzar_pase, methods=["POST"]),
+        ],
+        lifespan=_crear_lifespan(salas),
     )
 
 

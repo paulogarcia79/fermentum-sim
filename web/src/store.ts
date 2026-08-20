@@ -185,3 +185,20 @@ export async function pasar(): Promise<void> {
     store.cargando = false
   }
 }
+
+/** Milestone 6: cualquier jugador puede forzar el pase del jugador activo
+ * si lleva mucho tiempo inactivo. El servidor decide si corresponde --
+ * este cliente no intenta llevar la cuenta de cuánto tiempo pasó, solo
+ * ofrece el botón y muestra el error del servidor si todavía es pronto. */
+export async function forzarPase(): Promise<void> {
+  if (!store.sesion) return
+  store.cargando = true
+  try {
+    aplicarEstado(await api.forzarPase(store.sesion.roomId, store.sesion.token))
+    store.error = null
+  } catch (e) {
+    store.error = e instanceof Error ? e.message : String(e)
+  } finally {
+    store.cargando = false
+  }
+}

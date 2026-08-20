@@ -18,15 +18,19 @@ from __future__ import annotations
 
 import asyncio
 import secrets
+import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from bootstrap import create_game
 from engine import GameEngine
 from events import GameEvent
+from server import persistence
 from server.errors import (
+    NoActiveTurnError,
     NotHostError,
+    PlayerNotInactiveError,
     RoomFullError,
     RoomNotFoundError,
     RoomNotJoinableError,
@@ -39,6 +43,24 @@ MAX_JUGADORES = 4
 # sala de viva voz o por chat).
 _ALFABETO_CODIGO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 _LONGITUD_CODIGO = 6
+
+UMBRAL_INACTIVIDAD_SEGUNDOS = 90
+"""
+Tiempo sin interacción (ver ``Seat.last_seen``) tras el cual cualquier
+jugador sentado puede forzar el pase del turno activo
+(``GameSession.forzar_pase_por_inactividad``). Más generoso que el "60s"
+de referencia del plan original porque el polling de respaldo del cliente
+va cada 4s y ``EventSource`` reconecta solo — 90s de silencio total es una
+señal mucho más fuerte de desconexión real que de un simple parpadeo de red.
+"""
+
+# Umbrales de limpieza de salas inactivas (RoomManager.limpiar_inactivas):
+# una sala en LOBBY que nadie inicia se limpia rápido; una partida EN_CURSO
+# se conserva mucho más tiempo (una sesión real puede durar horas); una
+# partida TERMINADA se conserva solo lo justo para ver el resultado final.
+UMBRAL_LIMPIEZA_LOBBY_SEGUNDOS = 30 * 60
+UMBRAL_LIMPIEZA_EN_CURSO_SEGUNDOS = 4 * 60 * 60
+UMBRAL_LIMPIEZA_TERMINADA_SEGUNDOS = 60 * 60
 
 
 class RoomStatus(str, Enum):
@@ -56,6 +78,11 @@ class Seat:
     player_index: int
     nombre: str
     token: str
+    last_seen: float = field(default_factory=time.time)
+    """Marca de tiempo de la última petición autenticada de este jugador
+    (actualizada en ``GameSession.asiento_por_token``, el punto de paso
+    obligado de toda ruta autenticada). Usada por ``forzar_pase_por_inactividad``
+    y por ``RoomManager.limpiar_inactivas``."""
 
 
 @dataclass
@@ -89,10 +116,34 @@ class GameSession:
     engine: Optional[GameEngine] = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     suscriptores: List["asyncio.Queue[GameEvent]"] = field(default_factory=list)
+    creado_en: float = field(default_factory=time.time)
+
+    def __getstate__(self) -> Dict[str, Any]:
+        """
+        Excluye ``lock`` y ``suscriptores`` de la persistencia
+        (``server/persistence.py``, Milestone 6): un ``asyncio.Lock`` o una
+        cola de suscriptor SSE activos no tienen ningún sentido fuera del
+        proceso/event loop que los creó — una conexión SSE de un cliente
+        no sobrevive a un reinicio del servidor de todas formas.
+        """
+        estado = self.__dict__.copy()
+        estado.pop("lock", None)
+        estado.pop("suscriptores", None)
+        return estado
+
+    def __setstate__(self, estado: Dict[str, Any]) -> None:
+        """Contraparte de ``__getstate__``: reconstruye un lock y una lista
+        de suscriptores nuevos y vacíos al restaurar desde disco."""
+        self.__dict__.update(estado)
+        self.lock = asyncio.Lock()
+        self.suscriptores = []
 
     def asiento_por_token(self, token: str) -> Seat:
         """
-        Resuelve un token de jugador a su asiento.
+        Resuelve un token de jugador a su asiento, y marca el momento de
+        esta interacción (``Seat.last_seen``) — todo llamador autenticado
+        pasa por aquí, así que es el único punto donde hace falta
+        actualizarlo.
 
         Raises:
             UnknownPlayerTokenError: Si ningún asiento de esta sala tiene
@@ -100,6 +151,7 @@ class GameSession:
         """
         for asiento in self.seats:
             if secrets.compare_digest(asiento.token, token):
+                asiento.last_seen = time.time()
                 return asiento
         raise UnknownPlayerTokenError(
             f"Token de jugador desconocido para la sala {self.id!r}."
@@ -110,6 +162,36 @@ class GameSession:
         SSE conectado a esta sala ahora mismo."""
         for cola in self.suscriptores:
             cola.put_nowait(evento)
+
+    def forzar_pase_por_inactividad(self) -> None:
+        """
+        Pasa el turno del jugador activo si lleva al menos
+        ``UMBRAL_INACTIVIDAD_SEGUNDOS`` sin ninguna petición autenticada —
+        pensado para que cualquier jugador sentado (no solo el host) pueda
+        destrabar una partida cuando otro se desconectó a mitad de su turno,
+        en vez de dejar la sala congelada indefinidamente.
+
+        El llamador (``server/app.py``) es responsable de sostener
+        ``self.lock`` mientras invoca este método, igual que para
+        cualquier otra mutación del motor.
+
+        Raises:
+            NoActiveTurnError: No hay ningún turno activo que forzar.
+            PlayerNotInactiveError: El jugador activo todavía no lleva
+                suficiente tiempo inactivo.
+        """
+        if self.engine is None or self.engine.jugador_activo is None:
+            raise NoActiveTurnError("No hay ningún turno activo que forzar.")
+
+        jugador = self.engine.jugador_activo
+        asiento = self.seats[self.engine.players.index(jugador)]
+        inactividad = time.time() - asiento.last_seen
+        if inactividad < UMBRAL_INACTIVIDAD_SEGUNDOS:
+            raise PlayerNotInactiveError(
+                f"'{asiento.nombre}' lleva {inactividad:.0f}s inactivo; "
+                f"se requieren {UMBRAL_INACTIVIDAD_SEGUNDOS}s para forzar el pase."
+            )
+        self.engine.pasar_turno(jugador)
 
 
 class RoomManager:
@@ -125,6 +207,7 @@ class RoomManager:
         asiento = Seat(player_index=0, nombre=nombre_host, token=secrets.token_urlsafe(32))
         sesion.seats.append(asiento)
         self._salas[room_id] = sesion
+        self.guardar(sesion)
         return sesion, asiento
 
     def obtener(self, room_id: str) -> GameSession:
@@ -156,6 +239,7 @@ class RoomManager:
             token=secrets.token_urlsafe(32),
         )
         sesion.seats.append(asiento)
+        self.guardar(sesion)
         return sesion, asiento
 
     def iniciar(self, room_id: str, host_token: str) -> GameSession:
@@ -180,7 +264,47 @@ class RoomManager:
         sesion.engine = create_game(nombres, event_sink=sesion.difundir_evento)
         sesion.engine.iniciar_dia()
         sesion.status = RoomStatus.EN_CURSO
+        self.guardar(sesion)
         return sesion
+
+    def guardar(self, sesion: GameSession) -> None:
+        """Persiste el estado actual de una sala en disco (ver
+        ``server/persistence.py``). No lanza excepciones — un fallo de
+        persistencia no debe tumbar la petición que ya mutó el estado en
+        memoria correctamente."""
+        persistence.guardar(sesion)
+
+    def restaurar(self, sesion: GameSession) -> None:
+        """Reinserta una sala recuperada de disco al arrancar el proceso
+        (ver ``server/app.py:crear_app``)."""
+        self._salas[sesion.id] = sesion
+
+    def limpiar_inactivas(self) -> List[str]:
+        """
+        Elimina (de memoria y de disco) las salas sin actividad reciente.
+        Pensado para correr periódicamente en segundo plano (ver
+        ``server/app.py``'s lifespan) — no se llama desde ninguna ruta HTTP.
+
+        Returns:
+            Los códigos de las salas eliminadas.
+        """
+        ahora = time.time()
+        umbrales = {
+            RoomStatus.LOBBY: UMBRAL_LIMPIEZA_LOBBY_SEGUNDOS,
+            RoomStatus.EN_CURSO: UMBRAL_LIMPIEZA_EN_CURSO_SEGUNDOS,
+            RoomStatus.TERMINADA: UMBRAL_LIMPIEZA_TERMINADA_SEGUNDOS,
+        }
+        eliminadas: List[str] = []
+        for room_id, sesion in list(self._salas.items()):
+            ultima_actividad = max(
+                (asiento.last_seen for asiento in sesion.seats), default=sesion.creado_en
+            )
+            if ahora - ultima_actividad > umbrales[sesion.status]:
+                eliminadas.append(room_id)
+        for room_id in eliminadas:
+            del self._salas[room_id]
+            persistence.borrar(room_id)
+        return eliminadas
 
     def _generar_codigo_unico(self) -> str:
         while True:

@@ -39,3 +39,14 @@ class NotHostError(RoomError):
 class UnknownPlayerTokenError(RoomError):
     """Se lanza cuando un token de jugador no corresponde a ningún asiento
     de la sala solicitada."""
+
+
+class NoActiveTurnError(RoomError):
+    """Se lanza al intentar forzar un pase cuando no hay ningún turno
+    activo que forzar (p. ej. la Fase II ya terminó)."""
+
+
+class PlayerNotInactiveError(RoomError):
+    """Se lanza al intentar forzar el pase de un jugador que todavía no
+    lleva suficiente tiempo inactivo (ver ``server/sessions.py``:
+    ``UMBRAL_INACTIVIDAD_SEGUNDOS``)."""

@@ -90,3 +90,11 @@ export function enviarAccion(
 export function pasarTurno(roomId: string, token: string): Promise<GameStateView> {
   return pedir(`/games/${roomId}/pass`, conToken(token, { method: 'POST' }))
 }
+
+/** Milestone 6: cualquier jugador sentado puede pedir esto para destrabar
+ * la partida si el jugador activo lleva mucho tiempo sin interactuar
+ * (server/sessions.py:UMBRAL_INACTIVIDAD_SEGUNDOS). El servidor rechaza
+ * con 409 "jugador_no_inactivo" si todavía no pasó suficiente tiempo. */
+export function forzarPase(roomId: string, token: string): Promise<GameStateView> {
+  return pedir(`/games/${roomId}/force-pass`, conToken(token, { method: 'POST' }))
+}
