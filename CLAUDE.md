@@ -5,8 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 A pure-Python, CLI-driven simulation of **Fermentum**, a 1-4 player Eurogame about resource
-management and engine-building (fermenting bread). There is no build system, no package
-manager, and no external dependencies — everything is stdlib Python 3.12.
+management and engine-building (fermenting bread). The runtime code (`models.py`/`engine.py`/
+`actions.py`/`main.py`) has zero external dependencies — everything is stdlib Python 3.12.
+`pyproject.toml` declares `pytest` as a dev-only dependency for the `tests/` suite.
 
 The full game rules live in `context/*.md` and are the source of truth for behavior:
 
@@ -22,23 +23,33 @@ defines the exact numbers, thresholds, and edge cases the code must match.
 
 ## Commands
 
-There is no test runner, linter, or build tool configured (no `pytest`, `requirements.txt`, or
-`pyproject.toml`). Everything runs with the system Python 3.
+Runtime has zero dependencies; `pytest` is a dev-only dependency declared in `pyproject.toml`.
+Use the project venv at `.venv/` (create with `python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"`
+if it doesn't exist yet).
 
 ```bash
 # Run the interactive CLI game
 python3 main.py
 
-# Run the integration test suite (plain script, not pytest — asserts via print + sys.exit code)
+# Run the legacy integration suite (plain script, not pytest — asserts via print + sys.exit code)
 python3 test_actions_suite.py
+
+# Run the pytest suite (tests/ only — pytest is scoped there via testpaths so it never
+# collects test_actions_suite.py, whose top-level sys.exit() would abort a pytest session)
+.venv/bin/pytest
 ```
 
+`tests/test_golden_game.py` is a characterization test: it plays a fully deterministic game
+(seeded global RNG, two scripted "bot" players from `tests/_bot.py`) through several full
+Fase I/II/III cycles using the current `GameEngine.ejecutar_dia_laboratorio` blocking-callback
+API, and diffs the final state against `tests/golden/day4_2p_seed1234.json`. Its purpose is to
+give behavior-preserving refactors of `engine.py` (e.g. a turn-state-machine refactor) a
+regression baseline to check against, since none existed before. If a deliberate rules change
+alters this golden game's outcome, regenerate the snapshot rather than hand-editing it.
+
 `test_actions_suite.py` is a hand-rolled suite (`check()` / `xraises()` helpers) that exercises
-every `ActionManager` action's happy path and failure path. It is currently **out of sync** with
-`actions.py`/`models.py` in places — e.g. it assigns `p1.reserva_harina = [TipoHarina.BLANCA]`
-(a list) where `Player.reserva_harina` is actually a `Dict[str, int]` (see `models.py`), so the
-very first check fails on a fresh run. Don't assume the suite is green; check whether a failure
-is a real regression or a pre-existing mismatch before "fixing" production code to match it.
+every `ActionManager` action's happy path and failure path (60/60 passing). It's a standalone
+script, not pytest — run it directly.
 
 ## Architecture
 
