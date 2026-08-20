@@ -55,6 +55,10 @@ script, not pytest — run it directly.
 `terminar_turno_actual`/`pasar_turno` API directly (no callback), including a headless
 multi-day driver and targeted tests for the turn-economy rule above.
 
+`tests/test_events.py` covers `GameEngine`'s event emission (see Architecture below): a full
+day's global + per-player events, a manual bake vs. an automatic collapse, the
+contamination-transition-only rule, and `event_sink` forwarding.
+
 ## Architecture
 
 Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the four modules:
@@ -96,6 +100,19 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   output helpers), prompting (`_pedir_int`, `_pedir_opcion`, `_params_accion_*`), and the
   `main()` entrypoint / `setup_game()`. Contains no rules logic — it calls into `engine`/
   `actions` and displays the result.
+- **`events.py`** — `GameEvent`/`EventoTipo`/`EventSink`: a structured log of automatic,
+  no-player-input state changes (chief-researcher assignment, climate reveal, market refresh,
+  mass advance, structural collapse, every bake — manual or auto-collapse, both go through
+  `resolver_horneado` — metabolic decay, contamination onset, game over with its reason).
+  `GameEngine` always keeps the full log (`engine.eventos`) and optionally forwards each event,
+  at emission time, to an injected `event_sink` (e.g. for a future server to broadcast to
+  clients). `main.py`'s `_reporte_fermentacion` is built entirely from
+  `engine.eventos[since_index:]` — there's no before/after snapshot-diffing anywhere in the
+  codebase anymore; an automatic event (like a structural collapse costing a player several
+  points with no action on their part) is always something the engine explicitly said happened,
+  not something a caller has to infer from a state diff. When adding new automatic engine
+  behavior, emit an event for it at the point of mutation rather than expecting a caller to
+  reconstruct it from before/after state.
 
 `agents.py` is currently an empty placeholder file.
 
