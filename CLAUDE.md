@@ -1,0 +1,92 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this is
+
+A pure-Python, CLI-driven simulation of **Fermentum**, a 1-4 player Eurogame about resource
+management and engine-building (fermenting bread). There is no build system, no package
+manager, and no external dependencies — everything is stdlib Python 3.12.
+
+The full game rules live in `context/*.md` and are the source of truth for behavior:
+
+- `context/ARCHITECTURE.md` — coding standards the code must follow (see below)
+- `context/CORE_MECHANICS.md` — the Day/Phase loop, fermentation math, endgame/scoring
+- `context/ACTIONS_REGISTRY.md` — every player action, its PA/resource cost, and effects
+- `context/PLAYER_STATE.md` — the `Player` data schema and per-player setup/validation rules
+- `context/CLIMATE_LOGIC.md` — the climate deck and the Phase III fermentation-advance formula
+- `context/RECIPE_DATABASE.md` — the recipe catalog (hydration, zones, scoring)
+
+When implementing or changing game logic, check the relevant `context/*.md` file first — it
+defines the exact numbers, thresholds, and edge cases the code must match.
+
+## Commands
+
+There is no test runner, linter, or build tool configured (no `pytest`, `requirements.txt`, or
+`pyproject.toml`). Everything runs with the system Python 3.
+
+```bash
+# Run the interactive CLI game
+python3 main.py
+
+# Run the integration test suite (plain script, not pytest — asserts via print + sys.exit code)
+python3 test_actions_suite.py
+```
+
+`test_actions_suite.py` is a hand-rolled suite (`check()` / `xraises()` helpers) that exercises
+every `ActionManager` action's happy path and failure path. It is currently **out of sync** with
+`actions.py`/`models.py` in places — e.g. it assigns `p1.reserva_harina = [TipoHarina.BLANCA]`
+(a list) where `Player.reserva_harina` is actually a `Dict[str, int]` (see `models.py`), so the
+very first check fails on a fresh run. Don't assume the suite is green; check whether a failure
+is a real regression or a pre-existing mismatch before "fixing" production code to match it.
+
+## Architecture
+
+Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the four modules:
+
+- **`models.py`** — pure data: `Player`, `Recipe`, `ClimateCard`, `FermentationSlot`,
+  `HorneadoRecord`, `Technologies`, `Environment`, plus the `RECIPE_CATALOG` /
+  `build_climate_deck()` constant data. No game-flow logic lives here beyond small mutators
+  (e.g. `Player.ajustar_vitalidad`) that enforce the [0, 6] clamps.
+- **`engine.py`** — turn/phase orchestration: `GameEngine` runs the three-phase Day of Lab loop
+  (`fase_I_ambiente` → `fase_II_accion` → `fase_III_fermentacion`), plus `Market` (recipe/supply
+  market with refresh protocol) and endgame/scoring (`resolver_horneado`,
+  `calcular_ranking_final`).
+- **`actions.py`** — `ActionManager`, one `accion_X_*` method per action in
+  `ACTIONS_REGISTRY.md` (A: Alimentar, B: Iniciar Receta, C: Adquirir Insumos, D: Implementar
+  Mejora, E: Técnica/Pliegues, F: Hornear, G: Investigar Protocolo, H: Re-cultivo Manual, I:
+  Inóculo de Emergencia, plus Simposio Técnico and Horas Extras). Every method validates
+  preconditions and raises before mutating state (fail-fast).
+- **`main.py`** — CLI only: rendering (`mostrar_estado_jugador`, `mostrar_mercado`, colored
+  output helpers), prompting (`_pedir_int`, `_pedir_opcion`, `_params_accion_*`), and the
+  `main()` entrypoint / `setup_game()`. Contains no rules logic — it calls into `engine`/
+  `actions` and displays the result.
+
+`agents.py` is currently an empty placeholder file.
+
+### Error handling
+
+All game-rule failures raise semantic exceptions from `exceptions.py` (never bare `Exception`,
+`ValueError`, or a boolean return):
+
+- `FermentumError` — base class for `except FermentumError` catch-all
+- `ResourceDeficitError` → `NotEnoughActionPointsError`, `MissingResourceError`
+- `RuleViolationError` → `StationBlockedError`, `CarpetaFullError`
+- `InvalidActionError` — malformed/invalid call parameters
+- Engine-flow errors: `PhaseViolationError`, `GameAlreadyOverError`,
+  `InsufficientPlayersError`, `MarketSlotEmptyError`
+
+`ActionManager` methods validate every precondition (PA, resources, station/carpeta limits,
+contamination state) via `_require_*` helpers and raise before touching state — never partially
+apply an action.
+
+### Core game loop, in one paragraph
+
+Each "Día de Laboratorio" is Phase I (reveal climate card, adjust `temperatura_actual`, assign
+Investigador Jefe, refresh the market) → Phase II (round-robin, 2 PA per player, one action per
+turn until all PA spent) → Phase III (every active `FermentationSlot` advances by
+`temperatura_actual/5 + dado_inoculo + modificador_incubadora`; overshoot into
+`zona_sobrefermentada` auto-bakes at 0 PA cost with a penalty; then all players lose 1 vitality,
+2 if "Aletargamiento Invernal" is active). The game ends when the climate deck is exhausted or
+any player successfully bakes their 5th recipe (collapsed bakes don't count), then scores per
+`CORE_MECHANICS.md` §3.

@@ -1,0 +1,60 @@
+# CORE_MECHANICS (Fermentum)
+**Descripción General:** Fermentum es un Eurogame de gestión de recursos y "engine-building" para 1-4 jugadores. El objetivo central es acumular Puntos de Maestría controlando variables biológicas y térmicas.
+
+## 1. Bucle de Juego (Día de Laboratorio)
+El juego se divide en rondas llamadas "Días de Laboratorio". Cada ronda consta de tres fases secuenciales y estrictas:
+1. **Fase I: Ambiente** 
+2. **Fase II: Acción** 
+3. **Fase III: Fermentación** 
+
+---
+
+## 2. Resolución de Fases
+
+### FASE I: Ambiente (Preparación y Clima)
+Liderada por el Investigador Jefe, esta fase configura las variables globales del turno:
+* **Actualización de Jerarquía:** El token de Investigador Jefe se asigna al jugador con el nivel de Vitalidad más alto en su frasco (cultivo base). 
+    * *Desempate:* Mayor cantidad de Datos de Investigación.
+    * *Ventaja:* El Investigador Jefe actúa primero en la Fase II y tiene prioridad en los mercados.
+* **Resolución del Clima:** Se revela una carta del mazo de Clima. **(CRÍTICO PARA LA CLI: El sistema debe anunciar/imprimir en pantalla claramente el nombre de la carta, su modificador térmico y su efecto pasivo para que los jugadores puedan tomar decisiones).**
+    * Se ajusta el termómetro en el tablero sumando o restando el Modificador Térmico a la base de 20°C.
+    * Se sincroniza el "Ábaco de Fermentación" (20°C = 4 Pasos; 25°C = 5 Pasos; 30°C = 6 Pasos).
+    * Se aplican Anomalías Biológicas instantáneamente (ej. +1 Vitalidad para todos) o Efectos Pasivos.
+* **Protocolo de Refresco:** * *Recetas:* Se descarta la carta más antigua (extremo derecho), se desplazan las restantes a la derecha y se revelan nuevas a la izquierda. Si el mazo se agota, se baraja el descarte.
+    * *Suministros:* Se descartan los lotes no reclamados y se revelan 3 nuevos.
+
+### FASE II: Acción (Operatividad)
+Fase donde los jugadores intervienen en su laboratorio mediante un sistema de "Round-Robin" (turnos alternos).
+* **Capacidad:** Cada jugador dispone de 2 PA.
+* **Flujo Intercalado:** Empezando por el Investigador Jefe, el jugador activo ejecuta **solo 1 acción** (o pasa). Luego el control pasa al siguiente jugador. El ciclo (while loop) continúa hasta que la suma de PA de todos los jugadores sea 0 y nadie quiera usar "Horas Extras".
+* **Registro:** Se marca el uso de PA moviendo Cubos de Laboratorio en la Zona 5 (Checklist) del tablero personal.
+* **Escasez de Mercado:** Durante esta fase, si un jugador adquiere una receta o un lote de suministros, el espacio queda vacío hasta la próxima Fase I.
+
+### FASE III: Fermentación (Resolución Automática)
+Ocurre simultáneamente para todos una vez terminada la Fase II.
+* **Cinética Biológica (Avance de Masas):** Las masas en la Zona 2 avanzan en sus tracks según la siguiente ecuación:
+    > `Avance Final = (Temperatura Ambiental / 5) + (Valor del Dado de Inóculo) + (Modificadores de Tecnología)` 
+* **Colapso Estructural:** Si el avance hace que una masa supere la zona óptima de horneado (llegando a sobre-fermentación), la masa colapsa. 
+    * *Resolución:* Se hornea automáticamente (Costo: 0 PA), aplicando los puntos negativos de la carta.
+* **Metabolismo (Desgaste):** La Vitalidad del cultivo base (Zona 1) se reduce automáticamente en -1 punto. (Nota: Los valores de Vitalidad y Acidez nunca pueden bajar de 0 ).
+
+---
+
+## 3. Fin del Juego y Puntuación
+
+### Gatillos de Finalización
+El final del juego se desencadena de inmediato si ocurre una de estas dos condiciones:
+1. El mazo de Clima se agota por completo.
+2. Un jugador hornea exitosamente su **quinta (5ta) receta** (las recetas colapsadas con valor negativo no cuentan).
+*Una vez desencadenado, se termina el Día de Laboratorio en curso y se puntúa.*
+
+### Cálculo de Puntos de Maestría Finales
+1. **Puntos Base:** Suma de los puntos de todas las recetas horneadas (positivos y negativos).
+2. **Puntos de Sabor:** Suma de los bonos de Acidez impresos en las cartas que tengan un Cubo de Laboratorio sellado.
+3. **Madurez del Cultivo:** `(Vitalidad Actual + Acidez Actual) / 2` (redondeando hacia arriba).
+4. **Desperdicio (Penalización):** -1 punto de Maestría por cada 3 tokens de insumos (Harina o Agua) sin utilizar en la reserva.
+
+### Desempate
+En caso de empate en Puntos de Maestría, el ganador se determina por:
+1. El investigador con el mayor Nivel de Vitalidad en su cultivo base.
+2. Si persiste el empate, el jugador con más Datos de Investigación.
