@@ -4,10 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A pure-Python, CLI-driven simulation of **Fermentum**, a 1-4 player Eurogame about resource
-management and engine-building (fermenting bread). The runtime code (`models.py`/`engine.py`/
-`actions.py`/`main.py`) has zero external dependencies — everything is stdlib Python 3.12.
-`pyproject.toml` declares `pytest` as a dev-only dependency for the `tests/` suite.
+A simulation of **Fermentum**, a 1-4 player Eurogame about resource management and
+engine-building (fermenting bread), being ported from a single-process CLI to an online
+multiplayer web app: the Python rules engine is kept as-is and a thin HTTP layer is added on top,
+rather than porting the rules to another stack. The core simulation
+(`models.py`/`engine.py`/`actions.py`/`bootstrap.py`/`events.py`/`serialization.py`/`main.py`)
+has zero external dependencies — everything is stdlib Python 3.12. The optional `server/` package
+(headless HTTP backend) needs `starlette`+`uvicorn`, kept in its own `pyproject.toml` dependency
+group so a CLI-only checkout never has to install a web framework. `pytest`+`httpx` are dev-only.
 
 The full game rules live in `context/*.md` and are the source of truth for behavior:
 
@@ -23,9 +27,10 @@ defines the exact numbers, thresholds, and edge cases the code must match.
 
 ## Commands
 
-Runtime has zero dependencies; `pytest` is a dev-only dependency declared in `pyproject.toml`.
-Use the project venv at `.venv/` (create with `python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"`
-if it doesn't exist yet).
+Core simulation has zero dependencies; dev (`pytest`, `httpx`) and `server` (`starlette`,
+`uvicorn`) are separate `pyproject.toml` optional-dependency groups. Use the project venv at
+`.venv/` (create with `python3 -m venv .venv && .venv/bin/pip install -e ".[dev,server]"` if it
+doesn't exist yet).
 
 ```bash
 # Run the interactive CLI game
@@ -37,6 +42,9 @@ python3 test_actions_suite.py
 # Run the pytest suite (tests/ only — pytest is scoped there via testpaths so it never
 # collects test_actions_suite.py, whose top-level sys.exit() would abort a pytest session)
 .venv/bin/pytest
+
+# Run the headless HTTP backend (single worker only — see server/app.py's concurrency note)
+.venv/bin/uvicorn server.app:app --host 127.0.0.1 --port 8000 --workers 1
 ```
 
 `tests/test_golden_game.py` is a characterization test: it plays a fully deterministic game
@@ -59,6 +67,13 @@ multi-day driver and targeted tests for the turn-economy rule above.
 day's global + per-player events, a manual bake vs. an automatic collapse, the
 contamination-transition-only rule, and `event_sink` forwarding.
 
+`tests/test_server_api.py` plays a full 2-player game purely over HTTP against `server/app.py`
+via Starlette's `TestClient` (real ASGI routing/JSON parsing, no direct calls into
+`server/sessions.py`/`server/commands.py`) — room creation, join, start, turn-ownership
+rejection, an action, both players passing to trigger the automatic Fase III → next-day Fase I
+transition, and polling `/events`. This was the Milestone 3 "de-risk the server before building
+any frontend" proof, kept as a permanent regression test rather than a throwaway script.
+
 ## Architecture
 
 Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the four modules:
@@ -76,10 +91,9 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
     → `fase_I_ambiente` → `fase_II_accion(callback)` → `resolver_fase_III()`. Runs exactly one day
     and stops (does not auto-chain into the next day's Phase I), preserving `main.py`'s per-day
     pause/report point.
-  - **Non-blocking state-machine path** (for a future networked caller — a CLI-only project has no
-    current caller for this): `iniciar_dia()` then poll `jugador_activo` / call
-    `terminar_turno_actual()` or `pasar_turno(player)` per visit, then `resolver_fase_III()`. See
-    `Fase` enum and `GameEngine.turno_nonce`.
+  - **Non-blocking state-machine path** (used by `server/app.py`): `iniciar_dia()` then poll
+    `jugador_activo` / call `terminar_turno_actual()` or `pasar_turno(player)` per visit, then
+    `resolver_fase_III()`. See `Fase` enum and `GameEngine.turno_nonce`.
 
   **Turn-economy rule (deliberate, diverges from `ACTIONS_REGISTRY.md`'s literal CLI-original
   behavior)**: Acción A (Alimentar) and Horas Extras do **not** end a player's turn/visit by
@@ -114,6 +128,30 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   behavior, emit an event for it at the point of mutation rather than expecting a caller to
   reconstruct it from before/after state.
 
+- **`bootstrap.py`** — `create_game(nombres: List[str]) -> GameEngine`: the actual game-construction
+  logic (shuffled basic-recipe assignment, player setup), with no CLI dependency, so `server/`
+  never has to import `main.py`. `main.py:setup_game` is a thin wrapper that only fills in
+  default player names for the CLI's convenience, then delegates here.
+- **`serialization.py`** — `snapshot(engine) -> dict`: the full, *unredacted* state via
+  `dataclasses.asdict`, reused by both `tests/test_golden_game.py` and `server/views.py`. Works
+  with no schema library because every domain dataclass already serializes cleanly and every
+  domain enum is `str, Enum` (so e.g. `TipoHarina.BLANCA` is already a `str` and needs no
+  conversion for `json.dumps`).
+- **`server/`** — the headless HTTP backend (Starlette + uvicorn; see `server/app.py`'s module
+  docstring for the transport/concurrency reasoning). `sessions.py` holds `RoomManager`/
+  `GameSession`/`Seat` — in-memory rooms, no accounts, a room code + a per-player secret token is
+  the entire identity/reconnect mechanism. `commands.py` holds `resolver_comando`, which maps a
+  wire action id + params to the right `ActionManager` call (resolving what HTTP can't carry
+  directly — Acción B's recipe via `carpeta_index`, `TecnologiaID`/`TipoHarina` from plain
+  strings) and **owns `ACCIONES_QUE_TERMINAN_TURNO`**, the per-action turn-ending table the
+  turn-economy rule above deferred to this layer. `views.py` builds the client-facing state via
+  `serialization.snapshot()` with the one redaction that matters — `Environment.mazo_clima` /
+  `Market.mazo_recetas` (the hidden future decks) become counts, since everything else in this
+  game is public information. `app.py` wires it all into routes and maps the `FermentumError` /
+  `server/errors.py` `RoomError` hierarchies to HTTP status codes via one `isinstance` walk.
+  Nothing in `models.py`/`engine.py`/`actions.py`/`bootstrap.py`/`events.py`/`serialization.py`
+  imports anything from `server/` — the dependency only goes one way.
+
 `agents.py` is currently an empty placeholder file.
 
 ### Error handling
@@ -126,7 +164,13 @@ All game-rule failures raise semantic exceptions from `exceptions.py` (never bar
 - `RuleViolationError` → `StationBlockedError`, `CarpetaFullError`
 - `InvalidActionError` — malformed/invalid call parameters
 - Engine-flow errors: `PhaseViolationError`, `GameAlreadyOverError`,
-  `InsufficientPlayersError`, `MarketSlotEmptyError`
+  `InsufficientPlayersError`, `MarketSlotEmptyError`, `NotYourTurnError` (server-layer turn
+  ownership; the CLI never raises it since its callback only fires for the correct player)
+
+`server/errors.py` holds a second, separate hierarchy (`RoomError` → `RoomNotFoundError`, etc.)
+for lobby/session problems that aren't game-rule violations — kept out of `exceptions.py` so that
+file stays strictly the rules vocabulary `ActionManager`/`GameEngine` use, independent of whether
+a server exists.
 
 `ActionManager` methods validate every precondition (PA, resources, station/carpeta limits,
 contamination state) via `_require_*` helpers and raise before touching state — never partially
