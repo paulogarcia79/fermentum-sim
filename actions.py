@@ -50,6 +50,7 @@ from exceptions import (
     StationBlockedError,
 )
 from models import (
+    EfectoClimatico,
     FermentationSlot,
     Grado,
     HorneadoRecord,
@@ -298,7 +299,9 @@ class ActionManager:
 
         Costo:   1 PA
                  + 1 Token de Harina (tipo == receta.harina_base)
-                 + receta.tokens_agua tokens de agua (pago exacto).
+                 + receta.tokens_agua tokens de agua (pago exacto), o
+                   receta.tokens_agua - 1 si "Alta Humedad" es el efecto
+                   pasivo vigente (CLIMATE_LOGIC.md §2).
 
         Memoria Biológica sellada al inicio (ACTIONS_REGISTRY.md §2B):
           · Dado de Inóculo ← player.vitalidad actual (sellado fijo en la masa).
@@ -375,8 +378,12 @@ class ActionManager:
                 "Hornea una masa activa para recuperar un dado."
             )
 
+        tokens_agua_requeridos = receta.tokens_agua
+        if self._engine.environment.efecto_pasivo_activo == EfectoClimatico.ALTA_HUMEDAD:
+            tokens_agua_requeridos -= 1
+
         self._require_harina_tipo(player, receta.harina_base, 100)
-        self._require_agua(player, receta.tokens_agua)
+        self._require_agua(player, tokens_agua_requeridos)
 
         if modificador_incubadora not in (-1, 0, 1):
             raise InvalidActionError(
@@ -396,8 +403,8 @@ class ActionManager:
         # Consumir 100% del tipo de harina requerido
         player.reserva_harina[receta.harina_base.value] -= 100
 
-        # Consumir tokens de agua (pago exacto)
-        player.reserva_agua -= receta.tokens_agua
+        # Consumir tokens de agua (pago exacto; -1 con Alta Humedad activa)
+        player.reserva_agua -= tokens_agua_requeridos
 
         # Sellar Memoria Biológica: dado = Vitalidad actual; bono = acidez en diana
         dado_inoculo: int = player.vitalidad
