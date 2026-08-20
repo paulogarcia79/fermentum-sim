@@ -26,6 +26,13 @@ Construye el dict JSON que se envía a los clientes HTTP a partir de
      regla — la vista es la misma para cualquier solicitante (no hay
      información oculta entre jugadores en este juego), así que cada
      cliente simplemente indexa por su propio ``player_index``.
+  4. **Puntuación**: ``Player.puntos_maestria_final`` y
+     ``GameEngine.calcular_ranking_final`` son ``@property``/métodos, no
+     campos de dataclass — ``dataclasses.asdict`` no los incluye. Se
+     calculan aquí (``puntos_maestria_final`` por jugador, ``ranking`` con
+     el resultado de ``calcular_ranking_final``) en vez de que el cliente
+     reimplemente la fórmula de puntuación de ``CORE_MECHANICS.md`` §3 en
+     TypeScript — el mismo principio que la disponibilidad de acciones.
 """
 from __future__ import annotations
 
@@ -57,6 +64,12 @@ def game_state_view(engine: GameEngine) -> Dict[str, Any]:
     estado["jefe_investigador_idx"] = engine.players.index(jefe) if jefe is not None else None
     estado["acciones_disponibles"] = [
         acciones_disponibles(engine, jugador) for jugador in engine.players
+    ]
+    for datos_jugador, jugador in zip(estado["players"], engine.players):
+        datos_jugador["puntos_maestria_final"] = jugador.puntos_maestria_final
+    estado["ranking"] = [
+        {"posicion": posicion, "player_idx": engine.players.index(jugador)}
+        for posicion, jugador in engine.calcular_ranking_final()
     ]
 
     return estado
