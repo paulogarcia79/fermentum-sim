@@ -150,3 +150,96 @@ def test_no_host_no_puede_iniciar_la_sala() -> None:
     r = cliente.post(f"/games/{room_id}/start", headers={"X-Player-Token": "token-falso"})
     assert r.status_code == 403
     assert r.json()["error"] == "no_es_host"
+
+
+def _sala_en_curso_de_2(cliente: TestClient) -> Dict[str, str]:
+    r = cliente.post("/games", json={"nombre": "Alba", "color": "rojo"})
+    datos = r.json()
+    room_id, host_token, token_alba = datos["room_id"], datos["host_token"], datos["player_token"]
+    r = cliente.post(f"/games/{room_id}/join", json={"nombre": "Bruno", "color": "azul"})
+    token_bruno = r.json()["player_token"]
+    cliente.post(f"/games/{room_id}/start", headers={"X-Player-Token": host_token})
+    return {
+        "room_id": room_id,
+        "host_token": host_token,
+        "token_alba": token_alba,
+        "token_bruno": token_bruno,
+    }
+
+
+def test_votar_fin_anticipado_requiere_partida_en_curso() -> None:
+    # Con la sala aun en LOBBY (sin engine), el guard de "partida iniciada"
+    # se dispara antes: sala_no_disponible, no partida_no_en_curso.
+    cliente = _cliente()
+    r = cliente.post("/games", json={"nombre": "Alba", "color": "rojo"})
+    datos = r.json()
+
+    r = cliente.post(
+        f"/games/{datos['room_id']}/confirm-end",
+        headers={"X-Player-Token": datos["player_token"]},
+    )
+    assert r.status_code == 409
+    assert r.json()["error"] == "sala_no_disponible"
+
+    # partida_no_en_curso si aparece una vez que la sala YA tiene un engine
+    # pero la partida no esta EN_CURSO -- p. ej. tras terminar (TERMINADA).
+    s = _sala_en_curso_de_2(cliente)
+    cliente.post(f"/games/{s['room_id']}/confirm-end", headers={"X-Player-Token": s["token_alba"]})
+    cliente.post(f"/games/{s['room_id']}/confirm-end", headers={"X-Player-Token": s["token_bruno"]})
+
+    r = cliente.post(f"/games/{s['room_id']}/confirm-end", headers={"X-Player-Token": s["token_alba"]})
+    assert r.status_code == 409
+    assert r.json()["error"] == "partida_no_en_curso"
+
+
+def test_fin_anticipado_por_votacion_y_vuelta_al_lobby() -> None:
+    cliente = _cliente()
+    s = _sala_en_curso_de_2(cliente)
+    room_id = s["room_id"]
+
+    # -- Volver al lobby antes de que la partida termine: rechazado --
+    r = cliente.post(f"/games/{room_id}/return-to-lobby", headers={"X-Player-Token": s["host_token"]})
+    assert r.status_code == 409
+    assert r.json()["error"] == "partida_no_terminada"
+
+    # -- Alba confirma sola: no alcanza, la partida sigue en curso --
+    r = cliente.post(f"/games/{room_id}/confirm-end", headers={"X-Player-Token": s["token_alba"]})
+    assert r.status_code == 200, r.text
+    estado = r.json()
+    assert estado["fase_actual"] != "terminada"
+    assert estado["votos_fin_anticipado"] == [0]
+
+    # -- Bruno confirma tambien: ahora es unanime, la partida se fuerza a terminar --
+    r = cliente.post(f"/games/{room_id}/confirm-end", headers={"X-Player-Token": s["token_bruno"]})
+    assert r.status_code == 200, r.text
+    estado = r.json()
+    assert estado["fase_actual"] == "terminada"
+    assert sorted(estado["votos_fin_anticipado"]) == [0, 1]
+    # calcular_ranking_final() es valido "en cualquier momento" -- confirma
+    # que un fin forzado a mitad de partida sigue produciendo un ranking usable.
+    assert len(estado["ranking"]) == 2
+    assert {r["player_idx"] for r in estado["ranking"]} == {0, 1}
+
+    # -- Bruno (no-host) no puede reiniciar la sala --
+    r = cliente.post(f"/games/{room_id}/return-to-lobby", headers={"X-Player-Token": s["token_bruno"]})
+    assert r.status_code == 403
+    assert r.json()["error"] == "no_es_host"
+
+    # -- El host si puede: la sala vuelve a LOBBY, los asientos se conservan --
+    r = cliente.post(f"/games/{room_id}/return-to-lobby", headers={"X-Player-Token": s["host_token"]})
+    assert r.status_code == 200, r.text
+    metadata = r.json()
+    assert metadata["status"] == "lobby"
+    assert {a["color"] for a in metadata["seats"]} == {"rojo", "azul"}
+
+    # -- El estado del juego ya no esta disponible: la sala esta en LOBBY --
+    r = cliente.get(f"/games/{room_id}/state", headers={"X-Player-Token": s["token_alba"]})
+    assert r.status_code == 409
+    assert r.json()["error"] == "sala_no_disponible"
+
+    # -- El mismo grupo puede empezar una segunda partida en la misma sala --
+    r = cliente.post(f"/games/{room_id}/start", headers={"X-Player-Token": s["host_token"]})
+    assert r.status_code == 200, r.text
+    estado = r.json()
+    assert estado["environment"]["dia_actual"] == 1
+    assert estado["votos_fin_anticipado"] == []

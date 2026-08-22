@@ -21,7 +21,7 @@ import secrets
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from bootstrap import create_game
 from engine import GameEngine
@@ -32,6 +32,8 @@ from server.errors import (
     ColorYaTomadoError,
     NoActiveTurnError,
     NotHostError,
+    PartidaNoEnCursoError,
+    PartidaNoTerminadaError,
     PlayerNotInactiveError,
     RoomFullError,
     RoomNotFoundError,
@@ -139,6 +141,10 @@ class GameSession:
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     suscriptores: List["asyncio.Queue[GameEvent]"] = field(default_factory=list)
     creado_en: float = field(default_factory=time.time)
+    votos_fin_anticipado: Set[int] = field(default_factory=set)
+    """Índices de jugador que confirmaron terminar la partida antes de
+    tiempo (ver ``confirmar_fin_anticipado``) -- se vacía en
+    ``reiniciar_a_lobby``, nunca se retira un voto individual."""
 
     def __getstate__(self) -> Dict[str, Any]:
         """
@@ -214,6 +220,44 @@ class GameSession:
                 f"se requieren {UMBRAL_INACTIVIDAD_SEGUNDOS}s para forzar el pase."
             )
         self.engine.pasar_turno(jugador)
+
+    def confirmar_fin_anticipado(self, player_index: int) -> bool:
+        """
+        Registra que ``player_index`` confirmó terminar la partida antes de
+        tiempo (no hay forma de retirar un voto). Devuelve ``True`` si con
+        este voto ya confirmaron todos los asientos -- el llamador
+        (``server/app.py``) es quien entonces invoca
+        ``engine.forzar_fin_de_partida()`` y ajusta ``status``, ya que
+        forzar el fin de la partida es una mutación del motor, no de la
+        sala en sí.
+
+        Raises:
+            PartidaNoEnCursoError: La sala no tiene una partida en curso.
+        """
+        if self.status != RoomStatus.EN_CURSO:
+            raise PartidaNoEnCursoError(f"La sala {self.id!r} no tiene una partida en curso.")
+        self.votos_fin_anticipado.add(player_index)
+        return len(self.votos_fin_anticipado) >= len(self.seats)
+
+    def reiniciar_a_lobby(self, host_token: str) -> None:
+        """
+        Vuelve la sala a ``LOBBY`` tras una partida terminada (natural o
+        forzada), conservando ``seats``/``host_token`` -- mismos nombres,
+        tokens y colores -- para que el mismo grupo pueda empezar otra
+        partida sin recrear la sala. Solo el host puede hacerlo (mismo
+        control que ``RoomManager.iniciar``).
+
+        Raises:
+            NotHostError: ``host_token`` no coincide con el de la sala.
+            PartidaNoTerminadaError: La partida todavía no terminó.
+        """
+        if not secrets.compare_digest(self.host_token, host_token):
+            raise NotHostError(f"Solo el host puede reiniciar la sala {self.id!r}.")
+        if self.status != RoomStatus.TERMINADA:
+            raise PartidaNoTerminadaError(f"La sala {self.id!r} todavía no terminó.")
+        self.status = RoomStatus.LOBBY
+        self.engine = None
+        self.votos_fin_anticipado = set()
 
 
 def _validar_color(color: str, tomados: List[str]) -> None:

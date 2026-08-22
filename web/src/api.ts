@@ -98,3 +98,16 @@ export function pasarTurno(roomId: string, token: string): Promise<GameStateView
 export function forzarPase(roomId: string, token: string): Promise<GameStateView> {
   return pedir(`/games/${roomId}/force-pass`, conToken(token, { method: 'POST' }))
 }
+
+/** Confirma que este jugador quiere terminar la partida antes de tiempo.
+ * No hay forma de retirar el voto. Cuando confirman todos los asientos, el
+ * servidor fuerza el fin de la partida en la misma respuesta. */
+export function confirmarFinAnticipado(roomId: string, token: string): Promise<GameStateView> {
+  return pedir(`/games/${roomId}/confirm-end`, conToken(token, { method: 'POST' }))
+}
+
+/** Solo el host: vuelve la sala a LOBBY tras una partida terminada,
+ * conservando los asientos (nombres/tokens/colores) para otra partida. */
+export function volverALobby(roomId: string, hostToken: string): Promise<SalaMetadata> {
+  return pedir(`/games/${roomId}/return-to-lobby`, conToken(hostToken, { method: 'POST' }))
+}

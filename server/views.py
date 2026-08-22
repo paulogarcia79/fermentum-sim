@@ -42,19 +42,22 @@ Construye el dict JSON que se envía a los clientes HTTP a partir de
      lo cuantifica) — se calcula aquí en vez de en TypeScript por la misma
      razón que el punto 4: si el divisor cambia algún día, un cliente que
      lo hubiera reimplementado quedaría desincronizado en silencio.
-  6. **Color de jugador**: ``Seat.color`` vive en la capa de sala
-     (``server/sessions.py``), no en el ``Player`` de dominio — así que
-     ``game_state_view`` recibe los ``seats`` de la sala además del
-     ``engine`` para poder anexar ``color`` a cada jugador serializado.
+  6. **Color de jugador y voto de fin anticipado**: ``Seat.color`` y
+     ``GameSession.votos_fin_anticipado`` viven en la capa de sala
+     (``server/sessions.py``), no en el ``Player``/``GameEngine`` de
+     dominio — así que ``game_state_view`` recibe la ``GameSession``
+     completa (no solo el ``engine``) para poder anexar ambos a la vista.
 """
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 from disponibilidad import acciones_disponibles
-from engine import PUNTOS_ZONA_BAJA_DIVISOR, GameEngine
+from engine import PUNTOS_ZONA_BAJA_DIVISOR
 from serialization import snapshot
-from server.sessions import Seat
+
+if TYPE_CHECKING:
+    from server.sessions import GameSession
 
 
 def _enriquecer_receta(receta: Optional[Dict[str, Any]]) -> None:
@@ -62,8 +65,10 @@ def _enriquecer_receta(receta: Optional[Dict[str, Any]]) -> None:
         receta["puntos_zona_baja"] = max(1, receta["puntos_optimos"] // PUNTOS_ZONA_BAJA_DIVISOR)
 
 
-def game_state_view(engine: GameEngine, seats: List[Seat]) -> Dict[str, Any]:
+def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
     """Construye la vista de estado redactada de una partida en curso."""
+    engine = sesion.engine
+    assert engine is not None, "game_state_view requiere una partida iniciada."
     estado = snapshot(engine)
 
     entorno = estado["environment"]
@@ -84,7 +89,7 @@ def game_state_view(engine: GameEngine, seats: List[Seat]) -> Dict[str, Any]:
     estado["acciones_disponibles"] = [
         acciones_disponibles(engine, jugador) for jugador in engine.players
     ]
-    for datos_jugador, jugador, asiento in zip(estado["players"], engine.players, seats):
+    for datos_jugador, jugador, asiento in zip(estado["players"], engine.players, sesion.seats):
         datos_jugador["puntos_maestria_final"] = jugador.puntos_maestria_final
         datos_jugador["color"] = asiento.color
         for receta in datos_jugador["carpeta_proyectos"]:
@@ -98,5 +103,6 @@ def game_state_view(engine: GameEngine, seats: List[Seat]) -> Dict[str, Any]:
         {"posicion": posicion, "player_idx": engine.players.index(jugador)}
         for posicion, jugador in engine.calcular_ranking_final()
     ]
+    estado["votos_fin_anticipado"] = sorted(sesion.votos_fin_anticipado)
 
     return estado

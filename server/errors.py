@@ -60,3 +60,13 @@ class ColorInvalidoError(RoomError):
 class ColorYaTomadoError(RoomError):
     """Se lanza cuando el color elegido ya está en uso por otro asiento de
     la misma sala."""
+
+
+class PartidaNoEnCursoError(RoomError):
+    """Se lanza al intentar votar para terminar antes de tiempo una sala
+    que no tiene una partida en curso (``RoomStatus.EN_CURSO``)."""
+
+
+class PartidaNoTerminadaError(RoomError):
+    """Se lanza al intentar volver una sala al lobby (``reiniciar_a_lobby``)
+    antes de que su partida haya terminado."""

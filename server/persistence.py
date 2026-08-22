@@ -45,7 +45,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 1
+VERSION_FORMATO = 2
+"""
+Bumped a 2: `Seat` ganó `color` y `GameSession` ganó `votos_fin_anticipado`
+desde la versión 1 -- un pickle viejo sin esos campos debe descartarse
+limpiamente en vez de cargar a medias y luego fallar con AttributeError la
+primera vez que el código nuevo los toque.
+"""
 
 
 def guardar(sesion: "GameSession") -> None:

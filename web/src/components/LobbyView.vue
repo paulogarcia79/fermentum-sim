@@ -152,7 +152,25 @@ onUnmounted(() => {
 <template>
   <div class="lobby">
     <h1>🍞 Fermentum</h1>
-    <p class="subtitulo">Simulador de laboratorio de panadería — multijugador</p>
+    <p class="subtitulo">Simulador de laboratorio de fermentación — multijugador</p>
+
+    <div v-if="!salaCreada" class="flavor">
+      <p>
+        Eres la nueva investigadora jefa de un laboratorio artesanal de fermentación. Cada Día de
+        Laboratorio cuidas tu cultivo base — su <strong>Vitalidad</strong> y su
+        <strong>Acidez</strong> deciden si tu próxima hornada sale perfecta o colapsa —, inicias
+        recetas en tus cámaras de fermentación y corres contra el reloj: cada masa avanza sola por
+        el track de fermentación con el calor del día, y hornear justo en su zona óptima, ni cruda
+        ni pasada, es lo que separa a un panadero mediocre de uno legendario. Investiga
+        protocolos, negocia el mercado de insumos, mejora tu laboratorio, y acumula
+        <strong>Puntos de Maestría</strong> — quien más sume al terminar la partida, gana.
+      </p>
+      <ul class="destacados">
+        <li>🧫 Cultivo base — Vitalidad y Acidez, la base de cada receta</li>
+        <li>⏳ Track de fermentación — hornea en la zona óptima antes del colapso</li>
+        <li>🏆 Maestría — la puntuación final, entre investigadores rivales</li>
+      </ul>
+    </div>
 
     <div v-if="!salaCreada" class="panel formulario">
       <label>
@@ -232,6 +250,32 @@ h1 {
 .sala-espera {
   margin-top: 1.5rem;
   text-align: left;
+}
+
+.flavor {
+  margin-top: 1.25rem;
+  text-align: left;
+}
+
+.flavor p {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-texto);
+}
+
+.flavor strong {
+  color: var(--color-acento);
+}
+
+.destacados {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--color-texto-tenue);
 }
 
 label {

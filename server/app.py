@@ -66,6 +66,8 @@ from server.errors import (
     ColorYaTomadoError,
     NoActiveTurnError,
     NotHostError,
+    PartidaNoEnCursoError,
+    PartidaNoTerminadaError,
     PlayerNotInactiveError,
     RoomError,
     RoomFullError,
@@ -102,6 +104,8 @@ _MAPEO_ERRORES: List[Tuple[Type[Exception], int, str]] = [
     (PlayerNotInactiveError, 409, "jugador_no_inactivo"),
     (ColorInvalidoError, 400, "color_invalido"),
     (ColorYaTomadoError, 409, "color_ya_tomado"),
+    (PartidaNoEnCursoError, 409, "partida_no_en_curso"),
+    (PartidaNoTerminadaError, 409, "partida_no_terminada"),
     (RoomError, 400, "error_de_sala"),  # respaldo genérico
 ]
 
@@ -285,7 +289,7 @@ def crear_app() -> Starlette:
             host_token = _requerir_token(request)
             sesion = salas.iniciar(room_id, host_token)
             async with sesion.lock:
-                vista = game_state_view(sesion.engine, sesion.seats)
+                vista = game_state_view(sesion)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(vista)
@@ -313,9 +317,9 @@ def crear_app() -> Starlette:
             token = _requerir_token(request)
             sesion = salas.obtener(room_id)
             sesion.asiento_por_token(token)  # valida identidad
-            engine = _requerir_partida_iniciada(sesion)
+            _requerir_partida_iniciada(sesion)
             async with sesion.lock:
-                vista = game_state_view(engine, sesion.seats)
+                vista = game_state_view(sesion)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(vista)
@@ -435,7 +439,7 @@ def crear_app() -> Starlette:
                 resolver_comando(engine, manager, jugador, accion, params)
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
-                vista = game_state_view(engine, sesion.seats)
+                vista = game_state_view(sesion)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(vista)
@@ -454,7 +458,7 @@ def crear_app() -> Starlette:
                 engine.pasar_turno(jugador)
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
-                vista = game_state_view(engine, sesion.seats)
+                vista = game_state_view(sesion)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(vista)
@@ -478,10 +482,65 @@ def crear_app() -> Starlette:
                 sesion.forzar_pase_por_inactividad()
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
-                vista = game_state_view(engine, sesion.seats)
+                vista = game_state_view(sesion)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(vista)
+
+    async def confirmar_fin(request: Request) -> JSONResponse:
+        """
+        Cualquier jugador sentado puede confirmar que quiere terminar la
+        partida antes de tiempo (no hay forma de retirar un voto ya
+        emitido). Una vez que confirmaron todos los asientos, la partida
+        se fuerza a terminar de inmediato -- mismo estado terminal que un
+        fin natural (deck agotado / 5º horneado), así que la vista de
+        ranking del cliente no necesita ningún caso especial.
+        """
+        room_id = request.path_params["room_id"]
+        try:
+            token = _requerir_token(request)
+            sesion = salas.obtener(room_id)
+            asiento = sesion.asiento_por_token(token)
+            engine = _requerir_partida_iniciada(sesion)
+
+            async with sesion.lock:
+                todos_confirmaron = sesion.confirmar_fin_anticipado(asiento.player_index)
+                if todos_confirmaron:
+                    engine.forzar_fin_de_partida()
+                    sesion.status = RoomStatus.TERMINADA
+                salas.guardar(sesion)
+                vista = game_state_view(sesion)
+        except (FermentumError, RoomError) as exc:
+            return _respuesta_error(exc)
+        return JSONResponse(vista)
+
+    async def volver_a_lobby(request: Request) -> JSONResponse:
+        """
+        Solo el host puede volver la sala a LOBBY tras una partida
+        terminada (natural o por voto) -- conserva los asientos (nombres,
+        tokens, colores) para que el mismo grupo empiece otra partida sin
+        recrear la sala. Devuelve la misma forma que ``GET /games/{id}``,
+        ya que no queda ningún ``engine`` que serializar.
+        """
+        room_id = request.path_params["room_id"]
+        try:
+            host_token = _requerir_token(request)
+            sesion = salas.obtener(room_id)
+            async with sesion.lock:
+                sesion.reiniciar_a_lobby(host_token)
+                salas.guardar(sesion)
+        except (FermentumError, RoomError) as exc:
+            return _respuesta_error(exc)
+        return JSONResponse(
+            {
+                "room_id": sesion.id,
+                "status": sesion.status.value,
+                "seats": [
+                    {"player_index": a.player_index, "nombre": a.nombre, "color": a.color}
+                    for a in sesion.seats
+                ],
+            }
+        )
 
     return Starlette(
         routes=[
@@ -495,6 +554,8 @@ def crear_app() -> Starlette:
             Route("/games/{room_id}/actions", enviar_accion, methods=["POST"]),
             Route("/games/{room_id}/pass", pasar, methods=["POST"]),
             Route("/games/{room_id}/force-pass", forzar_pase, methods=["POST"]),
+            Route("/games/{room_id}/confirm-end", confirmar_fin, methods=["POST"]),
+            Route("/games/{room_id}/return-to-lobby", volver_a_lobby, methods=["POST"]),
         ],
         lifespan=_crear_lifespan(salas),
     )

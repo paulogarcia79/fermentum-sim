@@ -288,8 +288,33 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   `GET /games/{id}` (public, no token) to grey out already-taken colors as the room code is typed;
   the server's `color_ya_tomado`/`color_invalido` errors are the authoritative fallback for any
   race or stale check. `color` lives on `server/sessions.py`'s `Seat` (a session/lobby concept),
-  not on the domain `Player` — `server/views.py:game_state_view` takes the session's `seats`
-  alongside the `engine` specifically to attach it to each serialized player.
+  not on the domain `Player` — `server/views.py:game_state_view` takes the whole `GameSession`
+  (not just the `engine`) specifically so it can attach `color` (and the early-end vote tally
+  below) to the view without threading extra parameters through every call site.
+
+  **Mutual early-end vote and return-to-lobby**: any seated player can `POST
+  /games/{id}/confirm-end` at any point while `EN_CURSO` (not gated by whose turn it is, like
+  force-pass isn't either) — a one-way confirmation, no retracting a vote once cast. Once every
+  seat has confirmed, the server calls the new `engine.forzar_fin_de_partida()`
+  (`engine.py`) — sets `_partida_terminada`/`_fase` directly to the exact same terminal state a
+  natural ending (deck exhaustion, 5th bake) produces, skipping the wait for the next
+  `resolver_fase_III()`. This works cleanly because `calcular_ranking_final()` was already
+  documented as callable "at any moment" (partial results otherwise) — so `RankingView.vue` needs
+  zero special-casing for an early end vs. a natural one. From that ranking screen, only the host
+  can `POST /games/{id}/return-to-lobby` (`GameSession.reiniciar_a_lobby`, same host-token check
+  `iniciar_sala` already does) — resets `status`/`engine`/the vote set but **keeps `seats`**
+  (names/tokens/colors), so the same room can start a fresh game immediately. Every other
+  connected player picks this up on their own without any extra signal: `store.ts`'s
+  `refrescarEstado()` already polls `GET /games/{id}/state`, and once the room resets that route
+  starts returning `sala_no_disponible` (the engine is gone) — this specific error code is treated
+  as "the room went back to lobby," not a generic failure, resetting `store.estado` (keeping
+  `store.sesion`) the same way `volverALobby()` does for the host, which is what actually flips
+  `App.vue` back to `LobbyView` (its `enPartida` computed already keys off `estado !== null`) and
+  lets `LobbyView.vue`'s existing reconnect-resume logic pick the waiting room back up with no
+  changes needed there. `server/persistence.py:VERSION_FORMATO` was bumped to 2 for this — a
+  `GameSession`/`Seat` shape change (this and last session's `color` field) should invalidate old
+  on-disk pickles per the module's own documented policy, rather than loading a stale object that
+  crashes the first time new code touches a field it doesn't have.
 
 `agents.py` is currently an empty placeholder file.
 

@@ -122,6 +122,9 @@ export interface GameStateView {
   jefe_investigador_idx: number | null
   acciones_disponibles: AccionDisponible[][]
   ranking: { posicion: number; player_idx: number }[]
+  /** Índices de jugador que confirmaron terminar la partida antes de
+   * tiempo -- ver GameView.vue. No hay forma de retirar un voto. */
+  votos_fin_anticipado: number[]
 }
 
 export interface GameEventView {

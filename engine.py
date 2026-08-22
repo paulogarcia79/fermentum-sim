@@ -473,6 +473,27 @@ class GameEngine:
         """Fase actual del Día de Laboratorio (ver clase ``Fase``)."""
         return self._fase
 
+    def forzar_fin_de_partida(self) -> None:
+        """
+        Termina la partida de inmediato, fuera de los dos gatillos naturales
+        (mazo de clima agotado, 5º horneado exitoso) -- usado cuando todos
+        los jugadores acuerdan terminar antes de tiempo (ver ``server/``).
+
+        Deja el motor en el mismo estado terminal que produce un fin
+        natural (``_partida_terminada`` y ``_fase`` en ``Fase.TERMINADA``),
+        en vez de esperar al próximo ``resolver_fase_III()`` -- así
+        ``calcular_ranking_final()`` (que ya es válido "en cualquier
+        momento", ver su docstring) y todo el resto de la vista de estado
+        siguen funcionando sin cambios para un fin anticipado.
+
+        Raises:
+            GameAlreadyOverError: Si la partida ya había terminado.
+        """
+        if self._partida_terminada:
+            raise GameAlreadyOverError("La partida ya había terminado.")
+        self._partida_terminada = True
+        self._fase = Fase.TERMINADA
+
     @property
     def jugador_activo(self) -> Optional[Player]:
         """

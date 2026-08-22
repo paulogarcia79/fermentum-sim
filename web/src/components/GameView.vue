@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
-import { detenerTransmisionEnVivo, forzarPase, store } from '../store'
+import { confirmarFinAnticipado, detenerTransmisionEnVivo, forzarPase, store } from '../store'
 import ClimaBanner from './ClimaBanner.vue'
 import MercadoPanel from './MercadoPanel.vue'
 import SuministrosPanel from './SuministrosPanel.vue'
@@ -25,6 +25,17 @@ async function onForzarPase() {
   }
 }
 
+const yaConfirmeFinAnticipado = computed(() => estado.value.votos_fin_anticipado.includes(miIndice.value))
+const confirmandoFin = ref(false)
+async function onConfirmarFin() {
+  confirmandoFin.value = true
+  try {
+    await confirmarFinAnticipado()
+  } finally {
+    confirmandoFin.value = false
+  }
+}
+
 onUnmounted(() => detenerTransmisionEnVivo())
 </script>
 
@@ -41,6 +52,16 @@ onUnmounted(() => detenerTransmisionEnVivo())
         <template v-else>Resolviendo fin de día…</template>
       </p>
     </header>
+
+    <div v-if="!estado.partida_terminada" class="fin-anticipado">
+      <span class="tally">
+        {{ estado.votos_fin_anticipado.length }}/{{ estado.players.length }} confirmaron terminar antes de tiempo
+      </span>
+      <span v-if="yaConfirmeFinAnticipado" class="ya-confirmaste">✓ Ya confirmaste</span>
+      <button v-else class="confirmar-fin" :disabled="confirmandoFin" @click="onConfirmarFin">
+        Confirmar fin de partida
+      </button>
+    </div>
 
     <p v-if="store.error" class="error">⚠ {{ store.error }}</p>
 
@@ -104,6 +125,33 @@ onUnmounted(() => detenerTransmisionEnVivo())
   border: 1px solid var(--color-mal);
   border-radius: 6px;
   padding: 0.5rem 0.75rem;
+}
+
+.fin-anticipado {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.75rem;
+  color: var(--color-texto-tenue);
+  margin-bottom: 0.75rem;
+}
+
+.confirmar-fin {
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-borde);
+  background: transparent;
+  color: var(--color-texto-tenue);
+  font-size: 0.75rem;
+}
+
+.confirmar-fin:hover:not(:disabled) {
+  border-color: var(--color-acento);
+  color: var(--color-acento);
+}
+
+.ya-confirmaste {
+  color: var(--color-bien);
 }
 
 .mesa-comun {

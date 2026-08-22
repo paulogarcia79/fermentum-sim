@@ -144,12 +144,33 @@ export function reconocerReporteDia(): void {
   store.reporteDiaPendiente = null
 }
 
+/**
+ * Deja el store listo para mostrar la sala de espera de nuevo (sin tocar
+ * `store.sesion`, para que LobbyView.vue la retome tal cual ya hace al
+ * reconectar) -- usado tanto por `volverALobby()` (quien lo pidió) como
+ * por `refrescarEstado()` (todo el resto de jugadores, que se enteran de
+ * que el host reinició la sala en su próximo poll/evento).
+ */
+function volverAVistaDeLobby(): void {
+  detenerTransmisionEnVivo()
+  store.estado = null
+  store.eventos = []
+  store.ultimoSeqVisto = 0
+  store.reporteDiaPendiente = null
+}
+
 export async function refrescarEstado(): Promise<void> {
   if (!store.sesion) return
   try {
     aplicarEstado(await api.obtenerEstado(store.sesion.roomId, store.sesion.token))
     store.error = null
   } catch (e) {
+    if (e instanceof api.ApiFallo && e.codigo === 'sala_no_disponible') {
+      // El host volvió la sala a LOBBY (volverALobby) -- no es un error,
+      // es la señal de que este jugador también debe volver a la espera.
+      volverAVistaDeLobby()
+      return
+    }
     store.error = e instanceof Error ? e.message : String(e)
   }
 }
@@ -262,6 +283,37 @@ export async function forzarPase(): Promise<void> {
   store.cargando = true
   try {
     aplicarEstado(await api.forzarPase(store.sesion.roomId, store.sesion.token))
+    store.error = null
+  } catch (e) {
+    store.error = e instanceof Error ? e.message : String(e)
+  } finally {
+    store.cargando = false
+  }
+}
+
+/** Confirma que este jugador quiere terminar la partida antes de tiempo.
+ * No hay forma de retirar el voto (ver store.ts:GameView.vue). */
+export async function confirmarFinAnticipado(): Promise<void> {
+  if (!store.sesion) return
+  store.cargando = true
+  try {
+    aplicarEstado(await api.confirmarFinAnticipado(store.sesion.roomId, store.sesion.token))
+    store.error = null
+  } catch (e) {
+    store.error = e instanceof Error ? e.message : String(e)
+  } finally {
+    store.cargando = false
+  }
+}
+
+/** Solo el host: vuelve la sala a LOBBY tras una partida terminada. Los
+ * demás jugadores se enteran solos en su próximo refrescarEstado(). */
+export async function volverALobby(): Promise<void> {
+  if (!store.sesion?.hostToken) return
+  store.cargando = true
+  try {
+    await api.volverALobby(store.sesion.roomId, store.sesion.hostToken)
+    volverAVistaDeLobby()
     store.error = null
   } catch (e) {
     store.error = e instanceof Error ? e.message : String(e)
