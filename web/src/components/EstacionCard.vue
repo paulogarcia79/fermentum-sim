@@ -8,6 +8,7 @@
 import { computed } from 'vue'
 import type { FermentationSlot } from '../types'
 import { store } from '../store'
+import RecetaDetalle from './RecetaDetalle.vue'
 
 const props = defineProps<{
   slot: FermentationSlot | null
@@ -82,6 +83,7 @@ const zonaProyectada = computed(() => {
         <span>dado {{ slot.dado_inoculo }}</span>
         <span v-if="slot.bono_sabor">🧪 bono sabor</span>
       </div>
+      <RecetaDetalle :receta="slot.recipe" />
     </template>
   </div>
 </template>

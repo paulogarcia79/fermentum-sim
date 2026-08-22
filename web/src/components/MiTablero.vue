@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { store } from '../store'
 import EstacionCard from './EstacionCard.vue'
+import RecetaDetalle from './RecetaDetalle.vue'
 
 const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
 </script>
@@ -57,6 +58,7 @@ const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
     <ul class="carpeta">
       <li v-for="(receta, i) in yo.carpeta_proyectos" :key="i">
         {{ receta.nombre }} <span class="detalle">({{ receta.grado }})</span>
+        <RecetaDetalle :receta="receta" />
       </li>
       <li v-if="yo.carpeta_proyectos.length === 0" class="vacio">— vacía —</li>
     </ul>

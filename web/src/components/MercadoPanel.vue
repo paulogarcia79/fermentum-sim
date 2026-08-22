@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { store } from '../store'
+import RecetaDetalle from './RecetaDetalle.vue'
 
 const mercado = computed(() => store.estado!.market)
 </script>
@@ -16,6 +17,7 @@ const mercado = computed(() => store.estado!.market)
           <strong>{{ receta.nombre }}</strong>
           <span class="detalle">{{ receta.grado }} · {{ receta.harina_base }} · {{ receta.hidratacion_pct }}%</span>
           <span class="detalle">{{ receta.puntos_optimos }} pts óptimo</span>
+          <RecetaDetalle :receta="receta" />
         </template>
         <template v-else><span class="vacio">— tomada —</span></template>
       </li>

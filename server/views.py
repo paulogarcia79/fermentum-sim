@@ -33,14 +33,28 @@ Construye el dict JSON que se envía a los clientes HTTP a partir de
      el resultado de ``calcular_ranking_final``) en vez de que el cliente
      reimplemente la fórmula de puntuación de ``CORE_MECHANICS.md`` §3 en
      TypeScript — el mismo principio que la disponibilidad de acciones.
+  5. **Puntos de Zona Baja por receta**: cada receta serializada (en la
+     carpeta de proyectos, en una estación activa, o en el mercado) recibe
+     un campo ``puntos_zona_baja`` adicional, calculado con la misma
+     fórmula que usa ``engine._calcular_puntos_zona`` para la zona baja
+     (``max(1, puntos_optimos // PUNTOS_ZONA_BAJA_DIVISOR)``). Ese divisor
+     es una *asunción* documentada en ``engine.py`` (RECIPE_DATABASE.md no
+     lo cuantifica) — se calcula aquí en vez de en TypeScript por la misma
+     razón que el punto 4: si el divisor cambia algún día, un cliente que
+     lo hubiera reimplementado quedaría desincronizado en silencio.
 """
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from disponibilidad import acciones_disponibles
-from engine import GameEngine
+from engine import PUNTOS_ZONA_BAJA_DIVISOR, GameEngine
 from serialization import snapshot
+
+
+def _enriquecer_receta(receta: Optional[Dict[str, Any]]) -> None:
+    if receta is not None:
+        receta["puntos_zona_baja"] = max(1, receta["puntos_optimos"] // PUNTOS_ZONA_BAJA_DIVISOR)
 
 
 def game_state_view(engine: GameEngine) -> Dict[str, Any]:
@@ -67,6 +81,13 @@ def game_state_view(engine: GameEngine) -> Dict[str, Any]:
     ]
     for datos_jugador, jugador in zip(estado["players"], engine.players):
         datos_jugador["puntos_maestria_final"] = jugador.puntos_maestria_final
+        for receta in datos_jugador["carpeta_proyectos"]:
+            _enriquecer_receta(receta)
+        for estacion in datos_jugador["estaciones_fermentacion"]:
+            if estacion is not None:
+                _enriquecer_receta(estacion["recipe"])
+    for receta in mercado["recetas_visibles"]:
+        _enriquecer_receta(receta)
     estado["ranking"] = [
         {"posicion": posicion, "player_idx": engine.players.index(jugador)}
         for posicion, jugador in engine.calcular_ranking_final()

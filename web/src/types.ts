@@ -26,6 +26,10 @@ export interface Recipe {
   puntos_optimos: number
   penalizacion_colapso: number
   req_tecnologico: TecnologiaID | null
+  /** Solo presente en carpeta_proyectos/estaciones_fermentacion/market -- ver
+   * server/views.py:_enriquecer_receta. Ausente en recetas de HorneadoRecord
+   * (archivo_horneado_exitoso/archivo_colapsos), que reutilizan este mismo tipo. */
+  puntos_zona_baja?: number
 }
 
 export interface FermentationSlot {
