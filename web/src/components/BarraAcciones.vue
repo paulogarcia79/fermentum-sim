@@ -10,8 +10,7 @@ import ModalF from './acciones/ModalF.vue'
 import ModalG from './acciones/ModalG.vue'
 import ModalSimposio from './acciones/ModalSimposio.vue'
 import ModalConfirmacion from './acciones/ModalConfirmacion.vue'
-
-type IdAccion = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'simposio' | 'H' | 'I' | 'horas_extras'
+import { descripcionesAcciones, type IdAccion } from '../data/descripcionesAcciones'
 
 const BOTONES: { id: IdAccion; etiqueta: string; costo: string }[] = [
   { id: 'B', etiqueta: 'Iniciar Receta', costo: '1 PA' },
@@ -57,15 +56,17 @@ async function onPasar() {
   <section class="panel barra-acciones">
     <h3>Acciones disponibles</h3>
     <div class="grid-botones">
-      <button
-        v-for="b in BOTONES"
-        :key="b.id"
-        :disabled="!estado(b.id).habilitada"
-        :title="estado(b.id).motivo"
-        @click="abrir(b.id)"
-      >
-        {{ b.etiqueta }} <span class="costo">[{{ b.costo }}]</span>
-      </button>
+      <div v-for="b in BOTONES" :key="b.id" class="envoltorio-boton">
+        <button :disabled="!estado(b.id).habilitada" :title="estado(b.id).motivo" @click="abrir(b.id)">
+          {{ b.etiqueta }} <span class="costo">[{{ b.costo }}]</span>
+        </button>
+        <div class="tooltip" role="tooltip">
+          <p>{{ descripcionesAcciones[b.id] }}</p>
+          <p v-if="!estado(b.id).habilitada && estado(b.id).motivo" class="tooltip-motivo">
+            ⚠ {{ estado(b.id).motivo }}
+          </p>
+        </div>
+      </div>
     </div>
 
     <button class="pasar" :disabled="pasando" @click="onPasar">Pasar turno (sin más acciones)</button>
@@ -81,21 +82,21 @@ async function onPasar() {
     <ModalConfirmacion
       v-if="modalAbierto === 'H'"
       titulo="Re-cultivo Manual (1 PA)"
-      descripcion="Costo: 2 Harina (10% c/u de cualquier tipo) + 2 Agua. Limpia la Contaminación y fija Vitalidad=1, Acidez=1."
+      :descripcion="descripcionesAcciones.H"
       accion="H"
       @cerrar="cerrar"
     />
     <ModalConfirmacion
       v-if="modalAbierto === 'I'"
       titulo="Inóculo de Emergencia (1 PA)"
-      descripcion="Costo: 2 Datos de Investigación. Limpia la Contaminación y fija Vitalidad=2, Acidez=2."
+      :descripcion="descripcionesAcciones.I"
       accion="I"
       @cerrar="cerrar"
     />
     <ModalConfirmacion
       v-if="modalAbierto === 'horas_extras'"
       titulo="Horas Extras (0 PA)"
-      descripcion="Costo: 1 Dato de Investigación. Otorga +1 Punto de Acción inmediato. Una vez por día."
+      :descripcion="descripcionesAcciones.horas_extras"
       accion="horas_extras"
       @cerrar="cerrar"
     />
@@ -114,7 +115,12 @@ async function onPasar() {
   margin-bottom: 0.75rem;
 }
 
-.grid-botones button {
+.envoltorio-boton {
+  position: relative;
+}
+
+.envoltorio-boton button {
+  width: 100%;
   padding: 0.5rem;
   border-radius: 4px;
   border: 1px solid var(--color-borde);
@@ -122,6 +128,43 @@ async function onPasar() {
   color: var(--color-texto);
   font-size: 0.85rem;
   text-align: left;
+}
+
+.tooltip {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: calc(100% + 0.4rem);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  max-width: 60vw;
+  background: var(--color-panel);
+  border: 1px solid var(--color-borde);
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--color-texto);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  z-index: 30;
+  pointer-events: none;
+  transition: opacity 0.1s ease;
+}
+
+.tooltip p {
+  margin: 0;
+}
+
+.tooltip-motivo {
+  margin-top: 0.4rem !important;
+  color: var(--color-mal);
+}
+
+.envoltorio-boton:hover .tooltip,
+.envoltorio-boton:focus-within .tooltip {
+  visibility: visible;
+  opacity: 1;
 }
 
 .costo {
