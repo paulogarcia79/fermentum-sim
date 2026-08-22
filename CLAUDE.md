@@ -249,6 +249,23 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   player several points with no action on their part, and they need to be told, not left to infer
   it from state changing between polls.
 
+  **Climate-event modal**: `EventoClimaticoModal.vue` gives the Fase I climate card the same
+  mandatory-modal treatment, explaining its concrete effects in plain language (translated from
+  the raw `efecto_biologico`/`efecto_pasivo` enum values — e.g. "Iniciar Receta costará 1 token de
+  Agua menos hoy," not just "Alta Humedad") rather than leaving it to `ClimaBanner.vue`'s
+  always-there strip to be noticed. Unlike the Fase III report, this one is built straight from
+  current state (`environment.ultima_carta_clima`/`temperatura_actual`, already present, not
+  event-log filtering) — deliberately more robust across the return-to-lobby/second-game reset
+  (a fresh game's event `seq` restarts at 0). `store.ts` tracks a non-reactive
+  `ultimaCartaClimaId` (module-level, per tab) to detect when the card actually changed, seeded
+  `undefined` so Day 1's card triggers it too, not just later days; reset alongside the other
+  per-game flags in `cerrarSesion()`/`volverAVistaDeLobby()`. Reconnecting or loading into an
+  already-started game shows the current day's card once for that tab even if others already
+  dismissed it — deliberate (it's "here's today's situation," unlike the Fase III report, which
+  is about a past transition and is suppressed on reconnect). `GameView.vue` sequences it after
+  `FermentationReportModal` (`v-else-if`) since both can go pending from the same day-transition
+  state push, and the Fase III report is the more consequential one to see first.
+
   **Session persistence / reconnect**: `store.ts` saves `Sesion` (room id + player token) to
   `localStorage` on every `establecerSesion` call. Without this, closing the browser mid-game was
   a dead end — the backend was already designed for reconnect (per-player tokens valid for the

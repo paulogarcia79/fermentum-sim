@@ -28,6 +28,9 @@ interface Store {
   /** Dia que acaba de concluir y cuyo reporte de Fase III aun no fue
    * reconocido por el jugador -- null cuando no hay ninguno pendiente. */
   reporteDiaPendiente: number | null
+  /** True si la carta de clima del dia actual todavia no fue reconocida
+   * por el jugador en esta pestaña -- ver EventoClimaticoModal.vue. */
+  climaPendiente: boolean
 }
 
 export const store: Store = reactive({
@@ -38,7 +41,17 @@ export const store: Store = reactive({
   error: null,
   cargando: false,
   reporteDiaPendiente: null,
+  climaPendiente: false,
 })
+
+/**
+ * Id de la última carta de clima ya mostrada en esta pestaña -- no
+ * reactivo a propósito (es solo para detectar el cambio en
+ * aplicarEstado(), no algo que ningún componente deba leer). `undefined`
+ * antes de la primera aplicación de estado, lo que hace que la carta del
+ * Día 1 también dispare el modal, no solo las de días siguientes.
+ */
+let ultimaCartaClimaId: string | null | undefined = undefined
 
 let manejadorEstado: number | undefined
 let manejadorEventosRespaldo: number | undefined
@@ -97,6 +110,8 @@ export function cerrarSesion(): void {
   store.ultimoSeqVisto = 0
   store.error = null
   store.reporteDiaPendiente = null
+  store.climaPendiente = false
+  ultimaCartaClimaId = undefined
   borrarSesionLocal()
 }
 
@@ -137,11 +152,22 @@ export function aplicarEstado(nuevo: GameStateView): void {
   if (diaAnterior !== undefined && nuevo.environment.dia_actual > diaAnterior) {
     store.reporteDiaPendiente = diaAnterior
   }
+
+  const cartaId = nuevo.environment.ultima_carta_clima?.id ?? null
+  if (cartaId !== null && cartaId !== ultimaCartaClimaId) {
+    store.climaPendiente = true
+  }
+  ultimaCartaClimaId = cartaId
+
   store.estado = nuevo
 }
 
 export function reconocerReporteDia(): void {
   store.reporteDiaPendiente = null
+}
+
+export function reconocerClima(): void {
+  store.climaPendiente = false
 }
 
 /**
@@ -157,6 +183,8 @@ function volverAVistaDeLobby(): void {
   store.eventos = []
   store.ultimoSeqVisto = 0
   store.reporteDiaPendiente = null
+  store.climaPendiente = false
+  ultimaCartaClimaId = undefined
 }
 
 export async function refrescarEstado(): Promise<void> {
