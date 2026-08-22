@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { store } from '../store'
+import { hexDeColor } from '../data/coloresJugador'
 
 // No hay informacion oculta entre jugadores en Fermentum (la Carpeta de
 // Proyectos es boca arriba, ACTIONS_REGISTRY.md SS2G), asi que mostrar
@@ -26,6 +27,7 @@ function esTurno(i: number): boolean {
     <h3>Otros investigadores</h3>
     <div v-for="{ p, i } in oponentes" :key="i" class="fila" :class="{ turno: esTurno(i) }">
       <div class="nombre-fila">
+        <span class="punto-color" :style="{ background: hexDeColor(p.color) }" />
         {{ p.nombre }}
         <span v-if="esJefe(i)" title="Investigador Jefe">👑</span>
         <span v-if="p.en_estado_contaminacion" class="badge-contaminado">◉</span>
@@ -74,6 +76,13 @@ function esTurno(i: number): boolean {
 
 .badge-contaminado {
   color: var(--color-mal);
+}
+
+.punto-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
 }
 
 .stats {

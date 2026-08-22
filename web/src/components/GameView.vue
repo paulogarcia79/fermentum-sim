@@ -3,6 +3,7 @@ import { computed, onUnmounted, ref } from 'vue'
 import { detenerTransmisionEnVivo, forzarPase, store } from '../store'
 import ClimaBanner from './ClimaBanner.vue'
 import MercadoPanel from './MercadoPanel.vue'
+import SuministrosPanel from './SuministrosPanel.vue'
 import MiTablero from './MiTablero.vue'
 import TablerosOponentes from './TablerosOponentes.vue'
 import BarraAcciones from './BarraAcciones.vue'
@@ -48,9 +49,13 @@ onUnmounted(() => detenerTransmisionEnVivo())
     <template v-else>
       <ClimaBanner />
 
-      <div class="columnas">
-        <div class="columna-principal">
-          <MiTablero />
+      <section class="mesa-comun">
+        <h2 class="titulo-mesa">Mesa Común</h2>
+        <MercadoPanel />
+        <SuministrosPanel />
+
+        <div class="panel espacios-accion">
+          <h3>Espacios de Acción</h3>
           <BarraAcciones v-if="esMiTurno" />
           <div v-else class="espera-turno">
             <p class="espera">Esperando tu turno…</p>
@@ -59,9 +64,14 @@ onUnmounted(() => detenerTransmisionEnVivo())
             </button>
           </div>
         </div>
+      </section>
+
+      <div class="columnas">
+        <div class="columna-principal">
+          <MiTablero />
+        </div>
 
         <div class="columna-lateral">
-          <MercadoPanel />
           <TablerosOponentes />
           <RegistroEventos />
         </div>
@@ -94,6 +104,25 @@ onUnmounted(() => detenerTransmisionEnVivo())
   border: 1px solid var(--color-mal);
   border-radius: 6px;
   padding: 0.5rem 0.75rem;
+}
+
+.mesa-comun {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.titulo-mesa {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-texto-tenue);
+  margin: 0;
+}
+
+.espacios-accion h3 {
+  margin-top: 0;
 }
 
 .columnas {

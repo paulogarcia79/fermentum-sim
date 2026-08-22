@@ -53,8 +53,7 @@ async function onPasar() {
 </script>
 
 <template>
-  <section class="panel barra-acciones">
-    <h3>Acciones disponibles</h3>
+  <section class="barra-acciones">
     <div class="grid-botones">
       <div v-for="b in BOTONES" :key="b.id" class="envoltorio-boton">
         <button :disabled="!estado(b.id).habilitada" :title="estado(b.id).motivo" @click="abrir(b.id)">
@@ -104,14 +103,10 @@ async function onPasar() {
 </template>
 
 <style scoped>
-.barra-acciones h3 {
-  margin-top: 0;
-}
-
 .grid-botones {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.6rem;
   margin-bottom: 0.75rem;
 }
 
@@ -121,13 +116,18 @@ async function onPasar() {
 
 .envoltorio-boton button {
   width: 100%;
-  padding: 0.5rem;
-  border-radius: 4px;
+  padding: 0.6rem 0.5rem 0.5rem;
+  border-radius: 6px;
   border: 1px solid var(--color-borde);
+  border-top: 3px solid var(--color-acento);
   background: var(--color-fondo);
   color: var(--color-texto);
-  font-size: 0.85rem;
-  text-align: left;
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.envoltorio-boton button:disabled {
+  border-top-color: var(--color-borde);
 }
 
 .tooltip {

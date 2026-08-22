@@ -8,7 +8,7 @@
 import { computed } from 'vue'
 import type { FermentationSlot } from '../types'
 import { store } from '../store'
-import RecetaDetalle from './RecetaDetalle.vue'
+import RecetaCard from './RecetaCard.vue'
 
 const props = defineProps<{
   slot: FermentationSlot | null
@@ -55,7 +55,6 @@ const zonaProyectada = computed(() => {
   <div class="estacion" :class="{ bloqueada }">
     <div class="titulo">
       <span>Est-{{ (indice + 1).toString().padStart(2, '0') }}</span>
-      <span v-if="slot" class="nombre-receta">{{ slot.recipe.nombre }}</span>
     </div>
 
     <template v-if="bloqueada">
@@ -83,7 +82,7 @@ const zonaProyectada = computed(() => {
         <span>dado {{ slot.dado_inoculo }}</span>
         <span v-if="slot.bono_sabor">🧪 bono sabor</span>
       </div>
-      <RecetaDetalle :receta="slot.recipe" />
+      <RecetaCard :receta="slot.recipe" compacta />
     </template>
   </div>
 </template>
@@ -105,11 +104,6 @@ const zonaProyectada = computed(() => {
   font-size: 0.8rem;
   color: var(--color-texto-tenue);
   margin-bottom: 0.3rem;
-}
-
-.nombre-receta {
-  color: var(--color-texto);
-  font-weight: 600;
 }
 
 .vacia {

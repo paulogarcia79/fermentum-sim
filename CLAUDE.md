@@ -262,6 +262,35 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   straight in `GameView`). Any failure at any step (room gone, token rejected) just clears the
   stored session and falls back to the normal create/join form.
 
+  **Board-game-style layout and per-player color**: the UI is split into a shared "Mesa Común"
+  region (`GameView.vue`: `MercadoPanel.vue`'s recipe cards, `SuministrosPanel.vue`'s supply
+  lots, and `BarraAcciones.vue`'s action buttons restyled as board-tile "Espacios de Acción" —
+  same click-to-open-modal behavior, purely repositioned/restyled) versus each player's own,
+  richer board (`MiTablero.vue`, reorganized into labeled zones: resources as icon tiles,
+  0-6 pip Vitalidad/Acidez tracks matching the PA-pip visual language, an Incubadora/Cámara
+  B/Módulo Analítico upgrade-slot row showing locked/unlocked state, and the hand/stations as
+  `RecetaCard`s). `RecetaCard.vue` (superseding the earlier `RecetaDetalle.vue`) renders a recipe
+  as a small card — a per-recipe bread icon (`IconoPan.vue`, one hand-authored flat SVG shape per
+  recipe `id`, generic fallback for any future recipe without one yet), a flour/water requirement
+  row (`IconoHarina.vue`, `IconoAgua.vue`), and a point-scale strip across the 1-20 track (same
+  zone-banding math as `EstacionCard.vue`) labeling each zone's points directly — with the
+  remaining text detail (`acidez_diana`, `req_tecnologico`, hydration%) in a tooltip
+  (hover *and* tap-toggle via a `ⓘ` button, so it also works on touch, unlike a pure `:hover`
+  tooltip). Used identically in the market, the hand (`MiTablero.vue`), and own stations
+  (`EstacionCard.vue`) for one consistent recipe representation everywhere.
+
+  Every player picks a color from a fixed 6-entry palette (`data/coloresJugador.ts`, mirroring
+  `server/sessions.py:COLORES_DISPONIBLES`) in `LobbyView.vue` before creating/joining — needed
+  for opponent identification (`TablerosOponentes.vue`'s color dot, `MiTablero.vue`'s accent
+  border) and as groundwork for a deferred future feature (pawns on action spaces showing what
+  each player did that round — not built yet; needs its own new backend state, since nothing
+  today tracks which action space a player used on a given day). Joining live-checks
+  `GET /games/{id}` (public, no token) to grey out already-taken colors as the room code is typed;
+  the server's `color_ya_tomado`/`color_invalido` errors are the authoritative fallback for any
+  race or stale check. `color` lives on `server/sessions.py`'s `Seat` (a session/lobby concept),
+  not on the domain `Player` — `server/views.py:game_state_view` takes the session's `seats`
+  alongside the `engine` specifically to attach it to each serialized player.
+
 `agents.py` is currently an empty placeholder file.
 
 ### Error handling
