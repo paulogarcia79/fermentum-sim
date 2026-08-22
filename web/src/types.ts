@@ -57,6 +57,9 @@ export interface Technologies {
 
 export interface Player {
   nombre: string
+  /** Id de la paleta fija en data/coloresJugador.ts, elegido en el lobby
+   * (ver server/sessions.py:COLORES_DISPONIBLES). */
+  color: string
   vitalidad: number
   acidez: number
   en_estado_contaminacion: boolean

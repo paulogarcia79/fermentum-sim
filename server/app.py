@@ -62,6 +62,8 @@ from exceptions import (
 from server import persistence
 from server.commands import resolver_comando
 from server.errors import (
+    ColorInvalidoError,
+    ColorYaTomadoError,
     NoActiveTurnError,
     NotHostError,
     PlayerNotInactiveError,
@@ -98,6 +100,8 @@ _MAPEO_ERRORES: List[Tuple[Type[Exception], int, str]] = [
     (UnknownPlayerTokenError, 401, "token_desconocido"),
     (NoActiveTurnError, 409, "sin_turno_activo"),
     (PlayerNotInactiveError, 409, "jugador_no_inactivo"),
+    (ColorInvalidoError, 400, "color_invalido"),
+    (ColorYaTomadoError, 409, "color_ya_tomado"),
     (RoomError, 400, "error_de_sala"),  # respaldo genérico
 ]
 
@@ -148,6 +152,13 @@ def _requerir_nombre(cuerpo: Dict[str, Any]) -> str:
     if not nombre:
         raise InvalidActionError("Se requiere 'nombre' (no vacío) en el cuerpo.")
     return nombre
+
+
+def _requerir_color(cuerpo: Dict[str, Any]) -> str:
+    color = str(cuerpo.get("color") or "").strip()
+    if not color:
+        raise InvalidActionError("Se requiere 'color' (no vacío) en el cuerpo.")
+    return color
 
 
 def _avanzar_fase_si_corresponde(sesion: GameSession) -> None:
@@ -240,7 +251,8 @@ def crear_app() -> Starlette:
         try:
             cuerpo = await _cuerpo_json(request)
             nombre = _requerir_nombre(cuerpo)
-            sesion, asiento = salas.crear_sala(nombre)
+            color = _requerir_color(cuerpo)
+            sesion, asiento = salas.crear_sala(nombre, color)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(
@@ -258,7 +270,8 @@ def crear_app() -> Starlette:
         try:
             cuerpo = await _cuerpo_json(request)
             nombre = _requerir_nombre(cuerpo)
-            _sesion, asiento = salas.unirse(room_id, nombre)
+            color = _requerir_color(cuerpo)
+            _sesion, asiento = salas.unirse(room_id, nombre, color)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(
@@ -272,7 +285,7 @@ def crear_app() -> Starlette:
             host_token = _requerir_token(request)
             sesion = salas.iniciar(room_id, host_token)
             async with sesion.lock:
-                vista = game_state_view(sesion.engine)
+                vista = game_state_view(sesion.engine, sesion.seats)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(vista)
@@ -288,7 +301,8 @@ def crear_app() -> Starlette:
                 "room_id": sesion.id,
                 "status": sesion.status.value,
                 "seats": [
-                    {"player_index": a.player_index, "nombre": a.nombre} for a in sesion.seats
+                    {"player_index": a.player_index, "nombre": a.nombre, "color": a.color}
+                    for a in sesion.seats
                 ],
             }
         )
@@ -301,7 +315,7 @@ def crear_app() -> Starlette:
             sesion.asiento_por_token(token)  # valida identidad
             engine = _requerir_partida_iniciada(sesion)
             async with sesion.lock:
-                vista = game_state_view(engine)
+                vista = game_state_view(engine, sesion.seats)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(vista)
@@ -421,7 +435,7 @@ def crear_app() -> Starlette:
                 resolver_comando(engine, manager, jugador, accion, params)
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
-                vista = game_state_view(engine)
+                vista = game_state_view(engine, sesion.seats)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(vista)
@@ -440,7 +454,7 @@ def crear_app() -> Starlette:
                 engine.pasar_turno(jugador)
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
-                vista = game_state_view(engine)
+                vista = game_state_view(engine, sesion.seats)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(vista)
@@ -464,7 +478,7 @@ def crear_app() -> Starlette:
                 sesion.forzar_pase_por_inactividad()
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
-                vista = game_state_view(engine)
+                vista = game_state_view(engine, sesion.seats)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(vista)

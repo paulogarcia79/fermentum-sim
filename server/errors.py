@@ -50,3 +50,13 @@ class PlayerNotInactiveError(RoomError):
     """Se lanza al intentar forzar el pase de un jugador que todavía no
     lleva suficiente tiempo inactivo (ver ``server/sessions.py``:
     ``UMBRAL_INACTIVIDAD_SEGUNDOS``)."""
+
+
+class ColorInvalidoError(RoomError):
+    """Se lanza cuando el color elegido al crear/unirse a una sala no está
+    en ``server/sessions.py``: ``COLORES_DISPONIBLES``."""
+
+
+class ColorYaTomadoError(RoomError):
+    """Se lanza cuando el color elegido ya está en uso por otro asiento de
+    la misma sala."""

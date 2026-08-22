@@ -28,6 +28,8 @@ from engine import GameEngine
 from events import GameEvent
 from server import persistence
 from server.errors import (
+    ColorInvalidoError,
+    ColorYaTomadoError,
     NoActiveTurnError,
     NotHostError,
     PlayerNotInactiveError,
@@ -38,6 +40,25 @@ from server.errors import (
 )
 
 MAX_JUGADORES = 4
+
+COLORES_DISPONIBLES: List[Tuple[str, str]] = [
+    ("rojo", "#e0574f"),
+    ("azul", "#5b8dd9"),
+    ("verde", "#4caf6e"),
+    ("amarillo", "#e0c04f"),
+    ("morado", "#a374d9"),
+    ("cian", "#4fb8b0"),
+]
+"""
+Paleta fija de colores de jugador, elegidos en el lobby (ver `LobbyView.vue`).
+Tonos deliberadamente distintos de los colores semánticos ya usados en la UI
+(`--color-acento`/`--color-bien`/`--color-mal` en `App.vue`) para que un
+color de jugador nunca se confunda con un estado de "bien"/"mal"/"activo".
+6 opciones para hasta `MAX_JUGADORES` = 4 asientos, dejando margen real de
+elección en vez de agotar la paleta exactamente al llenar la sala.
+"""
+
+_IDS_COLORES_DISPONIBLES = frozenset(id_ for id_, _ in COLORES_DISPONIBLES)
 
 # Alfabeto sin 0/O/1/I/L (se confunden fácilmente al compartir un código de
 # sala de viva voz o por chat).
@@ -78,6 +99,7 @@ class Seat:
     player_index: int
     nombre: str
     token: str
+    color: str
     last_seen: float = field(default_factory=time.time)
     """Marca de tiempo de la última petición autenticada de este jugador
     (actualizada en ``GameSession.asiento_por_token``, el punto de paso
@@ -194,17 +216,27 @@ class GameSession:
         self.engine.pasar_turno(jugador)
 
 
+def _validar_color(color: str, tomados: List[str]) -> None:
+    if color not in _IDS_COLORES_DISPONIBLES:
+        raise ColorInvalidoError(f"Color {color!r} no es una opción válida.")
+    if color in tomados:
+        raise ColorYaTomadoError(f"El color {color!r} ya está en uso en esta sala.")
+
+
 class RoomManager:
     """Registro en memoria de todas las salas activas del proceso."""
 
     def __init__(self) -> None:
         self._salas: Dict[str, GameSession] = {}
 
-    def crear_sala(self, nombre_host: str) -> Tuple[GameSession, Seat]:
+    def crear_sala(self, nombre_host: str, color: str) -> Tuple[GameSession, Seat]:
         """Crea una sala nueva en estado LOBBY con el host como primer asiento."""
+        _validar_color(color, tomados=[])
         room_id = self._generar_codigo_unico()
         sesion = GameSession(id=room_id, host_token=secrets.token_urlsafe(32))
-        asiento = Seat(player_index=0, nombre=nombre_host, token=secrets.token_urlsafe(32))
+        asiento = Seat(
+            player_index=0, nombre=nombre_host, token=secrets.token_urlsafe(32), color=color
+        )
         sesion.seats.append(asiento)
         self._salas[room_id] = sesion
         self.guardar(sesion)
@@ -220,23 +252,27 @@ class RoomManager:
             raise RoomNotFoundError(f"No existe ninguna sala con código {room_id!r}.")
         return sesion
 
-    def unirse(self, room_id: str, nombre: str) -> Tuple[GameSession, Seat]:
+    def unirse(self, room_id: str, nombre: str, color: str) -> Tuple[GameSession, Seat]:
         """
         Raises:
             RoomNotFoundError: Ver ``obtener``.
             RoomNotJoinableError: La sala ya no está en LOBBY.
             RoomFullError: La sala ya tiene ``MAX_JUGADORES`` asientos.
+            ColorInvalidoError: ``color`` no está en ``COLORES_DISPONIBLES``.
+            ColorYaTomadoError: Otro asiento de esta sala ya tiene ese color.
         """
         sesion = self.obtener(room_id)
         if sesion.status != RoomStatus.LOBBY:
             raise RoomNotJoinableError(f"La sala {room_id!r} ya no admite nuevos jugadores.")
         if len(sesion.seats) >= MAX_JUGADORES:
             raise RoomFullError(f"La sala {room_id!r} ya tiene {MAX_JUGADORES} jugadores.")
+        _validar_color(color, tomados=[a.color for a in sesion.seats])
 
         asiento = Seat(
             player_index=len(sesion.seats),
             nombre=nombre,
             token=secrets.token_urlsafe(32),
+            color=color,
         )
         sesion.seats.append(asiento)
         self.guardar(sesion)

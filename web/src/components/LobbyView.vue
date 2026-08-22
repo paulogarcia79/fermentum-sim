@@ -1,18 +1,44 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from '../api'
 import { ApiFallo } from '../api'
 import { establecerSesion, iniciarPolling, refrescarEstado, store } from '../store'
 import type { SalaMetadata } from '../api'
+import { COLORES_JUGADOR, hexDeColor } from '../data/coloresJugador'
 
 const nombre = ref('')
 const codigoSala = ref('')
+const colorSeleccionado = ref<string | null>(null)
 const error = ref<string | null>(null)
 const cargando = ref(false)
 
 const salaCreada = ref<{ roomId: string; hostToken: string; nombre: string } | null>(null)
 const metadata = ref<SalaMetadata | null>(null)
 let intervaloLobby: number | undefined
+
+// Colores ya tomados en la sala a la que se está por unir -- consultado en
+// vivo mientras se escribe el código (GET /games/{id} es público, no
+// requiere token) para no dejar elegir un color que el servidor va a
+// rechazar de todas formas. Si dos jugadores chocan por una carrera real,
+// unirse() igual maneja el error color_ya_tomado que devuelve el servidor.
+const coloresTomadosAlUnirse = ref<Set<string>>(new Set())
+watch(codigoSala, async (codigo) => {
+  const limpio = codigo.trim().toUpperCase()
+  if (limpio.length !== 6) {
+    coloresTomadosAlUnirse.value = new Set()
+    return
+  }
+  try {
+    const meta = await api.verSala(limpio)
+    coloresTomadosAlUnirse.value = new Set(meta.seats.map((a) => a.color))
+  } catch {
+    coloresTomadosAlUnirse.value = new Set()
+  }
+})
+
+function colorDisponible(id: string): boolean {
+  return !coloresTomadosAlUnirse.value.has(id)
+}
 
 async function entrarASalaDeEspera(roomId: string, hostToken: string, nombreJugador: string) {
   salaCreada.value = { roomId, hostToken, nombre: nombreJugador }
@@ -35,10 +61,14 @@ async function crear() {
     error.value = 'Escribe tu nombre primero.'
     return
   }
+  if (!colorSeleccionado.value) {
+    error.value = 'Elige un color.'
+    return
+  }
   cargando.value = true
   error.value = null
   try {
-    const r = await api.crearSala(nombre.value.trim())
+    const r = await api.crearSala(nombre.value.trim(), colorSeleccionado.value)
     establecerSesion({
       roomId: r.room_id,
       token: r.player_token,
@@ -59,11 +89,15 @@ async function unirse() {
     error.value = 'Escribe tu nombre y el código de sala.'
     return
   }
+  if (!colorSeleccionado.value) {
+    error.value = 'Elige un color.'
+    return
+  }
   cargando.value = true
   error.value = null
   const roomId = codigoSala.value.trim().toUpperCase()
   try {
-    const r = await api.unirseSala(roomId, nombre.value.trim())
+    const r = await api.unirseSala(roomId, nombre.value.trim(), colorSeleccionado.value)
     establecerSesion({
       roomId,
       token: r.player_token,
@@ -126,6 +160,23 @@ onUnmounted(() => {
         <input v-model="nombre" placeholder="Investigador α" maxlength="24" />
       </label>
 
+      <label class="campo-color">
+        Tu color
+        <div class="swatches">
+          <button
+            v-for="c in COLORES_JUGADOR"
+            :key="c.id"
+            type="button"
+            class="swatch"
+            :class="{ activo: colorSeleccionado === c.id }"
+            :disabled="!colorDisponible(c.id)"
+            :style="{ background: c.hex }"
+            :title="colorDisponible(c.id) ? c.etiqueta : `${c.etiqueta} (ya elegido)`"
+            @click="colorSeleccionado = c.id"
+          />
+        </div>
+      </label>
+
       <div class="acciones-lobby">
         <button class="primario" :disabled="cargando" @click="crear">Crear sala nueva</button>
         <div class="separador">o</div>
@@ -145,6 +196,7 @@ onUnmounted(() => {
 
       <ul class="lista-asientos">
         <li v-for="asiento in metadata?.seats ?? []" :key="asiento.player_index">
+          <span class="punto-color" :style="{ background: hexDeColor(asiento.color) }" />
           {{ asiento.nombre }}
         </li>
       </ul>
@@ -201,6 +253,34 @@ input {
   font-size: 1rem;
 }
 
+.campo-color {
+  margin-bottom: 0.9rem;
+}
+
+.swatches {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.swatch {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.swatch.activo {
+  border-color: var(--color-texto);
+}
+
+.swatch:disabled {
+  opacity: 0.2;
+  cursor: not-allowed;
+}
+
 button {
   width: 100%;
   padding: 0.6rem;
@@ -230,10 +310,20 @@ button.primario {
 }
 
 .lista-asientos li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.4rem 0.6rem;
   background: var(--color-fondo);
   border-radius: 4px;
   margin-bottom: 0.35rem;
+}
+
+.punto-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
 }
 
 .error {

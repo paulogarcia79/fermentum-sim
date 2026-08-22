@@ -24,8 +24,8 @@ from server.sessions import (
 
 
 def _sala_en_curso(salas: RoomManager):
-    sesion, _anfitrion = salas.crear_sala("Alba")
-    salas.unirse(sesion.id, "Bruno")
+    sesion, _anfitrion = salas.crear_sala("Alba", "rojo")
+    salas.unirse(sesion.id, "Bruno", "azul")
     salas.iniciar(sesion.id, sesion.host_token)
     return sesion
 
@@ -56,7 +56,7 @@ def test_forzar_pase_funciona_tras_el_umbral_de_inactividad() -> None:
 
 def test_forzar_pase_sin_turno_activo_lanza_error() -> None:
     salas = RoomManager()
-    sesion, _anfitrion = salas.crear_sala("Alba")  # aun en LOBBY, sin engine
+    sesion, _anfitrion = salas.crear_sala("Alba", "rojo")  # aun en LOBBY, sin engine
 
     with pytest.raises(NoActiveTurnError):
         sesion.forzar_pase_por_inactividad()
@@ -69,8 +69,8 @@ def test_forzar_pase_sin_turno_activo_lanza_error() -> None:
 
 def test_limpiar_inactivas_elimina_solo_las_realmente_ociosas() -> None:
     salas = RoomManager()
-    vieja, _a = salas.crear_sala("Alba")
-    nueva, _b = salas.crear_sala("Carla")
+    vieja, _a = salas.crear_sala("Alba", "rojo")
+    nueva, _b = salas.crear_sala("Carla", "azul")
 
     vieja.creado_en = time.time() - UMBRAL_LIMPIEZA_LOBBY_SEGUNDOS - 1
     vieja.seats[0].last_seen = vieja.creado_en
@@ -100,7 +100,7 @@ def test_limpiar_inactivas_respeta_el_umbral_mas_largo_de_partidas_en_curso() ->
 
 def test_limpiar_inactivas_borra_tambien_el_snapshot_en_disco() -> None:
     salas = RoomManager()
-    sesion, _a = salas.crear_sala("Alba")
+    sesion, _a = salas.crear_sala("Alba", "rojo")
     sesion.creado_en = time.time() - UMBRAL_LIMPIEZA_LOBBY_SEGUNDOS - 1
     sesion.seats[0].last_seen = sesion.creado_en
 
@@ -155,7 +155,7 @@ def test_partida_restaurada_sigue_siendo_jugable() -> None:
 
 def test_cargar_todas_descarta_un_archivo_con_version_de_formato_distinta() -> None:
     salas = RoomManager()
-    salas.crear_sala("Alba")
+    salas.crear_sala("Alba", "rojo")
 
     import pickle
 

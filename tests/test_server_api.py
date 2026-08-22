@@ -27,7 +27,7 @@ def test_partida_completa_de_2_jugadores_por_http() -> None:
     cliente = _cliente()
 
     # -- Crear sala (Alba, host) --
-    r = cliente.post("/games", json={"nombre": "Alba"})
+    r = cliente.post("/games", json={"nombre": "Alba", "color": "rojo"})
     assert r.status_code == 201, r.text
     datos = r.json()
     room_id = datos["room_id"]
@@ -36,7 +36,7 @@ def test_partida_completa_de_2_jugadores_por_http() -> None:
     assert datos["player_index"] == 0
 
     # -- Unirse (Bruno) --
-    r = cliente.post(f"/games/{room_id}/join", json={"nombre": "Bruno"})
+    r = cliente.post(f"/games/{room_id}/join", json={"nombre": "Bruno", "color": "azul"})
     assert r.status_code == 201, r.text
     token_bruno = r.json()["player_token"]
     assert r.json()["player_index"] == 1
@@ -46,6 +46,17 @@ def test_partida_completa_de_2_jugadores_por_http() -> None:
     assert r.status_code == 200
     assert r.json()["status"] == "lobby"
     assert len(r.json()["seats"]) == 2
+    assert {a["color"] for a in r.json()["seats"]} == {"rojo", "azul"}
+
+    # -- Bruno intenta el color ya tomado por Alba --
+    r = cliente.post(f"/games/{room_id}/join", json={"nombre": "Carla", "color": "rojo"})
+    assert r.status_code == 409
+    assert r.json()["error"] == "color_ya_tomado"
+
+    # -- Color fuera de la paleta --
+    r = cliente.post(f"/games/{room_id}/join", json={"nombre": "Carla", "color": "fucsia"})
+    assert r.status_code == 400
+    assert r.json()["error"] == "color_invalido"
 
     # -- Iniciar (solo el host) --
     r = cliente.post(f"/games/{room_id}/start", headers={"X-Player-Token": host_token})
@@ -59,6 +70,8 @@ def test_partida_completa_de_2_jugadores_por_http() -> None:
     assert "mazo_clima" not in estado["environment"]  # redaccion: solo el conteo
     assert estado["environment"]["cartas_clima_restantes"] > 0
     assert "mazo_recetas" not in estado["market"]
+    assert estado["players"][0]["color"] == "rojo"
+    assert estado["players"][1]["color"] == "azul"
 
     # -- Bruno intenta actuar fuera de su turno --
     r = cliente.post(
@@ -114,7 +127,7 @@ def test_partida_completa_de_2_jugadores_por_http() -> None:
 
 def test_token_desconocido_es_401() -> None:
     cliente = _cliente()
-    r = cliente.post("/games", json={"nombre": "Alba"})
+    r = cliente.post("/games", json={"nombre": "Alba", "color": "rojo"})
     room_id = r.json()["room_id"]
 
     r = cliente.get(f"/games/{room_id}/state", headers={"X-Player-Token": "no-existe"})
@@ -131,7 +144,7 @@ def test_sala_inexistente_es_404() -> None:
 
 def test_no_host_no_puede_iniciar_la_sala() -> None:
     cliente = _cliente()
-    r = cliente.post("/games", json={"nombre": "Alba"})
+    r = cliente.post("/games", json={"nombre": "Alba", "color": "rojo"})
     room_id = r.json()["room_id"]
 
     r = cliente.post(f"/games/{room_id}/start", headers={"X-Player-Token": "token-falso"})

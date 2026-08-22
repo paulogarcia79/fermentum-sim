@@ -39,8 +39,8 @@ export interface CrearSalaResultado {
   player_index: number
 }
 
-export function crearSala(nombre: string): Promise<CrearSalaResultado> {
-  return pedir('/games', conJson({ nombre }))
+export function crearSala(nombre: string, color: string): Promise<CrearSalaResultado> {
+  return pedir('/games', conJson({ nombre, color }))
 }
 
 export interface UnirseSalaResultado {
@@ -48,14 +48,14 @@ export interface UnirseSalaResultado {
   player_index: number
 }
 
-export function unirseSala(roomId: string, nombre: string): Promise<UnirseSalaResultado> {
-  return pedir(`/games/${roomId}/join`, conJson({ nombre }))
+export function unirseSala(roomId: string, nombre: string, color: string): Promise<UnirseSalaResultado> {
+  return pedir(`/games/${roomId}/join`, conJson({ nombre, color }))
 }
 
 export interface SalaMetadata {
   room_id: string
   status: 'lobby' | 'en_curso' | 'terminada'
-  seats: { player_index: number; nombre: string }[]
+  seats: { player_index: number; nombre: string; color: string }[]
 }
 
 export function verSala(roomId: string): Promise<SalaMetadata> {

@@ -47,7 +47,7 @@ def _cliente() -> TestClient:
 
 def test_difundir_evento_reenvia_a_todos_los_suscriptores() -> None:
     salas = RoomManager()
-    sesion, _anfitrion = salas.crear_sala("Alba")
+    sesion, _anfitrion = salas.crear_sala("Alba", "rojo")
     cola_1, cola_2 = _ColaFalsa(), _ColaFalsa()
     sesion.suscriptores.extend([cola_1, cola_2])
 
@@ -64,8 +64,8 @@ def test_iniciar_sala_conecta_el_event_sink_a_los_suscriptores() -> None:
     cualquier suscriptor SSE ya conectado reciba los eventos de Fase I del
     Día 1 (jefe_asignado, clima_revelado, mercado_refrescado) sin sondear."""
     salas = RoomManager()
-    sesion, anfitrion = salas.crear_sala("Alba")
-    salas.unirse(sesion.id, "Bruno")
+    sesion, anfitrion = salas.crear_sala("Alba", "rojo")
+    salas.unirse(sesion.id, "Bruno", "azul")
 
     cola = _ColaFalsa()
     sesion.suscriptores.append(cola)
@@ -80,7 +80,7 @@ def test_iniciar_sala_conecta_el_event_sink_a_los_suscriptores() -> None:
 
 def test_flujo_eventos_requiere_token() -> None:
     cliente = _cliente()
-    r = cliente.post("/games", json={"nombre": "Alba"})
+    r = cliente.post("/games", json={"nombre": "Alba", "color": "rojo"})
     room_id = r.json()["room_id"]
 
     r = cliente.get(f"/games/{room_id}/events/stream")
@@ -97,7 +97,7 @@ def test_flujo_eventos_sala_inexistente() -> None:
 
 def test_flujo_eventos_partida_no_iniciada() -> None:
     cliente = _cliente()
-    r = cliente.post("/games", json={"nombre": "Alba"})
+    r = cliente.post("/games", json={"nombre": "Alba", "color": "rojo"})
     d = r.json()
 
     r = cliente.get(
