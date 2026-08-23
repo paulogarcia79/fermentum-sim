@@ -4,6 +4,7 @@ import { confirmarFinAnticipado, detenerTransmisionEnVivo, forzarPase, store } f
 import MazoClimaPanel from './MazoClimaPanel.vue'
 import MercadoPanel from './MercadoPanel.vue'
 import BolsaHarinasPanel from './BolsaHarinasPanel.vue'
+import MazoTendenciasPanel from './MazoTendenciasPanel.vue'
 import MiTablero from './MiTablero.vue'
 import TablerosOponentes from './TablerosOponentes.vue'
 import BarraAcciones from './BarraAcciones.vue'
@@ -73,7 +74,11 @@ onUnmounted(() => detenerTransmisionEnVivo())
         <h2 class="titulo-mesa">Mesa Común</h2>
         <MazoClimaPanel />
         <MercadoPanel />
-        <BolsaHarinasPanel />
+
+        <div class="fila-harinas">
+          <BolsaHarinasPanel />
+          <MazoTendenciasPanel />
+        </div>
 
         <div class="panel espacios-accion">
           <h3>Espacios de Acción</h3>
@@ -172,6 +177,26 @@ onUnmounted(() => detenerTransmisionEnVivo())
 
 .espacios-accion h3 {
   margin-top: 0;
+}
+
+.fila-harinas {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.fila-harinas > :first-child {
+  flex: 2 1 380px;
+}
+
+.fila-harinas > :last-child {
+  flex: 1 1 260px;
+}
+
+@media (max-width: 700px) {
+  .fila-harinas {
+    flex-direction: column;
+  }
 }
 
 .columnas {
