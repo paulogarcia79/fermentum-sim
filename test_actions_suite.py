@@ -127,28 +127,55 @@ p1.vitalidad = 2
 p1.en_estado_contaminacion = False
 
 # ========================================================================
-print("--- C: Adquirir Insumos ---")
-market.protocolo_refresco()
+print("--- C: Visitar el Mercado ---")
 p1.puntos_accion = 3
-p1.datos_investigacion = 8
+p1.monedas = 50
+p1.reserva_harina = {"Blanca": 100, "Centeno": 0, "Integral": 0}
 
-idx = next((i for i, s in enumerate(market.suministros) if s is not None), None)
-if idx is not None:
-    pa_antes = p1.puntos_accion
-    manager.accion_C_adquirir_insumos(p1, indice_slot=idx)
-    check("C normal: PA consumido", lambda: None if p1.puntos_accion == pa_antes - 1 else (_ for _ in ()).throw(AssertionError()))
+pa_antes = p1.puntos_accion
+monedas_antes = p1.monedas
+manager.accion_C_visitar_mercado(p1, transacciones=[{"tipo_recurso": "Blanca", "operacion": "comprar"}])
+check("C comprar harina: PA consumido", lambda: None if p1.puntos_accion == pa_antes - 1 else (_ for _ in ()).throw(AssertionError()))
+check("C comprar harina: +100 Blanca", lambda: None if p1.reserva_harina["Blanca"] == 200 else (_ for _ in ()).throw(AssertionError()))
+check("C comprar harina: monedas descontadas", lambda: None if p1.monedas < monedas_antes else (_ for _ in ()).throw(AssertionError()))
 
-ph = p1.reserva_harina["Blanca"]
 p1.puntos_accion = 2
-p1.datos_investigacion = 5
-manager.accion_C_adquirir_insumos(p1, urgencia=True, harina_urgencia=TipoHarina.BLANCA)
-check("C urgencia harina: +100 Blanca", lambda: None if p1.reserva_harina["Blanca"] == ph + 100 else (_ for _ in ()).throw(AssertionError()))
-check("C urgencia harina: -1 dato", lambda: None if p1.datos_investigacion == 4 else (_ for _ in ()).throw(AssertionError()))
+monedas_antes2 = p1.monedas
+manager.accion_C_visitar_mercado(p1, transacciones=[{"tipo_recurso": "Blanca", "operacion": "vender"}])
+check("C vender harina: -100 Blanca", lambda: None if p1.reserva_harina["Blanca"] == 100 else (_ for _ in ()).throw(AssertionError()))
+check("C vender harina: monedas recibidas", lambda: None if p1.monedas > monedas_antes2 else (_ for _ in ()).throw(AssertionError()))
 
-p1.puntos_accion = 1
-xraises(InvalidActionError, "C urgencia sin recurso", lambda: manager.accion_C_adquirir_insumos(p1, urgencia=True))
-xraises(InvalidActionError, "C urgencia doble recurso", lambda: manager.accion_C_adquirir_insumos(p1, urgencia=True, harina_urgencia=TipoHarina.BLANCA, agua_tokens_urgencia=10))
-xraises(InvalidActionError, "C normal sin indice", lambda: manager.accion_C_adquirir_insumos(p1))
+p1.puntos_accion = 2
+agua_antes = p1.reserva_agua
+manager.accion_C_visitar_mercado(p1, transacciones=[{"tipo_recurso": "agua", "operacion": "comprar", "lote_pct": 10}])
+check("C comprar agua: tokens recibidos", lambda: None if p1.reserva_agua > agua_antes else (_ for _ in ()).throw(AssertionError()))
+
+p1.puntos_accion = 2
+xraises(InvalidActionError, "C exclusividad: mismo recurso dos veces", lambda: manager.accion_C_visitar_mercado(
+    p1, transacciones=[
+        {"tipo_recurso": "Blanca", "operacion": "comprar"},
+        {"tipo_recurso": "Blanca", "operacion": "vender"},
+    ]
+))
+xraises(InvalidActionError, "C sin transacciones", lambda: manager.accion_C_visitar_mercado(p1, transacciones=[]))
+
+p1.puntos_accion = 2
+p1.monedas = 0
+xraises(MissingResourceError, "C monedas insuficientes", lambda: manager.accion_C_visitar_mercado(
+    p1, transacciones=[{"tipo_recurso": "Centeno", "operacion": "comprar"}]
+))
+
+# ========================================================================
+print("--- Pedido de Urgencia ---")
+ph = p1.reserva_harina["Blanca"]
+p1.datos_investigacion = 5
+manager.accion_auxiliar_pedido_urgencia(p1, harina_urgencia=TipoHarina.BLANCA)
+check("Pedido Urgencia: +100 Blanca", lambda: None if p1.reserva_harina["Blanca"] == ph + 100 else (_ for _ in ()).throw(AssertionError()))
+check("Pedido Urgencia: -1 dato", lambda: None if p1.datos_investigacion == 4 else (_ for _ in ()).throw(AssertionError()))
+check("Pedido Urgencia: no consume PA", lambda: None if p1.puntos_accion == 2 else (_ for _ in ()).throw(AssertionError()))
+
+xraises(InvalidActionError, "Pedido Urgencia sin recurso", lambda: manager.accion_auxiliar_pedido_urgencia(p1))
+xraises(InvalidActionError, "Pedido Urgencia doble recurso", lambda: manager.accion_auxiliar_pedido_urgencia(p1, harina_urgencia=TipoHarina.BLANCA, agua_tokens_urgencia=10))
 
 # ========================================================================
 print("--- D: Implementar Mejora ---")
@@ -163,7 +190,15 @@ check("D: Incubadora activa", lambda: None if p1.tecnologias.incubadora else (_ 
 check("D: -3 datos (10-3=7)", lambda: None if p1.datos_investigacion == 7 else (_ for _ in ()).throw(AssertionError(f"datos={p1.datos_investigacion}")))
 
 p1.puntos_accion = 2
-xraises(RuleViolationError, "D segunda mejora bloqueada", lambda: manager.accion_D_implementar_mejora(p1, TecnologiaID.CAMARA_B))
+xraises(RuleViolationError, "D misma mejora dos veces bloqueada", lambda: manager.accion_D_implementar_mejora(p1, TecnologiaID.INCUBADORA))
+
+p1.puntos_accion = 2
+manager.accion_D_implementar_mejora(p1, TecnologiaID.CAMARA_B)
+check("D: una segunda mejora DISTINTA sí se permite (GDD v0.0.2)", lambda: None if p1.tecnologias.camara_b else (_ for _ in ()).throw(AssertionError()))
+
+p1.puntos_accion = 2
+manager.accion_D_implementar_mejora(p1, TecnologiaID.CRIOPRESERVACION)
+check("D: Criopreservación (3ra mejora distinta)", lambda: None if p1.tecnologias.criopreservacion else (_ for _ in ()).throw(AssertionError()))
 
 # ========================================================================
 print("--- E: Pliegues ---")
@@ -272,15 +307,15 @@ p1.vitalidad = 0
 p1.acidez = 0
 p1.en_estado_contaminacion = True
 p1.puntos_accion = 2
-p1.reserva_harina = {"Blanca": 20, "Centeno": 0, "Integral": 0}
+p1.reserva_harina = {"Blanca": 50, "Centeno": 0, "Integral": 0}
 p1.reserva_agua = 5
 
 manager.accion_H_recultivo_manual(p1)
 check("H: vitalidad=1", lambda: None if p1.vitalidad == 1 else (_ for _ in ()).throw(AssertionError()))
 check("H: acidez=1", lambda: None if p1.acidez == 1 else (_ for _ in ()).throw(AssertionError()))
 check("H: contaminacion limpia", lambda: None if not p1.en_estado_contaminacion else (_ for _ in ()).throw(AssertionError()))
-check("H: harina consumida (-20%)", lambda: None if sum(p1.reserva_harina.values()) == 0 else (_ for _ in ()).throw(AssertionError()))
-check("H: agua consumida (-2)", lambda: None if p1.reserva_agua == 3 else (_ for _ in ()).throw(AssertionError()))
+check("H: harina consumida (-50%)", lambda: None if sum(p1.reserva_harina.values()) == 0 else (_ for _ in ()).throw(AssertionError()))
+check("H: agua NO consumida (sin costo de agua en GDD v0.0.2)", lambda: None if p1.reserva_agua == 5 else (_ for _ in ()).throw(AssertionError()))
 
 p1.puntos_accion = 1
 xraises(InvalidActionError, "H sin contaminacion", lambda: manager.accion_H_recultivo_manual(p1))
@@ -297,14 +332,14 @@ manager.accion_I_inoculo_emergencia(p2)
 check("I: vitalidad=2", lambda: None if p2.vitalidad == 2 else (_ for _ in ()).throw(AssertionError()))
 check("I: acidez=2", lambda: None if p2.acidez == 2 else (_ for _ in ()).throw(AssertionError()))
 check("I: contaminacion limpia", lambda: None if not p2.en_estado_contaminacion else (_ for _ in ()).throw(AssertionError()))
-check("I: datos=2 (4-2)", lambda: None if p2.datos_investigacion == 2 else (_ for _ in ()).throw(AssertionError(f"datos={p2.datos_investigacion}")))
+check("I: datos=3 (4-1, GDD v0.0.2)", lambda: None if p2.datos_investigacion == 3 else (_ for _ in ()).throw(AssertionError(f"datos={p2.datos_investigacion}")))
 
 p2.puntos_accion = 1
 xraises(InvalidActionError, "I sin contaminacion", lambda: manager.accion_I_inoculo_emergencia(p2))
 
 p2.en_estado_contaminacion = True
 p2.puntos_accion = 1
-p2.datos_investigacion = 1
+p2.datos_investigacion = 0
 xraises(MissingResourceError, "I datos insuficientes", lambda: manager.accion_I_inoculo_emergencia(p2))
 
 # ========================================================================

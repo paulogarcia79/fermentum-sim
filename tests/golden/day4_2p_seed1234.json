@@ -262,13 +262,17 @@
         "acidez_diana": [
           3
         ],
-        "bono_sabor_pts": 3,
+        "bono_sabor_pts": 4,
         "grado": "Avanzada",
         "harina_base": "Blanca",
         "hidratacion_pct": 62,
         "id": "pizza_napolitana",
+        "monedas_baja": 15,
+        "monedas_optima": 21,
+        "monedas_sobre": 12,
         "nombre": "Pizza Napolitana",
         "penalizacion_colapso": -4,
+        "puntos_baja": 4,
         "puntos_optimos": 14,
         "req_tecnologico": "modulo_analitico",
         "tokens_agua": 13,
@@ -278,65 +282,6 @@
         ],
         "zona_optima": [
           11,
-          13
-        ],
-        "zona_sobrefermentada": [
-          14,
-          20
-        ]
-      }
-    ],
-    "mazo_recetas": [],
-    "recetas_visibles": [
-      null,
-      {
-        "acidez_diana": [
-          2
-        ],
-        "bono_sabor_pts": 2,
-        "grado": "Básica",
-        "harina_base": "Blanca",
-        "hidratacion_pct": 65,
-        "id": "baguette",
-        "nombre": "Baguette",
-        "penalizacion_colapso": -2,
-        "puntos_optimos": 11,
-        "req_tecnologico": null,
-        "tokens_agua": 13,
-        "zona_baja": [
-          1,
-          13
-        ],
-        "zona_optima": [
-          14,
-          15
-        ],
-        "zona_sobrefermentada": [
-          16,
-          20
-        ]
-      },
-      {
-        "acidez_diana": [
-          1,
-          2
-        ],
-        "bono_sabor_pts": 2,
-        "grado": "Básica",
-        "harina_base": "Blanca",
-        "hidratacion_pct": 75,
-        "id": "focaccia",
-        "nombre": "Focaccia",
-        "penalizacion_colapso": -3,
-        "puntos_optimos": 12,
-        "req_tecnologico": null,
-        "tokens_agua": 15,
-        "zona_baja": [
-          1,
-          9
-        ],
-        "zona_optima": [
-          10,
           14
         ],
         "zona_sobrefermentada": [
@@ -344,50 +289,302 @@
           20
         ]
       },
-      null
-    ],
-    "suministros": [
-      null,
       {
-        "recursos": {
-          "Blanca": 10,
-          "Centeno": 100,
-          "Integral": 10,
-          "agua": 30
-        }
-      },
-      {
-        "recursos": {
-          "Blanca": 100,
-          "Centeno": 40,
-          "Integral": 10,
-          "agua": 0
-        }
+        "acidez_diana": [
+          4,
+          5
+        ],
+        "bono_sabor_pts": 6,
+        "grado": "Avanzada",
+        "harina_base": "Centeno",
+        "hidratacion_pct": 67,
+        "id": "hogaza_centeno",
+        "monedas_baja": 20,
+        "monedas_optima": 27,
+        "monedas_sobre": 17,
+        "nombre": "Hogaza Centeno",
+        "penalizacion_colapso": -5,
+        "puntos_baja": 6,
+        "puntos_optimos": 15,
+        "req_tecnologico": "modulo_analitico",
+        "tokens_agua": 14,
+        "zona_baja": [
+          1,
+          12
+        ],
+        "zona_optima": [
+          13,
+          16
+        ],
+        "zona_sobrefermentada": [
+          17,
+          20
+        ]
       }
+    ],
+    "descarte_tendencias": [
+      1,
+      1,
+      -1,
+      2
+    ],
+    "mazo_recetas": [],
+    "mazo_tendencias": [
+      0,
+      1,
+      0,
+      -2,
+      1,
+      0,
+      -1,
+      -1,
+      -1,
+      1,
+      -1,
+      0,
+      -1,
+      0,
+      -1,
+      1,
+      1
+    ],
+    "posiciones_harina": {
+      "Blanca": 5,
+      "Centeno": 5,
+      "Integral": 5
+    },
+    "recetas_visibles": [
+      {
+        "acidez_diana": [
+          3
+        ],
+        "bono_sabor_pts": 3,
+        "grado": "Básica",
+        "harina_base": "Blanca",
+        "hidratacion_pct": 60,
+        "id": "pan_de_campo",
+        "monedas_baja": 13,
+        "monedas_optima": 17,
+        "monedas_sobre": 11,
+        "nombre": "Pan de Campo",
+        "penalizacion_colapso": -2,
+        "puntos_baja": 4,
+        "puntos_optimos": 10,
+        "req_tecnologico": null,
+        "tokens_agua": 12,
+        "zona_baja": [
+          1,
+          10
+        ],
+        "zona_optima": [
+          11,
+          15
+        ],
+        "zona_sobrefermentada": [
+          16,
+          20
+        ]
+      },
+      null,
+      null,
+      null
     ]
   },
   "partida_terminada": false,
   "players": [
     {
       "accion_alimentar_usada": true,
-      "acidez": 3,
+      "acidez": 4,
       "archivo_colapsos": [],
       "archivo_horneado_exitoso": [],
       "carpeta_proyectos": [
         {
           "acidez_diana": [
-            1
+            3
           ],
           "bono_sabor_pts": 3,
+          "grado": "Básica",
+          "harina_base": "Blanca",
+          "hidratacion_pct": 60,
+          "id": "pan_de_campo",
+          "monedas_baja": 13,
+          "monedas_optima": 17,
+          "monedas_sobre": 11,
+          "nombre": "Pan de Campo",
+          "penalizacion_colapso": -2,
+          "puntos_baja": 4,
+          "puntos_optimos": 10,
+          "req_tecnologico": null,
+          "tokens_agua": 12,
+          "zona_baja": [
+            1,
+            10
+          ],
+          "zona_optima": [
+            11,
+            15
+          ],
+          "zona_sobrefermentada": [
+            16,
+            20
+          ]
+        },
+        {
+          "acidez_diana": [
+            1
+          ],
+          "bono_sabor_pts": 5,
           "grado": "Avanzada",
           "harina_base": "Blanca",
           "hidratacion_pct": 52,
           "id": "brioche",
+          "monedas_baja": 14,
+          "monedas_optima": 21,
+          "monedas_sobre": 11,
           "nombre": "Brioche",
           "penalizacion_colapso": -6,
+          "puntos_baja": 5,
           "puntos_optimos": 16,
           "req_tecnologico": "modulo_analitico",
           "tokens_agua": 11,
+          "zona_baja": [
+            1,
+            14
+          ],
+          "zona_optima": [
+            15,
+            17
+          ],
+          "zona_sobrefermentada": [
+            18,
+            20
+          ]
+        },
+        {
+          "acidez_diana": [
+            3,
+            4
+          ],
+          "bono_sabor_pts": 7,
+          "grado": "Avanzada",
+          "harina_base": "Integral",
+          "hidratacion_pct": 78,
+          "id": "pan_semillas",
+          "monedas_baja": 19,
+          "monedas_optima": 26,
+          "monedas_sobre": 16,
+          "nombre": "Pan Semillas",
+          "penalizacion_colapso": -5,
+          "puntos_baja": 6,
+          "puntos_optimos": 17,
+          "req_tecnologico": "modulo_analitico",
+          "tokens_agua": 16,
+          "zona_baja": [
+            1,
+            13
+          ],
+          "zona_optima": [
+            14,
+            16
+          ],
+          "zona_sobrefermentada": [
+            17,
+            20
+          ]
+        }
+      ],
+      "contador_contaminaciones": 0,
+      "dados_inoculo": 3,
+      "datos_investigacion": 0,
+      "en_estado_contaminacion": false,
+      "estaciones_fermentacion": [
+        null,
+        null,
+        null
+      ],
+      "horas_extras_usadas": false,
+      "monedas": 2,
+      "nombre": "Alba",
+      "puntos_accion": 0,
+      "reserva_agua": 0,
+      "reserva_harina": {
+        "Blanca": 160,
+        "Centeno": 0,
+        "Integral": 0
+      },
+      "tecnologias": {
+        "camara_b": false,
+        "criopreservacion": false,
+        "incubadora": false,
+        "modulo_analitico": false
+      },
+      "vitalidad": 1
+    },
+    {
+      "accion_alimentar_usada": true,
+      "acidez": 3,
+      "archivo_colapsos": [],
+      "archivo_horneado_exitoso": [
+        {
+          "bono_sabor_aplicado": true,
+          "datos_obtenidos": 1,
+          "fue_colapso": false,
+          "monedas_obtenidos": 21,
+          "posicion_final": 13,
+          "puntos_base": 12,
+          "recipe": {
+            "acidez_diana": [
+              1,
+              2
+            ],
+            "bono_sabor_pts": 2,
+            "grado": "Básica",
+            "harina_base": "Blanca",
+            "hidratacion_pct": 75,
+            "id": "focaccia",
+            "monedas_baja": 15,
+            "monedas_optima": 19,
+            "monedas_sobre": 13,
+            "nombre": "Focaccia",
+            "penalizacion_colapso": -3,
+            "puntos_baja": 3,
+            "puntos_optimos": 12,
+            "req_tecnologico": null,
+            "tokens_agua": 15,
+            "zona_baja": [
+              1,
+              9
+            ],
+            "zona_optima": [
+              10,
+              14
+            ],
+            "zona_sobrefermentada": [
+              15,
+              20
+            ]
+          }
+        }
+      ],
+      "carpeta_proyectos": [
+        {
+          "acidez_diana": [
+            1
+          ],
+          "bono_sabor_pts": 8,
+          "grado": "Avanzada",
+          "harina_base": "Blanca",
+          "hidratacion_pct": 47,
+          "id": "panettone",
+          "monedas_baja": 13,
+          "monedas_optima": 22,
+          "monedas_sobre": 10,
+          "nombre": "Panettone",
+          "penalizacion_colapso": -8,
+          "puntos_baja": 8,
+          "puntos_optimos": 20,
+          "req_tecnologico": "modulo_analitico",
+          "tokens_agua": 10,
           "zona_baja": [
             1,
             16
@@ -403,231 +600,90 @@
         },
         {
           "acidez_diana": [
-            1
+            1,
+            2
           ],
-          "bono_sabor_pts": 4,
-          "grado": "Avanzada",
+          "bono_sabor_pts": 2,
+          "grado": "Básica",
           "harina_base": "Blanca",
-          "hidratacion_pct": 47,
-          "id": "panettone",
-          "nombre": "Panettone",
-          "penalizacion_colapso": -8,
-          "puntos_optimos": 20,
-          "req_tecnologico": "modulo_analitico",
-          "tokens_agua": 10,
+          "hidratacion_pct": 75,
+          "id": "focaccia",
+          "monedas_baja": 15,
+          "monedas_optima": 19,
+          "monedas_sobre": 13,
+          "nombre": "Focaccia",
+          "penalizacion_colapso": -3,
+          "puntos_baja": 3,
+          "puntos_optimos": 12,
+          "req_tecnologico": null,
+          "tokens_agua": 15,
           "zona_baja": [
             1,
-            17
+            9
           ],
           "zona_optima": [
-            18,
-            19
+            10,
+            14
           ],
           "zona_sobrefermentada": [
-            20,
+            15,
             20
           ]
         },
         {
           "acidez_diana": [
-            3
+            2
           ],
-          "bono_sabor_pts": 2,
+          "bono_sabor_pts": 3,
           "grado": "Básica",
           "harina_base": "Blanca",
-          "hidratacion_pct": 60,
-          "id": "pan_de_campo",
-          "nombre": "Pan de Campo",
+          "hidratacion_pct": 65,
+          "id": "baguette",
+          "monedas_baja": 14,
+          "monedas_optima": 18,
+          "monedas_sobre": 12,
+          "nombre": "Baguette",
           "penalizacion_colapso": -2,
-          "puntos_optimos": 10,
+          "puntos_baja": 5,
+          "puntos_optimos": 11,
           "req_tecnologico": null,
-          "tokens_agua": 12,
+          "tokens_agua": 13,
           "zona_baja": [
             1,
             11
           ],
           "zona_optima": [
             12,
-            14
-          ],
-          "zona_sobrefermentada": [
-            15,
-            20
-          ]
-        }
-      ],
-      "contador_contaminaciones": 0,
-      "dados_inoculo": 2,
-      "datos_investigacion": 1,
-      "en_estado_contaminacion": false,
-      "estaciones_fermentacion": [
-        {
-          "bono_sabor": true,
-          "dado_inoculo": 1,
-          "modificador_incubadora": 0,
-          "posicion_track": 5,
-          "recipe": {
-            "acidez_diana": [
-              2
-            ],
-            "bono_sabor_pts": 2,
-            "grado": "Básica",
-            "harina_base": "Blanca",
-            "hidratacion_pct": 65,
-            "id": "baguette",
-            "nombre": "Baguette",
-            "penalizacion_colapso": -2,
-            "puntos_optimos": 11,
-            "req_tecnologico": null,
-            "tokens_agua": 13,
-            "zona_baja": [
-              1,
-              13
-            ],
-            "zona_optima": [
-              14,
-              15
-            ],
-            "zona_sobrefermentada": [
-              16,
-              20
-            ]
-          }
-        },
-        null,
-        null
-      ],
-      "horas_extras_usadas": false,
-      "nombre": "Alba",
-      "puntos_accion": 0,
-      "reserva_agua": 7,
-      "reserva_harina": {
-        "Blanca": 60,
-        "Centeno": 130,
-        "Integral": 250
-      },
-      "tecnologias": {
-        "camara_b": false,
-        "incubadora": false,
-        "modulo_analitico": false
-      },
-      "vitalidad": 1
-    },
-    {
-      "accion_alimentar_usada": true,
-      "acidez": 5,
-      "archivo_colapsos": [],
-      "archivo_horneado_exitoso": [],
-      "carpeta_proyectos": [
-        {
-          "acidez_diana": [
-            3,
-            4
-          ],
-          "bono_sabor_pts": 3,
-          "grado": "Avanzada",
-          "harina_base": "Integral",
-          "hidratacion_pct": 78,
-          "id": "pan_semillas",
-          "nombre": "Pan Semillas",
-          "penalizacion_colapso": -5,
-          "puntos_optimos": 17,
-          "req_tecnologico": "modulo_analitico",
-          "tokens_agua": 16,
-          "zona_baja": [
-            1,
-            12
-          ],
-          "zona_optima": [
-            13,
             15
           ],
           "zona_sobrefermentada": [
             16,
             20
           ]
-        },
-        {
-          "acidez_diana": [
-            4,
-            5
-          ],
-          "bono_sabor_pts": 3,
-          "grado": "Avanzada",
-          "harina_base": "Centeno",
-          "hidratacion_pct": 67,
-          "id": "hogaza_centeno",
-          "nombre": "Hogaza Centeno",
-          "penalizacion_colapso": -5,
-          "puntos_optimos": 15,
-          "req_tecnologico": "modulo_analitico",
-          "tokens_agua": 14,
-          "zona_baja": [
-            1,
-            14
-          ],
-          "zona_optima": [
-            15,
-            18
-          ],
-          "zona_sobrefermentada": [
-            19,
-            20
-          ]
         }
       ],
       "contador_contaminaciones": 0,
-      "dados_inoculo": 2,
+      "dados_inoculo": 3,
       "datos_investigacion": 1,
       "en_estado_contaminacion": false,
       "estaciones_fermentacion": [
-        {
-          "bono_sabor": false,
-          "dado_inoculo": 2,
-          "modificador_incubadora": 0,
-          "posicion_track": 6,
-          "recipe": {
-            "acidez_diana": [
-              3
-            ],
-            "bono_sabor_pts": 2,
-            "grado": "Básica",
-            "harina_base": "Blanca",
-            "hidratacion_pct": 60,
-            "id": "pan_de_campo",
-            "nombre": "Pan de Campo",
-            "penalizacion_colapso": -2,
-            "puntos_optimos": 10,
-            "req_tecnologico": null,
-            "tokens_agua": 12,
-            "zona_baja": [
-              1,
-              11
-            ],
-            "zona_optima": [
-              12,
-              14
-            ],
-            "zona_sobrefermentada": [
-              15,
-              20
-            ]
-          }
-        },
+        null,
         null,
         null
       ],
       "horas_extras_usadas": false,
+      "monedas": 19,
       "nombre": "Bruno",
       "puntos_accion": 0,
-      "reserva_agua": 14,
+      "reserva_agua": 1,
       "reserva_harina": {
-        "Blanca": 10,
-        "Centeno": 160,
-        "Integral": 120
+        "Blanca": 160,
+        "Centeno": 0,
+        "Integral": 0
       },
       "tecnologias": {
         "camara_b": false,
+        "criopreservacion": false,
         "incubadora": false,
         "modulo_analitico": false
       },

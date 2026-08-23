@@ -90,8 +90,14 @@ def _intentar_investigar(engine: "GameEngine", player: "Player", manager: "Actio
 
 
 def _intentar_adquirir(engine: "GameEngine", player: "Player", manager: "ActionManager") -> bool:
-    for idx, lote in enumerate(engine.market.suministros):
-        if lote is not None:
-            manager.accion_C_adquirir_insumos(player, indice_slot=idx)
+    from models import TipoHarina  # import local para evitar ciclo en TYPE_CHECKING
+
+    for tipo in TipoHarina:
+        try:
+            manager.accion_C_visitar_mercado(
+                player, transacciones=[{"tipo_recurso": tipo.value, "operacion": "comprar"}]
+            )
             return True
+        except FermentumError:
+            continue
     return False
