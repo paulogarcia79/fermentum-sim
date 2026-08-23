@@ -32,6 +32,7 @@ class EventoTipo(str, Enum):
 
     JEFE_ASIGNADO = "jefe_asignado"
     CLIMA_REVELADO = "clima_revelado"
+    TENDENCIA_MERCADO = "tendencia_mercado"
     MERCADO_REFRESCADO = "mercado_refrescado"
     MASA_AVANZO = "masa_avanzo"
     HORNEADO = "horneado"

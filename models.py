@@ -58,6 +58,7 @@ class TecnologiaID(str, Enum):
     INCUBADORA = "incubadora"
     CAMARA_B = "camara_b"
     MODULO_ANALITICO = "modulo_analitico"
+    CRIOPRESERVACION = "criopreservacion"
 
 
 class EfectoClimatico(str, Enum):
@@ -103,14 +104,17 @@ class Recipe:
         hidratacion_pct: Porcentaje total de hidratación de la masa.
         tokens_agua: Cantidad de tokens de agua (5% c/u) requeridos para iniciarla.
         acidez_diana: Conjunto de niveles de acidez que activan el Bono de Sabor.
-        bono_sabor_pts: Puntos de Maestría del bono de acidez impresos en la carta.
-            NOTA: No especificado en la tabla de RECIPE_DATABASE.md; se asignan
-            valores coherentes con el balance: +2 pts (Básica) / +3-4 pts (Avanzada).
+        bono_sabor_pts: Puntos de Maestría del bono de acidez impresos en la carta
+            (GDD v0.0.2, Módulo IV §2 — columna "Bono").
         zona_baja: Rango [inicio, fin] del track donde la masa está cruda (pocos puntos).
         zona_optima: Rango [inicio, fin] objetivo (puntos máximos y posible Dato extra).
         zona_sobrefermentada: Rango [inicio, fin] donde la masa colapsa automáticamente.
+        puntos_baja: Puntos de Maestría al hornear dentro de zona_baja.
         puntos_optimos: Puntos de Maestría al hornear dentro de zona_optima.
         penalizacion_colapso: Puntos negativos aplicados en un horneado de emergencia.
+        monedas_baja: Monedas cobradas al hornear y vender en zona_baja.
+        monedas_optima: Monedas cobradas al hornear y vender en zona_optima.
+        monedas_sobre: Monedas cobradas al hornear (automáticamente) en zona_sobrefermentada.
         req_tecnologico: Mejora de laboratorio necesaria para iniciar la receta
             si es Avanzada (None para las Básicas).
     """
@@ -126,8 +130,12 @@ class Recipe:
     zona_baja: Tuple[int, int]
     zona_optima: Tuple[int, int]
     zona_sobrefermentada: Tuple[int, int]
+    puntos_baja: int
     puntos_optimos: int
     penalizacion_colapso: int  # Valor negativo, ej. -2
+    monedas_baja: int
+    monedas_optima: int
+    monedas_sobre: int
     req_tecnologico: Optional[TecnologiaID]
 
     # ------------------------------------------------------------------
@@ -188,6 +196,32 @@ class ClimateCard:
     modificador_termico: int
     efecto_biologico: EfectoBiologico
     efecto_pasivo: EfectoClimatico
+
+
+@dataclass(frozen=True)
+class PatrocinioCard:
+    """
+    Carta de Patrocinio (GDD v0.0.2, Módulo I §6.4 / Anexo B) — determina, para
+    el Día 1 únicamente, el orden de turno y los recursos iniciales de un jugador.
+
+    Se reparte 1 carta (de un mazo de 8, barajado) a cada jugador sentado en
+    `bootstrap.create_game()`. El jugador con menor `iniciativa` recibe el token
+    de Investigador Jefe y actúa primero; el resto se ordena ascendentemente.
+
+    Attributes:
+        iniciativa: Prioridad de turno del Día 1 (1 = primero / Investigador Jefe).
+        tipo_harina: Tipo de harina otorgado al desplegar insumos.
+        harina_pct: Cantidad de harina otorgada, en porcentaje (100 = 1 bolsa,
+            200 = 2 bolsas).
+        agua_tokens: Tokens de agua otorgados (cada uno = 5% de hidratación).
+        monedas: Monedas otorgadas.
+    """
+
+    iniciativa: int
+    tipo_harina: TipoHarina
+    harina_pct: int
+    agua_tokens: int
+    monedas: int
 
 
 # ===========================================================================
@@ -264,6 +298,8 @@ class HorneadoRecord:
         fue_colapso: True si el horneado fue de emergencia (masa sobrefermentada).
         datos_obtenidos: Datos de Investigación recibidos al hornear.
             0 si fue colapso o si la posición no es zona óptima.
+        monedas_obtenidos: Monedas recibidas al hornear y vender (Acción F), ya
+            incluyendo el Bono de Sabor de +2 Monedas si aplica (GDD v0.0.2 Módulo III §F).
     """
 
     recipe: Recipe
@@ -272,6 +308,7 @@ class HorneadoRecord:
     bono_sabor_aplicado: bool
     fue_colapso: bool
     datos_obtenidos: int = 0
+    monedas_obtenidos: int = 0
 
     @property
     def puntos_totales(self) -> int:
@@ -310,8 +347,10 @@ class Technologies:
     """
     Estado de las mejoras de laboratorio instaladas (Zona 4 del tablero personal).
 
-    Regla de negocio (validada en engine.py): solo se puede instalar UNA mejora
-    por partida; esta clase únicamente registra qué está instalado.
+    Regla de negocio (validada en engine.py, ACTIONS_REGISTRY.md §2D): cada mejora
+    individual solo puede instalarse UNA vez por partida, pero un jugador puede
+    llegar a instalar varias mejoras distintas a lo largo de la partida; esta
+    clase únicamente registra qué está instalado.
 
     Attributes:
         incubadora: Permite ajuste local de temperatura ±5°C en la Fase III
@@ -320,11 +359,14 @@ class Technologies:
             recupera +1 Vitalidad o afecta dos masas simultáneamente.
         modulo_analitico: Genera +1 Dato al hornear en centro exacto y
             habilita el inicio de recetas de grado Avanzado.
+        criopreservacion: Efecto pasivo "Estasis Biológica" — durante la Fase III,
+            el cultivo base ignora el desgaste metabólico normal (no resta Vitalidad).
     """
 
     incubadora: bool = False
     camara_b: bool = False
     modulo_analitico: bool = False
+    criopreservacion: bool = False
 
     def esta_activa(self, tecnologia: TecnologiaID) -> bool:
         """Retorna True si la tecnología especificada está instalada."""
@@ -336,8 +378,10 @@ class Technologies:
 
     @property
     def cantidad_instaladas(self) -> int:
-        """Número de mejoras actualmente instaladas (máximo 1 por partida)."""
-        return sum([self.incubadora, self.camara_b, self.modulo_analitico])
+        """Número de mejoras actualmente instaladas (cada una, como máximo 1 vez por partida)."""
+        return sum(
+            [self.incubadora, self.camara_b, self.modulo_analitico, self.criopreservacion]
+        )
 
 
 @dataclass
@@ -386,7 +430,14 @@ class Player:
     """
 
     datos_investigacion: int = 0
-    """Moneda virtual para comprar mejoras de laboratorio y PA adicionales."""
+    """Moneda técnica: compra mejoras de laboratorio, PA extra (Horas Extras) y
+    permite el Pedido de Urgencia. Distinta de `monedas` (la divisa comercial)."""
+
+    monedas: int = 0
+    """
+    Divisa comercial del juego (GDD v0.0.2). Se gana al hornear y vender (Acción F)
+    y se gasta en Visitar el Mercado (Acción C) para comprar harina/agua.
+    """
 
     reserva_harina: Dict[str, int] = field(
         default_factory=lambda: {"Blanca": 0, "Centeno": 0, "Integral": 0}
@@ -487,66 +538,80 @@ class Player:
         cls,
         nombre: str,
         receta_inicial: Recipe,
-        player_index: int = 0,
+        harina_inicial: Optional[Dict[str, int]] = None,
+        agua_inicial: int = 0,
+        monedas_iniciales: int = 0,
+        datos_iniciales: int = 0,
     ) -> "Player":
         """
         Crea e inicializa un jugador con el estado exacto descrito en PLAYER_STATE.md §2.
 
-        Valores fijados en el Día 1:
+        Valores simétricos fijados en el Día 1 para todos los jugadores:
           · vitalidad = 1, acidez = 1
           · dados_inoculo = 3, puntos_accion = 0
           · carpeta_proyectos = [receta_inicial]
           · todas las tecnologías inactivas
-          · recursos asimétricos según player_index (PLAYER_STATE.md §2):
-              Índice 0 → harina=[Blanca], agua=0,  datos=1
-              Índice 1 → harina=[Blanca], agua=10, datos=1
-              Índice 2 → harina=[Blanca], agua=20, datos=1
-              Índice 3 → harina=[Blanca], agua=20, datos=2
+
+        Los recursos iniciales (harina, agua, monedas) provienen de la Carta de
+        Patrocinio repartida en el setup (GDD v0.0.2, Módulo I §6.4 / Anexo B) —
+        ver `bootstrap.create_game()`, que reparte `PATROCINIO_CATALOG` y pasa los
+        valores de la carta de cada jugador a estos parámetros. `datos_iniciales`
+        es 0 para todos los jugadores bajo el setup actual (la tabla de Patrocinios
+        no incluye Datos de Investigación); se deja como parámetro explícito para
+        no romper otros puntos de construcción directa de `Player`.
 
         Args:
             nombre: Nombre o identificador del investigador.
             receta_inicial: Carta de receta de grado 'Básica' asignada aleatoriamente
                 (usar seleccionar_receta_inicial() para elección automática).
-            player_index: Posición en el orden de turno (0 = primero, 3 = último).
-                Determina los recursos iniciales asimétricos.
+            harina_inicial: Harina adicional otorgada por la Carta de Patrocinio,
+                p. ej. {"Blanca": 100} o {"Blanca": 200}. Se suma sobre la reserva
+                base vacía {"Blanca": 0, "Centeno": 0, "Integral": 0}.
+            agua_inicial: Tokens de agua (5% c/u) otorgados por la Carta de Patrocinio.
+            monedas_iniciales: Monedas otorgadas por la Carta de Patrocinio.
+            datos_iniciales: Datos de Investigación iniciales (0 por defecto).
 
         Returns:
             Instancia de Player completamente configurada para el inicio de partida.
 
         Raises:
             ValueError: Si receta_inicial no es de grado Básica (regla del setup).
-            ValueError: Si player_index está fuera del rango 0-3.
         """
         if receta_inicial.grado != Grado.BASICA:
             raise ValueError(
                 f"La receta inicial del Día 1 debe ser de grado '{Grado.BASICA.value}'. "
                 f"Recibido: '{receta_inicial.grado.value}' (id='{receta_inicial.id}')."
             )
-        if player_index not in range(4):
-            raise ValueError(
-                f"player_index debe estar en el rango 0-3. Recibido: {player_index}."
-            )
         player = cls(nombre=nombre)
-        player._aplicar_setup_dia_1(receta_inicial, player_index)
+        player._aplicar_setup_dia_1(
+            receta_inicial,
+            harina_inicial=harina_inicial,
+            agua_inicial=agua_inicial,
+            monedas_iniciales=monedas_iniciales,
+            datos_iniciales=datos_iniciales,
+        )
         return player
 
-    def _aplicar_setup_dia_1(self, receta_inicial: Recipe, player_index: int = 0) -> None:
+    def _aplicar_setup_dia_1(
+        self,
+        receta_inicial: Recipe,
+        harina_inicial: Optional[Dict[str, int]] = None,
+        agua_inicial: int = 0,
+        monedas_iniciales: int = 0,
+        datos_iniciales: int = 0,
+    ) -> None:
         """Aplica los valores de inicialización del Día 1 (PLAYER_STATE.md §2)."""
-        # --- Recursos asimétricos según orden de turno (PLAYER_STATE.md §2) ---
-        _recursos: Dict[int, Tuple[int, int, int]] = {
-            0: (0,  0, 1),
-            1: (0, 10, 1),
-            2: (0, 20, 1),
-            3: (0, 20, 2),
-        }
-        _, agua_inicial, datos_iniciales = _recursos[player_index]
+        reserva_harina: Dict[str, int] = {"Blanca": 0, "Centeno": 0, "Integral": 0}
+        for tipo, cantidad in (harina_inicial or {}).items():
+            reserva_harina[tipo] = reserva_harina.get(tipo, 0) + cantidad
 
         self.vitalidad = 1
         self.acidez = 1
         self.datos_investigacion = datos_iniciales
+        self.monedas = monedas_iniciales
         self.dados_inoculo = 3
         self.puntos_accion = 0  # Se asignan 2 al llegar a la Fase II del primer día
-        self.reserva_harina = {"Blanca": 100, "Centeno": 0, "Integral": 0}
+        self.reserva_harina = reserva_harina
         self.reserva_agua = agua_inicial
         self.tecnologias = Technologies()
         self.estaciones_fermentacion = [None, None, None]
@@ -667,6 +732,7 @@ class Player:
           3. Madurez del Cultivo: ceil((vitalidad + acidez) / 2)
           4. Penalización Desperdicio: -1 pt por cada 3 tokens de insumos sin usar
           5. Penalización Contaminación: -3 pts × contador_contaminaciones
+          6. Conversión de Riqueza: +1 pt por cada 5 Monedas restantes en la reserva final
 
         Debe invocarse únicamente al final del día que termina la partida.
         """
@@ -693,12 +759,16 @@ class Player:
         # 5. Penalización por episodios de contaminación
         penalizacion_contaminacion: int = self.puntos_penalizacion_contaminacion
 
+        # 6. Conversión de riqueza (+1 pt por cada 5 Monedas restantes)
+        conversion_riqueza: int = self.monedas // 5
+
         return (
             puntos_base
             + puntos_sabor
             + madurez
             + penalizacion_desperdicio
             + penalizacion_contaminacion
+            + conversion_riqueza
         )
 
     def __repr__(self) -> str:
@@ -849,12 +919,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=60,
         tokens_agua=12,
         acidez_diana=(3,),
-        bono_sabor_pts=2,
-        zona_baja=(1, 11),
-        zona_optima=(12, 14),
-        zona_sobrefermentada=(15, 20),
+        bono_sabor_pts=3,
+        zona_baja=(1, 10),
+        zona_optima=(11, 15),
+        zona_sobrefermentada=(16, 20),
+        puntos_baja=4,
         puntos_optimos=10,
         penalizacion_colapso=-2,
+        monedas_baja=13,
+        monedas_optima=17,
+        monedas_sobre=11,
         req_tecnologico=None,
     ),
     "focaccia": Recipe(
@@ -869,8 +943,12 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         zona_baja=(1, 9),
         zona_optima=(10, 14),
         zona_sobrefermentada=(15, 20),
+        puntos_baja=3,
         puntos_optimos=12,
         penalizacion_colapso=-3,
+        monedas_baja=15,
+        monedas_optima=19,
+        monedas_sobre=13,
         req_tecnologico=None,
     ),
     "baguette": Recipe(
@@ -881,12 +959,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=65,
         tokens_agua=13,
         acidez_diana=(2,),
-        bono_sabor_pts=2,
-        zona_baja=(1, 13),
-        zona_optima=(14, 15),
+        bono_sabor_pts=3,
+        zona_baja=(1, 11),
+        zona_optima=(12, 15),
         zona_sobrefermentada=(16, 20),
+        puntos_baja=5,
         puntos_optimos=11,
         penalizacion_colapso=-2,
+        monedas_baja=14,
+        monedas_optima=18,
+        monedas_sobre=12,
         req_tecnologico=None,
     ),
     "pizza_napolitana": Recipe(
@@ -897,12 +979,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=62,
         tokens_agua=13,
         acidez_diana=(3,),
-        bono_sabor_pts=3,
+        bono_sabor_pts=4,
         zona_baja=(1, 10),
-        zona_optima=(11, 13),
-        zona_sobrefermentada=(14, 20),
+        zona_optima=(11, 14),
+        zona_sobrefermentada=(15, 20),
+        puntos_baja=4,
         puntos_optimos=14,
         penalizacion_colapso=-4,
+        monedas_baja=15,
+        monedas_optima=21,
+        monedas_sobre=12,
         req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
     "brioche": Recipe(
@@ -913,12 +999,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=52,
         tokens_agua=11,
         acidez_diana=(1,),
-        bono_sabor_pts=3,
-        zona_baja=(1, 16),
-        zona_optima=(17, 18),
-        zona_sobrefermentada=(19, 20),
+        bono_sabor_pts=5,
+        zona_baja=(1, 14),
+        zona_optima=(15, 17),
+        zona_sobrefermentada=(18, 20),
+        puntos_baja=5,
         puntos_optimos=16,
         penalizacion_colapso=-6,
+        monedas_baja=14,
+        monedas_optima=21,
+        monedas_sobre=11,
         req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
     "hogaza_centeno": Recipe(
@@ -929,12 +1019,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=67,
         tokens_agua=14,
         acidez_diana=(4, 5),
-        bono_sabor_pts=3,
-        zona_baja=(1, 14),
-        zona_optima=(15, 18),
-        zona_sobrefermentada=(19, 20),
+        bono_sabor_pts=6,
+        zona_baja=(1, 12),
+        zona_optima=(13, 16),
+        zona_sobrefermentada=(17, 20),
+        puntos_baja=6,
         puntos_optimos=15,
         penalizacion_colapso=-5,
+        monedas_baja=20,
+        monedas_optima=27,
+        monedas_sobre=17,
         req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
     "pan_semillas": Recipe(
@@ -945,12 +1039,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=78,
         tokens_agua=16,
         acidez_diana=(3, 4),
-        bono_sabor_pts=3,
-        zona_baja=(1, 12),
-        zona_optima=(13, 15),
-        zona_sobrefermentada=(16, 20),
+        bono_sabor_pts=7,
+        zona_baja=(1, 13),
+        zona_optima=(14, 16),
+        zona_sobrefermentada=(17, 20),
+        puntos_baja=6,
         puntos_optimos=17,
         penalizacion_colapso=-5,
+        monedas_baja=19,
+        monedas_optima=26,
+        monedas_sobre=16,
         req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
     "panettone": Recipe(
@@ -961,12 +1059,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=47,
         tokens_agua=10,
         acidez_diana=(1,),
-        bono_sabor_pts=4,
-        zona_baja=(1, 17),
-        zona_optima=(18, 19),
-        zona_sobrefermentada=(20, 20),
+        bono_sabor_pts=8,
+        zona_baja=(1, 16),
+        zona_optima=(17, 18),
+        zona_sobrefermentada=(19, 20),
+        puntos_baja=8,
         puntos_optimos=20,
         penalizacion_colapso=-8,
+        monedas_baja=13,
+        monedas_optima=22,
+        monedas_sobre=10,
         req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
 }
@@ -1066,6 +1168,26 @@ Catálogo maestro del mazo de Clima. Solo lectura en tiempo de ejecución.
 
 
 # ===========================================================================
+# SECCIÓN 5B: CATÁLOGO DE PATROCINIOS INICIALES (CONSTANTE INMUTABLE)
+# ===========================================================================
+
+PATROCINIO_CATALOG: Tuple[PatrocinioCard, ...] = (
+    PatrocinioCard(iniciativa=1, tipo_harina=TipoHarina.BLANCA, harina_pct=100, agua_tokens=2, monedas=9),
+    PatrocinioCard(iniciativa=2, tipo_harina=TipoHarina.BLANCA, harina_pct=100, agua_tokens=6, monedas=8),
+    PatrocinioCard(iniciativa=3, tipo_harina=TipoHarina.BLANCA, harina_pct=100, agua_tokens=12, monedas=6),
+    PatrocinioCard(iniciativa=4, tipo_harina=TipoHarina.INTEGRAL, harina_pct=100, agua_tokens=6, monedas=8),
+    PatrocinioCard(iniciativa=5, tipo_harina=TipoHarina.INTEGRAL, harina_pct=100, agua_tokens=12, monedas=6),
+    PatrocinioCard(iniciativa=6, tipo_harina=TipoHarina.CENTENO, harina_pct=100, agua_tokens=6, monedas=8),
+    PatrocinioCard(iniciativa=7, tipo_harina=TipoHarina.CENTENO, harina_pct=100, agua_tokens=12, monedas=6),
+    PatrocinioCard(iniciativa=8, tipo_harina=TipoHarina.BLANCA, harina_pct=200, agua_tokens=20, monedas=4),
+)
+"""
+Mazo maestro de 8 Cartas de Patrocinio (GDD v0.0.2, Anexo B). `bootstrap.create_game()`
+baraja una copia de esta tupla y reparte 1 carta por jugador sentado (1-4 jugadores).
+"""
+
+
+# ===========================================================================
 # SECCIÓN 6: FUNCIONES DE UTILIDAD PARA EL SETUP
 # ===========================================================================
 
@@ -1088,6 +1210,33 @@ def build_climate_deck() -> List[ClimateCard]:
         deck.extend([card] * card.cantidad)
     assert len(deck) == 30, (
         f"El mazo de clima debe tener exactamente 30 cartas, "
+        f"el catálogo actual genera {len(deck)}."
+    )
+    return deck
+
+
+TENDENCIA_MODIFICADORES: Tuple[int, ...] = (-2,) + (-1,) * 7 + (0,) * 5 + (1,) * 7 + (2,) * 1
+"""
+Mazo del Mercado de Tendencias (GDD v0.0.2, Módulo II §6): 21 cartas cuyo valor
+desplaza simultáneamente los 3 visores de la Bolsa de Harinas (Market.posiciones_harina).
+Distribución: -2×1, -1×7, 0×5, +1×7, +2×1.
+"""
+
+
+def build_tendencias_deck() -> List[int]:
+    """
+    Construye el mazo de Tendencias de Mercado (21 cartas, sin barajar).
+
+    Returns:
+        Lista de 21 modificadores enteros; el orden aleatorio lo aplica quien
+        posea el mazo (Market.crear_inicial()) con random.shuffle().
+
+    Raises:
+        AssertionError: Si el total no suma exactamente 21 cartas.
+    """
+    deck: List[int] = list(TENDENCIA_MODIFICADORES)
+    assert len(deck) == 21, (
+        f"El mazo de Tendencias de Mercado debe tener exactamente 21 cartas, "
         f"el catálogo actual genera {len(deck)}."
     )
     return deck

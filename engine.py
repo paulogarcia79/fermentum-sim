@@ -5,9 +5,9 @@ Orquesta el bucle principal del simulador: el «Día de Laboratorio».
 
 Contenido:
   · Constantes de configuración del mercado y puntuación.
-  · SupplyLote / Market  — modelos auxiliares del mercado central
-    (idealmente pertenecerían a models.py; se ubican aquí porque models.py
-    está cerrado y son exclusivos de la capa de lógica del motor).
+  · Market — modelo auxiliar del mercado central (idealmente pertenecería a
+    models.py; se ubica aquí porque models.py está cerrado y es exclusivo de
+    la capa de lógica del motor).
   · GameEngine — clase principal que implementa las tres fases del día y
     la evaluación de fin de partida.
 
@@ -43,6 +43,8 @@ from models import (
     HorneadoRecord,
     Player,
     Recipe,
+    TipoHarina,
+    build_tendencias_deck,
     get_recetas_avanzadas,
     get_recetas_basicas,
 )
@@ -55,9 +57,6 @@ from models import (
 NUM_RECIPE_SLOTS: int = 4
 """Número de ranuras de recetas visibles en el mercado. Convención de eurogames."""
 
-NUM_SUPPLY_SLOTS: int = 3
-"""Número de lotes de suministros disponibles por día (CORE_MECHANICS.md §2 Fase I)."""
-
 # --- Datos de Investigación por Horneado ---
 DATOS_BAKE_ZONA_OPTIMA: int = 1
 """Datos otorgados al hornear dentro de la zona óptima (ACTIONS_REGISTRY.md §2F)."""
@@ -68,72 +67,60 @@ Datos extra al hornear en el centro exacto de la zona óptima con Módulo Analí
 activo (ACTIONS_REGISTRY.md §2D: «Genera +1 Dato extra al hornear en centro exacto»).
 """
 
-# --- Puntuación de Zona Baja ---
-PUNTOS_ZONA_BAJA_DIVISOR: int = 3
+# --- Bono de Sabor en Monedas (Hornear y Vender) ---
+MONEDAS_BONO_SABOR: int = 2
 """
-Divisor para calcular los puntos al hornear en zona baja (masa cruda).
-Assumption: RECIPE_DATABASE.md indica «pocos puntos» sin cuantificar.
-Se usa: puntos_zona_baja = max(1, puntos_optimos // PUNTOS_ZONA_BAJA_DIVISOR).
+Monedas adicionales al hornear y vender si el Cubo de Acidez estaba sellado
+(GDD v0.0.2, Módulo III §F). Se excluye en un colapso, igual que el bono de
+Puntos de Maestría — ambos comparten la condición `bono_sabor_aplicado`.
 """
+
+# --- Bolsa de Harinas (Visitar el Mercado) ---
+POSICION_HARINA_INICIAL: int = 3
+"""Posición inicial (1-5) de los 3 visores de harina, antes de la primera Tendencia."""
+
+POSICION_HARINA_MIN: int = 1
+POSICION_HARINA_MAX: int = 5
+
+PRECIOS_HARINA: Dict[TipoHarina, Dict[str, Tuple[int, int, int, int, int]]] = {
+    TipoHarina.BLANCA: {
+        "compra": (2, 3, 4, 5, 6),
+        "venta": (1, 2, 3, 4, 5),
+    },
+    TipoHarina.INTEGRAL: {
+        "compra": (4, 5, 6, 7, 8),
+        "venta": (2, 3, 4, 5, 6),
+    },
+    TipoHarina.CENTENO: {
+        "compra": (6, 7, 8, 9, 10),
+        "venta": (3, 4, 5, 6, 7),
+    },
+}
+"""
+Tabla de precios (en Monedas) de la Bolsa de Harinas, indexada por posición del
+visor (1-5, GDD v0.0.2 Módulo III §C). ``precios["compra"][posicion - 1]``.
+"""
+
+PRECIO_AGUA: Dict[int, Dict[int, int]] = {
+    30: {10: 3, 30: 6, 60: 10, 100: 14},
+    25: {10: 2, 30: 5, 60: 8, 100: 12},
+    20: {10: 2, 30: 4, 60: 7, 100: 10},
+    15: {10: 1, 30: 3, 60: 6, 100: 9},
+    10: {10: 1, 30: 2, 60: 4, 100: 7},
+}
+"""
+Matriz de precios (en Monedas) del Suministro Hídrico Global, indexada por
+[temperatura_actual][lote_pct] (GDD v0.0.2 Módulo III §C). Las 5 filas cubren
+toda temperatura alcanzable desde la base de 20°C con los modificadores del
+mazo de clima (0, ±5, ±10).
+"""
+
+AGUA_TOKENS_POR_LOTE: Dict[int, int] = {10: 2, 30: 6, 60: 12, 100: 20}
+"""Tokens de agua (5% c/u) recibidos por cada tamaño de lote comprado."""
 
 # ===========================================================================
 # SECCIÓN 2: MODELOS AUXILIARES DEL MERCADO CENTRAL
 # ===========================================================================
-
-
-def _generar_lote_150() -> Dict[str, int]:
-    """
-    Genera un lote aleatorio de recursos cuya suma total es exactamente 150.
-
-    Distribuye 15 unidades de 10% entre los cuatro tipos de recurso
-    (Blanca, Centeno, Integral, agua) usando el método de «cortes aleatorios»
-    (stars-and-bars). Todos los valores son múltiplos de 10.
-
-    Returns:
-        Diccionario con claves ``"Blanca"``, ``"Centeno"``, ``"Integral"``, ``"agua"``
-        cuyos valores suman 150.
-    """
-    total_units = 15  # 15 × 10% = 150%
-    # Tres cortes aleatorios en [0, 15] dividen el total en 4 partes
-    c1, c2, c3 = sorted(random.randint(0, total_units) for _ in range(3))
-    return {
-        "Blanca":   c1 * 10,
-        "Centeno":  (c2 - c1) * 10,
-        "Integral": (c3 - c2) * 10,
-        "agua":     (total_units - c3) * 10,
-    }
-
-
-@dataclass
-class SupplyLote:
-    """
-    Lote de suministros disponible en el mercado central.
-
-    Un lote es una mezcla aleatoria de harinas y agua que el jugador puede
-    adquirir gastando 1 PA (Acción C: Adquirir Insumos).
-
-    Attributes:
-        recursos: Diccionario con claves ``"Blanca"``, ``"Centeno"``,
-            ``"Integral"`` (valores en % múltiplos de 10) y ``"agua"``
-            (valor en % múltiplo de 10, convertible a tokens de 5%).
-            La suma de todos los valores es siempre exactamente 150.
-    """
-
-    recursos: Dict[str, int]
-
-    def __post_init__(self) -> None:
-        claves_requeridas = {"Blanca", "Centeno", "Integral", "agua"}
-        if set(self.recursos.keys()) != claves_requeridas:
-            raise ValueError(
-                f"SupplyLote.recursos debe tener las claves {claves_requeridas}. "
-                f"Recibido: {set(self.recursos.keys())}"
-            )
-        total = sum(self.recursos.values())
-        if total != 150:
-            raise ValueError(
-                f"La suma de los valores del lote debe ser exactamente 150. "
-                f"Recibido: {total}"
-            )
 
 
 @dataclass
@@ -148,21 +135,37 @@ class Market:
     Protocolo de Refresco (Fase I — CORE_MECHANICS.md §2):
       · Recetas: elimina la más antigua (derecha), desplaza el resto a la derecha
         y revela una nueva carta a la izquierda. Si el mazo se agota, baraja el descarte.
-      · Suministros: descarta todos los lotes no reclamados y genera 3 nuevos.
+
+    Bolsa de Harinas y Mercado de Tendencias (GDD v0.0.2, Módulo III §C / Módulo II §6):
+      · ``posiciones_harina``: 3 visores compartidos (Blanca/Integral/Centeno), cada uno
+        una posición 1-5 que indexa ``PRECIOS_HARINA`` para el costo de Comprar/Vender
+        Harina en la Acción C (Visitar el Mercado).
+      · ``mazo_tendencias``/``descarte_tendencias``: mazo de 21 cartas robado una vez
+        por Fase I (antes del Protocolo de Refresco) para desplazar los 3 visores
+        simultáneamente.
 
     Attributes:
         recetas_visibles: Lista de NUM_RECIPE_SLOTS slots de recetas activas.
             ``None`` indica que el slot fue tomado por un jugador este día.
         mazo_recetas: Mazo oculto de recetas pendientes de aparecer en el mercado.
         descarte_recetas: Recetas descartadas del mercado (se remezclan si el mazo se agota).
-        suministros: Lista de NUM_SUPPLY_SLOTS lotes de suministros.
-            ``None`` indica que el slot fue tomado por un jugador este día.
+        posiciones_harina: Posición actual (1-5) de cada visor de la Bolsa de Harinas.
+        mazo_tendencias: Mazo de Tendencias de Mercado sin robar todavía.
+        descarte_tendencias: Cartas de Tendencia ya robadas (se remezclan si se agota).
     """
 
     recetas_visibles: List[Optional[Recipe]]
     mazo_recetas: List[Recipe]
     descarte_recetas: List[Recipe] = field(default_factory=list)
-    suministros: List[Optional[SupplyLote]] = field(default_factory=list)
+    posiciones_harina: Dict[TipoHarina, int] = field(
+        default_factory=lambda: {
+            TipoHarina.BLANCA: POSICION_HARINA_INICIAL,
+            TipoHarina.INTEGRAL: POSICION_HARINA_INICIAL,
+            TipoHarina.CENTENO: POSICION_HARINA_INICIAL,
+        }
+    )
+    mazo_tendencias: List[int] = field(default_factory=list)
+    descarte_tendencias: List[int] = field(default_factory=list)
 
     # ------------------------------------------------------------------
     # Factory Method
@@ -174,8 +177,9 @@ class Market:
         Construye el mercado en su estado inicial de partida.
 
         El mazo de recetas se compone de todas las avanzadas (mezcladas) seguidas
-        de las básicas al fondo. Se revelan las primeras NUM_RECIPE_SLOTS cartas
-        y se generan NUM_SUPPLY_SLOTS lotes de suministros aleatorios.
+        de las básicas al fondo. Se revelan las primeras NUM_RECIPE_SLOTS cartas.
+        Los 3 visores de la Bolsa de Harinas inician en ``POSICION_HARINA_INICIAL``
+        y el mazo de Tendencias de Mercado (21 cartas) se baraja.
 
         Returns:
             Instancia de Market lista para el inicio de la partida.
@@ -193,7 +197,8 @@ class Market:
         ]
 
         mercado = cls(recetas_visibles=visibles, mazo_recetas=mazo)
-        mercado._generar_suministros()
+        mercado.mazo_tendencias = build_tendencias_deck()
+        random.shuffle(mercado.mazo_tendencias)
         return mercado
 
     # ------------------------------------------------------------------
@@ -208,7 +213,6 @@ class Market:
           - Recetas: descarta la más antigua (extremo derecho), desplaza las
             restantes a la derecha y revela una nueva carta a la izquierda.
             Si el mazo se agota, baraja el descarte como nuevo mazo.
-          - Suministros: descarta todos los lotes no reclamados y revela 3 nuevos.
         """
         # --- Refresco de Recetas ---
 
@@ -231,9 +235,6 @@ class Market:
 
         # 3. Insertar la nueva carta en la posición izquierda (más nueva).
         self.recetas_visibles.insert(0, nueva_carta)
-
-        # --- Refresco de Suministros ---
-        self._generar_suministros()
 
     # ------------------------------------------------------------------
     # Operaciones del Mercado (consumidas por actions.py)
@@ -268,58 +269,76 @@ class Market:
         self.recetas_visibles[indice] = None
         return receta
 
-    def tomar_suministro(self, indice: int) -> SupplyLote:
+    # ------------------------------------------------------------------
+    # Bolsa de Harinas (Acción C: Visitar el Mercado)
+    # ------------------------------------------------------------------
+
+    def precio_compra_harina(self, tipo: TipoHarina) -> int:
+        """Costo en Monedas de comprar 1 token (100%) de ``tipo`` en su posición actual."""
+        posicion = self.posiciones_harina[tipo]
+        return PRECIOS_HARINA[tipo]["compra"][posicion - 1]
+
+    def precio_venta_harina(self, tipo: TipoHarina) -> int:
+        """Monedas recibidas al vender 1 token (100%) de ``tipo`` en su posición actual."""
+        posicion = self.posiciones_harina[tipo]
+        return PRECIOS_HARINA[tipo]["venta"][posicion - 1]
+
+    def mover_visor_harina(self, tipo: TipoHarina, hacia_caro: bool) -> None:
         """
-        Retira un lote de suministros del mercado (Acción C: Adquirir Insumos).
-        El slot queda como ``None`` hasta el próximo Protocolo de Refresco.
+        Desplaza 1 casilla el visor de ``tipo`` (comprar → más caro, vender → más
+        barato), respetando los topes [``POSICION_HARINA_MIN``, ``POSICION_HARINA_MAX``].
 
         Args:
-            indice: Posición en ``suministros`` (0, 1 o 2).
+            tipo: Tipo de harina cuyo visor se desplaza.
+            hacia_caro: True al comprar (+1), False al vender (-1).
+        """
+        delta = 1 if hacia_caro else -1
+        nueva = self.posiciones_harina[tipo] + delta
+        self.posiciones_harina[tipo] = max(
+            POSICION_HARINA_MIN, min(POSICION_HARINA_MAX, nueva)
+        )
+
+    # ------------------------------------------------------------------
+    # Mazo de Tendencias de Mercado (Fase I)
+    # ------------------------------------------------------------------
+
+    def robar_tendencia(self) -> int:
+        """
+        Roba la carta superior del mazo de Tendencias de Mercado, remezclando el
+        descarte como nuevo mazo si estaba agotado (mismo patrón que el mazo de
+        recetas en ``protocolo_refresco``).
 
         Returns:
-            El lote de suministros tomado.
-
-        Raises:
-            MarketSlotEmptyError: Si el slot ya estaba vacío (tomado este día).
-            ValueError: Si el índice está fuera de rango.
+            El modificador entero de la carta robada (-2, -1, 0, +1 o +2).
         """
-        if not (0 <= indice < len(self.suministros)):
-            raise ValueError(
-                f"Índice de suministro inválido: {indice}. "
-                f"Rango válido: [0, {len(self.suministros) - 1}]"
+        if not self.mazo_tendencias and self.descarte_tendencias:
+            self.mazo_tendencias = self.descarte_tendencias[:]
+            self.descarte_tendencias = []
+            random.shuffle(self.mazo_tendencias)
+
+        modificador: int = self.mazo_tendencias.pop(0)
+        self.descarte_tendencias.append(modificador)
+        return modificador
+
+    def aplicar_tendencia(self, modificador: int) -> None:
+        """
+        Desplaza los 3 visores de la Bolsa de Harinas por ``modificador``
+        simultáneamente, cada uno con su propio tope [1, 5] (sin arrastre ni
+        efecto acumulado más allá del límite — GDD v0.0.2 Módulo II §6).
+        """
+        for tipo in self.posiciones_harina:
+            nueva = self.posiciones_harina[tipo] + modificador
+            self.posiciones_harina[tipo] = max(
+                POSICION_HARINA_MIN, min(POSICION_HARINA_MAX, nueva)
             )
-        lote: Optional[SupplyLote] = self.suministros[indice]
-        if lote is None:
-            raise MarketSlotEmptyError(
-                f"El lote de suministro {indice} ya fue tomado este día. "
-                "Se repondrá en el próximo Protocolo de Refresco."
-            )
-        self.suministros[indice] = None
-        return lote
-
-    # ------------------------------------------------------------------
-    # Generación Interna de Suministros
-    # ------------------------------------------------------------------
-
-    def _generar_suministros(self) -> None:
-        """
-        Genera NUM_SUPPLY_SLOTS lotes de suministros nuevos de forma aleatoria.
-
-        Cada lote es un diccionario con claves ``"Blanca"``, ``"Centeno"``,
-        ``"Integral"`` y ``"agua"``, donde todos los valores son múltiplos de 10
-        y su suma es exactamente 150.
-        """
-        self.suministros = [
-            SupplyLote(recursos=_generar_lote_150())
-            for _ in range(NUM_SUPPLY_SLOTS)
-        ]
 
     def __repr__(self) -> str:
         recetas_str = [r.nombre if r else "—" for r in self.recetas_visibles]
+        posiciones_str = {t.value: p for t, p in self.posiciones_harina.items()}
         return (
             f"Market(recetas={recetas_str}, "
             f"mazo_restante={len(self.mazo_recetas)}, "
-            f"suministros={len([s for s in self.suministros if s is not None])} activos)"
+            f"posiciones_harina={posiciones_str})"
         )
 
 
@@ -389,6 +408,7 @@ class GameEngine:
         environment: Environment,
         market: Optional[Market] = None,
         event_sink: Optional[EventSink] = None,
+        orden_inicial: Optional[List[int]] = None,
     ) -> None:
         """
         Inicializa el motor de juego con inyección de dependencias.
@@ -403,6 +423,17 @@ class GameEngine:
                 para transmitirlo a clientes conectados). El motor conserva
                 el registro completo en ``self.eventos`` independientemente
                 de si se proporciona un sink.
+            orden_inicial: Índices en ``players``, ordenados ascendentemente por
+                Iniciativa de la Carta de Patrocinio repartida en el setup (GDD
+                v0.0.2, Módulo I §6.4). Cuando se proporciona, determina el
+                Investigador Jefe y el orden de turno del Día 1 únicamente —
+                ``self._players`` NUNCA se reordena, así que esto no afecta a
+                ``Seat.player_index`` en ``server/sessions.py``. A partir del
+                Día 2, el criterio habitual (mayor Vitalidad, desempate por
+                Datos) vuelve a aplicarse sin cambios. ``None`` (por defecto)
+                preserva el comportamiento anterior a esta funcionalidad —
+                usado por cualquier construcción directa de ``GameEngine`` que
+                no pase por ``bootstrap.create_game()`` (p. ej. tests).
 
         Raises:
             InsufficientPlayersError: Si se proporciona una lista de jugadores vacía.
@@ -415,6 +446,7 @@ class GameEngine:
         self._players: List[Player] = players
         self._environment: Environment = environment
         self._market: Market = market if market is not None else Market.crear_inicial()
+        self._orden_inicial_iniciativa: Optional[List[int]] = orden_inicial
 
         # Estado interno del turno actual
         self._jefe_investigador: Optional[Player] = None
@@ -645,7 +677,9 @@ class GameEngine:
 
         Pasos (en orden):
           1. **Actualización de Jerarquía**: asigna el Investigador Jefe al jugador
-             con mayor Vitalidad (desempate: Datos de Investigación).
+             con mayor Vitalidad (desempate: Datos de Investigación) — salvo el
+             Día 1, donde la Carta de Patrocinio de menor Iniciativa decide
+             (ver ``orden_inicial`` en el constructor).
           2. **Reset de Entorno**: la temperatura vuelve a 20°C y el efecto pasivo
              se neutraliza antes de aplicar la carta del día.
           3. **Resolución del Clima**: roba la carta superior del mazo de clima,
@@ -653,10 +687,15 @@ class GameEngine:
              Los efectos biológicos inmediatos (+Vitalidad / +Acidez) se aplican
              a todos los jugadores instantáneamente.
              Si el mazo se agota, se activa el gatillo de fin de partida.
-          4. **Protocolo de Refresco**: actualiza el mercado de recetas y suministros.
+          4. **Mercado de Tendencias**: roba una carta y desplaza los 3 visores
+             de la Bolsa de Harinas simultáneamente.
+          5. **Protocolo de Refresco**: actualiza el mercado de recetas.
         """
         # Paso 1: Determinar Investigador Jefe
-        self._jefe_investigador = self._determinar_investigador_jefe()
+        if self._environment.dia_actual == 1 and self._orden_inicial_iniciativa is not None:
+            self._jefe_investigador = self._players[self._orden_inicial_iniciativa[0]]
+        else:
+            self._jefe_investigador = self._determinar_investigador_jefe()
         self._emit(
             EventoTipo.JEFE_ASIGNADO,
             jugador_idx=self._players.index(self._jefe_investigador),
@@ -688,7 +727,23 @@ class GameEngine:
                         f"({carta.modificador_termico:+d}°C).",
             )
 
-        # Paso 4: Protocolo de Refresco del mercado
+        # Paso 4: Mercado de Tendencias — desplaza la Bolsa de Harinas
+        posiciones_antes = dict(self._market.posiciones_harina)
+        modificador_tendencia: int = self._market.robar_tendencia()
+        self._market.aplicar_tendencia(modificador_tendencia)
+        self._emit(
+            EventoTipo.TENDENCIA_MERCADO,
+            datos={
+                "modificador": modificador_tendencia,
+                "posiciones_antes": {t.value: p for t, p in posiciones_antes.items()},
+                "posiciones_despues": {
+                    t.value: p for t, p in self._market.posiciones_harina.items()
+                },
+            },
+            mensaje=f"Tendencia de mercado: harinas se mueven {modificador_tendencia:+d}.",
+        )
+
+        # Paso 5: Protocolo de Refresco del mercado
         self._market.protocolo_refresco()
         self._emit(
             EventoTipo.MERCADO_REFRESCADO,
@@ -862,8 +917,10 @@ class GameEngine:
 
         Un jugador que ejecutó ``pasar_turno`` este día nunca vuelve a ser
         elegible (cede el resto del día, incluidas sus acciones gratuitas
-        pendientes). En caso contrario, es elegible si tiene PA disponibles
-        o si aún no ha usado Acción A u Horas Extras hoy.
+        pendientes). En caso contrario, es elegible si tiene PA disponibles,
+        si aún no ha usado Acción A u Horas Extras hoy, o si aún puede pagar
+        un Pedido de Urgencia (0 PA, sin límite por ronda, sin flag de "ya
+        usado" — se autolimita por Datos de Investigación disponibles).
         """
         if indice in self._turno_pasado:
             return False
@@ -872,6 +929,7 @@ class GameEngine:
             player.puntos_accion > 0
             or not player.accion_alimentar_usada
             or not player.horas_extras_usadas
+            or player.datos_investigacion >= 1
         )
 
     def _avanzar_a_siguiente_elegible(self, desde: int, incluir_actual: bool) -> None:
@@ -1076,12 +1134,15 @@ class GameEngine:
         Ejecutado tras procesar el avance de todas las masas (CLIMATE_LOGIC.md §4):
           · Estándar: ``-1`` Vitalidad.
           · Aletargamiento Invernal activo: ``-2`` Vitalidad.
+          · Criopreservación activa ("Estasis Biológica", GDD v0.0.2 Módulo III §5):
+            el jugador ignora el desgaste por completo este día (``delta = 0``).
           · Límite suelo: la Vitalidad nunca cae por debajo de 0.
           · Consecuencia de llegar a 0: estado de Contaminación + penalización
             de -3 PM (gestionado automáticamente por ``Player.ajustar_vitalidad``).
         """
-        delta: int = self._environment.desgaste_vitalidad_fase_3
+        delta_estandar: int = self._environment.desgaste_vitalidad_fase_3
         for jugador_idx, player in enumerate(self._players):
+            delta: int = 0 if player.tecnologias.criopreservacion else delta_estandar
             vit_antes: int = player.vitalidad
             contaminado_antes: bool = player.en_estado_contaminacion
 
@@ -1118,23 +1179,27 @@ class GameEngine:
         del jugador (``fue_colapso=False``, costo 1 PA gestionado por actions.py)
         o por Colapso Estructural automático (``fue_colapso=True``, costo 0 PA).
 
-        Lógica de puntuación:
-          · **Colapso**: ``puntos_base = recipe.penalizacion_colapso`` (negativo).
-            El bono de sabor NO se aplica (la fermentación fue un fracaso).
-          · **Zona óptima**: ``puntos_base = recipe.puntos_optimos``.
-            Se acreditan Datos de Investigación (+ extra si centro exacto + Módulo Analítico).
-            El bono de sabor SE aplica si el Cubo de Laboratorio estaba sellado.
-          · **Zona baja** (masa cruda): ``puntos_base = max(1, puntos_optimos // 3)``.
-            Assumption: «pocos puntos» no cuantificados en RECIPE_DATABASE.md.
-            Sin Datos de Investigación. El bono de sabor SE aplica.
+        Lógica de puntuación y venta (GDD v0.0.2 Módulo III §F — "Hornear y Vender"):
+          · **Colapso**: ``puntos_base = recipe.penalizacion_colapso`` (negativo),
+            ``monedas = recipe.monedas_sobre``. El bono de sabor NO se aplica
+            (ni en Puntos de Maestría ni en Monedas) — la fermentación fue un fracaso.
+          · **Zona óptima**: ``puntos_base = recipe.puntos_optimos``,
+            ``monedas = recipe.monedas_optima``. Se acreditan Datos de Investigación
+            (+ extra si centro exacto + Módulo Analítico). El bono de sabor SE aplica
+            si el Cubo de Laboratorio estaba sellado: +``bono_sabor_pts`` de la receta
+            y +``MONEDAS_BONO_SABOR`` (2) Monedas.
+          · **Zona baja** (masa cruda): ``puntos_base = recipe.puntos_baja``,
+            ``monedas = recipe.monedas_baja``. Sin Datos de Investigación.
+            El bono de sabor SE aplica igual que en zona óptima.
 
         Efectos sobre el estado del jugador:
           1. El slot en ``estaciones_fermentacion`` se libera (``None``).
           2. Se recupera 1 dado de inóculo (máx 3).
           3. Los Datos de Investigación ganados se acreditan inmediatamente.
-          4. El ``HorneadoRecord`` se añade al archivo correspondiente
+          4. Las Monedas ganadas se acreditan inmediatamente.
+          5. El ``HorneadoRecord`` se añade al archivo correspondiente
              (``archivo_horneado_exitoso`` o ``archivo_colapsos``).
-          5. Si el jugador alcanza 5 horneados exitosos, se activa el fin de partida.
+          6. Si el jugador alcanza 5 horneados exitosos, se activa el fin de partida.
 
         Args:
             player: Jugador propietario de la masa a hornear.
@@ -1159,7 +1224,7 @@ class GameEngine:
         recipe: Recipe = slot.recipe
         posicion: int = slot.posicion_track
 
-        # --- Cálculo de puntos y datos ---
+        # --- Cálculo de puntos, datos y monedas ---
         puntos_base: int = self._calcular_puntos_zona(recipe, posicion, fue_colapso)
         datos_obtenidos: int = (
             0
@@ -1170,6 +1235,11 @@ class GameEngine:
         # El bono de sabor no aplica en un colapso (fermentación fallida).
         bono_sabor_aplicado: bool = slot.bono_sabor and not fue_colapso
 
+        monedas_base: int = self._calcular_monedas_zona(recipe, posicion, fue_colapso)
+        monedas_obtenidos: int = monedas_base + (
+            MONEDAS_BONO_SABOR if bono_sabor_aplicado else 0
+        )
+
         # --- Crear registro inmutable del horneado ---
         record = HorneadoRecord(
             recipe=recipe,
@@ -1178,12 +1248,14 @@ class GameEngine:
             bono_sabor_aplicado=bono_sabor_aplicado,
             fue_colapso=fue_colapso,
             datos_obtenidos=datos_obtenidos,
+            monedas_obtenidos=monedas_obtenidos,
         )
 
         # --- Actualizar estado del jugador ---
         player.estaciones_fermentacion[slot_index] = None  # Liberar slot
         player.dados_inoculo = min(3, player.dados_inoculo + 1)  # Recuperar dado
         player.datos_investigacion += datos_obtenidos  # Acreditar datos
+        player.monedas += monedas_obtenidos  # Acreditar monedas (Hornear y Vender)
 
         jugador_idx: int = self._players.index(player)
         if fue_colapso:
@@ -1196,6 +1268,7 @@ class GameEngine:
                     "puntos_totales": record.puntos_totales,
                     "fue_colapso": True,
                     "datos_generados": datos_obtenidos,
+                    "monedas_obtenidas": monedas_obtenidos,
                 },
                 mensaje=f"Colapso estructural: '{recipe.nombre}' se horneó de "
                         f"emergencia por {record.puntos_totales} pts.",
@@ -1210,6 +1283,7 @@ class GameEngine:
                     "puntos_totales": record.puntos_totales,
                     "fue_colapso": False,
                     "datos_generados": datos_obtenidos,
+                    "monedas_obtenidas": monedas_obtenidos,
                 },
                 mensaje=f"Horneado exitoso: '{recipe.nombre}' por "
                         f"{record.puntos_totales} pts.",
@@ -1253,11 +1327,8 @@ class GameEngine:
         +-----------------------+--------------------------------------------+
         | Zona óptima           | ``recipe.puntos_optimos``                  |
         +-----------------------+--------------------------------------------+
-        | Zona baja             | ``max(1, puntos_optimos // 3)`` ¹          |
+        | Zona baja             | ``recipe.puntos_baja``                     |
         +-----------------------+--------------------------------------------+
-
-        ¹ Assumption: RECIPE_DATABASE.md describe «pocos puntos» sin dar la fórmula
-        exacta. Se usa 1/3 de los puntos óptimos con mínimo de 1.
 
         Args:
             recipe: Receta de la masa que se está horneando.
@@ -1274,7 +1345,34 @@ class GameEngine:
             return recipe.puntos_optimos
 
         # Zona baja: masa cruda
-        return max(1, recipe.puntos_optimos // PUNTOS_ZONA_BAJA_DIVISOR)
+        return recipe.puntos_baja
+
+    def _calcular_monedas_zona(
+        self,
+        recipe: Recipe,
+        posicion: int,
+        fue_colapso: bool,
+    ) -> int:
+        """
+        Calcula las Monedas obtenidas al hornear y vender, según la zona del
+        track de fermentación (GDD v0.0.2, Módulo III §F). Misma estructura de
+        3 ramas que ``_calcular_puntos_zona``.
+
+        Args:
+            recipe: Receta de la masa que se está horneando.
+            posicion: Posición actual en el track de fermentación.
+            fue_colapso: True si es un horneado forzado por sobrefermentación.
+
+        Returns:
+            Monedas base (antes del Bono de Sabor).
+        """
+        if fue_colapso or recipe.esta_sobrefermentada(posicion):
+            return recipe.monedas_sobre
+
+        if recipe.esta_en_zona_optima(posicion):
+            return recipe.monedas_optima
+
+        return recipe.monedas_baja
 
     def _calcular_datos_horneado(
         self,
@@ -1365,14 +1463,19 @@ class GameEngine:
         """
         Retorna la lista de jugadores en orden de turno para la Fase II.
 
-        El Investigador Jefe actúa primero (prioridad en mercados y acciones).
-        Los demás siguen en su orden original de inscripción a la partida.
-        Si el Jefe no se ha determinado aún (antes del primer día), se usa el
-        orden original.
+        El Día 1, si se proporcionó ``orden_inicial`` al constructor (Iniciativa
+        de la Carta de Patrocinio), ese orden es el que manda. A partir del Día
+        2, el Investigador Jefe (determinado por Vitalidad) actúa primero y el
+        resto sigue en su orden original de inscripción a la partida. Si el
+        Jefe no se ha determinado aún (antes del primer día), se usa el orden
+        original.
 
         Returns:
             Lista ordenada de jugadores para la Fase II del día actual.
         """
+        if self._environment.dia_actual == 1 and self._orden_inicial_iniciativa is not None:
+            return [self._players[i] for i in self._orden_inicial_iniciativa]
+
         if self._jefe_investigador is None:
             return list(self._players)
 
