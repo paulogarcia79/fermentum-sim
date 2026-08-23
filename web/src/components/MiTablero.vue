@@ -6,6 +6,7 @@ import RecetaCard from './RecetaCard.vue'
 import IconoHarina from './IconoHarina.vue'
 import IconoAgua from './IconoAgua.vue'
 import IconoDatos from './IconoDatos.vue'
+import IconoMonedas from './IconoMonedas.vue'
 import { hexDeColor } from '../data/coloresJugador'
 
 const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
@@ -57,6 +58,9 @@ const colorHex = computed(() => hexDeColor(yo.value.color))
       <div class="recurso-tile" title="Datos de Investigación">
         <span class="icono-recurso"><IconoDatos /></span>{{ yo.datos_investigacion }}
       </div>
+      <div class="recurso-tile" title="Monedas">
+        <span class="icono-recurso"><IconoMonedas /></span>{{ yo.monedas }}
+      </div>
       <div class="recurso-tile" title="Dados de inóculo en reserva">
         <span class="icono-recurso emoji">🎲</span>{{ yo.dados_inoculo }}
       </div>
@@ -67,6 +71,7 @@ const colorHex = computed(() => hexDeColor(yo.value.color))
       <div class="mejora-slot" :class="{ activa: yo.tecnologias.incubadora }">🌡 Incubadora</div>
       <div class="mejora-slot" :class="{ activa: yo.tecnologias.camara_b }">🚪 Cámara B</div>
       <div class="mejora-slot" :class="{ activa: yo.tecnologias.modulo_analitico }">📊 Módulo Analítico</div>
+      <div class="mejora-slot" :class="{ activa: yo.tecnologias.criopreservacion }">❄ Criopreservación</div>
     </div>
 
     <div class="sub-titulo">Estaciones de fermentación</div>

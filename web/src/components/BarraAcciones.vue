@@ -10,20 +10,22 @@ import ModalF from './acciones/ModalF.vue'
 import ModalG from './acciones/ModalG.vue'
 import ModalSimposio from './acciones/ModalSimposio.vue'
 import ModalConfirmacion from './acciones/ModalConfirmacion.vue'
+import ModalPedidoUrgencia from './acciones/ModalPedidoUrgencia.vue'
 import { descripcionesAcciones, type IdAccion } from '../data/descripcionesAcciones'
 
 const BOTONES: { id: IdAccion; etiqueta: string; costo: string }[] = [
   { id: 'B', etiqueta: 'Iniciar Receta', costo: '1 PA' },
-  { id: 'C', etiqueta: 'Adquirir Insumos', costo: '1 PA' },
+  { id: 'C', etiqueta: 'Visitar Mercado', costo: '1 PA' },
   { id: 'D', etiqueta: 'Implementar Mejora', costo: '1 PA' },
   { id: 'E', etiqueta: 'Pliegues', costo: '1 PA' },
-  { id: 'F', etiqueta: 'Hornear', costo: '1 PA' },
+  { id: 'F', etiqueta: 'Hornear y Vender', costo: '1 PA' },
   { id: 'G', etiqueta: 'Investigar Protocolo', costo: '1 PA' },
   { id: 'simposio', etiqueta: 'Simposio Técnico', costo: '1 PA' },
   { id: 'H', etiqueta: 'Re-cultivo Manual', costo: '1 PA' },
   { id: 'I', etiqueta: 'Inóculo Emergencia', costo: '1 PA' },
   { id: 'A', etiqueta: 'Alimentar Cultivo', costo: '0 PA' },
   { id: 'horas_extras', etiqueta: 'Horas Extras', costo: '0 PA' },
+  { id: 'pedido_urgencia', etiqueta: 'Pedido de Urgencia', costo: '0 PA' },
 ]
 
 const disponibilidad = computed(() => store.estado!.acciones_disponibles[store.sesion!.playerIndex])
@@ -99,6 +101,7 @@ async function onPasar() {
       accion="horas_extras"
       @cerrar="cerrar"
     />
+    <ModalPedidoUrgencia v-if="modalAbierto === 'pedido_urgencia'" @cerrar="cerrar" />
   </section>
 </template>
 

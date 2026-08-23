@@ -70,7 +70,7 @@ const detalleAbierto = ref(false)
         <div class="banda sobre" :style="{ left: bandas.sobre[0] + '%', width: bandas.sobre[1] - bandas.sobre[0] + '%' }" />
       </div>
       <div class="etiquetas-puntos">
-        <span class="pts baja">{{ receta.puntos_zona_baja ?? '?' }}</span>
+        <span class="pts baja">{{ receta.puntos_baja }}</span>
         <span class="pts optima">{{ receta.puntos_optimos }}</span>
         <span class="pts sobre">{{ receta.penalizacion_colapso }}</span>
       </div>

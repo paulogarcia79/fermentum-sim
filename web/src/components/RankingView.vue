@@ -29,6 +29,7 @@ async function onVolverALobby() {
           <th>Puntos de Maestría</th>
           <th>Vitalidad</th>
           <th>Datos</th>
+          <th>Monedas</th>
         </tr>
       </thead>
       <tbody>
@@ -38,6 +39,7 @@ async function onVolverALobby() {
           <td>{{ fila.jugador.puntos_maestria_final }}</td>
           <td>{{ fila.jugador.vitalidad }}</td>
           <td>{{ fila.jugador.datos_investigacion }}</td>
+          <td>{{ fila.jugador.monedas }}</td>
         </tr>
       </tbody>
     </table>
