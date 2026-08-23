@@ -40,6 +40,7 @@ export interface FermentationSlot {
   posicion_track: number
   bono_sabor: boolean
   modificador_incubadora: number
+  acidez_inicial: number
 }
 
 export interface HorneadoRecord {

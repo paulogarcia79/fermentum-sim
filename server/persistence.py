@@ -45,18 +45,19 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 3
+VERSION_FORMATO = 4
 """
-Bumped a 3: la revisión de reglas GDD v0.0.2 cambió la forma de `Player`
+Bumped a 4: `FermentationSlot` ganó `acidez_inicial` (Registro de pH de la
+carta de receta, sellado en Acción B) -- un pickle viejo sin ese campo debe
+descartarse limpiamente en vez de cargar a medias.
+
+(Bumped a 3: la revisión de reglas GDD v0.0.2 cambió la forma de `Player`
 (`monedas` nuevo, `crear_dia_1` con parámetros de Patrocinio en vez de
 `player_index`), `Recipe` (`puntos_baja`, `monedas_baja/optima/sobre`
 nuevos), `Market` (`suministros`/`SupplyLote` eliminados; `posiciones_harina`,
 `mazo_tendencias`, `descarte_tendencias` nuevos) y `GameEngine.__init__`
-(`orden_inicial` nuevo) -- un pickle viejo con la forma anterior debe
-descartarse limpiamente en vez de cargar a medias y fallar con
-AttributeError la primera vez que el código nuevo toque alguno de esos
-campos. (Bumped a 2: `Seat` ganó `color` y `GameSession` ganó
-`votos_fin_anticipado` desde la versión 1.)
+(`orden_inicial` nuevo). Bumped a 2: `Seat` ganó `color` y `GameSession`
+ganó `votos_fin_anticipado` desde la versión 1.)
 """
 
 

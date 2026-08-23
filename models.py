@@ -244,6 +244,11 @@ class FermentationSlot:
             Se sella el Cubo de Laboratorio en la carta si es True.
         modificador_incubadora: Ajuste de avance local (-1 / 0 / +1).
             Solo aplicable si el jugador tiene la tecnología Incubadora instalada.
+        acidez_inicial: Acidez del jugador en el momento de sellar esta masa
+            (Registro de pH de la carta). Solo informativo para la UI —
+            `bono_sabor` ya es el booleano autoritativo que engine.py usa al
+            hornear; este valor deja ver, en retrospectiva, qué acidez quedó
+            registrada frente a `recipe.acidez_diana`.
     """
 
     recipe: Recipe
@@ -251,6 +256,7 @@ class FermentationSlot:
     posicion_track: int = 0
     bono_sabor: bool = False
     modificador_incubadora: int = 0  # -1, 0 o +1
+    acidez_inicial: int = 0
 
     def __post_init__(self) -> None:
         # Validaciones de integridad de datos en el origen.

@@ -439,6 +439,7 @@ class ActionManager:
             posicion_track=0,
             bono_sabor=bono_sabor,
             modificador_incubadora=modificador_incubadora,
+            acidez_inicial=player.acidez,
         )
 
         # Colocar en la estación disponible y consumir dado de inóculo
