@@ -42,9 +42,9 @@ const mercado = computed(() => store.estado!.market)
 }
 
 .lista-recetas .slot {
-  flex: 1 1 220px;
-  min-width: 200px;
-  max-width: 280px;
+  flex: 1 1 260px;
+  min-width: 240px;
+  max-width: 320px;
 }
 
 .slot .vacio {

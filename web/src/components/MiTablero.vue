@@ -88,7 +88,7 @@ const colorHex = computed(() => hexDeColor(yo.value.color))
 
     <div class="sub-titulo">Carpeta de Proyectos ({{ yo.carpeta_proyectos.length }}/3)</div>
     <div class="carpeta">
-      <RecetaCard v-for="(receta, i) in yo.carpeta_proyectos" :key="i" :receta="receta" compacta />
+      <RecetaCard v-for="(receta, i) in yo.carpeta_proyectos" :key="i" :receta="receta" />
       <p v-if="yo.carpeta_proyectos.length === 0" class="vacio">— vacía —</p>
     </div>
 
@@ -258,8 +258,8 @@ const colorHex = computed(() => hexDeColor(yo.value.color))
 }
 
 .carpeta > :deep(.receta-card) {
-  flex: 1 1 200px;
-  max-width: 260px;
+  flex: 1 1 240px;
+  max-width: 300px;
 }
 
 .vacio {
