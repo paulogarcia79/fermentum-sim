@@ -5,10 +5,11 @@
 // la próxima Fase III (temp//5 + dado_inoculo + modificador_incubadora) --
 // aritmética pura del lado del cliente sobre datos que ya vienen en el
 // snapshot, sin duplicar ninguna regla de negocio.
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { FermentationSlot } from '../types'
 import { store } from '../store'
 import RecetaCard from './RecetaCard.vue'
+import DetalleRecetaModal from './DetalleRecetaModal.vue'
 
 const props = defineProps<{
   slot: FermentationSlot | null
@@ -49,6 +50,8 @@ const zonaProyectada = computed(() => {
   if (posicionFantasma.value >= r.zona_optima[0] && posicionFantasma.value <= r.zona_optima[1]) return 'optima'
   return 'baja'
 })
+
+const detalleAbierto = ref(false)
 </script>
 
 <template>
@@ -82,8 +85,18 @@ const zonaProyectada = computed(() => {
         <span>dado {{ slot.dado_inoculo }}</span>
         <span v-if="slot.bono_sabor">🧪 bono sabor</span>
       </div>
-      <RecetaCard :receta="slot.recipe" compacta />
+      <button type="button" class="boton-tarjeta" title="Ver receta completa" @click="detalleAbierto = true">
+        <RecetaCard :receta="slot.recipe" compacta />
+      </button>
     </template>
+
+    <DetalleRecetaModal
+      v-if="detalleAbierto && slot"
+      :receta="slot.recipe"
+      :acidez-inicial="slot.acidez_inicial"
+      :bono-sellado="slot.bono_sabor"
+      @cerrar="detalleAbierto = false"
+    />
   </div>
 </template>
 
@@ -96,6 +109,23 @@ const zonaProyectada = computed(() => {
 
 .estacion.bloqueada {
   opacity: 0.5;
+}
+
+.boton-tarjeta {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.boton-tarjeta:hover :deep(.receta-card) {
+  border-color: var(--color-acento);
 }
 
 .titulo {
