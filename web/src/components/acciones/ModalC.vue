@@ -10,6 +10,8 @@
 import { computed, reactive, ref } from 'vue'
 import { despacharAccion, store } from '../../store'
 import ModalShell from '../ModalShell.vue'
+import PistaPrecioHarina from '../PistaPrecioHarina.vue'
+import TablaPrecioAgua from '../TablaPrecioAgua.vue'
 import {
   LOTES_AGUA_VALIDOS,
   PRECIO_AGUA,
@@ -87,8 +89,8 @@ async function confirmar() {
   <ModalShell titulo="Visitar Mercado (1 PA)" :error="error" @cerrar="emit('cerrar')">
     <p class="info-linea">Máximo una transacción por tipo de recurso en esta visita.</p>
 
-    <label v-for="tipo in TIPOS_HARINA" :key="tipo" class="campo">
-      {{ tipo }} (visor {{ mercado.posiciones_harina[tipo] }}/5)
+    <div v-for="tipo in TIPOS_HARINA" :key="tipo" class="campo">
+      <PistaPrecioHarina :tipo="tipo" />
       <select v-model="operacionHarina[tipo]">
         <option value="">— sin transacción —</option>
         <option value="comprar">Comprar — {{ precioCompraHarina(tipo, mercado.posiciones_harina[tipo]) }} Monedas</option>
@@ -96,15 +98,15 @@ async function confirmar() {
           Vender — {{ precioVentaHarina(tipo, mercado.posiciones_harina[tipo]) }} Monedas
         </option>
       </select>
-    </label>
+    </div>
 
-    <label class="campo">
-      Agua ({{ temperatura }}°C)
+    <div class="campo">
+      <TablaPrecioAgua />
       <select v-model="operacionAgua">
         <option value="">— sin transacción —</option>
         <option value="comprar">Comprar lote</option>
       </select>
-    </label>
+    </div>
     <label v-if="operacionAgua === 'comprar'" class="campo">
       Tamaño de lote
       <select v-model.number="loteAgua">
