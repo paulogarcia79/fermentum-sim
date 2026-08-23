@@ -3,7 +3,7 @@ import { computed, onUnmounted, ref } from 'vue'
 import { confirmarFinAnticipado, detenerTransmisionEnVivo, forzarPase, store } from '../store'
 import ClimaBanner from './ClimaBanner.vue'
 import MercadoPanel from './MercadoPanel.vue'
-import SuministrosPanel from './SuministrosPanel.vue'
+import BolsaHarinasPanel from './BolsaHarinasPanel.vue'
 import MiTablero from './MiTablero.vue'
 import TablerosOponentes from './TablerosOponentes.vue'
 import BarraAcciones from './BarraAcciones.vue'
@@ -74,7 +74,7 @@ onUnmounted(() => detenerTransmisionEnVivo())
       <section class="mesa-comun">
         <h2 class="titulo-mesa">Mesa Común</h2>
         <MercadoPanel />
-        <SuministrosPanel />
+        <BolsaHarinasPanel />
 
         <div class="panel espacios-accion">
           <h3>Espacios de Acción</h3>

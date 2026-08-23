@@ -1,14 +1,16 @@
 // types.ts -- espejo TypeScript del JSON que produce server/views.py
 // (game_state_view), que a su vez envuelve serialization.snapshot() con
-// redaccion (mazo_clima/mazo_recetas -> conteos) y los campos de
-// turno/fase/disponibilidad. Mantener sincronizado con:
-//   - models.py: Player, Recipe, FermentationSlot, HorneadoRecord, Technologies
-//   - engine.py: Environment (via models.py), Market, SupplyLote, Fase
+// redaccion (mazo_clima/mazo_recetas/mazo_tendencias -> conteos) y los campos
+// de turno/fase/disponibilidad. Mantener sincronizado con:
+//   - models.py: Player (incl. monedas), Recipe, FermentationSlot,
+//     HorneadoRecord, Technologies (incl. criopreservacion)
+//   - engine.py: Environment (via models.py), Market (posiciones_harina,
+//     mazo_tendencias -- ya no hay SupplyLote/suministros, GDD v0.0.2), Fase
 //   - disponibilidad.py: AccionDisponible
 
 export type Grado = 'Básica' | 'Avanzada'
 export type TipoHarina = 'Blanca' | 'Centeno' | 'Integral'
-export type TecnologiaID = 'incubadora' | 'camara_b' | 'modulo_analitico'
+export type TecnologiaID = 'incubadora' | 'camara_b' | 'modulo_analitico' | 'criopreservacion'
 export type FaseActual = 'preparacion' | 'fase_i' | 'fase_ii' | 'fase_iii' | 'terminada'
 
 export interface Recipe {
@@ -23,13 +25,13 @@ export interface Recipe {
   zona_baja: [number, number]
   zona_optima: [number, number]
   zona_sobrefermentada: [number, number]
+  puntos_baja: number
   puntos_optimos: number
   penalizacion_colapso: number
+  monedas_baja: number
+  monedas_optima: number
+  monedas_sobre: number
   req_tecnologico: TecnologiaID | null
-  /** Solo presente en carpeta_proyectos/estaciones_fermentacion/market -- ver
-   * server/views.py:_enriquecer_receta. Ausente en recetas de HorneadoRecord
-   * (archivo_horneado_exitoso/archivo_colapsos), que reutilizan este mismo tipo. */
-  puntos_zona_baja?: number
 }
 
 export interface FermentationSlot {
@@ -47,12 +49,14 @@ export interface HorneadoRecord {
   bono_sabor_aplicado: boolean
   fue_colapso: boolean
   datos_obtenidos: number
+  monedas_obtenidos: number
 }
 
 export interface Technologies {
   incubadora: boolean
   camara_b: boolean
   modulo_analitico: boolean
+  criopreservacion: boolean
 }
 
 export interface Player {
@@ -65,6 +69,7 @@ export interface Player {
   en_estado_contaminacion: boolean
   puntos_accion: number
   datos_investigacion: number
+  monedas: number
   reserva_harina: Record<TipoHarina, number>
   accion_alimentar_usada: boolean
   reserva_agua: number
@@ -94,15 +99,13 @@ export interface Environment {
   cartas_clima_restantes: number
 }
 
-export interface SupplyLote {
-  recursos: { Blanca: number; Centeno: number; Integral: number; agua: number }
-}
-
 export interface Market {
   recetas_visibles: (Recipe | null)[]
   descarte_recetas: Recipe[]
-  suministros: (SupplyLote | null)[]
+  posiciones_harina: Record<TipoHarina, number>
+  descarte_tendencias: number[]
   mazo_recetas_restantes: number
+  mazo_tendencias_restantes: number
 }
 
 export interface AccionDisponible {
