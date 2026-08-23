@@ -10,27 +10,30 @@ Para la simulación, cada entidad de tipo `Receta` debe contener los siguientes 
 * `hidratacion_pct` (Integer): Porcentaje total de hidratación.
 * `tokens_agua` (Integer): Cantidad de tokens de agua del 5% requeridos (ej. 60% / 5% = 12 tokens).
 * `acidez_diana` (List[int]): Rango de niveles de Acidez que otorgan el Bono de Sabor al iniciar la receta.
-* `zona_baja` (Tuple[int, int]): Rango del track donde la masa está cruda (otorga pocos puntos y 0 Datos).
+* `zona_baja` (Tuple[int, int]): Rango del track donde la masa está cruda (otorga pocos puntos, `puntos_baja`, y 0 Datos).
 * `zona_optima` (Tuple[int, int]): Rango del track objetivo (otorga puntos máximos, Datos extra en el centro exacto).
 * `zona_sobrefermentada` (Tuple[int, int]): Rango del track donde la masa colapsa automáticamente.
+* `puntos_baja` (Integer): Puntos de Maestría otorgados si se hornea en la zona baja.
 * `puntos_optimos` (Integer): Puntos de Maestría otorgados si se hornea en la zona óptima.
 * `penalizacion_colapso` (Integer): Puntos de Maestría negativos aplicados en horneado de emergencia (o si se hornea manual en esa zona).
+* `monedas_baja` / `monedas_optima` / `monedas_sobre` (Integer): Monedas cobradas al Hornear y Vender (Acción F) según la zona de horneado.
+* `bono_sabor_pts` (Integer): Puntos de Maestría del Bono de Sabor, otorgados junto con +2 Monedas si el Cubo de Acidez estaba sellado (y el horneado no fue un colapso).
 * `req_tecnologico` (String / None): Mejora de laboratorio estrictamente necesaria para iniciar u hornear la receta con bonos.
 
 ---
 
 ## 2. Catálogo de Recetas (Dataset)
 
-| ID Receta | Grado | Harina | Hidratación (Tokens) | Acidez Diana | Zona Baja | Zona Óptima | Zona Sobre | Puntos (Óptimo) | Penalización | Req. Tecnológico |
+| ID Receta | Grado | Harina | Hidratación (Tokens) | Acidez Diana (Bono) | Zona Baja | Zona Óptima | Zona Sobre | Puntos (Baja/Óptimo/Sobre) | Monedas (Baja/Óptima/Sobre) |Req. Tecnológico |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Pan de Campo** | Básica | Blanca | 60% (12 tokens) | [3] | 1 - 11 | 12 - 14 | 15 - 20 | 10 pts | -2 pts | Ninguno |
-| **Focaccia** | Básica | Blanca | 75% (15 tokens) | [1, 2] | 1 - 9 | 10 - 14 | 15 - 20 | 12 pts | -3 pts | Ninguno |
-| **Baguette** | Básica | Blanca | 65% (13 tokens) | [2] | 1 - 13 | 14 - 15 | 16 - 20 | 11 pts | -2 pts | Ninguno |
-| **Pizza Napolitana** | Avanzada | Blanca | 62% (13 tokens) | [3] | 1 - 10 | 11 - 13 | 14 - 20 | 14 pts | -4 pts | Módulo Analítico |
-| **Brioche** | Avanzada | Blanca | 52% (11 tokens) | [1] | 1 - 16 | 17 - 18 | 19 - 20 | 16 pts | -6 pts | Módulo Analítico |
-| **Hogaza Centeno**| Avanzada | Centeno | 67% (14 tokens) | [4, 5] | 1 - 14 | 15 - 18 | 19 - 20 | 15 pts | -5 pts | Módulo Analítico |
-| **Pan Semillas** | Avanzada | Integral | 78% (16 tokens) | [3, 4] | 1 - 12 | 13 - 15 | 16 - 20 | 17 pts | -5 pts | Módulo Analítico |
-| **Panettone** | Avanzada | Blanca | 47% (10 tokens) | [1] | 1 - 17 | 18 - 19 | 20 | 20 pts | -8 pts | Módulo Analítico |
+| **Pan de Campo** | Básica | Blanca | 60% (12 tokens) | [3] (+3) | 1 - 10 | 11 - 15 | 16 - 20 | 4 / 10 / -2 | 13 / 17 / 11 | Ninguno |
+| **Focaccia** | Básica | Blanca | 75% (15 tokens) | [1, 2] (+2) | 1 - 9 | 10 - 14 | 15 - 20 | 3 / 12 / -3 | 15 / 19 / 13 | Ninguno |
+| **Baguette** | Básica | Blanca | 65% (13 tokens) | [2] (+3) | 1 - 11 | 12 - 15 | 16 - 20 | 5 / 11 / -2 | 14 / 18 / 12 | Ninguno |
+| **Pizza Napolitana** | Avanzada | Blanca | 62% (13 tokens) | [3] (+4) | 1 - 10 | 11 - 14 | 15 - 20 | 4 / 14 / -4 | 15 / 21 / 12 | Módulo Analítico |
+| **Brioche** | Avanzada | Blanca | 52% (11 tokens) | [1] (+5) | 1 - 14 | 15 - 17 | 18 - 20 | 5 / 16 / -6 | 14 / 21 / 11 | Módulo Analítico |
+| **Hogaza Centeno**| Avanzada | Centeno | 67% (14 tokens) | [4, 5] (+6) | 1 - 12 | 13 - 16 | 17 - 20 | 6 / 15 / -5 | 20 / 27 / 17 | Módulo Analítico |
+| **Pan Semillas** | Avanzada | Integral | 78% (16 tokens) | [3, 4] (+7) | 1 - 13 | 14 - 16 | 17 - 20 | 6 / 17 / -5 | 19 / 26 / 16 | Módulo Analítico |
+| **Panettone** | Avanzada | Blanca | 47% (10 tokens) | [1] (+8) | 1 - 16 | 17 - 18 | 19 - 20 | 8 / 20 / -8 | 13 / 22 / 10 | Módulo Analítico |
 
 ---
 

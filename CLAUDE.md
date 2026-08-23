@@ -124,8 +124,10 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   `build_climate_deck()` constant data. No game-flow logic lives here beyond small mutators
   (e.g. `Player.ajustar_vitalidad`) that enforce the [0, 6] clamps.
 - **`engine.py`** — turn/phase orchestration: `GameEngine` runs the three-phase Day of Lab loop,
-  plus `Market` (recipe/supply market with refresh protocol) and endgame/scoring
-  (`resolver_horneado`, `calcular_ranking_final`). Two ways to drive Phase II, sharing one
+  plus `Market` (recipe market with refresh protocol, the 3-track Bolsa de Harinas, and the
+  Mercado de Tendencias deck — see the GDD v0.0.2 note above; there is no supply-lot market
+  anymore) and endgame/scoring (`resolver_horneado`, `calcular_ranking_final`). Two ways to drive
+  Phase II, sharing one
   round-robin implementation (`_preparar_fase_II` / `_avanzar_a_siguiente_elegible`) so they can't
   diverge:
   - **Blocking-callback path** (used by the CLI): `ejecutar_dia_laboratorio(ejecutar_turno_jugador)`
@@ -147,10 +149,23 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   player will be revisited forever (see `main.py`'s `"P"` branch and `tests/_bot.py`'s fallback for
   the required pattern).
 - **`actions.py`** — `ActionManager`, one `accion_X_*` method per action in
-  `ACTIONS_REGISTRY.md` (A: Alimentar, B: Iniciar Receta, C: Adquirir Insumos, D: Implementar
-  Mejora, E: Técnica/Pliegues, F: Hornear, G: Investigar Protocolo, H: Re-cultivo Manual, I:
-  Inóculo de Emergencia, plus Simposio Técnico and Horas Extras). Every method validates
-  preconditions and raises before mutating state (fail-fast).
+  `ACTIONS_REGISTRY.md` (A: Alimentar, B: Iniciar Receta, C: Visitar el Mercado, D: Implementar
+  Mejora, E: Técnica/Pliegues, F: Hornear y Vender, G: Investigar Protocolo, H: Re-cultivo Manual, I:
+  Inóculo de Emergencia, plus Simposio Técnico, Horas Extras, and Pedido de Urgencia). Every method
+  validates preconditions and raises before mutating state (fail-fast). **GDD v0.0.2 rules
+  overhaul** (branch `rules-gdd-0.0.2`): introduces a `Player.monedas` economy — Acción C
+  (`accion_C_visitar_mercado`) replaced the old random-lot Acción C (Adquirir Insumos, now removed
+  along with `SupplyLote`/`Market.suministros`) with priced buy/sell of flour against a shared,
+  3-track `Market.posiciones_harina` "Bolsa de Harinas" (moved by both player transactions and a
+  new daily Mercado de Tendencias draw in Fase I) plus temperature-priced water lots
+  (`engine.PRECIO_AGUA`); Acción F now pays out Monedas per zone on top of the existing
+  points/Datos logic (`Recipe.monedas_baja/optima/sobre`, flat `+2` Monedas Bono de Sabor); setup
+  (`bootstrap.create_game`) now deals from an 8-card `PATROCINIO_CATALOG` instead of a hardcoded
+  4-slot `player_index` table, driving both Día 1 turn order (`GameEngine`'s new `orden_inicial`
+  param) and starting resources; the lab-upgrade cap (Acción D) is now per-technology, not a
+  single "one upgrade per game" total, with a 4th tech (Criopreservación) added; and endgame
+  scoring gained a "Conversión de riqueza" term. Recipe zone/point/Monedas values were rebalanced
+  across the board — see `context/RECIPE_DATABASE.md`.
 - **`main.py`** — CLI only: rendering (`mostrar_estado_jugador`, `mostrar_mercado`, colored
   output helpers), prompting (`_pedir_int`, `_pedir_opcion`, `_params_accion_*`), and the
   `main()` entrypoint / `setup_game()`. Contains no rules logic — it calls into `engine`/
@@ -222,9 +237,10 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   directly — Acción B's recipe via `carpeta_index`, `TecnologiaID`/`TipoHarina` from plain
   strings) and **owns `ACCIONES_QUE_TERMINAN_TURNO`**, the per-action turn-ending table the
   turn-economy rule above deferred to this layer. `views.py` builds the client-facing state via
-  `serialization.snapshot()` with the one redaction that matters — `Environment.mazo_clima` /
-  `Market.mazo_recetas` (the hidden future decks) become counts, since everything else in this
-  game is public information — plus `disponibilidad.acciones_disponibles` per player and
+  `serialization.snapshot()` with the redaction that matters — `Environment.mazo_clima` /
+  `Market.mazo_recetas` / `Market.mazo_tendencias` (the hidden future decks) become counts, since
+  everything else in this game is public information (including `Market.posiciones_harina`, the
+  Bolsa de Harinas price tracks, which are left untouched) — plus `disponibilidad.acciones_disponibles` per player and
   `puntos_maestria_final`/`calcular_ranking_final` (both `@property`/methods, not dataclass
   fields, so `dataclasses.asdict` wouldn't include them — computed here instead of in the
   frontend, same reasoning as action availability: don't duplicate `CORE_MECHANICS.md` §3's
