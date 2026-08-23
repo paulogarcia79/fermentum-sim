@@ -1,55 +1,39 @@
 <script setup lang="ts">
-// Bolsa de Harinas + Suministro Hídrico Global (GDD v0.0.2) -- reemplaza el
-// viejo panel de "Suministros" (3 lotes aleatorios de 150% que se tomaban
-// enteros). Ahora es un tablero de precios estático: 3 visores de harina
-// compartidos (posiciones_harina, 1-5) y una fila de precio de agua por
-// tamaño de lote según la temperatura actual. Ya no hay "tomar" un lote ni
-// slots que se vacían -- comprar/vender es la Acción C (Visitar el Mercado,
-// ver ModalC.vue), este panel solo muestra el precio vigente.
+// Bolsa de Harinas + Suministro Hídrico Global (GDD v0.0.2) -- ahora
+// muestra la pista de precio COMPLETA (las 5 posiciones posibles del visor
+// de cada harina, y las 5 filas de temperatura x 4 lotes de agua) con la
+// posicion/fila actual resaltada, en vez de solo el precio vigente como
+// texto -- ver reference_images/market_example.jpeg. PistaPrecioHarina.vue
+// y TablaPrecioAgua.vue hacen el trabajo real; este panel solo los agrupa
+// y los reusa tambien ModalC.vue (Accion C) para dar contexto al transactar.
 import { computed } from 'vue'
 import { store } from '../store'
-import IconoHarina from './IconoHarina.vue'
-import IconoAgua from './IconoAgua.vue'
-import IconoMonedas from './IconoMonedas.vue'
-import { LOTES_AGUA_VALIDOS, PRECIO_AGUA, precioCompraHarina, precioVentaHarina } from '../data/preciosHarina'
+import PistaPrecioHarina from './PistaPrecioHarina.vue'
+import TablaPrecioAgua from './TablaPrecioAgua.vue'
+import TermometroAgua from './TermometroAgua.vue'
 import type { TipoHarina } from '../types'
 
 const TIPOS: TipoHarina[] = ['Blanca', 'Integral', 'Centeno']
 
-const mercado = computed(() => store.estado!.market)
 const temperatura = computed(() => store.estado!.environment.temperatura_actual)
 </script>
 
 <template>
   <section class="panel bolsa-harinas">
     <h3>Bolsa de Harinas</h3>
-    <ul class="lista-bolsa-harinas">
-      <li v-for="tipo in TIPOS" :key="tipo" class="lote">
-        <div class="recursos">
-          <span class="recurso">
-            <span class="icono"><IconoHarina :tipo="tipo" /></span>
-            {{ tipo }} — visor {{ mercado.posiciones_harina[tipo] }}/5
-          </span>
-          <span class="precio">
-            Compra <span class="icono-mini"><IconoMonedas /></span>{{ precioCompraHarina(tipo, mercado.posiciones_harina[tipo]) }}
-          </span>
-          <span class="precio">
-            Venta <span class="icono-mini"><IconoMonedas /></span>{{ precioVentaHarina(tipo, mercado.posiciones_harina[tipo]) }}
-          </span>
+    <div class="cuerpo-bolsa">
+      <div class="seccion-harinas">
+        <PistaPrecioHarina v-for="tipo in TIPOS" :key="tipo" :tipo="tipo" />
+      </div>
+
+      <div class="seccion-agua">
+        <h4>Suministro Hídrico @ {{ temperatura }}°C</h4>
+        <div class="fila-agua">
+          <TermometroAgua :temperatura="temperatura" />
+          <TablaPrecioAgua />
         </div>
-      </li>
-      <li class="lote">
-        <div class="recursos">
-          <span class="recurso">
-            <span class="icono"><IconoAgua /></span>
-            Agua @ {{ temperatura }}°C
-          </span>
-          <span v-for="lote in LOTES_AGUA_VALIDOS" :key="lote" class="precio">
-            {{ lote }}% <span class="icono-mini"><IconoMonedas /></span>{{ PRECIO_AGUA[temperatura]?.[lote] ?? '—' }}
-          </span>
-        </div>
-      </li>
-    </ul>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -58,50 +42,39 @@ const temperatura = computed(() => store.estado!.environment.temperatura_actual)
   margin-top: 0;
 }
 
-.lista-bolsa-harinas {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+.cuerpo-bolsa {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.seccion-harinas {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.5rem;
+  flex: 2 1 260px;
 }
 
-.lote {
-  background: var(--color-fondo);
-  border-radius: 4px;
-  padding: 0.4rem 0.5rem;
+.seccion-agua {
+  flex: 1 1 220px;
 }
 
-.recursos {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.6rem;
+.seccion-agua h4 {
+  margin: 0 0 0.4rem;
   font-size: 0.8rem;
-}
-
-.recurso {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.precio {
-  display: flex;
-  align-items: center;
-  gap: 0.2rem;
+  font-weight: 600;
   color: var(--color-texto-tenue);
 }
 
-.icono {
-  width: 16px;
-  height: 16px;
+.fila-agua {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.icono-mini {
-  width: 12px;
-  height: 12px;
-  display: inline-flex;
+@media (max-width: 640px) {
+  .cuerpo-bolsa {
+    flex-direction: column;
+  }
 }
 </style>
