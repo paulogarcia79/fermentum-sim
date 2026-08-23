@@ -1,15 +1,18 @@
 <script setup lang="ts">
-// Vista previa de puntos: replica solo la lectura de zona (no una decision
-// de reglas) usando las mismas constantes que ya viajan en el snapshot --
-// PUNTOS_ZONA_BAJA_DIVISOR=3 es el unico numero "mágico" duplicado de
-// engine.py, puramente para mostrar una estimacion antes de confirmar
-// (ver engine.py:_calcular_puntos_zona). El servidor sigue siendo quien
-// calcula el resultado real al recibir la accion.
+// Hornear y Vender (GDD v0.0.2, antes "Hornear"). Vista previa de puntos y
+// Monedas: replica solo la lectura de zona (no una decision de reglas)
+// leyendo puntos_baja/monedas_baja/monedas_optima/monedas_sobre directamente
+// de la Recipe que ya viaja en el snapshot (a diferencia de los precios de
+// la Bolsa de Harinas en ModalC.vue, estos SI son campos reales de la
+// receta, no una tabla del motor que haya que duplicar). MONEDAS_BONO_SABOR
+// = 2 es el unico numero "mágico" duplicado de engine.py, puramente para
+// mostrar una estimacion antes de confirmar (ver engine.py:resolver_horneado).
+// El servidor sigue siendo quien calcula el resultado real al recibir la accion.
 import { computed, ref } from 'vue'
 import { despacharAccion, store } from '../../store'
 import ModalShell from '../ModalShell.vue'
 
-const PUNTOS_ZONA_BAJA_DIVISOR = 3
+const MONEDAS_BONO_SABOR = 2
 
 const emit = defineEmits<{ cerrar: [] }>()
 
@@ -29,13 +32,16 @@ const previa = computed(() => {
   if (!slot) return null
   const r = slot.recipe
   const pos = slot.posicion_track
-  if (pos >= r.zona_sobrefermentada[0]) return { zona: 'Sobrefermentada', puntos: r.penalizacion_colapso }
-  if (pos >= r.zona_optima[0] && pos <= r.zona_optima[1]) {
-    const bono = slot.bono_sabor ? r.bono_sabor_pts : 0
-    return { zona: 'Óptima', puntos: r.puntos_optimos + bono }
+  if (pos >= r.zona_sobrefermentada[0]) {
+    // Un colapso nunca aplica el Bono de Sabor, ni en puntos ni en Monedas.
+    return { zona: 'Sobrefermentada', puntos: r.penalizacion_colapso, monedas: r.monedas_sobre }
   }
-  const bono = slot.bono_sabor ? r.bono_sabor_pts : 0
-  return { zona: 'Baja', puntos: Math.max(1, Math.floor(r.puntos_optimos / PUNTOS_ZONA_BAJA_DIVISOR)) + bono }
+  const bonoPuntos = slot.bono_sabor ? r.bono_sabor_pts : 0
+  const bonoMonedas = slot.bono_sabor ? MONEDAS_BONO_SABOR : 0
+  if (pos >= r.zona_optima[0] && pos <= r.zona_optima[1]) {
+    return { zona: 'Óptima', puntos: r.puntos_optimos + bonoPuntos, monedas: r.monedas_optima + bonoMonedas }
+  }
+  return { zona: 'Baja', puntos: r.puntos_baja + bonoPuntos, monedas: r.monedas_baja + bonoMonedas }
 })
 
 async function confirmar() {
@@ -53,7 +59,7 @@ async function confirmar() {
 </script>
 
 <template>
-  <ModalShell titulo="Hornear (1 PA)" :error="error" @cerrar="emit('cerrar')">
+  <ModalShell titulo="Hornear y Vender (1 PA)" :error="error" @cerrar="emit('cerrar')">
     <label class="campo">
       Masa
       <select v-model.number="slotIndex">
@@ -62,7 +68,8 @@ async function confirmar() {
     </label>
 
     <p v-if="previa" class="info-linea">
-      Zona {{ previa.zona }} — resultado estimado: <strong>{{ previa.puntos }} pts</strong>
+      Zona {{ previa.zona }} — resultado estimado: <strong>{{ previa.puntos }} pts</strong>,
+      <strong>{{ previa.monedas }} Monedas</strong>
     </p>
 
     <template #acciones>

@@ -37,6 +37,7 @@ function esTurno(i: number): boolean {
         <span>Acidez {{ p.acidez }}/6</span>
         <span>PA {{ p.puntos_accion }}</span>
         <span>Datos {{ p.datos_investigacion }}</span>
+        <span>Monedas {{ p.monedas }}</span>
         <span>{{ p.archivo_horneado_exitoso.length }}✔ / {{ p.archivo_colapsos.length }}⚠</span>
       </div>
       <div class="masas" v-if="p.estaciones_fermentacion.some((s) => s)">

@@ -18,8 +18,7 @@ Deliberadamente NO reimplementa ninguna validación de reglas: cada método de
 §3). Este módulo solo resuelve lo que HTTP no puede transportar directamente
 — referencias de objeto (``Recipe`` para la Acción B, vía ``carpeta_index``)
 y miembros de enum (``TecnologiaID``, ``TipoHarina`` para el Pedido de
-Urgencia de la Acción C) — y deja que ``ActionManager`` decida si la acción
-es válida.
+Urgencia) — y deja que ``ActionManager`` decida si la acción es válida.
 """
 from __future__ import annotations
 
@@ -31,8 +30,8 @@ from exceptions import InvalidActionError
 from models import Player, TecnologiaID, TipoHarina
 
 # Acciones que terminan la visita del jugador al completarse con éxito.
-# Ver Milestone 1 (engine.py): Acción A y Horas Extras son gratuitas y NO
-# terminan el turno por sí mismas; todas las demás sí.
+# Ver Milestone 1 (engine.py): Acción A, Horas Extras y Pedido de Urgencia son
+# gratuitas (0 PA) y NO terminan el turno por sí mismas; todas las demás sí.
 ACCIONES_QUE_TERMINAN_TURNO: Dict[str, bool] = {
     "A": False,
     "B": True,
@@ -45,6 +44,7 @@ ACCIONES_QUE_TERMINAN_TURNO: Dict[str, bool] = {
     "H": True,
     "I": True,
     "horas_extras": False,
+    "pedido_urgencia": False,
 }
 
 ACCIONES_VALIDAS = frozenset(ACCIONES_QUE_TERMINAN_TURNO)
@@ -130,19 +130,13 @@ def _despachar(
         )
 
     if accion == "C":
-        if params.get("urgencia", False):
-            harina_urgencia = params.get("harina_urgencia")
-            return manager.accion_C_adquirir_insumos(
-                player,
-                urgencia=True,
-                harina_urgencia=(
-                    _resolver_tipo_harina(harina_urgencia) if harina_urgencia is not None else None
-                ),
-                agua_tokens_urgencia=params.get("agua_tokens_urgencia", 0),
+        transacciones = params.get("transacciones")
+        if not isinstance(transacciones, list):
+            raise InvalidActionError(
+                "Acción C (Visitar el Mercado) requiere 'transacciones' "
+                f"como una lista. Recibido: {transacciones!r}."
             )
-        return manager.accion_C_adquirir_insumos(
-            player, indice_slot=_requerir_int(params, "indice_slot")
-        )
+        return manager.accion_C_visitar_mercado(player, transacciones=transacciones)
 
     if accion == "D":
         return manager.accion_D_implementar_mejora(
@@ -182,6 +176,16 @@ def _despachar(
 
     if accion == "horas_extras":
         return manager.accion_auxiliar_horas_extras(player)
+
+    if accion == "pedido_urgencia":
+        harina_urgencia = params.get("harina_urgencia")
+        return manager.accion_auxiliar_pedido_urgencia(
+            player,
+            harina_urgencia=(
+                _resolver_tipo_harina(harina_urgencia) if harina_urgencia is not None else None
+            ),
+            agua_tokens_urgencia=params.get("agua_tokens_urgencia", 0),
+        )
 
     raise AssertionError(f"accion {accion!r} pasó la validación pero no tiene despacho")  # inalcanzable
 

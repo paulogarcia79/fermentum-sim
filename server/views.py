@@ -33,15 +33,11 @@ Construye el dict JSON que se envía a los clientes HTTP a partir de
      el resultado de ``calcular_ranking_final``) en vez de que el cliente
      reimplemente la fórmula de puntuación de ``CORE_MECHANICS.md`` §3 en
      TypeScript — el mismo principio que la disponibilidad de acciones.
-  5. **Puntos de Zona Baja por receta**: cada receta serializada (en la
-     carpeta de proyectos, en una estación activa, o en el mercado) recibe
-     un campo ``puntos_zona_baja`` adicional, calculado con la misma
-     fórmula que usa ``engine._calcular_puntos_zona`` para la zona baja
-     (``max(1, puntos_optimos // PUNTOS_ZONA_BAJA_DIVISOR)``). Ese divisor
-     es una *asunción* documentada en ``engine.py`` (RECIPE_DATABASE.md no
-     lo cuantifica) — se calcula aquí en vez de en TypeScript por la misma
-     razón que el punto 4: si el divisor cambia algún día, un cliente que
-     lo hubiera reimplementado quedaría desincronizado en silencio.
+  5. **Mazo de Tendencias de Mercado**: ``Market.mazo_tendencias`` (el mazo
+     de Tendencias restante, en orden) se reemplaza por su longitud —
+     mismo tratamiento que el mazo de clima y el mazo de recetas. Su
+     descarte (``descarte_tendencias``) sí es información pública, igual
+     que el descarte de clima/recetas, y se serializa sin cambios.
   6. **Color de jugador y voto de fin anticipado**: ``Seat.color`` y
      ``GameSession.votos_fin_anticipado`` viven en la capa de sala
      (``server/sessions.py``), no en el ``Player``/``GameEngine`` de
@@ -50,19 +46,13 @@ Construye el dict JSON que se envía a los clientes HTTP a partir de
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict
 
 from disponibilidad import acciones_disponibles
-from engine import PUNTOS_ZONA_BAJA_DIVISOR
 from serialization import snapshot
 
 if TYPE_CHECKING:
     from server.sessions import GameSession
-
-
-def _enriquecer_receta(receta: Optional[Dict[str, Any]]) -> None:
-    if receta is not None:
-        receta["puntos_zona_baja"] = max(1, receta["puntos_optimos"] // PUNTOS_ZONA_BAJA_DIVISOR)
 
 
 def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
@@ -76,6 +66,7 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
 
     mercado = estado["market"]
     mercado["mazo_recetas_restantes"] = len(mercado.pop("mazo_recetas"))
+    mercado["mazo_tendencias_restantes"] = len(mercado.pop("mazo_tendencias"))
 
     jugador_activo = engine.jugador_activo
     jefe = engine.jefe_investigador
@@ -92,13 +83,6 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
     for datos_jugador, jugador, asiento in zip(estado["players"], engine.players, sesion.seats):
         datos_jugador["puntos_maestria_final"] = jugador.puntos_maestria_final
         datos_jugador["color"] = asiento.color
-        for receta in datos_jugador["carpeta_proyectos"]:
-            _enriquecer_receta(receta)
-        for estacion in datos_jugador["estaciones_fermentacion"]:
-            if estacion is not None:
-                _enriquecer_receta(estacion["recipe"])
-    for receta in mercado["recetas_visibles"]:
-        _enriquecer_receta(receta)
     estado["ranking"] = [
         {"posicion": posicion, "player_idx": engine.players.index(jugador)}
         for posicion, jugador in engine.calcular_ranking_final()

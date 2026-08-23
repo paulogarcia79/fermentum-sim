@@ -118,8 +118,8 @@ def test_event_sink_recibe_los_mismos_eventos_que_engine_eventos() -> None:
     recibidos = []
     receta = next(r for r in RECIPE_CATALOG.values())
     players = [
-        Player.crear_dia_1("Alba", receta, player_index=0),
-        Player.crear_dia_1("Bruno", receta, player_index=1),
+        Player.crear_dia_1("Alba", receta),
+        Player.crear_dia_1("Bruno", receta),
     ]
     engine = GameEngine(players, Environment.crear_inicial(), event_sink=recibidos.append)
 

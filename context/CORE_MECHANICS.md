@@ -16,19 +16,20 @@ Liderada por el Investigador Jefe, esta fase configura las variables globales de
 * **Actualización de Jerarquía:** El token de Investigador Jefe se asigna al jugador con el nivel de Vitalidad más alto en su frasco (cultivo base). 
     * *Desempate:* Mayor cantidad de Datos de Investigación.
     * *Ventaja:* El Investigador Jefe actúa primero en la Fase II y tiene prioridad en los mercados.
+    * *Excepción Día 1:* En la primera ronda, el orden se determina por la Iniciativa de la Carta de Patrocinio de cada jugador (ver PLAYER_STATE.md §2), no por Vitalidad — a partir del Día 2 rige la regla estándar de este párrafo.
 * **Resolución del Clima:** Se revela una carta del mazo de Clima. **(CRÍTICO PARA LA CLI: El sistema debe anunciar/imprimir en pantalla claramente el nombre de la carta, su modificador térmico y su efecto pasivo para que los jugadores puedan tomar decisiones).**
     * Se ajusta el termómetro en el tablero sumando o restando el Modificador Térmico a la base de 20°C.
     * Se sincroniza el "Ábaco de Fermentación" (20°C = 4 Pasos; 25°C = 5 Pasos; 30°C = 6 Pasos).
     * Se aplican Anomalías Biológicas instantáneamente (ej. +1 Vitalidad para todos) o Efectos Pasivos.
-* **Protocolo de Refresco:** * *Recetas:* Se descarta la carta más antigua (extremo derecho), se desplazan las restantes a la derecha y se revelan nuevas a la izquierda. Si el mazo se agota, se baraja el descarte.
-    * *Suministros:* Se descartan los lotes no reclamados y se revelan 3 nuevos.
+* **Mercado de Tendencias:** Se roba una carta del mazo de Tendencias de Mercado (21 cartas: -2×1, -1×7, 0×5, +1×7, +2×1) y su modificador desplaza simultáneamente los 3 visores de la Bolsa de Harinas (Blanca/Integral/Centeno), cada uno con tope independiente en [1, 5] (sin arrastre más allá del límite).
+* **Protocolo de Refresco:** Recetas — se descarta la carta más antigua (extremo derecho), se desplazan las restantes a la derecha y se revelan nuevas a la izquierda. Si el mazo se agota, se baraja el descarte.
 
 ### FASE II: Acción (Operatividad)
 Fase donde los jugadores intervienen en su laboratorio mediante un sistema de "Round-Robin" (turnos alternos).
 * **Capacidad:** Cada jugador dispone de 2 PA.
 * **Flujo Intercalado:** Empezando por el Investigador Jefe, el jugador activo ejecuta **solo 1 acción** (o pasa). Luego el control pasa al siguiente jugador. El ciclo (while loop) continúa hasta que la suma de PA de todos los jugadores sea 0 y nadie quiera usar "Horas Extras".
 * **Registro:** Se marca el uso de PA moviendo Cubos de Laboratorio en la Zona 5 (Checklist) del tablero personal.
-* **Escasez de Mercado:** Durante esta fase, si un jugador adquiere una receta o un lote de suministros, el espacio queda vacío hasta la próxima Fase I.
+* **Escasez de Mercado:** Durante esta fase, si un jugador investiga una receta (Acción G), el espacio del mercado queda vacío hasta la próxima Fase I. La harina y el agua, en cambio, ya no son un slot consumible — son un track de precio compartido (Bolsa de Harinas) y una matriz de precio por temperatura (Suministro Hídrico Global) que cualquier jugador puede usar en Visitar el Mercado (Acción C) sin agotar un cupo.
 
 ### FASE III: Fermentación (Resolución Automática)
 Ocurre simultáneamente para todos una vez terminada la Fase II.
@@ -53,6 +54,7 @@ El final del juego se desencadena de inmediato si ocurre una de estas dos condic
 2. **Puntos de Sabor:** Suma de los bonos de Acidez impresos en las cartas que tengan un Cubo de Laboratorio sellado.
 3. **Madurez del Cultivo:** `(Vitalidad Actual + Acidez Actual) / 2` (redondeando hacia arriba).
 4. **Desperdicio (Penalización):** -1 punto de Maestría por cada 3 tokens de insumos (Harina o Agua) sin utilizar en la reserva.
+5. **Conversión de Riqueza:** +1 punto de Maestría por cada 5 Monedas restantes en la reserva final (división entera).
 
 ### Desempate
 En caso de empate en Puntos de Maestría, el ganador se determina por:

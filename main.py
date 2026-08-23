@@ -27,9 +27,9 @@ import os
 import sys
 from typing import List, Optional, Tuple
 
-from actions import ActionManager
+from actions import COSTOS_TECNOLOGIA, ActionManager
 from bootstrap import create_game
-from engine import GameEngine
+from engine import PRECIO_AGUA, GameEngine
 from events import EventoTipo, GameEvent
 from exceptions import FermentumError
 from models import (
@@ -118,6 +118,7 @@ _NOMBRE_TECNOLOGIA = {
     TecnologiaID.INCUBADORA: "Incubadora",
     TecnologiaID.CAMARA_B: "Cámara B",
     TecnologiaID.MODULO_ANALITICO: "Módulo Analítico",
+    TecnologiaID.CRIOPRESERVACION: "Criopreservación",
 }
 
 
@@ -168,7 +169,8 @@ def mostrar_estado_jugador(player: Player, dia: int) -> None:
     h_str = "  ".join(h_partes)
     agua_str = str(player.reserva_agua) if player.reserva_agua > 0 else _c(_C.DIM, "0")
     print(f"  Harina:    {h_str}")
-    print(f"  Agua:      {agua_str} tokens  |  Datos: {player.datos_investigacion}  |  Dados: {player.dados_inoculo}")
+    print(f"  Agua:      {agua_str} tokens  |  Datos: {player.datos_investigacion}  |  "
+          f"Dados: {player.dados_inoculo}  |  {_c(_C.YELLOW, f'Monedas: {player.monedas}')}")
 
     # Tecnologías activas
     techs = [
@@ -225,21 +227,21 @@ def mostrar_mercado(engine: GameEngine) -> None:
                   f"Opt:[{receta.zona_optima[0]}-{receta.zona_optima[1]}] "
                   f"Pts:{receta.puntos_optimos}{req}")
 
-    # Suministros
-    print("  Suministros disponibles:")
-    for i, lote in enumerate(market.suministros):
-        if lote is None:
-            print(_c(_C.DIM, f"    [{i}] — ya tomado —"))
-        else:
-            partes = []
-            for k in ("Blanca", "Centeno", "Integral"):
-                if lote.recursos[k] > 0:
-                    partes.append(f"{_c(_C.YELLOW, k)} {lote.recursos[k]}%")
-            agua_val = lote.recursos["agua"]
-            if agua_val > 0:
-                partes.append(f"{_c(_C.BLUE, 'Agua')} {agua_val}%")
-            contenido = "  ".join(partes) if partes else _c(_C.DIM, "vacío")
-            print(f"    [{i}] {contenido}  (total: 150%)")
+    # Bolsa de Harinas (Acción C: Visitar el Mercado)
+    print("  Bolsa de Harinas (Compra / Venta en Monedas):")
+    for tipo in TipoHarina:
+        print(f"    {_c(_C.YELLOW, tipo.value):<20} "
+              f"Compra: {market.precio_compra_harina(tipo)}  "
+              f"Venta: {market.precio_venta_harina(tipo)}  "
+              f"(visor: {market.posiciones_harina[tipo]}/5)")
+
+    # Suministro Hídrico Global (precio según temperatura actual)
+    temp = engine.environment.temperatura_actual
+    fila_agua = PRECIO_AGUA.get(temp, {})
+    lotes_str = "  ".join(
+        f"{pct}%→{fila_agua[pct]}₥" for pct in (10, 30, 60, 100) if pct in fila_agua
+    )
+    print(f"  Agua ({temp}°C):        {_c(_C.BLUE, lotes_str) if lotes_str else _c(_C.DIM, 'sin precio para esta temperatura')}")
 
 
 def _mostrar_evento_climatico(engine: GameEngine) -> None:
@@ -287,10 +289,11 @@ def _mostrar_evento_climatico(engine: GameEngine) -> None:
 _MENU_ACCIONES = """
   ┌─── ACCIONES DISPONIBLES ───────────────────────────────────────┐
   │  B  Iniciar Receta         (colocar masa)           [1PA]       │
-  │  C  Adquirir Insumos       (mercado o urgencia)     [1PA]       │
+  │  C  Visitar el Mercado     (comprar/vender harina,  [1PA]       │
+  │                              comprar agua)                      │
   │  D  Implementar Mejora     (tecnología)             [1PA]       │
   │  E  Pliegues               (avanzar masa)           [1PA]       │
-  │  F  Hornear                (finalizar masa)         [1PA]       │
+  │  F  Hornear y Vender       (finalizar masa)         [1PA]       │
   │  G  Investigar Protocolo   (tomar receta mercado)   [1PA]       │
   │  S  Simposio Técnico       (descartar → +1 Dato)    [1PA]       │
   │  H  Re-cultivo Manual      (emergencia, contamin.)  [1PA]       │
@@ -298,6 +301,7 @@ _MENU_ACCIONES = """
   ├─── AUXILIARES (GRATUITAS) ─────────────────────────────────────┤
   │  A  Alimentar cultivo      (+1 Vit / +1 Acid, 1×)  [0PA]       │
   │  X  Horas Extras           (+1PA a cambio de 1 Dato) [0PA]      │
+  │  U  Pedido de Urgencia     (recurso directo × 1 Dato) [0PA]     │
   │  P  Pasar turno            (sin más acciones)                   │
   └────────────────────────────────────────────────────────────────┘
 """
@@ -385,44 +389,80 @@ def _params_accion_B(player: Player, engine: GameEngine) -> Optional[dict]:
 
 
 def _params_accion_C(player: Player, engine: GameEngine) -> Optional[dict]:
-    modo = _pedir_opcion("Modo de adquisición: [n]ormal / [u]rgencia", ["n", "u"])
-    if modo is None:
-        return None
+    mostrar_mercado(engine)
+    print("  Arma tu visita: agrega transacciones (una por tipo de recurso), "
+          "Enter en blanco para terminar.")
 
-    if modo == "n":
-        mostrar_mercado(engine)
-        idx = _pedir_int("Índice del lote de suministro", 0, 2)
-        if idx is None:
-            return None
-        return {"indice_slot": idx, "urgencia": False}
-    else:
-        # Urgencia: el jugador elige un tipo de harina O cantidad de agua
-        tipo_res = _pedir_opcion("Recurso de urgencia: [h]arina / [a]gua", ["h", "a"])
-        if tipo_res is None:
-            return None
-        if tipo_res == "h":
-            tipos = list(TipoHarina)
-            print("  Tipos de harina:")
-            for i, t in enumerate(tipos):
-                print(f"    [{i}] {t.value} (+100%)")
-            idx_h = _pedir_int("Tipo de harina", 0, len(tipos) - 1)
-            if idx_h is None:
-                return None
-            return {"urgencia": True, "harina_urgencia": tipos[idx_h]}
+    transacciones: List[dict] = []
+    tipos_usados: set = set()
+    tipos_harina = list(TipoHarina)
+
+    while True:
+        opciones_disponibles = [t.value for t in tipos_harina if t.value not in tipos_usados]
+        if "agua" not in tipos_usados:
+            opciones_disponibles.append("agua")
+        if not opciones_disponibles:
+            break
+
+        print(f"  Recursos disponibles para esta visita: {', '.join(opciones_disponibles)}")
+        recurso = input(
+            "  Tipo de recurso (Enter para terminar la visita): "
+        ).strip().capitalize()
+        if recurso == "":
+            break
+        if recurso.lower() == "agua":
+            recurso = "agua"
+        if recurso not in opciones_disponibles:
+            _warn(f"'{recurso}' no es válido o ya fue usado en esta visita.")
+            continue
+
+        if recurso == "agua":
+            lote = _pedir_int("Tamaño de lote de agua (%)", 10, 100)
+            if lote not in (10, 30, 60, 100):
+                _warn("El lote debe ser 10, 30, 60 o 100.")
+                continue
+            transacciones.append({"tipo_recurso": "agua", "operacion": "comprar", "lote_pct": lote})
         else:
-            cant = _pedir_int("Tokens de agua a añadir (5% c/u)", 1, 100)
-            if cant is None:
-                return None
-            return {"urgencia": True, "agua_tokens_urgencia": cant}
+            op = _pedir_opcion(f"[c]omprar / [v]ender {recurso}", ["c", "v"])
+            if op is None:
+                continue
+            operacion = "comprar" if op == "c" else "vender"
+            transacciones.append({"tipo_recurso": recurso, "operacion": operacion})
+
+        tipos_usados.add(recurso)
+
+    if not transacciones:
+        return None
+    return {"transacciones": transacciones}
+
+
+def _params_accion_U(player: Player) -> Optional[dict]:
+    """Pedido de Urgencia: recolecta parámetros (harina XOR agua)."""
+    tipo_res = _pedir_opcion("Recurso de urgencia: [h]arina / [a]gua", ["h", "a"])
+    if tipo_res is None:
+        return None
+    if tipo_res == "h":
+        tipos = list(TipoHarina)
+        print("  Tipos de harina:")
+        for i, t in enumerate(tipos):
+            print(f"    [{i}] {t.value} (+100%)")
+        idx_h = _pedir_int("Tipo de harina", 0, len(tipos) - 1)
+        if idx_h is None:
+            return None
+        return {"harina_urgencia": tipos[idx_h]}
+    else:
+        cant = _pedir_int("Tokens de agua a añadir (5% c/u)", 1, 100)
+        if cant is None:
+            return None
+        return {"agua_tokens_urgencia": cant}
 
 
 def _params_accion_D(player: Player) -> Optional[dict]:
     tecnologias = list(TecnologiaID)
-    costos = {TecnologiaID.INCUBADORA: 3, TecnologiaID.CAMARA_B: 4, TecnologiaID.MODULO_ANALITICO: 3}
     print("  Mejoras disponibles:")
     for i, t in enumerate(tecnologias):
         ya = _c(_C.GREEN, " [ya instalada]") if player.tecnologias.esta_activa(t) else ""
-        print(f"    [{i}] {_NOMBRE_TECNOLOGIA[t]}  ({costos[t]} Datos){ya}")
+        print(f"    [{i}] {_NOMBRE_TECNOLOGIA[t]}  ({COSTOS_TECNOLOGIA[t]} Datos){ya}")
     idx = _pedir_int("Índice de mejora a instalar", 0, len(tecnologias) - 1)
     if idx is None:
         return None
@@ -623,8 +663,8 @@ def _despachar_accion(
         params = _params_accion_C(player, engine)
         if not params:
             return False
-        manager.accion_C_adquirir_insumos(player, **params)
-        _ok("Insumos adquiridos.")
+        manager.accion_C_visitar_mercado(player, **params)
+        _ok("Visita al mercado completada.")
         return True
 
     elif opcion == "D":
@@ -683,6 +723,14 @@ def _despachar_accion(
         _ok("+1 PA otorgado (Horas Extras).")
         return True
 
+    elif opcion == "U":
+        params = _params_accion_U(player)
+        if not params:
+            return False
+        manager.accion_auxiliar_pedido_urgencia(player, **params)
+        _ok("Pedido de Urgencia completado.")
+        return True
+
     else:
         _warn(f"Opción '{opcion}' no reconocida. Usa las letras del menú o P para pasar.")
         return False
@@ -703,6 +751,7 @@ def _renderizar_resultado_horneado(record: HorneadoRecord) -> None:
     datos = record.datos_generados
     if datos > 0:
         print(f"  Datos +  : {_c(_C.CYAN, str(datos))}")
+    print(f"  Monedas + : {_c(_C.YELLOW, str(record.monedas_obtenidos))}")
     if record.fue_colapso:
         _warn("La masa colapsó — horneado de emergencia (0 PA).")
     print()

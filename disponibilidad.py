@@ -67,8 +67,8 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     agregar("C", tiene_pa, "Sin PA")
     agregar(
         "D",
-        tiene_pa and player.tecnologias.cantidad_instaladas == 0,
-        "Sin PA" if not tiene_pa else "Ya se instaló una mejora esta partida",
+        tiene_pa,
+        "Sin PA",
     )
     agregar("E", tiene_pa and hay_estacion_activa, "Sin PA" if not tiene_pa else "Sin masas activas")
     agregar("F", tiene_pa and hay_estacion_activa, "Sin PA" if not tiene_pa else "Sin masas activas")
@@ -78,9 +78,9 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         "Sin PA" if not tiene_pa else "No hay recetas visibles en el mercado",
     )
     agregar(
-        "C_urgencia",
-        tiene_pa and player.datos_investigacion >= 1,
-        "Sin PA" if not tiene_pa else "Sin Datos de Investigación",
+        "pedido_urgencia",
+        player.datos_investigacion >= 1,
+        "Sin Datos de Investigación",
     )
     agregar(
         "simposio",
@@ -89,13 +89,13 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     )
     agregar(
         "H",
-        contaminado and tiene_pa and harina_total >= 20 and player.reserva_agua >= 2,
-        _motivo_emergencia(contaminado, tiene_pa, harina_total >= 20 and player.reserva_agua >= 2),
+        contaminado and tiene_pa and harina_total >= 50,
+        _motivo_emergencia(contaminado, tiene_pa, harina_total >= 50),
     )
     agregar(
         "I",
-        contaminado and tiene_pa and player.datos_investigacion >= 2,
-        _motivo_emergencia(contaminado, tiene_pa, player.datos_investigacion >= 2),
+        contaminado and tiene_pa and player.datos_investigacion >= 1,
+        _motivo_emergencia(contaminado, tiene_pa, player.datos_investigacion >= 1),
     )
     agregar(
         "horas_extras",

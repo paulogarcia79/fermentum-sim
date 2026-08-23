@@ -47,13 +47,13 @@ def test_contaminado_habilita_protocolos_de_emergencia_segun_recursos() -> None:
     engine.iniciar_dia()
     p1 = engine.players[0]
     p1.en_estado_contaminacion = True
-    p1.reserva_harina = {"Blanca": 20, "Centeno": 0, "Integral": 0}
-    p1.reserva_agua = 2
+    p1.reserva_harina = {"Blanca": 50, "Centeno": 0, "Integral": 0}
+    p1.reserva_agua = 0
     p1.datos_investigacion = 0
 
     resultado = acciones_disponibles(engine, p1)
 
-    assert _por_id(resultado, "H")["habilitada"] is True  # harina y agua suficientes
+    assert _por_id(resultado, "H")["habilitada"] is True  # 50% de harina, sin costo de agua
     assert _por_id(resultado, "I")["habilitada"] is False  # sin datos
     assert _por_id(resultado, "I")["motivo"] == "Recursos insuficientes"
     # Estando contaminado, Accion B queda bloqueada aunque el resto de

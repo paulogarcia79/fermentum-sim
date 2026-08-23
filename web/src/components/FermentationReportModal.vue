@@ -29,8 +29,15 @@ function porJugador(idx: number, tipos: string[]): GameEventView[] {
             :key="'h' + i"
             :class="{ colapso: ev.datos.fue_colapso, exito: !ev.datos.fue_colapso }"
           >
-            <template v-if="ev.datos.fue_colapso">⚠ COLAPSO: '{{ ev.datos.receta_nombre }}' → {{ ev.datos.puntos_totales }} pts (auto-horneado)</template>
-            <template v-else>✔ Horneado exitoso: '{{ ev.datos.receta_nombre }}' → {{ ev.datos.puntos_totales }} pts</template>
+            <template v-if="ev.datos.fue_colapso">
+              ⚠ COLAPSO: '{{ ev.datos.receta_nombre }}' → {{ ev.datos.puntos_totales }} pts,
+              {{ ev.datos.monedas_obtenidas }} Monedas (auto-horneado)
+            </template>
+            <template v-else>
+              ✔ Horneado exitoso: '{{ ev.datos.receta_nombre }}' → {{ ev.datos.puntos_totales }} pts,
+              {{ ev.datos.monedas_obtenidas }} Monedas
+              <template v-if="Number(ev.datos.datos_generados) > 0"> (+{{ ev.datos.datos_generados }} Datos)</template>
+            </template>
           </li>
 
           <li v-for="(ev, i) in porJugador(idx, ['desgaste'])" :key="'d' + i">

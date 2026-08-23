@@ -34,13 +34,14 @@ Patrón de uso::
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
     # Evita importación circular en tiempo de ejecución.
     # GameEngine solo se usa como anotación de tipo en __init__.
     from engine import GameEngine
 
+from engine import AGUA_TOKENS_POR_LOTE, PRECIO_AGUA
 from exceptions import (
     CarpetaFullError,
     InvalidActionError,
@@ -68,11 +69,18 @@ COSTOS_TECNOLOGIA: Dict[TecnologiaID, int] = {
     TecnologiaID.INCUBADORA: 3,
     TecnologiaID.CAMARA_B: 4,
     TecnologiaID.MODULO_ANALITICO: 3,
+    TecnologiaID.CRIOPRESERVACION: 2,
 }
 """
 Coste en Datos de Investigación de cada mejora de laboratorio (Acción D).
 Fuente: ACTIONS_REGISTRY.md §2D.
 """
+
+TIPOS_HARINA_VALIDOS: Dict[str, TipoHarina] = {t.value: t for t in TipoHarina}
+"""Lookup de string → TipoHarina, usado para validar transacciones de mercado."""
+
+LOTES_AGUA_VALIDOS = (10, 30, 60, 100)
+"""Tamaños de lote válidos (%) para Comprar Lote de Agua en Visitar el Mercado."""
 
 
 # ===========================================================================
@@ -98,14 +106,15 @@ class ActionManager:
       Principales (1 PA):
         A — Alimentar / Refrescar el Cultivo
         B — Iniciar Receta
-        C — Adquirir Insumos
+        C — Visitar el Mercado (comprar/vender harina, comprar agua)
         D — Implementar Mejora de Laboratorio
         E — Técnica / Pliegues
-        F — Hornear
+        F — Hornear y Vender
         G — Investigar Protocolo
         Simposio Técnico — Generación de Datos
       Auxiliares / Emergencia:
         Horas Extras (0 PA + 1 Dato)
+        Pedido de Urgencia (0 PA + 1 Dato)
         H — Re-cultivo Manual (emergencia)
         I — Inóculo de Emergencia (emergencia)
     """
@@ -194,6 +203,19 @@ class ActionManager:
             raise MissingResourceError(
                 f"'{player.nombre}' necesita {cantidad} Datos de Investigación "
                 f"pero tiene {player.datos_investigacion}."
+            )
+
+    def _require_monedas(self, player: Player, cantidad: int) -> None:
+        """
+        Verifica que el jugador tenga al menos `cantidad` Monedas.
+
+        Raises:
+            MissingResourceError: Si las Monedas son insuficientes.
+        """
+        if player.monedas < cantidad:
+            raise MissingResourceError(
+                f"'{player.nombre}' necesita {cantidad} Monedas "
+                f"pero tiene {player.monedas}."
             )
 
     def _require_contaminado(self, player: Player, nombre_protocolo: str) -> None:
@@ -428,95 +450,154 @@ class ActionManager:
 
         return slot
 
-    def accion_C_adquirir_insumos(
+    def accion_C_visitar_mercado(
         self,
         player: Player,
-        indice_slot: Optional[int] = None,
-        urgencia: bool = False,
-        harina_urgencia: Optional[TipoHarina] = None,
-        agua_tokens_urgencia: int = 0,
+        transacciones: List[Dict[str, Any]],
     ) -> None:
         """
-        Acción C: Adquirir Insumos (ACTIONS_REGISTRY.md §2C).
+        Acción C: Visitar el Mercado (GDD v0.0.2, Módulo III §C).
 
-        Modo normal (urgencia=False):
-          Costo:  1 PA.
-          Efecto: Toma el lote del slot ``indice_slot`` del mercado central.
-                  El slot queda vacío hasta el próximo Protocolo de Refresco.
-          Requiere: ``indice_slot`` especificado (0 a NUM_SUPPLY_SLOTS-1).
+        Costo:   1 PA (una sola vez por visita, sin importar cuántas
+                 transacciones incluya el lote).
 
-        Modo urgencia (urgencia=True — «Pedido de Urgencia»):
-          Costo:  1 PA + 1 Dato de Investigación adicional.
-          Efecto: Obtiene directamente un recurso de la reserva general,
-                  sin consumir un slot visible del mercado. Útil cuando
-                  el mercado no tiene el recurso necesario o está vacío.
-          Requiere: ``harina_urgencia`` (tipo de harina) XOR
-                    ``agua_tokens_urgencia > 0`` (cantidad de agua).
+        Cada elemento de ``transacciones`` es un dict:
+          · ``tipo_recurso``: ``"Blanca" | "Integral" | "Centeno" | "agua"``.
+          · ``operacion``: ``"comprar" | "vender"``. El agua solo admite
+            ``"comprar"`` (no existe venta de agua).
+          · ``lote_pct``: requerido solo para agua, uno de
+            ``LOTES_AGUA_VALIDOS`` (10, 30, 60, 100).
+
+        Regla de Exclusividad (GDD v0.0.2 §C): una visita puede incluir como
+        máximo UNA transacción por tipo de recurso — comprar Blanca y vender
+        Centeno y comprar un lote de agua en la misma visita está permitido;
+        comprar Blanca dos veces, o comprar y vender Blanca, no lo está.
+
+        Comprar harina: paga el precio de Compra visible (según la posición
+        actual del visor de ese tipo en ``Market.posiciones_harina``), recibe
+        1 token (100%) de esa harina, y el visor se mueve 1 casilla hacia el
+        extremo caro (tope en posición 5).
+        Vender harina: cobra el precio de Venta visible, entrega 1 token
+        (100%) de esa harina, y el visor se mueve 1 casilla hacia el extremo
+        barato (tope en posición 1).
+        Comprar lote de agua: paga el costo de ``PRECIO_AGUA`` según la
+        temperatura actual y el tamaño de lote elegido, recibe los tokens de
+        agua correspondientes (``AGUA_TOKENS_POR_LOTE``).
+
+        Toda la operación se valida en conjunto ANTES de aplicar ningún
+        cambio (fail-fast): una venta puede financiar una compra en la misma
+        visita, así que los saldos se simulan sobre una copia de las
+        reservas del jugador en el orden dado, y solo si el lote completo es
+        viable se consume el PA y se aplican todas las transacciones.
 
         Args:
-            player: Jugador que adquiere los insumos.
-            indice_slot: Índice del lote en el mercado (modo normal).
-            urgencia: True para activar el Pedido de Urgencia.
-            harina_urgencia: Tipo de harina a obtener en modo urgencia.
-            agua_tokens_urgencia: Tokens de agua (5% c/u) en modo urgencia.
+            player: Jugador que visita el mercado.
+            transacciones: Lista de 1 o más transacciones (ver formato arriba).
 
         Raises:
             NotEnoughActionPointsError: PA insuficientes.
-            MissingResourceError: Datos insuficientes en modo urgencia.
-            InvalidActionError: Parámetros inválidos o ambiguos para el modo.
-            MarketSlotEmptyError: Slot de mercado ya reclamado (modo normal).
+            InvalidActionError: Lista vacía, transacción malformada, o
+                más de una transacción sobre el mismo tipo de recurso.
+            MissingResourceError: Monedas o harina insuficientes en algún
+                punto de la simulación de la visita completa.
         """
         self._require_pa(player, 1)
 
-        if urgencia:
-            tiene_harina = harina_urgencia is not None
-            tiene_agua = agua_tokens_urgencia > 0
+        if not transacciones:
+            raise InvalidActionError(
+                "Visitar el Mercado requiere al menos una transacción."
+            )
 
-            if not tiene_harina and not tiene_agua:
+        tipos_vistos: set = set()
+        for t in transacciones:
+            tipo_recurso = t.get("tipo_recurso")
+            operacion = t.get("operacion")
+
+            if tipo_recurso not in TIPOS_HARINA_VALIDOS and tipo_recurso != "agua":
                 raise InvalidActionError(
-                    "Pedido de Urgencia: especifica harina_urgencia "
-                    "o agua_tokens_urgencia > 0 para indicar el recurso deseado."
+                    f"tipo_recurso inválido: {tipo_recurso!r}. Debe ser "
+                    f"'agua' o uno de {sorted(TIPOS_HARINA_VALIDOS)}."
                 )
-            if tiene_harina and tiene_agua:
+            if tipo_recurso in tipos_vistos:
                 raise InvalidActionError(
-                    "Pedido de Urgencia: elige UN solo tipo de recurso. "
-                    "No puedes pedir harina y agua en el mismo pedido."
+                    f"Regla de Exclusividad: solo se permite una transacción "
+                    f"por tipo de recurso por visita. '{tipo_recurso}' repetido."
                 )
+            tipos_vistos.add(tipo_recurso)
 
-            # Costo adicional: 1 Dato de Investigación
-            self._require_datos(player, 1)
-
-            # Aplicar
-            player.consumir_punto_accion()
-            player.datos_investigacion -= 1
-
-            if harina_urgencia is not None:
-                player.reserva_harina[harina_urgencia.value] += 100
+            if tipo_recurso == "agua":
+                if operacion != "comprar":
+                    raise InvalidActionError(
+                        "El agua solo admite operacion='comprar' (no se vende)."
+                    )
+                lote_pct = t.get("lote_pct")
+                if lote_pct not in LOTES_AGUA_VALIDOS:
+                    raise InvalidActionError(
+                        f"lote_pct inválido para agua: {lote_pct!r}. "
+                        f"Debe ser uno de {LOTES_AGUA_VALIDOS}."
+                    )
             else:
-                player.reserva_agua += agua_tokens_urgencia
+                if operacion not in ("comprar", "vender"):
+                    raise InvalidActionError(
+                        f"operacion inválida: {operacion!r}. "
+                        "Debe ser 'comprar' o 'vender'."
+                    )
 
-        else:
-            # Modo normal: requiere índice de slot
-            if indice_slot is None:
-                raise InvalidActionError(
-                    "Acción C (modo normal) requiere indice_slot. "
-                    "Para pedir sin slot, usa urgencia=True."
+        # --- Simulación de saldos (sin aplicar todavía) ---
+        monedas_sim: int = player.monedas
+        harina_sim: Dict[str, int] = dict(player.reserva_harina)
+        market = self._engine.market
+        temp_actual = self._engine.environment.temperatura_actual
+
+        for t in transacciones:
+            tipo_recurso = t["tipo_recurso"]
+            operacion = t["operacion"]
+
+            if tipo_recurso == "agua":
+                lote_pct = t["lote_pct"]
+                costo = PRECIO_AGUA[temp_actual][lote_pct]
+                monedas_sim -= costo
+            elif operacion == "comprar":
+                tipo = TIPOS_HARINA_VALIDOS[tipo_recurso]
+                monedas_sim -= market.precio_compra_harina(tipo)
+            else:  # vender
+                tipo = TIPOS_HARINA_VALIDOS[tipo_recurso]
+                harina_sim[tipo_recurso] -= 100
+                monedas_sim += market.precio_venta_harina(tipo)
+
+            if monedas_sim < 0:
+                raise MissingResourceError(
+                    f"'{player.nombre}' no tiene suficientes Monedas para "
+                    "completar esta visita al mercado."
+                )
+            if harina_sim.get(tipo_recurso, 0) < 0:
+                raise MissingResourceError(
+                    f"'{player.nombre}' no tiene suficiente Harina "
+                    f"{tipo_recurso} para vender en esta visita."
                 )
 
-            # Delega validación de rango y slot vacío al mercado.
-            lote = self._engine.market.tomar_suministro(indice_slot)
+        # --- Toda la visita es viable: aplicar de verdad ---
+        player.consumir_punto_accion()
 
-            player.consumir_punto_accion()
+        for t in transacciones:
+            tipo_recurso = t["tipo_recurso"]
+            operacion = t["operacion"]
 
-            # Aplicar recursos del lote al jugador
-            for clave, valor in lote.recursos.items():
-                if valor == 0:
-                    continue
-                if clave in ("Blanca", "Centeno", "Integral"):
-                    player.reserva_harina[clave] += valor
-                else:  # "agua"
-                    # El lote almacena % (múltiplos de 10); agua usa tokens de 5%
-                    player.reserva_agua += valor // 5
+            if tipo_recurso == "agua":
+                lote_pct = t["lote_pct"]
+                costo = PRECIO_AGUA[temp_actual][lote_pct]
+                player.monedas -= costo
+                player.reserva_agua += AGUA_TOKENS_POR_LOTE[lote_pct]
+            elif operacion == "comprar":
+                tipo = TIPOS_HARINA_VALIDOS[tipo_recurso]
+                player.monedas -= market.precio_compra_harina(tipo)
+                player.reserva_harina[tipo_recurso] += 100
+                market.mover_visor_harina(tipo, hacia_caro=True)
+            else:  # vender
+                tipo = TIPOS_HARINA_VALIDOS[tipo_recurso]
+                player.monedas += market.precio_venta_harina(tipo)
+                player.reserva_harina[tipo_recurso] -= 100
+                market.mover_visor_harina(tipo, hacia_caro=False)
 
     def accion_D_implementar_mejora(
         self,
@@ -531,9 +612,13 @@ class ActionManager:
           · Cámara B:         4 Datos  → desbloquea Estación 03 y mejora Acción E.
           · Módulo Analítico: 3 Datos  → +1 Dato al hornear en centro exacto
                                          y habilita recetas Avanzadas (Acción B).
+          · Criopreservación: 2 Datos  → ignora el desgaste metabólico de
+                                         Fase III (Estasis Biológica).
 
-        Reglas (ACTIONS_REGISTRY.md §2D):
-          · Solo se puede instalar UNA mejora por partida (total).
+        Reglas (ACTIONS_REGISTRY.md §2D, GDD v0.0.2):
+          · Cada mejora individual solo puede instalarse UNA vez por partida,
+            pero un jugador puede llegar a instalar varias mejoras distintas
+            a lo largo de la partida (no hay tope global de "una mejora total").
           · El beneficio se activa de forma inmediata al instalarse.
           · No se puede reinstalar una mejora ya activa.
 
@@ -544,22 +629,8 @@ class ActionManager:
         Raises:
             NotEnoughActionPointsError: PA insuficientes.
             MissingResourceError: Datos de Investigación insuficientes.
-            RuleViolationError: Ya se instaló una mejora en esta partida,
-                o la tecnología ya estaba activa para este jugador.
+            RuleViolationError: La tecnología ya estaba activa para este jugador.
         """
-        # Regla de UNA sola mejora por partida
-        if player.tecnologias.cantidad_instaladas >= 1:
-            instalada = next(
-                t.value
-                for t in TecnologiaID
-                if player.tecnologias.esta_activa(t)
-            )
-            raise RuleViolationError(
-                f"'{player.nombre}' ya instaló '{instalada}'. "
-                "Solo se permite una mejora de laboratorio por partida "
-                "(ACTIONS_REGISTRY.md §2D)."
-            )
-
         if player.tecnologias.esta_activa(tecnologia):
             raise RuleViolationError(
                 f"La tecnología '{tecnologia.value}' ya está activa "
@@ -684,19 +755,23 @@ class ActionManager:
         slot_index: int,
     ) -> HorneadoRecord:
         """
-        Acción F: Hornear — Finalización de Protocolo (ACTIONS_REGISTRY.md §2F).
+        Acción F: Hornear y Vender — Finalización de Protocolo
+        (GDD v0.0.2, Módulo III §F; antes «Hornear», ACTIONS_REGISTRY.md §2F).
 
         Costo:   1 PA.
-        Efecto:  Finaliza la fermentación de la masa en ``slot_index``.
-                 Los puntos, datos y archivado se delegan a
-                 ``engine.resolver_horneado()``, que implementa la tabla completa
-                 de puntuación por zona (CORE_MECHANICS.md §2, Fase III).
+        Efecto:  Finaliza la fermentación de la masa en ``slot_index`` y la
+                 vende de inmediato. Los puntos, datos, monedas y archivado se
+                 delegan a ``engine.resolver_horneado()``, que implementa la
+                 tabla completa de puntuación/venta por zona.
 
-        Tabla de resolución (engine._calcular_puntos_zona):
-          · Zona óptima      → puntos_optimos (+ bono_sabor si cubo sellado).
-                               Acredita Datos de Investigación.
-          · Zona baja        → pocos puntos (sin Datos de Investigación).
-          · Sobrefermentada  → penalizacion_colapso (sin bono ni Datos).
+        Tabla de resolución (engine._calcular_puntos_zona / _calcular_monedas_zona):
+          · Zona óptima      → puntos_optimos + monedas_optima
+                               (+ bono_sabor_pts y +2 Monedas si el cubo estaba
+                               sellado). Acredita Datos de Investigación.
+          · Zona baja        → puntos_baja + monedas_baja (sin Datos).
+                               El bono de sabor SÍ aplica en esta zona.
+          · Sobrefermentada  → penalizacion_colapso + monedas_sobre (sin bono
+                               ni Datos — venta de recuperación de coste).
 
         Nota: El PA se consume aquí antes de delegar para mantener la semántica
         de que la Acción F tiene costo 1 PA. El engine.resolver_horneado()
@@ -899,6 +974,60 @@ class ActionManager:
         player.datos_investigacion -= 1
         player.otorgar_punto_accion_extra()
 
+    def accion_auxiliar_pedido_urgencia(
+        self,
+        player: Player,
+        harina_urgencia: Optional[TipoHarina] = None,
+        agua_tokens_urgencia: int = 0,
+    ) -> None:
+        """
+        Acción Auxiliar: Pedido de Urgencia (GDD v0.0.2, Módulo V §2 «Logística»).
+
+        Tipo:    Acción gratuita (0 PA) — no consume un Punto de Acción y no
+                 termina el turno del jugador.
+        Costo:   1 Dato de Investigación.
+        Efecto:  Ignora el mercado y el precio vigente por completo: obtiene
+                 directamente un recurso de la reserva general.
+        Límite:  Ninguno (a diferencia de Horas Extras, el GDD no impone un
+                 tope por ronda; se autolimita por Datos de Investigación
+                 disponibles).
+
+        Requiere: ``harina_urgencia`` (tipo de harina, otorga 100%) XOR
+                  ``agua_tokens_urgencia > 0`` (tokens de agua, 5% c/u).
+
+        Args:
+            player: Jugador que activa el Pedido de Urgencia.
+            harina_urgencia: Tipo de harina a obtener (100% directo).
+            agua_tokens_urgencia: Tokens de agua a obtener.
+
+        Raises:
+            InvalidActionError: Ni harina ni agua especificadas, o ambas a la vez.
+            MissingResourceError: Datos de Investigación insuficientes.
+        """
+        tiene_harina = harina_urgencia is not None
+        tiene_agua = agua_tokens_urgencia > 0
+
+        if not tiene_harina and not tiene_agua:
+            raise InvalidActionError(
+                "Pedido de Urgencia: especifica harina_urgencia "
+                "o agua_tokens_urgencia > 0 para indicar el recurso deseado."
+            )
+        if tiene_harina and tiene_agua:
+            raise InvalidActionError(
+                "Pedido de Urgencia: elige UN solo tipo de recurso. "
+                "No puedes pedir harina y agua en el mismo pedido."
+            )
+
+        self._require_datos(player, 1)
+
+        # Aplicar (0 PA — no se consume punto de acción)
+        player.datos_investigacion -= 1
+
+        if harina_urgencia is not None:
+            player.reserva_harina[harina_urgencia.value] += 100
+        else:
+            player.reserva_agua += agua_tokens_urgencia
+
     # ==================================================================
     # PROTOCOLOS DE EMERGENCIA (solo cuando Vitalidad == 0)
     # ==================================================================
@@ -910,7 +1039,8 @@ class ActionManager:
         Precondición: ``player.en_estado_contaminacion == True``
             (Vitalidad llegó a 0 en algún punto del juego).
 
-        Costo:   1 PA + 2 Harina (cualquier tipo) + 2 Agua.
+        Costo:   1 PA + 50% Harina (cualquier tipo). Sin costo de agua
+                 (GDD v0.0.2, Módulo III §3H).
         Efecto:  · Retira el estado de Contaminación.
                  · Establece Vitalidad = 1 y Acidez = 1 directamente
                    (sin pasar por los clamps de ajustar_vitalidad para
@@ -927,25 +1057,23 @@ class ActionManager:
         Raises:
             InvalidActionError: El jugador NO está contaminado.
             NotEnoughActionPointsError: PA insuficientes.
-            MissingResourceError: Harina o agua insuficientes.
+            MissingResourceError: Harina insuficiente.
         """
         self._require_contaminado(player, "Protocolo H (Re-cultivo Manual)")
         self._require_pa(player, 1)
-        self._require_cualquier_harina(player, 20)  # 2 × 10% = 20%
-        self._require_agua(player, 2)
+        self._require_cualquier_harina(player, 50)
 
         # Aplicar
         player.consumir_punto_accion()
 
-        # Consumir 20% de harina (deduce de los tipos con mayor reserva primero)
-        harina_a_consumir = 20
+        # Consumir 50% de harina (deduce de los tipos con mayor reserva primero)
+        harina_a_consumir = 50
         for tipo in ("Blanca", "Centeno", "Integral"):
             if harina_a_consumir <= 0:
                 break
             consumible = min(player.reserva_harina[tipo], harina_a_consumir)
             player.reserva_harina[tipo] -= consumible
             harina_a_consumir -= consumible
-        player.reserva_agua -= 2
 
         # Restablecer cultivo base y limpiar contaminación
         player.vitalidad = 1
@@ -959,7 +1087,7 @@ class ActionManager:
         Precondición: ``player.en_estado_contaminacion == True``
             (Vitalidad llegó a 0 en algún punto del juego).
 
-        Costo:   1 PA + 2 Datos de Investigación.
+        Costo:   1 PA + 1 Dato de Investigación (GDD v0.0.2, Módulo III §3I).
         Efecto:  · Retira el estado de Contaminación.
                  · Establece Vitalidad = 2 y Acidez = 2 directamente.
                    (Resultado superior al Re-cultivo Manual.)
@@ -977,11 +1105,11 @@ class ActionManager:
         """
         self._require_contaminado(player, "Protocolo I (Inóculo de Emergencia)")
         self._require_pa(player, 1)
-        self._require_datos(player, 2)
+        self._require_datos(player, 1)
 
         # Aplicar
         player.consumir_punto_accion()
-        player.datos_investigacion -= 2
+        player.datos_investigacion -= 1
 
         # Restablecer cultivo base y limpiar contaminación
         player.vitalidad = 2

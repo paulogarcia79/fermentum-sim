@@ -12,6 +12,8 @@ Para la simulación, el entorno (`Environment`) debe mantener un registro de las
 ## 2. Catálogo del Mazo de Clima (Dataset de 30 Cartas)
 Este mazo actúa como temporizador del juego (se roba una carta al inicio de cada Fase I) y altera el entorno.
 
+*Nota:* el Mercado de Tendencias (mazo de 21 cartas que fija el precio de la Bolsa de Harinas) es un mazo independiente, robado también en Fase I pero después del Clima — ver CORE_MECHANICS.md §2 y ACTIONS_REGISTRY.md §2C. No interactúa con la temperatura ni con este mazo.
+
 | ID Evento (Cantidad) | Modificador Térmico | Efecto Biológico Inmediato (Fase I) | Efecto Pasivo / Impacto en Fase III |
 | :--- | :--- | :--- | :--- |
 | **Estabilidad Térmica** (x10) | 0°C | Ninguno | Ninguno. Avance normal. |
