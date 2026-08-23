@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
 import { confirmarFinAnticipado, detenerTransmisionEnVivo, forzarPase, store } from '../store'
-import ClimaBanner from './ClimaBanner.vue'
+import MazoClimaPanel from './MazoClimaPanel.vue'
 import MercadoPanel from './MercadoPanel.vue'
 import BolsaHarinasPanel from './BolsaHarinasPanel.vue'
 import MiTablero from './MiTablero.vue'
@@ -69,10 +69,9 @@ onUnmounted(() => detenerTransmisionEnVivo())
     <RankingView v-if="estado.partida_terminada" />
 
     <template v-else>
-      <ClimaBanner />
-
       <section class="mesa-comun">
         <h2 class="titulo-mesa">Mesa Común</h2>
+        <MazoClimaPanel />
         <MercadoPanel />
         <BolsaHarinasPanel />
 

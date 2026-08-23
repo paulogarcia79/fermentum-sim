@@ -84,18 +84,20 @@ export interface Player {
   puntos_maestria_final: number
 }
 
+export interface ClimateCard {
+  id: string
+  nombre: string
+  modificador_termico: number
+  efecto_biologico: string
+  efecto_pasivo: string
+}
+
 export interface Environment {
   temperatura_actual: number
   dia_actual: number
   efecto_pasivo_activo: string
-  descarte_clima: unknown[]
-  ultima_carta_clima: {
-    id: string
-    nombre: string
-    modificador_termico: number
-    efecto_biologico: string
-    efecto_pasivo: string
-  } | null
+  descarte_clima: ClimateCard[]
+  ultima_carta_clima: ClimateCard | null
   cartas_clima_restantes: number
 }
 

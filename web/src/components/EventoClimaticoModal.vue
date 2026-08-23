@@ -3,37 +3,23 @@
 // recien revelada y sus efectos concretos -- mismo tratamiento que
 // FermentationReportModal.vue le da a los colapsos: algo que se le dice
 // explicitamente al jugador, no algo que tenga que notar por su cuenta en
-// la franja de ClimaBanner.vue. A diferencia de ese modal, este se arma a
+// el panel de MazoClimaPanel.vue. A diferencia de ese modal, este se arma a
 // partir del estado actual (no del registro de eventos), ya que
-// environment.ultima_carta_clima siempre refleja la carta de "hoy".
+// environment.ultima_carta_clima siempre refleja la carta de "hoy". La
+// carta se muestra con CartaClima.vue (el mismo componente del mazo/pila de
+// descarte) para que el jugador la reconozca visualmente; la lista debajo
+// da los numeros concretos que la carta sola no transmite.
 import { computed } from 'vue'
 import { reconocerClima, store } from '../store'
+import { efectoBiologicoTexto as bioTexto, efectoPasivoTexto as pasivoTexto } from '../climaTexto'
+import CartaClima from './CartaClima.vue'
 
 const env = computed(() => store.estado!.environment)
 const carta = computed(() => env.value.ultima_carta_clima!)
 const avanceBase = computed(() => Math.floor(env.value.temperatura_actual / 5))
 
-const efectoBiologicoTexto = computed(() => {
-  switch (carta.value.efecto_biologico) {
-    case 'Ganancia Vitalidad':
-      return 'Todos los jugadores ya ganaron +1 Vitalidad (máx. 6).'
-    case 'Ganancia Acidez':
-      return 'Todos los jugadores ya ganaron +1 Acidez (máx. 6).'
-    default:
-      return null
-  }
-})
-
-const efectoPasivoTexto = computed(() => {
-  switch (carta.value.efecto_pasivo) {
-    case 'Alta Humedad':
-      return 'Iniciar Receta (Acción B) costará 1 token de Agua menos hoy.'
-    case 'Aletargamiento Invernal':
-      return 'Al final del día, el cultivo base de cada jugador perderá 2 de Vitalidad en vez de 1.'
-    default:
-      return 'Ninguno — desgaste y costos normales hoy.'
-  }
-})
+const efectoBiologicoTexto = computed(() => bioTexto(carta.value))
+const efectoPasivoTexto = computed(() => pasivoTexto(carta.value) ?? 'Ninguno — desgaste y costos normales hoy.')
 </script>
 
 <template>
@@ -41,7 +27,9 @@ const efectoPasivoTexto = computed(() => {
     <div class="modal panel">
       <h2>🌦️ Evento Climático — Día {{ env.dia_actual }}</h2>
 
-      <p class="nombre-carta">{{ carta.nombre }}</p>
+      <div class="carta-envoltorio">
+        <CartaClima :carta="carta" />
+      </div>
 
       <ul class="lista">
         <li>
@@ -79,11 +67,10 @@ const efectoPasivoTexto = computed(() => {
   margin-top: 0;
 }
 
-.nombre-carta {
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--color-acento);
-  margin-top: 0;
+.carta-envoltorio {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.75rem;
 }
 
 .lista {

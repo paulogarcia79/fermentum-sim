@@ -37,6 +37,8 @@ const enPartida = computed(() => store.sesion !== null && store.estado !== null)
   --color-acento: #d99a3f;
   --color-bien: #6fae5c;
   --color-mal: #c65a4b;
+  --color-calido: #d9612f;
+  --color-frio: #6fa8d9;
   --fuente: 'Segoe UI', system-ui, -apple-system, sans-serif;
 }
 
