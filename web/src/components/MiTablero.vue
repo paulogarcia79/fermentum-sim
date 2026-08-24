@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { store } from '../store'
 import EstacionCard from './EstacionCard.vue'
 import RecetaCard from './RecetaCard.vue'
@@ -8,9 +8,20 @@ import IconoAgua from './IconoAgua.vue'
 import IconoDatos from './IconoDatos.vue'
 import IconoMonedas from './IconoMonedas.vue'
 import { hexDeColor } from '../data/coloresJugador'
+import { TECNOLOGIAS } from '../data/tecnologias'
+import type { TecnologiaID } from '../types'
 
 const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
 const colorHex = computed(() => hexDeColor(yo.value.color))
+
+const EMOJI_TECNOLOGIA: Record<TecnologiaID, string> = {
+  incubadora: '🌡',
+  camara_b: '🚪',
+  modulo_analitico: '📊',
+  criopreservacion: '❄',
+}
+
+const tecAbierta = ref<TecnologiaID | null>(null)
 </script>
 
 <template>
@@ -68,10 +79,27 @@ const colorHex = computed(() => hexDeColor(yo.value.color))
 
     <div class="sub-titulo">Mejoras</div>
     <div class="mejoras-grid">
-      <div class="mejora-slot" :class="{ activa: yo.tecnologias.incubadora }">🌡 Incubadora</div>
-      <div class="mejora-slot" :class="{ activa: yo.tecnologias.camara_b }">🚪 Cámara B</div>
-      <div class="mejora-slot" :class="{ activa: yo.tecnologias.modulo_analitico }">📊 Módulo Analítico</div>
-      <div class="mejora-slot" :class="{ activa: yo.tecnologias.criopreservacion }">❄ Criopreservación</div>
+      <div
+        v-for="tec in TECNOLOGIAS"
+        :key="tec.id"
+        class="mejora-slot"
+        :class="{ activa: yo.tecnologias[tec.id], abierta: tecAbierta === tec.id }"
+      >
+        {{ EMOJI_TECNOLOGIA[tec.id] }} {{ tec.nombre }}
+        <button
+          type="button"
+          class="boton-info"
+          :aria-expanded="tecAbierta === tec.id"
+          title="Ver detalles"
+          @click="tecAbierta = tecAbierta === tec.id ? null : tec.id"
+        >
+          ⓘ
+        </button>
+        <div class="tooltip" role="tooltip">
+          <p>{{ tec.descripcion }}</p>
+          <p v-if="!yo.tecnologias[tec.id]">Costo: {{ tec.costo }} Datos</p>
+        </div>
+      </div>
     </div>
 
     <div class="sub-titulo">Estaciones de fermentación</div>
@@ -216,19 +244,74 @@ const colorHex = computed(() => hexDeColor(yo.value.color))
 }
 
 .mejora-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
   background: var(--color-fondo);
   border: 1px dashed var(--color-borde);
   border-radius: 4px;
   padding: 0.2rem 0.5rem;
   font-size: 0.75rem;
   color: var(--color-texto-tenue);
-  opacity: 0.6;
 }
 
 .mejora-slot.activa {
   border-style: solid;
   border-color: var(--color-acento);
   color: var(--color-texto);
+}
+
+.mejora-slot .boton-info {
+  flex: 0 0 auto;
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 0.85rem;
+  line-height: 1;
+  padding: 0 0 0 0.1rem;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.mejora-slot .boton-info:hover {
+  opacity: 1;
+}
+
+.mejora-slot .tooltip {
+  visibility: hidden;
+  opacity: 0;
+  position: absolute;
+  bottom: calc(100% + 0.4rem);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  max-width: 70vw;
+  background: var(--color-panel);
+  border: 1px solid var(--color-borde);
+  border-radius: 6px;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  color: var(--color-texto);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  z-index: 30;
+  transition: opacity 0.1s ease;
+  white-space: normal;
+}
+
+.mejora-slot .tooltip p {
+  margin: 0 0 0.35rem;
+}
+
+.mejora-slot .tooltip p:last-child {
+  margin-bottom: 0;
+}
+
+.mejora-slot:hover .tooltip,
+.mejora-slot:focus-within .tooltip,
+.mejora-slot.abierta .tooltip {
+  visibility: visible;
   opacity: 1;
 }
 
