@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import LobbyView from './components/LobbyView.vue'
 import GameView from './components/GameView.vue'
 import { intentarReconectar, store } from './store'
+import { habilitarAudio } from './sonido'
 
 const reconectando = ref(true)
 
@@ -13,6 +14,12 @@ onMounted(async () => {
   await intentarReconectar()
   reconectando.value = false
 })
+
+// Los navegadores exigen un gesto del usuario antes de permitir audio -- se
+// habilita el AudioContext en la primera interaccion de toda la pestaña
+// (crear/unirse a una sala ya cuenta), bien antes de que un cambio de turno
+// real necesite sonar (ver sonido.ts / store.ts:aplicarEstado).
+document.addEventListener('pointerdown', habilitarAudio, { once: true })
 
 const enPartida = computed(() => store.sesion !== null && store.estado !== null)
 </script>

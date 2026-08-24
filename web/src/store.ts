@@ -9,6 +9,7 @@
 import { reactive } from 'vue'
 import * as api from './api'
 import type { GameEventView, GameStateView } from './types'
+import { reproducirNotificacionTurno } from './sonido'
 
 export interface Sesion {
   roomId: string
@@ -52,6 +53,30 @@ export const store: Store = reactive({
  * Día 1 también dispare el modal, no solo las de días siguientes.
  */
 let ultimaCartaClimaId: string | null | undefined = undefined
+
+/**
+ * Ultimo `jugador_en_turno_idx` observado -- no reactivo, solo para
+ * detectar en aplicarEstado() cuando el turno ACABA de llegar al jugador
+ * local (ver reproducirNotificacionTurno() mas abajo). Empieza en `null`
+ * ("hasta donde sabemos, no es el turno de nadie todavia") a proposito: la
+ * primera vez que un jugador ve el tablero -- el host recien apretó
+ * "Iniciar partida", o cualquier otro jugador recien salió del lobby -- es
+ * una entrega de turno EN VIVO igual que cualquier otra, y si le toca a él
+ * primero, debe sonar.
+ *
+ * El unico caso que NO debe sonar es recargar la pestaña o reconectar a
+ * mitad de partida y encontrarse con que ya es tu turno -- eso no es una
+ * entrega en vivo, es solo el estado actual. `intentarReconectar()` cubre
+ * ese caso llamando a `sembrarTurnoSinSonido()` antes de aplicar el primer
+ * estado, para que esa aplicación puntual no dispare el sonido.
+ */
+let jugadorEnTurnoAnterior: number | null = null
+
+/** Ver el comentario de `jugadorEnTurnoAnterior`. Solo debe usarse antes de
+ * la primerísima `aplicarEstado()` de una sesión reconectada. */
+function sembrarTurnoSinSonido(idx: number | null): void {
+  jugadorEnTurnoAnterior = idx
+}
 
 let manejadorEstado: number | undefined
 let manejadorEventosRespaldo: number | undefined
@@ -112,6 +137,7 @@ export function cerrarSesion(): void {
   store.reporteDiaPendiente = null
   store.climaPendiente = false
   ultimaCartaClimaId = undefined
+  jugadorEnTurnoAnterior = null
   borrarSesionLocal()
 }
 
@@ -140,6 +166,11 @@ export async function intentarReconectar(): Promise<void> {
     }
     const estadoRemoto = await api.obtenerEstado(guardada.roomId, guardada.token)
     store.sesion = guardada
+    // Recarga de pestaña / reconexion a mitad de partida -- si ya es el
+    // turno de este jugador, no es una entrega EN VIVO, es solo el estado
+    // actual. Sembrar el indice actual antes de aplicarEstado() evita que
+    // esa primera aplicación dispare el sonido.
+    sembrarTurnoSinSonido(estadoRemoto.jugador_en_turno_idx)
     aplicarEstado(estadoRemoto)
     iniciarPolling()
   } catch {
@@ -149,7 +180,8 @@ export async function intentarReconectar(): Promise<void> {
 
 export function aplicarEstado(nuevo: GameStateView): void {
   const diaAnterior = store.estado?.environment.dia_actual
-  if (diaAnterior !== undefined && nuevo.environment.dia_actual > diaAnterior) {
+  const diaAvanzo = diaAnterior !== undefined && nuevo.environment.dia_actual > diaAnterior
+  if (diaAvanzo) {
     store.reporteDiaPendiente = diaAnterior
   }
 
@@ -158,6 +190,23 @@ export function aplicarEstado(nuevo: GameStateView): void {
     store.climaPendiente = true
   }
   ultimaCartaClimaId = cartaId
+
+  // "El turno llega" es o bien (a) otro jugador tenia el turno y ahora es
+  // el mio, o (b) empezo un dia nuevo y me toca -- (b) hace falta porque en
+  // una partida solo (o cualquier ronda donde nadie mas queda elegible)
+  // jugador_en_turno_idx nunca se observa en OTRO indice entre una visita y
+  // la siguiente: el ciclo Fase III -> Fase I -> Fase II del dia siguiente
+  // ocurre server-side y el cliente solo ve "sigue siendo mi turno" de
+  // snapshot a snapshot, asi que la condicion (a) sola nunca dispara.
+  const miIndice = store.sesion?.playerIndex
+  if (
+    miIndice !== undefined &&
+    nuevo.jugador_en_turno_idx === miIndice &&
+    (jugadorEnTurnoAnterior !== miIndice || diaAvanzo)
+  ) {
+    reproducirNotificacionTurno()
+  }
+  jugadorEnTurnoAnterior = nuevo.jugador_en_turno_idx
 
   store.estado = nuevo
 }
@@ -185,6 +234,7 @@ function volverAVistaDeLobby(): void {
   store.reporteDiaPendiente = null
   store.climaPendiente = false
   ultimaCartaClimaId = undefined
+  jugadorEnTurnoAnterior = null
 }
 
 export async function refrescarEstado(): Promise<void> {
