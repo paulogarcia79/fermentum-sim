@@ -384,8 +384,40 @@ export async function confirmarFinAnticipado(): Promise<void> {
   }
 }
 
+/** Crea una sala nueva reutilizando el nombre/color de este jugador y la
+ * misma cantidad de jugadores que la partida recién terminada, y entra
+ * directo a su sala de espera -- usado desde RankingView.vue como una de
+ * las dos opciones de fin de partida (la otra es cerrarSesion()), ahora
+ * que cualquier jugador (no solo el host) decide qué hacer al terminar. */
+export async function crearSalaNueva(): Promise<void> {
+  if (!store.sesion || !store.estado) return
+  const jugadorActual = store.estado.players[store.sesion.playerIndex]
+  const nombre = jugadorActual.nombre
+  const color = jugadorActual.color
+  const maxJugadores = store.estado.players.length
+  store.cargando = true
+  try {
+    const r = await api.crearSala(nombre, color, maxJugadores)
+    volverAVistaDeLobby()
+    establecerSesion({
+      roomId: r.room_id,
+      token: r.player_token,
+      playerIndex: r.player_index,
+      hostToken: r.host_token,
+      nombre,
+    })
+    store.error = null
+  } catch (e) {
+    store.error = e instanceof Error ? e.message : String(e)
+  } finally {
+    store.cargando = false
+  }
+}
+
 /** Solo el host: vuelve la sala a LOBBY tras una partida terminada. Los
- * demás jugadores se enteran solos en su próximo refrescarEstado(). */
+ * demás jugadores se enteran solos en su próximo refrescarEstado().
+ * No usado actualmente (ver RankingView.vue), se deja intacto por si se
+ * retoma la opción de reusar la sala. */
 export async function volverALobby(): Promise<void> {
   if (!store.sesion?.hostToken) return
   store.cargando = true
