@@ -16,6 +16,7 @@ from exceptions import (
     NotEnoughActionPointsError, MissingResourceError,
     StationBlockedError, CarpetaFullError,
     RuleViolationError, InvalidActionError,
+    EspacioAccionYaUsadoError,
 )
 
 ok = 0
@@ -103,6 +104,7 @@ check("B: receta removida de carpeta", lambda: None if receta_b not in p1.carpet
 check("B: dados_inoculo -= 1 (ahora 2)", lambda: None if p1.dados_inoculo == 2 else (_ for _ in ()).throw(AssertionError()))
 
 p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
 xraises(RuleViolationError, "B receta no en carpeta", lambda: manager.accion_B_iniciar_receta(p1, receta_b))
 
 p1.carpeta_proyectos = [receta_b]
@@ -111,17 +113,20 @@ p1.reserva_harina[receta_b.harina_base.value] = 100
 p1.reserva_agua = 200
 p1.estaciones_fermentacion = [slot, slot, slot]
 p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
 xraises(StationBlockedError, "B estaciones llenas", lambda: manager.accion_B_iniciar_receta(p1, receta_b))
 
 p1.carpeta_proyectos = [receta_av]
 p1.estaciones_fermentacion = [None, None, None]
 p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
 xraises(RuleViolationError, "B avanzada sin Modulo Analitico", lambda: manager.accion_B_iniciar_receta(p1, receta_av))
 
 p1.vitalidad = 0
 p1.en_estado_contaminacion = True
 p1.carpeta_proyectos = [receta_b]
 p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
 xraises(RuleViolationError, "B vitalidad=0 bloquea inicio", lambda: manager.accion_B_iniciar_receta(p1, receta_b))
 p1.vitalidad = 2
 p1.en_estado_contaminacion = False
@@ -140,26 +145,31 @@ check("C comprar harina: +100 Blanca", lambda: None if p1.reserva_harina["Blanca
 check("C comprar harina: monedas descontadas", lambda: None if p1.monedas < monedas_antes else (_ for _ in ()).throw(AssertionError()))
 
 p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
 monedas_antes2 = p1.monedas
 manager.accion_C_visitar_mercado(p1, transacciones=[{"tipo_recurso": "Blanca", "operacion": "vender"}])
 check("C vender harina: -100 Blanca", lambda: None if p1.reserva_harina["Blanca"] == 100 else (_ for _ in ()).throw(AssertionError()))
 check("C vender harina: monedas recibidas", lambda: None if p1.monedas > monedas_antes2 else (_ for _ in ()).throw(AssertionError()))
 
 p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
 agua_antes = p1.reserva_agua
 manager.accion_C_visitar_mercado(p1, transacciones=[{"tipo_recurso": "agua", "operacion": "comprar", "lote_pct": 10}])
 check("C comprar agua: tokens recibidos", lambda: None if p1.reserva_agua > agua_antes else (_ for _ in ()).throw(AssertionError()))
 
 p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
 xraises(InvalidActionError, "C exclusividad: mismo recurso dos veces", lambda: manager.accion_C_visitar_mercado(
     p1, transacciones=[
         {"tipo_recurso": "Blanca", "operacion": "comprar"},
         {"tipo_recurso": "Blanca", "operacion": "vender"},
     ]
 ))
+p1.acciones_pa_usadas_hoy = []
 xraises(InvalidActionError, "C sin transacciones", lambda: manager.accion_C_visitar_mercado(p1, transacciones=[]))
 
 p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
 p1.monedas = 0
 xraises(MissingResourceError, "C monedas insuficientes", lambda: manager.accion_C_visitar_mercado(
     p1, transacciones=[{"tipo_recurso": "Centeno", "operacion": "comprar"}]
@@ -192,13 +202,21 @@ check("D: -3 datos (10-3=7)", lambda: None if p1.datos_investigacion == 7 else (
 p1.puntos_accion = 2
 xraises(RuleViolationError, "D misma mejora dos veces bloqueada", lambda: manager.accion_D_implementar_mejora(p1, TecnologiaID.INCUBADORA))
 
+# Nueva regla: el espacio D queda bloqueado el resto del día tras instalar
+# CUALQUIER mejora, incluso una DISTINTA (un visita por espacio por día).
+p1.puntos_accion = 2
+xraises(EspacioAccionYaUsadoError, "D bloqueado el mismo día para una mejora distinta", lambda: manager.accion_D_implementar_mejora(p1, TecnologiaID.CAMARA_B))
+
+# Simular el día siguiente (el espacio se libera en engine.py:_preparar_fase_II).
+p1.acciones_pa_usadas_hoy = []
 p1.puntos_accion = 2
 manager.accion_D_implementar_mejora(p1, TecnologiaID.CAMARA_B)
-check("D: una segunda mejora DISTINTA sí se permite (GDD v0.0.2)", lambda: None if p1.tecnologias.camara_b else (_ for _ in ()).throw(AssertionError()))
+check("D: una segunda mejora DISTINTA al día siguiente sí se permite (GDD v0.0.2)", lambda: None if p1.tecnologias.camara_b else (_ for _ in ()).throw(AssertionError()))
 
+p1.acciones_pa_usadas_hoy = []
 p1.puntos_accion = 2
 manager.accion_D_implementar_mejora(p1, TecnologiaID.CRIOPRESERVACION)
-check("D: Criopreservación (3ra mejora distinta)", lambda: None if p1.tecnologias.criopreservacion else (_ for _ in ()).throw(AssertionError()))
+check("D: Criopreservación (3ra mejora distinta, otro día)", lambda: None if p1.tecnologias.criopreservacion else (_ for _ in ()).throw(AssertionError()))
 
 # ========================================================================
 print("--- E: Pliegues ---")
@@ -211,6 +229,7 @@ check("E avanzar: +1 posicion", lambda: None if slot.posicion_track == pos0 + 1 
 
 p1.tecnologias.camara_b = True
 p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
 v_e = p1.vitalidad
 manager.accion_E_tecnica_pliegues(p1, slot_index=0, opcion_camara_b="recuperar_vitalidad")
 check("E recuperar_vit: vitalidad incrementada", lambda: None if p1.vitalidad >= v_e else (_ for _ in ()).throw(AssertionError()))
@@ -220,6 +239,7 @@ p1.puntos_accion = 1
 xraises(RuleViolationError, "E recuperar_vit sin CamaraB", lambda: manager.accion_E_tecnica_pliegues(p1, slot_index=0, opcion_camara_b="recuperar_vitalidad"))
 xraises(InvalidActionError, "E opcion invalida", lambda: manager.accion_E_tecnica_pliegues(p1, slot_index=0, opcion_camara_b="volar"))
 
+p1.acciones_pa_usadas_hoy = []
 xraises(RuleViolationError, "E slot vacio", lambda: manager.accion_E_tecnica_pliegues(p1, slot_index=1))
 
 # ========================================================================
@@ -235,6 +255,7 @@ check("F: estacion liberada", lambda: None if p1.estaciones_fermentacion[0] is N
 p1.puntos_accion = 0
 xraises(NotEnoughActionPointsError, "F sin PA", lambda: manager.accion_F_hornear(p1, slot_index=0))
 p1.puntos_accion = 1
+p1.acciones_pa_usadas_hoy = []
 xraises(RuleViolationError, "F estacion vacia", lambda: manager.accion_F_hornear(p1, slot_index=0))
 
 # ========================================================================
@@ -250,6 +271,7 @@ if idx_r is not None:
 
 p1.carpeta_proyectos = list(RECIPE_CATALOG.values())[:3]
 p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
 market.protocolo_refresco()
 idx_r2 = next((i for i, r in enumerate(market.recetas_visibles) if r is not None), None)
 if idx_r2 is not None:
@@ -258,6 +280,7 @@ if idx_r2 is not None:
     check("G carpeta llena con descarte: size=3", lambda: None if len(p1.carpeta_proyectos) == 3 else (_ for _ in ()).throw(AssertionError()))
 
 p1.puntos_accion = 1
+p1.acciones_pa_usadas_hoy = []
 xraises(InvalidActionError, "G indice mercado invalido", lambda: manager.accion_G_investigar_protocolo(p1, 99))
 
 # ========================================================================
@@ -273,6 +296,7 @@ check("Simposio carpeta: size=1", lambda: None if len(p1.carpeta_proyectos) == 1
 fslot = FermentationSlot(recipe=receta_b, dado_inoculo=2, posicion_track=3, bono_sabor=False, modificador_incubadora=0)
 p1.estaciones_fermentacion = [fslot, None, None]
 p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
 p1.dados_inoculo = 1
 datos_s2 = p1.datos_investigacion
 
@@ -283,6 +307,7 @@ check("Simposio estacion: dado recuperado (1->2)", lambda: None if p1.dados_inoc
 
 p1.puntos_accion = 1
 xraises(InvalidActionError, "Simposio origen invalido", lambda: manager.accion_simposio_tecnico(p1, "horno", 0))
+p1.acciones_pa_usadas_hoy = []
 xraises(RuleViolationError, "Simposio estacion vacia", lambda: manager.accion_simposio_tecnico(p1, "estacion", 0))
 
 # ========================================================================
@@ -340,6 +365,7 @@ xraises(InvalidActionError, "I sin contaminacion", lambda: manager.accion_I_inoc
 p2.en_estado_contaminacion = True
 p2.puntos_accion = 1
 p2.datos_investigacion = 0
+p2.acciones_pa_usadas_hoy = []
 xraises(MissingResourceError, "I datos insuficientes", lambda: manager.accion_I_inoculo_emergencia(p2))
 
 # ========================================================================

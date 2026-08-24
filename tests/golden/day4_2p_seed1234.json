@@ -394,6 +394,7 @@
   "players": [
     {
       "accion_alimentar_usada": true,
+      "acciones_pa_usadas_hoy": [],
       "acidez": 4,
       "archivo_colapsos": [],
       "archivo_horneado_exitoso": [],
@@ -462,33 +463,33 @@
         },
         {
           "acidez_diana": [
-            3,
-            4
+            1,
+            2
           ],
-          "bono_sabor_pts": 7,
-          "grado": "Avanzada",
-          "harina_base": "Integral",
-          "hidratacion_pct": 78,
-          "id": "pan_semillas",
-          "monedas_baja": 19,
-          "monedas_optima": 26,
-          "monedas_sobre": 16,
-          "nombre": "Pan Semillas",
-          "penalizacion_colapso": -5,
-          "puntos_baja": 6,
-          "puntos_optimos": 17,
-          "req_tecnologico": "modulo_analitico",
-          "tokens_agua": 16,
+          "bono_sabor_pts": 2,
+          "grado": "Básica",
+          "harina_base": "Blanca",
+          "hidratacion_pct": 75,
+          "id": "focaccia",
+          "monedas_baja": 15,
+          "monedas_optima": 19,
+          "monedas_sobre": 13,
+          "nombre": "Focaccia",
+          "penalizacion_colapso": -3,
+          "puntos_baja": 3,
+          "puntos_optimos": 12,
+          "req_tecnologico": null,
+          "tokens_agua": 15,
           "zona_baja": [
             1,
-            13
+            9
           ],
           "zona_optima": [
-            14,
-            16
+            10,
+            14
           ],
           "zona_sobrefermentada": [
-            17,
+            15,
             20
           ]
         }
@@ -503,7 +504,7 @@
         null
       ],
       "horas_extras_usadas": false,
-      "monedas": 2,
+      "monedas": 3,
       "nombre": "Alba",
       "puntos_accion": 0,
       "reserva_agua": 0,
@@ -522,6 +523,10 @@
     },
     {
       "accion_alimentar_usada": true,
+      "acciones_pa_usadas_hoy": [
+        "F",
+        "C"
+      ],
       "acidez": 3,
       "archivo_colapsos": [],
       "archivo_horneado_exitoso": [
@@ -569,6 +574,38 @@
       "carpeta_proyectos": [
         {
           "acidez_diana": [
+            3,
+            4
+          ],
+          "bono_sabor_pts": 7,
+          "grado": "Avanzada",
+          "harina_base": "Integral",
+          "hidratacion_pct": 78,
+          "id": "pan_semillas",
+          "monedas_baja": 19,
+          "monedas_optima": 26,
+          "monedas_sobre": 16,
+          "nombre": "Pan Semillas",
+          "penalizacion_colapso": -5,
+          "puntos_baja": 6,
+          "puntos_optimos": 17,
+          "req_tecnologico": "modulo_analitico",
+          "tokens_agua": 16,
+          "zona_baja": [
+            1,
+            13
+          ],
+          "zona_optima": [
+            14,
+            16
+          ],
+          "zona_sobrefermentada": [
+            17,
+            20
+          ]
+        },
+        {
+          "acidez_diana": [
             1
           ],
           "bono_sabor_pts": 8,
@@ -595,38 +632,6 @@
           ],
           "zona_sobrefermentada": [
             19,
-            20
-          ]
-        },
-        {
-          "acidez_diana": [
-            1,
-            2
-          ],
-          "bono_sabor_pts": 2,
-          "grado": "Básica",
-          "harina_base": "Blanca",
-          "hidratacion_pct": 75,
-          "id": "focaccia",
-          "monedas_baja": 15,
-          "monedas_optima": 19,
-          "monedas_sobre": 13,
-          "nombre": "Focaccia",
-          "penalizacion_colapso": -3,
-          "puntos_baja": 3,
-          "puntos_optimos": 12,
-          "req_tecnologico": null,
-          "tokens_agua": 15,
-          "zona_baja": [
-            1,
-            9
-          ],
-          "zona_optima": [
-            10,
-            14
-          ],
-          "zona_sobrefermentada": [
-            15,
             20
           ]
         },
