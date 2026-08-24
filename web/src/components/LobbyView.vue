@@ -16,6 +16,8 @@ const jugadoresObjetivo = ref(4)
 const error = ref<string | null>(null)
 const cargando = ref(false)
 const enlaceCopiado = ref(false)
+const llegoPorInvitacion = ref(false)
+const confirmandoInicio = ref(false)
 
 const salaCreada = ref<{ roomId: string; hostToken: string; nombre: string } | null>(null)
 const metadata = ref<SalaMetadata | null>(null)
@@ -68,6 +70,7 @@ onMounted(() => {
   const salaInvitacion = parametros.get('sala')
   if (salaInvitacion) {
     codigoSala.value = salaInvitacion.trim().toUpperCase()
+    llegoPorInvitacion.value = true
     window.history.replaceState({}, '', window.location.pathname)
   }
 })
@@ -168,7 +171,21 @@ async function refrescarMetadata() {
   }
 }
 
-async function iniciar() {
+// Si hay menos jugadores sentados que el objetivo configurado al crear la
+// sala, se avisa antes de arrancar en vez de iniciar directo -- fácil de
+// hacer sin querer con el botón a un click. Si ya se alcanzó el objetivo
+// (el caso normal), arranca directo, igual que antes.
+function intentarIniciar() {
+  const actuales = metadata.value?.seats.length ?? 0
+  const objetivo = metadata.value?.max_jugadores ?? actuales
+  if (actuales < objetivo) {
+    confirmandoInicio.value = true
+    return
+  }
+  void iniciarConfirmado()
+}
+
+async function iniciarConfirmado() {
   if (!store.sesion?.hostToken) return
   cargando.value = true
   error.value = null
@@ -179,6 +196,7 @@ async function iniciar() {
     iniciarPolling()
   } catch (e) {
     error.value = e instanceof ApiFallo ? e.message : 'No se pudo iniciar la partida.'
+    confirmandoInicio.value = false
   } finally {
     cargando.value = false
   }
@@ -236,23 +254,25 @@ onUnmounted(() => {
       </label>
 
       <div class="acciones-lobby">
-        <label class="campo-jugadores">
-          Jugadores en la sala
-          <div class="swatches">
-            <button
-              v-for="n in JUGADORES_POSIBLES"
-              :key="n"
-              type="button"
-              class="swatch-numero"
-              :class="{ activo: jugadoresObjetivo === n }"
-              @click="jugadoresObjetivo = n"
-            >
-              {{ n }}
-            </button>
-          </div>
-        </label>
-        <button class="primario" :disabled="cargando" @click="crear">Crear sala nueva</button>
-        <div class="separador">o</div>
+        <template v-if="!llegoPorInvitacion">
+          <label class="campo-jugadores">
+            Jugadores en la sala
+            <div class="swatches">
+              <button
+                v-for="n in JUGADORES_POSIBLES"
+                :key="n"
+                type="button"
+                class="swatch-numero"
+                :class="{ activo: jugadoresObjetivo === n }"
+                @click="jugadoresObjetivo = n"
+              >
+                {{ n }}
+              </button>
+            </div>
+          </label>
+          <button class="primario" :disabled="cargando" @click="crear">Crear sala nueva</button>
+          <div class="separador">o</div>
+        </template>
         <label>
           Código de sala
           <input v-model="codigoSala" placeholder="ABC123" maxlength="6" style="text-transform: uppercase" />
@@ -279,9 +299,23 @@ onUnmounted(() => {
         </li>
       </ul>
 
-      <button v-if="store.sesion?.hostToken" class="primario" :disabled="cargando" @click="iniciar">
-        Iniciar partida ({{ metadata?.seats.length ?? 0 }}/{{ metadata?.max_jugadores ?? '—' }} jugadores)
-      </button>
+      <template v-if="store.sesion?.hostToken">
+        <button v-if="!confirmandoInicio" class="primario" :disabled="cargando" @click="intentarIniciar">
+          Iniciar partida ({{ metadata?.seats.length ?? 0 }}/{{ metadata?.max_jugadores ?? '—' }} jugadores)
+        </button>
+        <div v-else class="confirmacion-inicio">
+          <p class="aviso">
+            Solo hay {{ metadata?.seats.length ?? 0 }} de {{ metadata?.max_jugadores ?? '—' }} jugadores
+            configurados. ¿Iniciar de todas formas?
+          </p>
+          <div class="botones-confirmacion">
+            <button :disabled="cargando" @click="confirmandoInicio = false">Cancelar</button>
+            <button class="primario" :disabled="cargando" @click="iniciarConfirmado">
+              Sí, iniciar con {{ metadata?.seats.length ?? 0 }}
+            </button>
+          </div>
+        </div>
+      </template>
       <p v-else class="subtitulo">Esperando a que el host inicie la partida…</p>
 
       <p v-if="error" class="error">{{ error }}</p>
@@ -472,5 +506,22 @@ button.primario {
 .error {
   color: var(--color-mal);
   margin-top: 0.75rem;
+}
+
+.confirmacion-inicio {
+  border: 1px solid var(--color-mal);
+  border-radius: 4px;
+  padding: 0.6rem 0.7rem;
+}
+
+.confirmacion-inicio .aviso {
+  margin: 0 0 0.6rem;
+  font-size: 0.85rem;
+  color: var(--color-texto);
+}
+
+.botones-confirmacion {
+  display: flex;
+  gap: 0.5rem;
 }
 </style>
