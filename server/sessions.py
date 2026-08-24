@@ -28,6 +28,7 @@ from engine import GameEngine
 from events import GameEvent
 from server import persistence
 from server.errors import (
+    CapacidadInvalidaError,
     ColorInvalidoError,
     ColorYaTomadoError,
     NoActiveTurnError,
@@ -42,6 +43,13 @@ from server.errors import (
 )
 
 MAX_JUGADORES = 4
+"""
+Techo absoluto de jugadores por sala -- el juego está documentado en todas
+partes como 1-4 jugadores, y ``COLORES_DISPONIBLES`` (abajo) solo tiene 6
+tonos con margen justo para este techo, no más. El creador de la sala elige
+la capacidad real (``GameSession.max_jugadores``, ``1..MAX_JUGADORES``) al
+crearla -- ver ``RoomManager.crear_sala``.
+"""
 
 COLORES_DISPONIBLES: List[Tuple[str, str]] = [
     ("rojo", "#e0574f"),
@@ -135,6 +143,13 @@ class GameSession:
 
     id: str
     host_token: str
+    max_jugadores: int = MAX_JUGADORES
+    """Capacidad de esta sala en particular, elegida por el host al
+    crearla (``RoomManager.crear_sala``) -- entre 1 y ``MAX_JUGADORES``.
+    Cubre el chequeo de sala llena en ``RoomManager.unirse``; no gatilla
+    ``iniciar`` (el host puede empezar con menos jugadores que el
+    objetivo, igual que hoy) y sobrevive sin cambios a
+    ``reiniciar_a_lobby`` (misma sala, mismo objetivo)."""
     status: RoomStatus = RoomStatus.LOBBY
     seats: List[Seat] = field(default_factory=list)
     engine: Optional[GameEngine] = None
@@ -273,11 +288,25 @@ class RoomManager:
     def __init__(self) -> None:
         self._salas: Dict[str, GameSession] = {}
 
-    def crear_sala(self, nombre_host: str, color: str) -> Tuple[GameSession, Seat]:
-        """Crea una sala nueva en estado LOBBY con el host como primer asiento."""
+    def crear_sala(
+        self, nombre_host: str, color: str, max_jugadores: int = MAX_JUGADORES
+    ) -> Tuple[GameSession, Seat]:
+        """
+        Crea una sala nueva en estado LOBBY con el host como primer asiento.
+
+        Raises:
+            CapacidadInvalidaError: ``max_jugadores`` fuera de ``1..MAX_JUGADORES``.
+            ColorInvalidoError: ``color`` no está en ``COLORES_DISPONIBLES``.
+        """
+        if not (1 <= max_jugadores <= MAX_JUGADORES):
+            raise CapacidadInvalidaError(
+                f"max_jugadores debe estar entre 1 y {MAX_JUGADORES}. Recibido: {max_jugadores}"
+            )
         _validar_color(color, tomados=[])
         room_id = self._generar_codigo_unico()
-        sesion = GameSession(id=room_id, host_token=secrets.token_urlsafe(32))
+        sesion = GameSession(
+            id=room_id, host_token=secrets.token_urlsafe(32), max_jugadores=max_jugadores
+        )
         asiento = Seat(
             player_index=0, nombre=nombre_host, token=secrets.token_urlsafe(32), color=color
         )
@@ -301,15 +330,15 @@ class RoomManager:
         Raises:
             RoomNotFoundError: Ver ``obtener``.
             RoomNotJoinableError: La sala ya no está en LOBBY.
-            RoomFullError: La sala ya tiene ``MAX_JUGADORES`` asientos.
+            RoomFullError: La sala ya tiene ``max_jugadores`` asientos.
             ColorInvalidoError: ``color`` no está en ``COLORES_DISPONIBLES``.
             ColorYaTomadoError: Otro asiento de esta sala ya tiene ese color.
         """
         sesion = self.obtener(room_id)
         if sesion.status != RoomStatus.LOBBY:
             raise RoomNotJoinableError(f"La sala {room_id!r} ya no admite nuevos jugadores.")
-        if len(sesion.seats) >= MAX_JUGADORES:
-            raise RoomFullError(f"La sala {room_id!r} ya tiene {MAX_JUGADORES} jugadores.")
+        if len(sesion.seats) >= sesion.max_jugadores:
+            raise RoomFullError(f"La sala {room_id!r} ya tiene {sesion.max_jugadores} jugadores.")
         _validar_color(color, tomados=[a.color for a in sesion.seats])
 
         asiento = Seat(

@@ -62,6 +62,7 @@ from exceptions import (
 from server import persistence
 from server.commands import resolver_comando
 from server.errors import (
+    CapacidadInvalidaError,
     ColorInvalidoError,
     ColorYaTomadoError,
     NoActiveTurnError,
@@ -75,7 +76,7 @@ from server.errors import (
     RoomNotJoinableError,
     UnknownPlayerTokenError,
 )
-from server.sessions import GameSession, RoomManager, RoomStatus, Seat
+from server.sessions import MAX_JUGADORES, GameSession, RoomManager, RoomStatus, Seat
 from server.views import game_state_view
 
 # ===========================================================================
@@ -104,6 +105,7 @@ _MAPEO_ERRORES: List[Tuple[Type[Exception], int, str]] = [
     (PlayerNotInactiveError, 409, "jugador_no_inactivo"),
     (ColorInvalidoError, 400, "color_invalido"),
     (ColorYaTomadoError, 409, "color_ya_tomado"),
+    (CapacidadInvalidaError, 400, "capacidad_invalida"),
     (PartidaNoEnCursoError, 409, "partida_no_en_curso"),
     (PartidaNoTerminadaError, 409, "partida_no_terminada"),
     (RoomError, 400, "error_de_sala"),  # respaldo genérico
@@ -151,10 +153,17 @@ async def _cuerpo_json(request: Request) -> Dict[str, Any]:
     return cuerpo
 
 
+NOMBRE_LONGITUD_MINIMA = 3
+
+
 def _requerir_nombre(cuerpo: Dict[str, Any]) -> str:
     nombre = str(cuerpo.get("nombre") or "").strip()
     if not nombre:
         raise InvalidActionError("Se requiere 'nombre' (no vacío) en el cuerpo.")
+    if len(nombre) < NOMBRE_LONGITUD_MINIMA:
+        raise InvalidActionError(
+            f"'nombre' debe tener al menos {NOMBRE_LONGITUD_MINIMA} caracteres."
+        )
     return nombre
 
 
@@ -163,6 +172,22 @@ def _requerir_color(cuerpo: Dict[str, Any]) -> str:
     if not color:
         raise InvalidActionError("Se requiere 'color' (no vacío) en el cuerpo.")
     return color
+
+
+def _requerir_max_jugadores(cuerpo: Dict[str, Any]) -> int:
+    """
+    Chequeo de forma (si viene, ¿es un entero?) -- el rango real
+    (``1..MAX_JUGADORES``) lo valida ``RoomManager.crear_sala`` (regla de
+    dominio, igual que ``_validar_color``). Opcional: por defecto
+    ``MAX_JUGADORES`` (4), el techo histórico antes de que este campo
+    existiera -- LobbyView.vue siempre manda un valor explícito desde su
+    selector nuevo, pero cualquier otro llamador de la API (tests
+    incluidos) no tiene por qué que preocuparse por la capacidad.
+    """
+    crudo = cuerpo.get("max_jugadores", MAX_JUGADORES)
+    if isinstance(crudo, bool) or not isinstance(crudo, int):
+        raise InvalidActionError("'max_jugadores' debe ser un entero.")
+    return crudo
 
 
 def _avanzar_fase_si_corresponde(sesion: GameSession) -> None:
@@ -256,7 +281,8 @@ def crear_app() -> Starlette:
             cuerpo = await _cuerpo_json(request)
             nombre = _requerir_nombre(cuerpo)
             color = _requerir_color(cuerpo)
-            sesion, asiento = salas.crear_sala(nombre, color)
+            max_jugadores = _requerir_max_jugadores(cuerpo)
+            sesion, asiento = salas.crear_sala(nombre, color, max_jugadores)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(
@@ -265,6 +291,7 @@ def crear_app() -> Starlette:
                 "host_token": sesion.host_token,
                 "player_token": asiento.token,
                 "player_index": asiento.player_index,
+                "max_jugadores": sesion.max_jugadores,
             },
             status_code=201,
         )
@@ -304,6 +331,7 @@ def crear_app() -> Starlette:
             {
                 "room_id": sesion.id,
                 "status": sesion.status.value,
+                "max_jugadores": sesion.max_jugadores,
                 "seats": [
                     {"player_index": a.player_index, "nombre": a.nombre, "color": a.color}
                     for a in sesion.seats
@@ -535,6 +563,7 @@ def crear_app() -> Starlette:
             {
                 "room_id": sesion.id,
                 "status": sesion.status.value,
+                "max_jugadores": sesion.max_jugadores,
                 "seats": [
                     {"player_index": a.player_index, "nombre": a.nombre, "color": a.color}
                     for a in sesion.seats

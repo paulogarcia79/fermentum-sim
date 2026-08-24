@@ -62,6 +62,11 @@ class ColorYaTomadoError(RoomError):
     la misma sala."""
 
 
+class CapacidadInvalidaError(RoomError):
+    """Se lanza cuando ``max_jugadores`` al crear una sala está fuera del
+    rango ``1..MAX_JUGADORES`` (ver ``server/sessions.py``)."""
+
+
 class PartidaNoEnCursoError(RoomError):
     """Se lanza al intentar votar para terminar antes de tiempo una sala
     que no tiene una partida en curso (``RoomStatus.EN_CURSO``)."""
