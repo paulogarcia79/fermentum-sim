@@ -201,6 +201,12 @@ Cada jugador dispone de **2 Puntos de Acción (PA)** por Día de Laboratorio.
   gratuitas sin usar ese día. Cualquier acción de costo en PA, o un **Pasar** explícito, sí cierra
   la visita; **Pasar** además renuncia de inmediato a cualquier acción gratuita pendiente por el
   resto del día.
+- **Un espacio de acción, una visita por día:** cada espacio de acción con costo de PA (B a G,
+  Simposio Técnico, H, I) solo puede visitarse **una vez por Día de Laboratorio, por jugador** —
+  el investigador marca el espacio con su color en cuanto lo visita, bloqueándolo para él (no para
+  el resto de jugadores) hasta el día siguiente. Con 2-3 PA (Horas Extras incluida) esto significa
+  como máximo un uso de cada espacio distinto por día, nunca el mismo espacio dos veces. Pedido de
+  Urgencia queda exento (no cuesta PA — ver su entrada en el Catálogo de Acciones).
 - **Sin escasez de insumos:** a diferencia de las recetas del mercado (que sí ocupan un espacio
   limitado), la harina y el agua ya no se agotan por turno — son un precio compartido (Bolsa de
   Harinas) y una tabla de precio por temperatura (Suministro Hídrico Global) que cualquier jugador
@@ -215,7 +221,7 @@ Cada jugador dispone de **2 Puntos de Acción (PA)** por Día de Laboratorio.
 #### B. Iniciar Receta
 
 **Costo:** 1 PA + 1 token de harina (100% del tipo que pida la receta) + los tokens de agua
-exactos según la hidratación de la receta.
+exactos según la hidratación de la receta. **Límite:** 1 vez por día (por espacio de acción).
 
 Al iniciar la masa, se sella su **Memoria Biológica**: el Dado de Inóculo guarda la Vitalidad
 actual del cultivo base (determina la velocidad de fermentación de esa masa específica durante
@@ -228,7 +234,8 @@ menos 1 Dado de Inóculo disponible.
 
 #### C. Visitar el Mercado
 
-**Costo:** 1 PA por visita, sin importar cuántas transacciones incluya.
+**Costo:** 1 PA por visita, sin importar cuántas transacciones incluya. **Límite:** 1 vez por día
+(por espacio de acción) — todas las transacciones de la visita se resuelven en esa única visita.
 
 El Mercado de Insumos es donde se comercian los recursos del juego:
 
@@ -269,17 +276,22 @@ la misma visita, pero no comprar y vender la misma harina, ni comprar el mismo t
 Laboratorio](#10-tecnologías-de-laboratorio). El beneficio se activa de inmediato. Cada mejora
 individual solo puede instalarse **una vez** por partida, pero un jugador puede llegar a instalar
 varias mejoras distintas a lo largo de la partida — no existe un tope global de "una sola mejora
-en total".
+en total". **Límite adicional:** el espacio D en sí solo puede visitarse 1 vez por día — instalar
+CUALQUIER mejora agota el espacio para el resto del día, así que dos mejoras distintas nunca pueden
+instalarse el mismo día; como muy pronto, la segunda espera al día siguiente.
 
 #### E. Técnica (Pliegues)
 
 **Costo:** 1 PA. Avanza el marcador de una masa en fermentación 1 casilla adicional. Con la
 tecnología Cámara B instalada, el jugador puede optar en su lugar por recuperar +1 de Vitalidad en
-su cultivo base, o por afectar a dos masas simultáneamente (+1 casilla a cada una).
+su cultivo base, o por afectar a dos masas simultáneamente (+1 casilla a cada una). **Límite:** 1
+vez por día (por espacio de acción) — cualquiera de las variantes agota el espacio.
 
 #### F. Hornear y Vender (Finalización de Protocolo)
 
-**Costo:** 1 PA. Finaliza el protocolo de una masa y la vende de inmediato: se obtienen Puntos de
+**Costo:** 1 PA. **Límite:** 1 vez por día (por espacio de acción) — no aplica al colapso
+automático de Fase III, que no pasa por este espacio ni consume PA. Finaliza el protocolo de una
+masa y la vende de inmediato: se obtienen Puntos de
 Maestría, Monedas y (en Zona Óptima) Datos de Investigación, según la zona del track donde se
 encuentre el marcador:
 
@@ -295,16 +307,18 @@ encuentre el marcador:
 
 #### G. Investigar Protocolo
 
-**Costo:** 1 PA. Selecciona una carta de receta de cualquiera de las 4 estaciones visibles del
-Mercado Central y la coloca boca arriba, en estado inactivo, en la Carpeta de Proyectos propia
-(máximo 3 cartas — si está llena, hay que descartar una antes de investigar la nueva). El espacio
-del mercado que se libera queda vacío hasta el Protocolo de Refresco del día siguiente.
+**Costo:** 1 PA. **Límites:** máximo 3 cartas en la Carpeta de Proyectos (si está llena, hay que
+descartar una antes de investigar la nueva); además, 1 vez por día (por espacio de acción).
+Selecciona una carta de receta de cualquiera de las 4 estaciones visibles del Mercado Central y la
+coloca boca arriba, en estado inactivo, en la Carpeta de Proyectos propia. El espacio del mercado
+que se libera queda vacío hasta el Protocolo de Refresco del día siguiente.
 
 #### Simposio Técnico
 
-**Costo:** 1 PA. Descarta una carta de receta de la Carpeta de Proyectos o de una estación de
-fermentación activa (perdiendo esa masa sin puntuación ni penalización, pero recuperando el Dado
-de Inóculo) a cambio de +1 Dato de Investigación inmediato.
+**Costo:** 1 PA. **Límite:** 1 vez por día (por espacio de acción), sin importar si se descarta
+desde la carpeta o desde una estación. Descarta una carta de receta de la Carpeta de Proyectos o de
+una estación de fermentación activa (perdiendo esa masa sin puntuación ni penalización, pero
+recuperando el Dado de Inóculo) a cambio de +1 Dato de Investigación inmediato.
 
 ### Acciones auxiliares y de emergencia (Costo: 0 PA)
 
@@ -325,7 +339,8 @@ mismo día. Solo puede activarse **una vez por Día de Laboratorio** por jugador
 vigente — y obtiene directamente de la reserva general **un** tipo de recurso a elección: 100% de
 un tipo de harina, o los tokens de agua que el jugador desee (5% cada uno). A diferencia de Horas
 Extras, no tiene límite de usos por día — se autolimita únicamente por los Datos de Investigación
-disponibles.
+disponibles. Al no costar PA, queda exento de la regla "1 vez por día por espacio de acción" de la
+[Fase II](#6-fase-ii-acción) — es intencional, no un descuido.
 
 #### Protocolos de Emergencia (Rescate de Cultivo)
 
@@ -333,9 +348,11 @@ Solo pueden ejecutarse si la Vitalidad del cultivo base ha llegado a 0 (ver [Fas
 III](#9-fase-iii-fermentación)):
 
 - **H. Re-cultivo Manual:** Costo 1 PA + 50% de harina (de cualquier tipo, sin costo de agua).
-  Retira la Contaminación y sitúa Vitalidad y Acidez en Nivel 1.
+  Retira la Contaminación y sitúa Vitalidad y Acidez en Nivel 1. **Límite:** 1 vez por día (por
+  espacio de acción), además de requerir Contaminación activa.
 - **I. Inóculo de Emergencia:** Costo 1 PA + 1 Dato de Investigación. Retira la Contaminación y
-  sitúa Vitalidad y Acidez en Nivel 2 (resultado superior al Re-cultivo Manual).
+  sitúa Vitalidad y Acidez en Nivel 2 (resultado superior al Re-cultivo Manual). **Límite:** 1 vez
+  por día (por espacio de acción), además de requerir Contaminación activa.
 
 ---
 

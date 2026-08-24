@@ -15,6 +15,8 @@ Para la simulación, cada instancia de `Jugador` debe inicializarse y gestionar 
 * `reserva_harina` (Dict[String, Integer]): Inventario de harinas representadas en porcentajes (múltiplos de 10%). Ej: `{"Blanca": 100, "Centeno": 20, "Integral": 0}`.
 * `reserva_agua` (Integer): Suma total de los tokens de hidratación disponibles (en múltiplos de 5%).
 * `accion_alimentar_usada` (Boolean): Bandera que se reinicia a `False` al inicio de cada Fase II para limitar el mantenimiento a 1 vez por ronda.
+* `horas_extras_usadas` (Boolean): Bandera que se reinicia a `False` al inicio de cada Fase II (junto con `puntos_accion`) para limitar la acción auxiliar "Horas Extras" a 1 vez por día.
+* `acciones_pa_usadas_hoy` (List[String]): Ids de espacios de acción con costo de PA (B, C, D, E, F, G, H, I, "simposio") ya visitados este Día de Laboratorio por este jugador — cada espacio solo puede visitarse una vez por día (ACTIONS_REGISTRY.md §1). Se llena al gastar el PA de la acción y se reinicia a `[]` al inicio de cada Fase II, junto con `accion_alimentar_usada`. Pedido de Urgencia (0 PA) y las acciones gratuitas (Alimentar, Horas Extras) no participan de esta lista — tienen sus propias banderas dedicadas.
 
 ### Atributos de Infraestructura
 * `tecnologias_activas` (Dict[String, Boolean]): Registro de módulos de la Zona 4.

@@ -29,6 +29,7 @@ Fase donde los jugadores intervienen en su laboratorio mediante un sistema de "R
 * **Capacidad:** Cada jugador dispone de 2 PA.
 * **Flujo Intercalado:** Empezando por el Investigador Jefe, el jugador activo ejecuta **solo 1 acción** (o pasa). Luego el control pasa al siguiente jugador. El ciclo (while loop) continúa hasta que la suma de PA de todos los jugadores sea 0 y nadie quiera usar "Horas Extras".
 * **Registro:** Se marca el uso de PA moviendo Cubos de Laboratorio en la Zona 5 (Checklist) del tablero personal.
+* **Un espacio, una visita por día:** cada espacio de acción con costo de PA (Acciones B a G, Simposio Técnico, H, I — ver ACTIONS_REGISTRY.md §1) solo puede ser visitado UNA vez por Día de Laboratorio por cada jugador; visitarlo lo marca con el color de ese jugador (bloqueado para él, no para el resto) hasta el reinicio del siguiente Día de Laboratorio. Pedido de Urgencia (0 PA) queda exento.
 * **Escasez de Mercado:** Durante esta fase, si un jugador investiga una receta (Acción G), el espacio del mercado queda vacío hasta la próxima Fase I. La harina y el agua, en cambio, ya no son un slot consumible — son un track de precio compartido (Bolsa de Harinas) y una matriz de precio por temperatura (Suministro Hídrico Global) que cualquier jugador puede usar en Visitar el Mercado (Acción C) sin agotar un cupo.
 
 ### FASE III: Fermentación (Resolución Automática)
