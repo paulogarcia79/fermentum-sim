@@ -12,6 +12,8 @@ import ModalSimposio from './acciones/ModalSimposio.vue'
 import ModalConfirmacion from './acciones/ModalConfirmacion.vue'
 import ModalPedidoUrgencia from './acciones/ModalPedidoUrgencia.vue'
 import { descripcionesAcciones, type IdAccion } from '../data/descripcionesAcciones'
+import { hexDeColor } from '../data/coloresJugador'
+import type { Player } from '../types'
 
 const BOTONES: { id: IdAccion; etiqueta: string; costo: string }[] = [
   { id: 'B', etiqueta: 'Iniciar Receta', costo: '1 PA' },
@@ -32,6 +34,22 @@ const disponibilidad = computed(() => store.estado!.acciones_disponibles[store.s
 
 function estado(id: IdAccion) {
   return disponibilidad.value.find((a) => a.id === id) ?? { habilitada: false, motivo: '' }
+}
+
+/** Espacios de acción gratuitos (0 PA) que igual solo se pueden visitar una
+ * vez por día -- se marcan visualmente distinto (aro hueco) de los espacios
+ * con costo de PA (punto sólido), ver .marcador-jugador.gratis más abajo. */
+const ESPACIOS_GRATIS_UNA_VEZ_POR_DIA: IdAccion[] = ['A', 'horas_extras']
+
+/** Jugadores que ya visitaron el espacio de acción `id` hoy -- recorre a
+ * TODOS los jugadores (no solo el propio, a diferencia de `disponibilidad`)
+ * para poder mostrar el marcador de color de cada uno. Pedido de Urgencia
+ * no tiene límite diario, así que nunca devuelve marcadores. */
+function jugadoresQueUsaron(id: IdAccion): Player[] {
+  if (id === 'A') return store.estado!.players.filter((p) => p.accion_alimentar_usada)
+  if (id === 'horas_extras') return store.estado!.players.filter((p) => p.horas_extras_usadas)
+  if (id === 'pedido_urgencia') return []
+  return store.estado!.players.filter((p) => p.acciones_pa_usadas_hoy.includes(id))
 }
 
 const modalAbierto = ref<IdAccion | null>(null)
@@ -58,6 +76,16 @@ async function onPasar() {
   <section class="barra-acciones">
     <div class="grid-botones">
       <div v-for="b in BOTONES" :key="b.id" class="envoltorio-boton">
+        <div v-if="jugadoresQueUsaron(b.id).length > 0" class="marcadores-jugador">
+          <span
+            v-for="p in jugadoresQueUsaron(b.id)"
+            :key="p.nombre"
+            class="marcador-jugador"
+            :class="{ gratis: ESPACIOS_GRATIS_UNA_VEZ_POR_DIA.includes(b.id) }"
+            :style="{ '--color-marcador': hexDeColor(p.color) }"
+            :title="`${p.nombre} ya visitó este espacio hoy`"
+          />
+        </div>
         <button :disabled="!estado(b.id).habilitada" :title="estado(b.id).motivo" @click="abrir(b.id)">
           {{ b.etiqueta }} <span class="costo">[{{ b.costo }}]</span>
         </button>
@@ -131,6 +159,30 @@ async function onPasar() {
 
 .envoltorio-boton button:disabled {
   border-top-color: var(--color-borde);
+}
+
+.marcadores-jugador {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: flex;
+  gap: 2px;
+  z-index: 10;
+}
+
+.marcador-jugador {
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-marcador);
+  box-shadow: 0 0 0 1px var(--color-fondo);
+}
+
+.marcador-jugador.gratis {
+  background: transparent;
+  border: 2px solid var(--color-marcador);
+  box-shadow: none;
 }
 
 .tooltip {

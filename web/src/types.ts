@@ -81,6 +81,10 @@ export interface Player {
   archivo_horneado_exitoso: HorneadoRecord[]
   archivo_colapsos: HorneadoRecord[]
   horas_extras_usadas: boolean
+  /** Ids de espacios de acción con costo de PA (B, C, D, E, F, G, H, I,
+   * 'simposio') que este jugador ya visitó hoy -- cada uno solo puede
+   * usarse una vez por Día de Laboratorio. Ver BarraAcciones.vue. */
+  acciones_pa_usadas_hoy: string[]
   contador_contaminaciones: number
   puntos_maestria_final: number
 }
