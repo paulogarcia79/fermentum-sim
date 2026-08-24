@@ -890,9 +890,10 @@ class GameEngine:
     def _preparar_fase_II(self) -> None:
         """
         Prepara el estado de turno para la Fase II del día actual: resetea
-        los indicadores de acciones gratuitas usadas y los PA de todos los
-        jugadores, calcula el orden de turno del día (Investigador Jefe
-        primero), y posiciona el cursor en el primer jugador elegible.
+        los indicadores de acciones gratuitas usadas, los espacios de acción
+        con costo de PA ya visitados hoy, y los PA de todos los jugadores,
+        calcula el orden de turno del día (Investigador Jefe primero), y
+        posiciona el cursor en el primer jugador elegible.
 
         Compartido por ``fase_II_accion()`` (ruta bloqueante, usada por la
         CLI) e ``iniciar_dia()`` (ruta de estado explícito) para que ambas
@@ -902,6 +903,7 @@ class GameEngine:
 
         for player in orden:
             player.accion_alimentar_usada = False
+            player.acciones_pa_usadas_hoy = []
         for player in orden:
             player.resetear_puntos_accion()
 

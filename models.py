@@ -525,6 +525,17 @@ class Player:
     Solo se puede usar una vez por día. Se resetea en resetear_puntos_accion().
     """
 
+    acciones_pa_usadas_hoy: List[str] = field(default_factory=list)
+    """
+    Ids de espacios de acción con costo de PA (B, C, D, E, F, G, H, I,
+    'simposio') que este jugador ya visitó en el Día de Laboratorio actual
+    -- cada espacio solo puede visitarse una vez por día. Se llena en
+    Player.consumir_punto_accion() y se reinicia a [] al inicio de cada
+    Fase II (engine.py:_preparar_fase_II). Pedido de Urgencia (0 PA) y las
+    acciones gratuitas (Alimentar, Horas Extras) no participan de esta
+    lista -- tienen sus propias banderas de una vez por día.
+    """
+
     # ------------------------------------------------------------------
     # Seguimiento de Penalizaciones Acumuladas
     # ------------------------------------------------------------------
@@ -667,12 +678,15 @@ class Player:
         self.puntos_accion = 2
         self.horas_extras_usadas = False
 
-    def consumir_punto_accion(self) -> None:
+    def consumir_punto_accion(self, espacio_accion_id: str) -> None:
         """
-        Decrementa 1 PA del jugador.
-        Precondición: el engine debe verificar puntos_accion >= 1 ANTES de llamar.
+        Decrementa 1 PA del jugador y registra `espacio_accion_id` en
+        acciones_pa_usadas_hoy, bloqueando ese espacio para el resto del día.
+        Precondición: el llamador debe verificar puntos_accion >= 1 y que
+        espacio_accion_id no esté ya en acciones_pa_usadas_hoy ANTES de llamar.
         """
         self.puntos_accion -= 1
+        self.acciones_pa_usadas_hoy.append(espacio_accion_id)
 
     def otorgar_punto_accion_extra(self) -> None:
         """

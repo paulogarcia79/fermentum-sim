@@ -45,8 +45,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 5
+VERSION_FORMATO = 6
 """
+Bumped a 6: `Player` ganó `acciones_pa_usadas_hoy` (espacios de acción con
+costo de PA ya visitados hoy -- ver PLAYER_STATE.md) -- un pickle viejo sin
+ese campo debe descartarse limpiamente en vez de fallar la primera vez que
+el engine intente leerlo.
+
 Bumped a 5: `GameSession` ganó `max_jugadores` (capacidad de sala elegida
 por el host al crearla) -- un pickle viejo sin ese campo debe descartarse
 limpiamente en vez de cargar a medias.

@@ -84,6 +84,16 @@ class CarpetaFullError(RuleViolationError):
     """
 
 
+class EspacioAccionYaUsadoError(RuleViolationError):
+    """
+    Subclase semántica de RuleViolationError.
+    Se lanza cuando un jugador intenta usar un espacio de acción con costo
+    de PA (Acciones B a I, Simposio Técnico) que ya usó en el día actual —
+    cada espacio de acción solo puede visitarse una vez por Día de
+    Laboratorio (PLAYER_STATE.md, `acciones_pa_usadas_hoy`).
+    """
+
+
 # ---------------------------------------------------------------------------
 # Excepciones de Flujo del Motor (engine.py)
 # ---------------------------------------------------------------------------

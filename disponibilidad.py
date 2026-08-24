@@ -42,6 +42,7 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     hay_estacion_activa = len(player.masas_activas) > 0
     hay_estacion_libre = player.indice_estacion_disponible is not None
     hay_receta_visible = any(r is not None for r in engine.market.recetas_visibles)
+    usados = player.acciones_pa_usadas_hoy
 
     resultados: List[Dict[str, Any]] = []
 
@@ -55,27 +56,47 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         not player.accion_alimentar_usada and tiene_recurso_alimentar,
         "Ya se usó hoy" if player.accion_alimentar_usada else "Sin harina ni agua suficiente",
     )
+
     agregar(
         "B",
-        tiene_pa
+        "B" not in usados
+        and tiene_pa
         and not contaminado
         and bool(player.carpeta_proyectos)
         and hay_estacion_libre
         and player.dados_inoculo >= 1,
-        _motivo_B(player, tiene_pa, contaminado, hay_estacion_libre),
+        _motivo_B(player, tiene_pa, contaminado, hay_estacion_libre, "B" in usados),
     )
-    agregar("C", tiene_pa, "Sin PA")
+    agregar(
+        "C",
+        "C" not in usados and tiene_pa,
+        "Ya usaste este espacio hoy" if "C" in usados else "Sin PA",
+    )
     agregar(
         "D",
-        tiene_pa,
-        "Sin PA",
+        "D" not in usados and tiene_pa,
+        "Ya usaste este espacio hoy" if "D" in usados else "Sin PA",
     )
-    agregar("E", tiene_pa and hay_estacion_activa, "Sin PA" if not tiene_pa else "Sin masas activas")
-    agregar("F", tiene_pa and hay_estacion_activa, "Sin PA" if not tiene_pa else "Sin masas activas")
+    agregar(
+        "E",
+        "E" not in usados and tiene_pa and hay_estacion_activa,
+        "Ya usaste este espacio hoy"
+        if "E" in usados
+        else ("Sin PA" if not tiene_pa else "Sin masas activas"),
+    )
+    agregar(
+        "F",
+        "F" not in usados and tiene_pa and hay_estacion_activa,
+        "Ya usaste este espacio hoy"
+        if "F" in usados
+        else ("Sin PA" if not tiene_pa else "Sin masas activas"),
+    )
     agregar(
         "G",
-        tiene_pa and hay_receta_visible,
-        "Sin PA" if not tiene_pa else "No hay recetas visibles en el mercado",
+        "G" not in usados and tiene_pa and hay_receta_visible,
+        "Ya usaste este espacio hoy"
+        if "G" in usados
+        else ("Sin PA" if not tiene_pa else "No hay recetas visibles en el mercado"),
     )
     agregar(
         "pedido_urgencia",
@@ -84,18 +105,20 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     )
     agregar(
         "simposio",
-        tiene_pa and (bool(player.carpeta_proyectos) or hay_estacion_activa),
-        "Sin PA" if not tiene_pa else "Carpeta y estaciones vacías",
+        "simposio" not in usados and tiene_pa and (bool(player.carpeta_proyectos) or hay_estacion_activa),
+        "Ya usaste este espacio hoy"
+        if "simposio" in usados
+        else ("Sin PA" if not tiene_pa else "Carpeta y estaciones vacías"),
     )
     agregar(
         "H",
-        contaminado and tiene_pa and harina_total >= 50,
-        _motivo_emergencia(contaminado, tiene_pa, harina_total >= 50),
+        "H" not in usados and contaminado and tiene_pa and harina_total >= 50,
+        _motivo_emergencia(contaminado, tiene_pa, harina_total >= 50, "H" in usados),
     )
     agregar(
         "I",
-        contaminado and tiene_pa and player.datos_investigacion >= 1,
-        _motivo_emergencia(contaminado, tiene_pa, player.datos_investigacion >= 1),
+        "I" not in usados and contaminado and tiene_pa and player.datos_investigacion >= 1,
+        _motivo_emergencia(contaminado, tiene_pa, player.datos_investigacion >= 1, "I" in usados),
     )
     agregar(
         "horas_extras",
@@ -106,7 +129,11 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     return resultados
 
 
-def _motivo_B(player: Player, tiene_pa: bool, contaminado: bool, hay_estacion_libre: bool) -> str:
+def _motivo_B(
+    player: Player, tiene_pa: bool, contaminado: bool, hay_estacion_libre: bool, usado_hoy: bool
+) -> str:
+    if usado_hoy:
+        return "Ya usaste este espacio hoy"
     if not tiene_pa:
         return "Sin PA"
     if contaminado:
@@ -118,9 +145,11 @@ def _motivo_B(player: Player, tiene_pa: bool, contaminado: bool, hay_estacion_li
     return "Sin dados de inóculo disponibles"
 
 
-def _motivo_emergencia(contaminado: bool, tiene_pa: bool, tiene_recursos: bool) -> str:
+def _motivo_emergencia(contaminado: bool, tiene_pa: bool, tiene_recursos: bool, usado_hoy: bool) -> str:
     if not contaminado:
         return "El cultivo no está contaminado"
+    if usado_hoy:
+        return "Ya usaste este espacio hoy"
     if not tiene_pa:
         return "Sin PA"
     if not tiene_recursos:

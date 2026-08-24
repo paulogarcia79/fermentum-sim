@@ -44,6 +44,7 @@ if TYPE_CHECKING:
 from engine import AGUA_TOKENS_POR_LOTE, PRECIO_AGUA
 from exceptions import (
     CarpetaFullError,
+    EspacioAccionYaUsadoError,
     InvalidActionError,
     MissingResourceError,
     NotEnoughActionPointsError,
@@ -142,6 +143,21 @@ class ActionManager:
             raise NotEnoughActionPointsError(
                 f"'{player.nombre}' necesita {costo} PA pero solo tiene "
                 f"{player.puntos_accion}. Considera usar Horas Extras."
+            )
+
+    def _require_espacio_disponible(self, player: Player, accion_id: str) -> None:
+        """
+        Verifica que el jugador no haya visitado ya este espacio de acción
+        hoy -- cada espacio con costo de PA solo puede usarse una vez por
+        Día de Laboratorio (PLAYER_STATE.md, acciones_pa_usadas_hoy).
+
+        Raises:
+            EspacioAccionYaUsadoError: Si ``accion_id`` ya está en
+                ``player.acciones_pa_usadas_hoy``.
+        """
+        if accion_id in player.acciones_pa_usadas_hoy:
+            raise EspacioAccionYaUsadoError(
+                f"'{player.nombre}' ya usó el espacio de acción '{accion_id}' hoy."
             )
 
     def _require_harina_tipo(
@@ -366,6 +382,7 @@ class ActionManager:
         # --- Bloque de validaciones completo (Fail-Fast) ---
 
         self._require_pa(player, 1)
+        self._require_espacio_disponible(player, "B")
 
         if player.vitalidad < 1:
             raise RuleViolationError(
@@ -420,7 +437,7 @@ class ActionManager:
 
         # --- Todas las validaciones pasaron; aplicar efectos ---
 
-        player.consumir_punto_accion()
+        player.consumir_punto_accion("B")
 
         # Consumir 100% del tipo de harina requerido
         player.reserva_harina[receta.harina_base.value] -= 100
@@ -503,6 +520,7 @@ class ActionManager:
                 punto de la simulación de la visita completa.
         """
         self._require_pa(player, 1)
+        self._require_espacio_disponible(player, "C")
 
         if not transacciones:
             raise InvalidActionError(
@@ -578,7 +596,7 @@ class ActionManager:
                 )
 
         # --- Toda la visita es viable: aplicar de verdad ---
-        player.consumir_punto_accion()
+        player.consumir_punto_accion("C")
 
         for t in transacciones:
             tipo_recurso = t["tipo_recurso"]
@@ -641,10 +659,11 @@ class ActionManager:
         costo_datos: int = COSTOS_TECNOLOGIA[tecnologia]
 
         self._require_pa(player, 1)
+        self._require_espacio_disponible(player, "D")
         self._require_datos(player, costo_datos)
 
         # Aplicar
-        player.consumir_punto_accion()
+        player.consumir_punto_accion("D")
         player.datos_investigacion -= costo_datos
         player.tecnologias.activar(tecnologia)
 
@@ -698,10 +717,11 @@ class ActionManager:
             )
 
         self._require_pa(player, 1)
+        self._require_espacio_disponible(player, "E")
 
         # --- Rama: recuperar vitalidad (no usa slot_index) ---
         if opcion_camara_b == "recuperar_vitalidad":
-            player.consumir_punto_accion()
+            player.consumir_punto_accion("E")
             player.ajustar_vitalidad(+1)
             return
 
@@ -741,13 +761,13 @@ class ActionManager:
                 )
 
             # Aplicar doble pliegue
-            player.consumir_punto_accion()
+            player.consumir_punto_accion("E")
             slot.posicion_track += 1
             slot_2.posicion_track += 1
 
         else:
             # --- Rama base: avanzar una masa ---
-            player.consumir_punto_accion()
+            player.consumir_punto_accion("E")
             slot.posicion_track += 1
 
     def accion_F_hornear(
@@ -790,6 +810,7 @@ class ActionManager:
             RuleViolationError: La estación está vacía.
         """
         self._require_pa(player, 1)
+        self._require_espacio_disponible(player, "F")
 
         if not (0 <= slot_index <= 2):
             raise RuleViolationError(
@@ -802,7 +823,7 @@ class ActionManager:
             )
 
         # Consumir PA antes de delegar (la delegación no consume PA)
-        player.consumir_punto_accion()
+        player.consumir_punto_accion("F")
 
         # Delegar resolución de puntuación, archivado y recuperación de dado
         return self._engine.resolver_horneado(
@@ -843,6 +864,7 @@ class ActionManager:
             MarketSlotEmptyError: El slot de mercado está vacío (ya fue tomado).
         """
         self._require_pa(player, 1)
+        self._require_espacio_disponible(player, "G")
 
         # Validar índice de mercado (semántico; el mercado también valida)
         num_slots = len(self._engine.market.recetas_visibles)
@@ -872,7 +894,7 @@ class ActionManager:
         receta: Recipe = self._engine.market.tomar_receta(indice_mercado)
 
         # Aplicar efectos
-        player.consumir_punto_accion()
+        player.consumir_punto_accion("G")
 
         if carpeta_llena and indice_descartar is not None:
             player.carpeta_proyectos.pop(indice_descartar)
@@ -915,6 +937,7 @@ class ActionManager:
             )
 
         self._require_pa(player, 1)
+        self._require_espacio_disponible(player, "simposio")
 
         if origen == "carpeta":
             if not (0 <= indice < len(player.carpeta_proyectos)):
@@ -922,7 +945,7 @@ class ActionManager:
                     f"Índice {indice} fuera de rango para carpeta_proyectos "
                     f"(tamaño actual: {len(player.carpeta_proyectos)})."
                 )
-            player.consumir_punto_accion()
+            player.consumir_punto_accion("simposio")
             player.carpeta_proyectos.pop(indice)
             player.datos_investigacion += 1
 
@@ -937,7 +960,7 @@ class ActionManager:
                     f"La estación {indice} de '{player.nombre}' está vacía. "
                     "No hay masa activa que descartar en el Simposio Técnico."
                 )
-            player.consumir_punto_accion()
+            player.consumir_punto_accion("simposio")
             player.estaciones_fermentacion[indice] = None
             player.dados_inoculo = min(3, player.dados_inoculo + 1)
             player.datos_investigacion += 1
@@ -1062,10 +1085,11 @@ class ActionManager:
         """
         self._require_contaminado(player, "Protocolo H (Re-cultivo Manual)")
         self._require_pa(player, 1)
+        self._require_espacio_disponible(player, "H")
         self._require_cualquier_harina(player, 50)
 
         # Aplicar
-        player.consumir_punto_accion()
+        player.consumir_punto_accion("H")
 
         # Consumir 50% de harina (deduce de los tipos con mayor reserva primero)
         harina_a_consumir = 50
@@ -1106,10 +1130,11 @@ class ActionManager:
         """
         self._require_contaminado(player, "Protocolo I (Inóculo de Emergencia)")
         self._require_pa(player, 1)
+        self._require_espacio_disponible(player, "I")
         self._require_datos(player, 1)
 
         # Aplicar
-        player.consumir_punto_accion()
+        player.consumir_punto_accion("I")
         player.datos_investigacion -= 1
 
         # Restablecer cultivo base y limpiar contaminación
