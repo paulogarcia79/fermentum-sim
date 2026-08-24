@@ -37,10 +37,11 @@ export interface CrearSalaResultado {
   host_token: string
   player_token: string
   player_index: number
+  max_jugadores: number
 }
 
-export function crearSala(nombre: string, color: string): Promise<CrearSalaResultado> {
-  return pedir('/games', conJson({ nombre, color }))
+export function crearSala(nombre: string, color: string, maxJugadores: number): Promise<CrearSalaResultado> {
+  return pedir('/games', conJson({ nombre, color, max_jugadores: maxJugadores }))
 }
 
 export interface UnirseSalaResultado {
@@ -55,6 +56,7 @@ export function unirseSala(roomId: string, nombre: string, color: string): Promi
 export interface SalaMetadata {
   room_id: string
   status: 'lobby' | 'en_curso' | 'terminada'
+  max_jugadores: number
   seats: { player_index: number; nombre: string; color: string }[]
 }
 

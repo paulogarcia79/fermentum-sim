@@ -6,11 +6,16 @@ import { establecerSesion, iniciarPolling, refrescarEstado, store } from '../sto
 import type { SalaMetadata } from '../api'
 import { COLORES_JUGADOR, hexDeColor } from '../data/coloresJugador'
 
+const NOMBRE_LONGITUD_MINIMA = 3
+const JUGADORES_POSIBLES = [1, 2, 3, 4]
+
 const nombre = ref('')
 const codigoSala = ref('')
 const colorSeleccionado = ref<string | null>(null)
+const jugadoresObjetivo = ref(4)
 const error = ref<string | null>(null)
 const cargando = ref(false)
+const enlaceCopiado = ref(false)
 
 const salaCreada = ref<{ roomId: string; hostToken: string; nombre: string } | null>(null)
 const metadata = ref<SalaMetadata | null>(null)
@@ -49,18 +54,38 @@ async function entrarASalaDeEspera(roomId: string, hostToken: string, nombreJuga
 // Si App.vue ya recuperó una sesión guardada (localStorage, ver
 // store.ts:intentarReconectar) y la sala seguía en LOBBY, store.sesion ya
 // está poblado al montar este componente -- solo hace falta retomar la
-// sala de espera con esos datos, sin volver a crear/unirse.
+// sala de espera con esos datos, sin volver a crear/unirse. Si no hay
+// sesión previa, se revisa si se llegó por un enlace de invitación
+// (?sala=CODIGO, ver el botón "Copiar enlace" en la sala de espera) para
+// precargar el código de sala -- no hay ningún router en la app, así que
+// esto es la única lectura de la URL que existe.
 onMounted(() => {
   if (store.sesion) {
     void entrarASalaDeEspera(store.sesion.roomId, store.sesion.hostToken ?? '', store.sesion.nombre)
+    return
+  }
+  const parametros = new URLSearchParams(window.location.search)
+  const salaInvitacion = parametros.get('sala')
+  if (salaInvitacion) {
+    codigoSala.value = salaInvitacion.trim().toUpperCase()
+    window.history.replaceState({}, '', window.location.pathname)
   }
 })
 
-async function crear() {
+function nombreValido(): boolean {
   if (!nombre.value.trim()) {
     error.value = 'Escribe tu nombre primero.'
-    return
+    return false
   }
+  if (nombre.value.trim().length < NOMBRE_LONGITUD_MINIMA) {
+    error.value = `El nombre debe tener al menos ${NOMBRE_LONGITUD_MINIMA} caracteres.`
+    return false
+  }
+  return true
+}
+
+async function crear() {
+  if (!nombreValido()) return
   if (!colorSeleccionado.value) {
     error.value = 'Elige un color.'
     return
@@ -68,7 +93,7 @@ async function crear() {
   cargando.value = true
   error.value = null
   try {
-    const r = await api.crearSala(nombre.value.trim(), colorSeleccionado.value)
+    const r = await api.crearSala(nombre.value.trim(), colorSeleccionado.value, jugadoresObjetivo.value)
     establecerSesion({
       roomId: r.room_id,
       token: r.player_token,
@@ -85,10 +110,11 @@ async function crear() {
 }
 
 async function unirse() {
-  if (!nombre.value.trim() || !codigoSala.value.trim()) {
-    error.value = 'Escribe tu nombre y el código de sala.'
+  if (!codigoSala.value.trim()) {
+    error.value = 'Escribe el código de sala.'
     return
   }
+  if (!nombreValido()) return
   if (!colorSeleccionado.value) {
     error.value = 'Elige un color.'
     return
@@ -110,6 +136,20 @@ async function unirse() {
     error.value = e instanceof ApiFallo ? e.message : 'No se pudo unir a la sala.'
   } finally {
     cargando.value = false
+  }
+}
+
+async function copiarEnlace() {
+  if (!salaCreada.value) return
+  const url = `${window.location.origin}${window.location.pathname}?sala=${salaCreada.value.roomId}`
+  try {
+    await navigator.clipboard.writeText(url)
+    enlaceCopiado.value = true
+    window.setTimeout(() => {
+      enlaceCopiado.value = false
+    }, 1500)
+  } catch {
+    error.value = 'No se pudo copiar el enlace. Copia el código manualmente.'
   }
 }
 
@@ -175,7 +215,7 @@ onUnmounted(() => {
     <div v-if="!salaCreada" class="panel formulario">
       <label>
         Tu nombre
-        <input v-model="nombre" placeholder="Investigador α" maxlength="24" />
+        <input v-model="nombre" placeholder="Investigador α" maxlength="24" :minlength="NOMBRE_LONGITUD_MINIMA" />
       </label>
 
       <label class="campo-color">
@@ -196,6 +236,21 @@ onUnmounted(() => {
       </label>
 
       <div class="acciones-lobby">
+        <label class="campo-jugadores">
+          Jugadores en la sala
+          <div class="swatches">
+            <button
+              v-for="n in JUGADORES_POSIBLES"
+              :key="n"
+              type="button"
+              class="swatch-numero"
+              :class="{ activo: jugadoresObjetivo === n }"
+              @click="jugadoresObjetivo = n"
+            >
+              {{ n }}
+            </button>
+          </div>
+        </label>
         <button class="primario" :disabled="cargando" @click="crear">Crear sala nueva</button>
         <div class="separador">o</div>
         <label>
@@ -209,8 +264,13 @@ onUnmounted(() => {
     </div>
 
     <div v-else class="panel sala-espera">
-      <h2>Sala {{ salaCreada.roomId }}</h2>
-      <p class="subtitulo">Comparte este código con el resto de investigadores.</p>
+      <div class="cabecera-sala">
+        <h2>Sala {{ salaCreada.roomId }}</h2>
+        <button type="button" class="copiar-enlace" @click="copiarEnlace">
+          {{ enlaceCopiado ? '¡Copiado!' : 'Copiar enlace' }}
+        </button>
+      </div>
+      <p class="subtitulo">Comparte el código o el enlace con el resto de investigadores.</p>
 
       <ul class="lista-asientos">
         <li v-for="asiento in metadata?.seats ?? []" :key="asiento.player_index">
@@ -220,7 +280,7 @@ onUnmounted(() => {
       </ul>
 
       <button v-if="store.sesion?.hostToken" class="primario" :disabled="cargando" @click="iniciar">
-        Iniciar partida ({{ metadata?.seats.length ?? 0 }} jugador{{ (metadata?.seats.length ?? 0) === 1 ? '' : 'es' }})
+        Iniciar partida ({{ metadata?.seats.length ?? 0 }}/{{ metadata?.max_jugadores ?? '—' }} jugadores)
       </button>
       <p v-else class="subtitulo">Esperando a que el host inicie la partida…</p>
 
@@ -325,6 +385,27 @@ input {
   cursor: not-allowed;
 }
 
+.campo-jugadores {
+  margin-bottom: 0.9rem;
+}
+
+.swatch-numero {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 4px;
+  border: 2px solid var(--color-borde);
+  background: var(--color-fondo);
+  color: var(--color-texto);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.swatch-numero.activo {
+  border-color: var(--color-acento);
+  color: var(--color-acento);
+}
+
 button {
   width: 100%;
   padding: 0.6rem;
@@ -345,6 +426,24 @@ button.primario {
   text-align: center;
   color: var(--color-texto-tenue);
   margin: 0.75rem 0;
+}
+
+.cabecera-sala {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cabecera-sala h2 {
+  margin: 0;
+}
+
+.copiar-enlace {
+  width: auto;
+  flex: 0 0 auto;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
 }
 
 .lista-asientos {
