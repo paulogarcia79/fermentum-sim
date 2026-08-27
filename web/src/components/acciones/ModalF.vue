@@ -34,14 +34,18 @@ const previa = computed(() => {
   const pos = slot.posicion_track
   if (pos >= r.zona_sobrefermentada[0]) {
     // Un colapso nunca aplica el Bono de Sabor, ni en puntos ni en Monedas.
-    return { zona: 'Sobrefermentada', puntos: r.penalizacion_colapso, monedas: r.monedas_sobre }
+    return { zona: 'Sobrefermentada', puntos: r.penalizacion_colapso, monedas: r.monedas_sobre, datos: 0 }
   }
   const bonoPuntos = slot.bono_sabor ? r.bono_sabor_pts : 0
   const bonoMonedas = slot.bono_sabor ? MONEDAS_BONO_SABOR : 0
   if (pos >= r.zona_optima[0] && pos <= r.zona_optima[1]) {
-    return { zona: 'Óptima', puntos: r.puntos_optimos + bonoPuntos, monedas: r.monedas_optima + bonoMonedas }
+    // Datos: 1 en zona óptima, +1 si es el centro exacto y el Módulo Analítico está
+    // instalado (espejo de engine._calcular_datos_horneado / DATOS_BAKE_*).
+    const centro = Math.floor((r.zona_optima[0] + r.zona_optima[1]) / 2)
+    const bonoDatos = pos === centro && yo.value.tecnologias.modulo_analitico ? 1 : 0
+    return { zona: 'Óptima', puntos: r.puntos_optimos + bonoPuntos, monedas: r.monedas_optima + bonoMonedas, datos: 1 + bonoDatos }
   }
-  return { zona: 'Baja', puntos: r.puntos_baja + bonoPuntos, monedas: r.monedas_baja + bonoMonedas }
+  return { zona: 'Baja', puntos: r.puntos_baja + bonoPuntos, monedas: r.monedas_baja + bonoMonedas, datos: 0 }
 })
 
 async function confirmar() {
@@ -69,7 +73,8 @@ async function confirmar() {
 
     <p v-if="previa" class="info-linea">
       Zona {{ previa.zona }} — resultado estimado: <strong>{{ previa.puntos }} pts</strong>,
-      <strong>{{ previa.monedas }} Monedas</strong>
+      <strong>{{ previa.monedas }} Monedas</strong><template v-if="previa.datos > 0"> ·
+      <strong>+{{ previa.datos }} Datos</strong></template>
     </p>
 
     <template #acciones>

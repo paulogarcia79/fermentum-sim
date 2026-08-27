@@ -34,7 +34,11 @@ const zonas = computed(() => {
   }
 })
 
-const posicionActualPct = computed(() => (props.slot ? pct(props.slot.posicion_track) : 0))
+// El marcador se dibuja en el CENTRO de su celda del track (pos - 0.5), no en el
+// borde derecho: así una masa en `zona_optima[0] - 1` (que el motor puntúa como zona
+// baja, 0 Datos) queda visiblemente a la izquierda de la banda verde, y una en
+// `zona_optima[0]` queda dentro — coincidiendo con lo que `resolver_horneado` hará.
+const posicionActualPct = computed(() => (props.slot ? pct(props.slot.posicion_track - 0.5) : 0))
 
 const posicionFantasma = computed(() => {
   if (!props.slot || !store.estado) return null
@@ -76,7 +80,7 @@ const detalleAbierto = ref(false)
           v-if="mostrarFantasma && posicionFantasma !== null"
           class="marcador fantasma"
           :class="zonaProyectada"
-          :style="{ left: pct(posicionFantasma) + '%' }"
+          :style="{ left: pct(posicionFantasma - 0.5) + '%' }"
           :title="`Próxima posición proyectada: ${posicionFantasma}`"
         />
       </div>

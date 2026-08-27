@@ -1273,7 +1273,8 @@ class GameEngine:
                     "monedas_obtenidas": monedas_obtenidos,
                 },
                 mensaje=f"Colapso estructural: '{recipe.nombre}' se horneó de "
-                        f"emergencia por {record.puntos_totales} pts.",
+                        f"emergencia por {record.puntos_totales} pts y "
+                        f"{monedas_obtenidos} Monedas.",
             )
         else:
             player.archivo_horneado_exitoso.append(record)
@@ -1288,7 +1289,8 @@ class GameEngine:
                     "monedas_obtenidas": monedas_obtenidos,
                 },
                 mensaje=f"Horneado exitoso: '{recipe.nombre}' por "
-                        f"{record.puntos_totales} pts.",
+                        f"{record.puntos_totales} pts y {monedas_obtenidos} Monedas"
+                        + (f" (+{datos_obtenidos} Datos)." if datos_obtenidos else "."),
             )
             # Evaluar gatillo de fin de partida por quinta receta exitosa.
             # (PLAYER_STATE.md §3: len(archivo_horneado_exitoso) >= 5)

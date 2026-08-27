@@ -48,6 +48,7 @@ def test_horneado_manual_emite_evento_no_colapso() -> None:
     slot = manager.accion_B_iniciar_receta(p1, receta)
     slot.posicion_track = receta.zona_optima[0]  # forzar zona optima para el horneado
 
+    datos_antes = p1.datos_investigacion
     idx_antes = len(engine.eventos)
     manager.accion_F_hornear(p1, slot_index=0)
 
@@ -57,6 +58,32 @@ def test_horneado_manual_emite_evento_no_colapso() -> None:
     assert horneados[0].jugador_idx == 0
     assert horneados[0].datos["fue_colapso"] is False
     assert horneados[0].datos["receta_nombre"] == receta.nombre
+    # Zona optima -> +1 Dato de Investigacion, acreditado al jugador.
+    assert horneados[0].datos["datos_generados"] == 1
+    assert p1.datos_investigacion == datos_antes + 1
+
+
+def test_horneado_una_celda_bajo_optima_no_da_datos() -> None:
+    """Frontera exacta que el track del frontend dibujaba mal: una masa en
+    ``zona_optima[0] - 1`` es zona baja para el motor (0 Datos, puntos_baja)."""
+    engine = setup_game(["Alba", "Bruno"])
+    manager = ActionManager(engine)
+    p1 = engine.players[0]
+    receta = p1.carpeta_proyectos[0]
+
+    p1.reserva_harina[receta.harina_base.value] = 100
+    p1.reserva_agua = receta.tokens_agua
+    p1.puntos_accion = 2
+    slot = manager.accion_B_iniciar_receta(p1, receta)
+    slot.posicion_track = receta.zona_optima[0] - 1
+
+    datos_antes = p1.datos_investigacion
+    record = manager.accion_F_hornear(p1, slot_index=0)
+
+    assert record.fue_colapso is False
+    assert record.datos_obtenidos == 0
+    assert record.puntos_base == receta.puntos_baja
+    assert p1.datos_investigacion == datos_antes
 
 
 def test_colapso_estructural_emite_horneado_colapso_y_masa_avanzo() -> None:
