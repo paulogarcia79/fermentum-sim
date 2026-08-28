@@ -216,7 +216,7 @@ def mostrar_mercado(engine: GameEngine) -> None:
     print("  Recetas disponibles:")
     for i, receta in enumerate(market.recetas_visibles):
         if receta is None:
-            print(_c(_C.DIM, f"    [{i}] — ya tomada —"))
+            print(_c(_C.DIM, f"    [{i}] — vacía —"))
         else:
             grado_c = _C.MAGENTA if receta.grado == Grado.AVANZADA else _C.WHITE
             req = ""
@@ -783,6 +783,14 @@ def _reporte_fermentacion(
     _header(f"REPORTE DE FERMENTACIÓN — Día {dia}")
     avance_base = temp // 5
     print(f"  Temperatura: {temp}°C  →  Avance base por turno: {avance_base} casillas\n")
+
+    # Rotación del Mercado Central (evento global de fin de día).
+    descartada = next(
+        (ev for ev in eventos_dia if ev.tipo == EventoTipo.RECETA_DESCARTADA), None
+    )
+    if descartada is not None:
+        print(f"  Mercado: se descartó la receta más antigua: "
+              f"'{descartada.datos['receta_nombre']}'\n")
 
     for i, player in enumerate(players):
         eventos_jugador = [ev for ev in eventos_dia if ev.jugador_idx == i]

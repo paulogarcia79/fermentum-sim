@@ -14,7 +14,7 @@ const mercado = computed(() => store.estado!.market)
     <ul class="lista-recetas">
       <li v-for="(receta, i) in mercado.recetas_visibles" :key="i" class="slot">
         <RecetaCard v-if="receta" :receta="receta" />
-        <span v-else class="vacio">— tomada —</span>
+        <span v-else class="vacio">— vacía —</span>
       </li>
     </ul>
   </section>

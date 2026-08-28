@@ -13,6 +13,7 @@ const ICONOS: Record<string, string> = {
   jefe_asignado: '👑',
   clima_revelado: '⛅',
   mercado_refrescado: '🔄',
+  receta_descartada: '🗑',
   masa_avanzo: '📈',
   horneado: '🍞',
   desgaste: '💧',
