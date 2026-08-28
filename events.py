@@ -34,6 +34,7 @@ class EventoTipo(str, Enum):
     CLIMA_REVELADO = "clima_revelado"
     TENDENCIA_MERCADO = "tendencia_mercado"
     MERCADO_REFRESCADO = "mercado_refrescado"
+    RECETA_DESCARTADA = "receta_descartada"
     MASA_AVANZO = "masa_avanzo"
     HORNEADO = "horneado"
     DESGASTE = "desgaste"

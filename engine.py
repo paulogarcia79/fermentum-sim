@@ -132,9 +132,13 @@ class Market:
       · Posición 0 (izquierda) = carta más nueva (recién incorporada).
       · Posición N-1 (derecha) = carta más antigua (próxima a descartarse).
 
-    Protocolo de Refresco (Fase I — CORE_MECHANICS.md §2):
-      · Recetas: elimina la más antigua (derecha), desplaza el resto a la derecha
-        y revela una nueva carta a la izquierda. Si el mazo se agota, baraja el descarte.
+    Rotación del mercado de recetas (CORE_MECHANICS.md §2), en dos mitades:
+      · **Fin del día (Fase III)**: ``descartar_receta_mas_antigua()`` retira la
+        carta real más a la derecha y la manda al descarte.
+      · **Inicio del día (Fase I)**: ``protocolo_refresco()`` compacta las cartas
+        supervivientes y rellena todos los huecos hasta ``NUM_RECIPE_SLOTS``,
+        revelando cartas nuevas a la izquierda. Si el mazo se agota, baraja el
+        descarte como mazo nuevo.
 
     Bolsa de Harinas y Mercado de Tendencias (GDD v0.0.2, Módulo III §C / Módulo II §6):
       · ``posiciones_harina``: 3 visores compartidos (Blanca/Integral/Centeno), cada uno
@@ -205,36 +209,65 @@ class Market:
     # Protocolo de Refresco
     # ------------------------------------------------------------------
 
-    def protocolo_refresco(self) -> None:
+    def protocolo_refresco(self) -> int:
         """
-        Ejecuta el Protocolo de Refresco del mercado central (Fase I).
+        Reabastece el mercado de recetas al inicio del día (Fase I).
 
-        Reglas (CORE_MECHANICS.md §2, Fase I):
-          - Recetas: descarta la más antigua (extremo derecho), desplaza las
-            restantes a la derecha y revela una nueva carta a la izquierda.
-            Si el mazo se agota, baraja el descarte como nuevo mazo.
+        Reglas (CORE_MECHANICS.md §2, Fase I) — solo rellena, no descarta (el
+        descarte de la carta más antigua ocurre al final del día anterior, ver
+        ``descartar_receta_mas_antigua``):
+          - Compacta las cartas supervivientes conservando su orden
+            (más nueva → más antigua).
+          - Revela cartas nuevas del mazo, a la izquierda, hasta volver a tener
+            ``NUM_RECIPE_SLOTS`` recetas visibles. Si el mazo se agota, baraja el
+            descarte como nuevo mazo. Si mazo y descarte quedan vacíos, el mercado
+            puede quedar por debajo del máximo (huecos ``None`` al extremo derecho).
+
+        Returns:
+            Número de cartas nuevas reveladas en esta llamada.
         """
-        # --- Refresco de Recetas ---
+        supervivientes: List[Recipe] = [
+            r for r in self.recetas_visibles if r is not None
+        ]
 
-        # 1. Descartar la carta más antigua (posición derecha = índice -1).
-        #    Si el slot estaba vacío (ya tomado), se elimina silenciosamente.
-        if self.recetas_visibles:
-            oldest: Optional[Recipe] = self.recetas_visibles.pop()  # rightmost
-            if oldest is not None:
-                self.descarte_recetas.append(oldest)
+        nuevas: List[Recipe] = []
+        for _ in range(NUM_RECIPE_SLOTS - len(supervivientes)):
+            if not self.mazo_recetas and self.descarte_recetas:
+                self.mazo_recetas = self.descarte_recetas[:]
+                self.descarte_recetas = []
+                random.shuffle(self.mazo_recetas)
+            if not self.mazo_recetas:
+                break
+            nuevas.append(self.mazo_recetas.pop(0))
 
-        # 2. Obtener nueva carta del mazo (barajando descarte si es necesario).
-        if not self.mazo_recetas and self.descarte_recetas:
-            self.mazo_recetas = self.descarte_recetas[:]
-            self.descarte_recetas = []
-            random.shuffle(self.mazo_recetas)
+        # Nuevas a la izquierda (más nuevas); supervivientes a su derecha; los
+        # huecos que no se pudieron rellenar quedan al extremo derecho (más
+        # antiguo), que es justo lo próximo a descartarse.
+        combinadas: List[Optional[Recipe]] = [*nuevas, *supervivientes]
+        combinadas += [None] * (NUM_RECIPE_SLOTS - len(combinadas))
+        self.recetas_visibles = combinadas
 
-        nueva_carta: Optional[Recipe] = (
-            self.mazo_recetas.pop(0) if self.mazo_recetas else None
-        )
+        return len(nuevas)
 
-        # 3. Insertar la nueva carta en la posición izquierda (más nueva).
-        self.recetas_visibles.insert(0, nueva_carta)
+    def descartar_receta_mas_antigua(self) -> Optional[Recipe]:
+        """
+        Descarta la receta visible más antigua del mercado (fin del día, Fase III).
+
+        Recorre ``recetas_visibles`` desde la derecha (más antigua) hasta la
+        primera carta real, la retira (el slot queda ``None``) y la manda a
+        ``descarte_recetas``. La compactación de los huecos la hace el
+        ``protocolo_refresco`` del día siguiente.
+
+        Returns:
+            La receta descartada, o ``None`` si el mercado no tiene ninguna carta.
+        """
+        for i in range(len(self.recetas_visibles) - 1, -1, -1):
+            receta: Optional[Recipe] = self.recetas_visibles[i]
+            if receta is not None:
+                self.recetas_visibles[i] = None
+                self.descarte_recetas.append(receta)
+                return receta
+        return None
 
     # ------------------------------------------------------------------
     # Operaciones del Mercado (consumidas por actions.py)
@@ -689,7 +722,9 @@ class GameEngine:
              Si el mazo se agota, se activa el gatillo de fin de partida.
           4. **Mercado de Tendencias**: roba una carta y desplaza los 3 visores
              de la Bolsa de Harinas simultáneamente.
-          5. **Protocolo de Refresco**: actualiza el mercado de recetas.
+          5. **Protocolo de Refresco**: reabastece el mercado de recetas hasta
+             ``NUM_RECIPE_SLOTS``, rellenando los huecos dejados por Acción G y
+             por el descarte de fin del día anterior. Ya no descarta aquí.
         """
         # Paso 1: Determinar Investigador Jefe
         if self._environment.dia_actual == 1 and self._orden_inicial_iniciativa is not None:
@@ -743,11 +778,17 @@ class GameEngine:
             mensaje=f"Tendencia de mercado: harinas se mueven {modificador_tendencia:+d}.",
         )
 
-        # Paso 5: Protocolo de Refresco del mercado
-        self._market.protocolo_refresco()
+        # Paso 5: Protocolo de Refresco del mercado (reabastece a NUM_RECIPE_SLOTS;
+        # el descarte de la carta más antigua ocurrió al final del día anterior).
+        reveladas: int = self._market.protocolo_refresco()
         self._emit(
             EventoTipo.MERCADO_REFRESCADO,
-            mensaje="El mercado central se refrescó.",
+            datos={"reveladas": reveladas},
+            mensaje=(
+                f"El mercado se reabasteció con {reveladas} receta(s)."
+                if reveladas
+                else "El mercado central se refrescó."
+            ),
         )
 
     def _determinar_investigador_jefe(self) -> Player:
@@ -1005,6 +1046,8 @@ class GameEngine:
         """
         Resuelve la Fase III (Fermentación): avance de masas, colapsos
         automáticos y desgaste metabólico (``fase_III_fermentacion``),
+        descarta la receta más antigua del Mercado Central (rotación de fin del
+        día — el reabastecimiento ocurre en la Fase I del día siguiente),
         evalúa el fin de partida e incrementa el contador de días.
 
         Deja el motor en ``Fase.TERMINADA`` si la partida concluyó, o de
@@ -1029,6 +1072,21 @@ class GameEngine:
             )
 
         self.fase_III_fermentacion()
+
+        # Rotación del Mercado: al final del día se descarta la receta más antigua
+        # (la Fase I del día siguiente reabastece hasta NUM_RECIPE_SLOTS).
+        descartada: Optional[Recipe] = self._market.descartar_receta_mas_antigua()
+        if descartada is not None:
+            self._emit(
+                EventoTipo.RECETA_DESCARTADA,
+                datos={
+                    "receta_id": descartada.id,
+                    "receta_nombre": descartada.nombre,
+                },
+                mensaje=f"El mercado descartó la receta más antigua: "
+                        f"'{descartada.nombre}'.",
+            )
+
         fin: bool = self._evaluar_fin_de_juego()
         self._environment.dia_actual += 1
 
