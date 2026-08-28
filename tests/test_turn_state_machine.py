@@ -105,3 +105,20 @@ def test_pasar_turno_renuncia_tambien_a_acciones_gratuitas() -> None:
         if candidato is None:
             break
         engine.terminar_turno_actual()
+
+
+def test_turno_orden_expone_la_secuencia_del_dia_como_copia() -> None:
+    """engine.turno_orden: indices en players, orden de juego, [0] = Jefe.
+    Debe ser una copia defensiva (mutarla no afecta al motor)."""
+    engine = setup_game(["Ada", "Chen", "Bo"])
+    engine.iniciar_dia()
+
+    orden = engine.turno_orden
+    assert sorted(orden) == [0, 1, 2]
+    assert orden[0] == engine.players.index(engine.jefe_investigador)
+    assert engine.players[orden[0]] is engine.jugador_activo  # el Jefe abre la Fase II
+
+    activo_antes = engine.jugador_activo
+    orden.reverse()  # mutar la lista devuelta
+    assert engine.turno_orden[0] == engine.players.index(engine.jefe_investigador)
+    assert engine.jugador_activo is activo_antes

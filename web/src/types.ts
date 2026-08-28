@@ -130,6 +130,9 @@ export interface GameStateView {
   turno_nonce: number
   jugador_en_turno_idx: number | null
   jefe_investigador_idx: number | null
+  /** Índices de jugador en orden de juego del día ([0] = Investigador Jefe).
+   * Ver OrdenTurnoPanel.vue. Puede estar vacío antes del primer día. */
+  turno_orden: number[]
   acciones_disponibles: AccionDisponible[][]
   ranking: { posicion: number; player_idx: number }[]
   /** Índices de jugador que confirmaron terminar la partida antes de

@@ -245,7 +245,10 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   `puntos_maestria_final`/`calcular_ranking_final` (both `@property`/methods, not dataclass
   fields, so `dataclasses.asdict` wouldn't include them — computed here instead of in the
   frontend, same reasoning as action availability: don't duplicate `CORE_MECHANICS.md` §3's
-  scoring formula in TypeScript). `app.py` wires it all into routes and maps the `FermentumError` /
+  scoring formula in TypeScript) — plus the engine turn/phase fields `fase_actual`,
+  `turno_nonce`, `jugador_en_turno_idx`, `jefe_investigador_idx` and `turno_orden`
+  (`GameEngine.turno_orden`: the full day's play-order list of player indices, `[0]` = Jefe;
+  public, unredacted; holds the last day's order after game over). `app.py` wires it all into routes and maps the `FermentumError` /
   `server/errors.py` `RoomError` hierarchies to HTTP status codes via one `isinstance` walk.
   Nothing in `models.py`/`engine.py`/`actions.py`/`bootstrap.py`/`events.py`/`serialization.py`
   imports anything from `server/` — the dependency only goes one way.
@@ -303,7 +306,10 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   richer board (`MiTablero.vue`, reorganized into labeled zones: resources as icon tiles,
   0-6 pip Vitalidad/Acidez tracks matching the PA-pip visual language, an Incubadora/Cámara
   B/Módulo Analítico upgrade-slot row showing locked/unlocked state, and the hand/stations as
-  `RecetaCard`s). `RecetaCard.vue` (superseding the earlier `RecetaDetalle.vue`) renders a recipe
+  `RecetaCard`s). The side column also carries `OrdenTurnoPanel.vue` — a vertical "Track de
+  Orden de Turno" (numbered rows, a per-player-color meeple via `IconoPeon.vue`, `👑 Jefe` on
+  row 1, the active player's row accented) built straight from the state view's `turno_orden`,
+  mirroring the physical board component. `RecetaCard.vue` (superseding the earlier `RecetaDetalle.vue`) renders a recipe
   as a small card — a per-recipe bread icon (`IconoPan.vue`, one hand-authored flat SVG shape per
   recipe `id`, generic fallback for any future recipe without one yet), a flour/water requirement
   row (`IconoHarina.vue`, `IconoAgua.vue`), and a point-scale strip across the 1-20 track (same

@@ -18,8 +18,11 @@ Construye el dict JSON que se envía a los clientes HTTP a partir de
   2. **Campos de turno/fase**: añade lo que un cliente necesita para saber
      de quién es el turno y si su propia solicitud podría estar basada en
      un estado obsoleto (``fase_actual``, ``turno_nonce``,
-     ``jugador_en_turno_idx``, ``jefe_investigador_idx``) — datos que viven
-     en el motor, no en las entidades de dominio serializables.
+     ``jugador_en_turno_idx``, ``jefe_investigador_idx``, ``turno_orden``) —
+     datos que viven en el motor, no en las entidades de dominio
+     serializables. ``turno_orden`` es la secuencia completa de índices de
+     jugador en orden de juego del día (``[0]`` = Investigador Jefe);
+     información pública, sin redacción.
   3. **Disponibilidad de acciones**: ``acciones_disponibles``, una lista
      por jugador (ver ``disponibilidad.py``) para que un cliente pueda
      habilitar/deshabilitar sus propios botones sin reimplementar ninguna
@@ -77,6 +80,10 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
         engine.players.index(jugador_activo) if jugador_activo is not None else None
     )
     estado["jefe_investigador_idx"] = engine.players.index(jefe) if jefe is not None else None
+    # Secuencia completa de turno del día (índices en players, [0] = Jefe).
+    # Tras el fin de partida conserva el orden del último día — inofensivo:
+    # el panel de orden solo se muestra mientras se juega.
+    estado["turno_orden"] = engine.turno_orden
     estado["acciones_disponibles"] = [
         acciones_disponibles(engine, jugador) for jugador in engine.players
     ]

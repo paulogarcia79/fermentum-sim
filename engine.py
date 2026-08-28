@@ -578,6 +578,19 @@ class GameEngine:
         return self._players[self._turno_orden[self._turno_cursor]]
 
     @property
+    def turno_orden(self) -> List[int]:
+        """
+        Índices en ``self.players`` en el orden de juego del día actual
+        (``[0]`` = Investigador Jefe en todas las ramas: Día 1 por Iniciativa
+        de Patrocinio, Día 2+ como ``[jefe] + resto`` en orden de inscripción).
+
+        Lo llena ``_preparar_fase_II``; entre ``resolver_fase_III`` y el
+        siguiente ``iniciar_dia`` conserva el orden del día anterior. Copia
+        defensiva, igual que ``eventos``.
+        """
+        return list(self._turno_orden)
+
+    @property
     def turno_nonce(self) -> int:
         """
         Contador que se incrementa cada vez que se cierra una visita de

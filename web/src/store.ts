@@ -32,6 +32,9 @@ interface Store {
   /** True si la carta de clima del dia actual todavia no fue reconocida
    * por el jugador en esta pestaña -- ver EventoClimaticoModal.vue. */
   climaPendiente: boolean
+  /** True si otro jugador pidio terminar la partida antes de tiempo y este
+   * jugador todavia no votó ni descartó el aviso -- ver FinAnticipadoModal.vue. */
+  finAnticipadoPendiente: boolean
 }
 
 export const store: Store = reactive({
@@ -43,6 +46,7 @@ export const store: Store = reactive({
   cargando: false,
   reporteDiaPendiente: null,
   climaPendiente: false,
+  finAnticipadoPendiente: false,
 })
 
 /**
@@ -53,6 +57,15 @@ export const store: Store = reactive({
  * Día 1 también dispare el modal, no solo las de días siguientes.
  */
 let ultimaCartaClimaId: string | null | undefined = undefined
+
+/**
+ * Conteo de `votos_fin_anticipado` en el que este jugador descartó por
+ * última vez el aviso de fin anticipado (o -1 si nunca lo descartó). No
+ * reactivo -- solo lo lee aplicarEstado() para decidir si vuelve a mostrar
+ * el modal. Volver a mostrarlo solo si el conteo CRECIÓ (otro jugador más
+ * se sumó al pedido); nunca insistir con el mismo conteo ya descartado.
+ */
+let finAnticipadoDescartadoEnConteo = -1
 
 /**
  * Ultimo `jugador_en_turno_idx` observado -- no reactivo, solo para
@@ -136,7 +149,9 @@ export function cerrarSesion(): void {
   store.error = null
   store.reporteDiaPendiente = null
   store.climaPendiente = false
+  store.finAnticipadoPendiente = false
   ultimaCartaClimaId = undefined
+  finAnticipadoDescartadoEnConteo = -1
   jugadorEnTurnoAnterior = null
   borrarSesionLocal()
 }
@@ -208,6 +223,20 @@ export function aplicarEstado(nuevo: GameStateView): void {
   }
   jugadorEnTurnoAnterior = nuevo.jugador_en_turno_idx
 
+  // Otro jugador pidió terminar la partida antes de tiempo: si yo todavía no
+  // voté (ni descarté el aviso a este conteo), mostrar el modal de confirmación.
+  const votos = nuevo.votos_fin_anticipado
+  const otrosVotaron = votos.some((i) => i !== miIndice)
+  const yoVote = miIndice !== undefined && votos.includes(miIndice)
+  if (
+    !nuevo.partida_terminada &&
+    otrosVotaron &&
+    !yoVote &&
+    votos.length > finAnticipadoDescartadoEnConteo
+  ) {
+    store.finAnticipadoPendiente = true
+  }
+
   store.estado = nuevo
 }
 
@@ -217,6 +246,15 @@ export function reconocerReporteDia(): void {
 
 export function reconocerClima(): void {
   store.climaPendiente = false
+}
+
+/** El jugador descartó el aviso de fin anticipado ("Ahora no"). No vuelve a
+ * aparecer hasta que otro jugador más se sume al pedido (el conteo crezca). */
+export function reconocerFinAnticipado(): void {
+  store.finAnticipadoPendiente = false
+  if (store.estado) {
+    finAnticipadoDescartadoEnConteo = store.estado.votos_fin_anticipado.length
+  }
 }
 
 /**
@@ -233,7 +271,9 @@ function volverAVistaDeLobby(): void {
   store.ultimoSeqVisto = 0
   store.reporteDiaPendiente = null
   store.climaPendiente = false
+  store.finAnticipadoPendiente = false
   ultimaCartaClimaId = undefined
+  finAnticipadoDescartadoEnConteo = -1
   jugadorEnTurnoAnterior = null
 }
 

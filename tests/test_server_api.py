@@ -67,6 +67,9 @@ def test_partida_completa_de_2_jugadores_por_http() -> None:
     # PLAYER_STATE.md §2): el desempate de _determinar_investigador_jefe
     # recae en el primero inscrito.
     assert estado["jugador_en_turno_idx"] == 0
+    # turno_orden: secuencia completa del dia, [0] = Investigador Jefe.
+    assert estado["turno_orden"][0] == estado["jefe_investigador_idx"]
+    assert sorted(estado["turno_orden"]) == list(range(len(estado["players"])))
     assert "mazo_clima" not in estado["environment"]  # redaccion: solo el conteo
     assert estado["environment"]["cartas_clima_restantes"] > 0
     assert "mazo_recetas" not in estado["market"]
@@ -109,6 +112,8 @@ def test_partida_completa_de_2_jugadores_por_http() -> None:
     assert estado["environment"]["dia_actual"] == 2
     assert estado["fase_actual"] == "fase_ii"
     assert estado["jugador_en_turno_idx"] is not None
+    assert estado["turno_orden"][0] == estado["jefe_investigador_idx"]
+    assert sorted(estado["turno_orden"]) == list(range(len(estado["players"])))
 
     # -- El registro de eventos cubre ambos dias --
     r = cliente.get(f"/games/{room_id}/events?since=0", headers={"X-Player-Token": token_alba})

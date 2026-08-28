@@ -6,11 +6,13 @@ import MercadoPanel from './MercadoPanel.vue'
 import BolsaHarinasPanel from './BolsaHarinasPanel.vue'
 import MazoTendenciasPanel from './MazoTendenciasPanel.vue'
 import MiTablero from './MiTablero.vue'
+import OrdenTurnoPanel from './OrdenTurnoPanel.vue'
 import TablerosOponentes from './TablerosOponentes.vue'
 import BarraAcciones from './BarraAcciones.vue'
 import RegistroEventos from './RegistroEventos.vue'
 import FermentationReportModal from './FermentationReportModal.vue'
 import EventoClimaticoModal from './EventoClimaticoModal.vue'
+import FinAnticipadoModal from './FinAnticipadoModal.vue'
 import RankingView from './RankingView.vue'
 
 const estado = computed(() => store.estado!)
@@ -28,6 +30,9 @@ async function onForzarPase() {
 }
 
 const yaConfirmeFinAnticipado = computed(() => estado.value.votos_fin_anticipado.includes(miIndice.value))
+const nombresPidieronFin = computed(() =>
+  estado.value.votos_fin_anticipado.map((i) => estado.value.players[i]?.nombre ?? `Jugador ${i + 1}`),
+)
 const confirmandoFin = ref(false)
 async function onConfirmarFin() {
   confirmandoFin.value = true
@@ -57,7 +62,10 @@ onUnmounted(() => detenerTransmisionEnVivo())
 
     <div v-if="!estado.partida_terminada" class="fin-anticipado">
       <span class="tally">
-        {{ estado.votos_fin_anticipado.length }}/{{ estado.players.length }} confirmaron terminar antes de tiempo
+        <template v-if="nombresPidieronFin.length > 0">
+          {{ nombresPidieronFin.join(', ') }} pidió terminar antes de tiempo ·
+        </template>
+        {{ estado.votos_fin_anticipado.length }}/{{ estado.players.length }} confirmaron
       </span>
       <span v-if="yaConfirmeFinAnticipado" class="ya-confirmaste">✓ Ya confirmaste</span>
       <button v-else class="confirmar-fin" :disabled="confirmandoFin" @click="onConfirmarFin">
@@ -98,6 +106,7 @@ onUnmounted(() => detenerTransmisionEnVivo())
         </div>
 
         <div class="columna-lateral">
+          <OrdenTurnoPanel />
           <TablerosOponentes />
           <RegistroEventos />
         </div>
@@ -106,6 +115,7 @@ onUnmounted(() => detenerTransmisionEnVivo())
 
     <FermentationReportModal v-if="store.reporteDiaPendiente !== null" />
     <EventoClimaticoModal v-else-if="store.climaPendiente" />
+    <FinAnticipadoModal v-else-if="store.finAnticipadoPendiente" />
   </div>
 </template>
 
