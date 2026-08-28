@@ -172,8 +172,9 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   `actions` and displays the result.
 - **`events.py`** — `GameEvent`/`EventoTipo`/`EventSink`: a structured log of automatic,
   no-player-input state changes (chief-researcher assignment, climate reveal, market refresh,
-  mass advance, structural collapse, every bake — manual or auto-collapse, both go through
-  `resolver_horneado` — metabolic decay, contamination onset, game over with its reason).
+  end-of-day discard of the market's oldest recipe, mass advance, structural collapse, every
+  bake — manual or auto-collapse, both go through `resolver_horneado` — metabolic decay,
+  contamination onset, game over with its reason).
   `GameEngine` always keeps the full log (`engine.eventos`) and optionally forwards each event,
   at emission time, to an injected `event_sink` — this is what `server/sessions.py`'s
   `GameSession.difundir_evento` plugs into (Milestone 5) to push events to connected SSE clients
@@ -376,11 +377,13 @@ apply an action.
 ### Core game loop, in one paragraph
 
 Each "Día de Laboratorio" is Phase I (reveal climate card, adjust `temperatura_actual`, assign
-Investigador Jefe, refresh the market) → Phase II (round-robin, 2 PA per player, one action per
+Investigador Jefe, refill the recipe market back to `NUM_RECIPE_SLOTS`=4 — `Market.protocolo_refresco`,
+refill-only, no discard) → Phase II (round-robin, 2 PA per player, one action per
 visit until no player has PA or an unused free action — see the turn-economy rule above) → Phase
 III (every active `FermentationSlot` advances by
 `temperatura_actual/5 + dado_inoculo + modificador_incubadora`; overshoot into
 `zona_sobrefermentada` auto-bakes at 0 PA cost with a penalty; then all players lose 1 vitality,
-2 if "Aletargamiento Invernal" is active). The game ends when the climate deck is exhausted or
+2 if "Aletargamiento Invernal" is active; then the market's oldest visible recipe is discarded —
+`Market.descartar_receta_mas_antigua`, emits `RECETA_DESCARTADA`). The game ends when the climate deck is exhausted or
 any player successfully bakes their 5th recipe (collapsed bakes don't count), then scores per
 `CORE_MECHANICS.md` §3.

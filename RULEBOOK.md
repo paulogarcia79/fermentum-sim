@@ -132,7 +132,8 @@ estrictas, siempre en este orden:
 
 1. **Fase I: Ambiente** — se preparan las variables globales del día.
 2. **Fase II: Acción** — los jugadores usan sus Puntos de Acción.
-3. **Fase III: Fermentación** — resolución automática de las masas y desgaste del cultivo base.
+3. **Fase III: Fermentación** — resolución automática de las masas, desgaste del cultivo base y
+   rotación del Mercado de Recetas (se descarta la más antigua).
 
 ---
 
@@ -177,11 +178,13 @@ como mazo nuevo.
 
 ### 5.4 Protocolo de Refresco del Mercado de Recetas
 
-Se descarta la carta situada en la estación más a la derecha (la más antigua). Todas las cartas
-restantes se desplazan hacia la derecha para cubrir los espacios vacíos (incluidos los huecos
-dejados por jugadores en la ronda anterior), y se revela una nueva carta del mazo para ocupar el
-espacio que quede libre en el extremo izquierdo. Si el mazo de recetas se agota, se baraja su
-descarte como mazo nuevo.
+Este paso **reabastece**, no descarta (el descarte de la carta más antigua ocurre al final de la
+Fase III del día anterior — ver §9). Las cartas supervivientes se desplazan hacia la derecha para
+cubrir los espacios vacíos (los huecos dejados por jugadores con la Acción G y el hueco que dejó
+el descarte de fin de día), y se revelan cartas nuevas del mazo por el extremo izquierdo hasta
+completar de nuevo las 4 estaciones. Si el mazo de recetas se agota, se baraja su descarte como
+mazo nuevo; si mazo y descarte quedan vacíos, el mercado puede quedar temporalmente por debajo de
+4 cartas.
 
 ---
 
@@ -311,7 +314,8 @@ encuentre el marcador:
 descartar una antes de investigar la nueva); además, 1 vez por día (por espacio de acción).
 Selecciona una carta de receta de cualquiera de las 4 estaciones visibles del Mercado Central y la
 coloca boca arriba, en estado inactivo, en la Carpeta de Proyectos propia. El espacio del mercado
-que se libera queda vacío hasta el Protocolo de Refresco del día siguiente.
+que se libera queda vacío hasta el reabastecimiento del Protocolo de Refresco al inicio del día
+siguiente.
 
 #### Simposio Técnico
 
@@ -427,6 +431,13 @@ momento (por desgaste, por un evento, o al inicio del turno), sufre una penaliza
 hasta ejecutar un Protocolo de Emergencia (H o I). Cada episodio de Contaminación aplica su propia
 penalización de −3 puntos — si un jugador cae en Contaminación más de una vez durante la partida,
 las penalizaciones se acumulan.
+
+### 9.4 Rotación del Mercado de Recetas
+
+Al cerrar el día, se descarta la carta de receta situada en la estación más a la derecha del
+Mercado Central (la más antigua). Si esa estación ya estaba vacía por una Acción G, se descarta la
+siguiente carta real hacia la izquierda. El hueco que deja se rellena en el Protocolo de Refresco
+del día siguiente (§5.4).
 
 ---
 

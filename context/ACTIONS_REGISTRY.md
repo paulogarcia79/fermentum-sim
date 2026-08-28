@@ -73,7 +73,7 @@
 * **Costo:** 1 PA.
 * **Límites:** Máximo 3 recetas inactivas (si está llena, debe descartar una previa); además, 1 vez por día (por espacio de acción — ver §1).
 * **Efecto:** Selecciona 1 Carta de Receta del Mercado Central y la coloca boca arriba en la "Carpeta de Proyectos" (estado inactivo).
-* **Mercado:** El espacio central queda vacío hasta el "Protocolo de Refresco" del día siguiente.
+* **Mercado:** El espacio central queda vacío hasta que el "Protocolo de Refresco" del inicio del día siguiente reabastezca el Mercado Central a 4 recetas.
 
 ### Simposio Técnico (Generación de Datos)
 * **Costo:** 1 PA.
