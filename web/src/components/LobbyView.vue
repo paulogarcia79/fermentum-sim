@@ -397,7 +397,10 @@ label {
   color: var(--color-texto-tenue);
 }
 
-input {
+/* Solo los campos de texto del formulario (nombre / código de sala). El
+   :not() es necesario: sin el, un checkbox tambien heredaria width: 100% y
+   se comeria toda la fila, empujando su etiqueta fuera del panel. */
+input:not([type='checkbox']) {
   display: block;
   width: 100%;
   margin-top: 0.25rem;
@@ -423,6 +426,12 @@ input {
 }
 
 .campo-alerta input {
+  /* `width: auto` explicito, igual que `.campo-checkbox input` en App.vue:
+     la regla de arriba ya no le aplica, pero dejarlo escrito documenta el
+     tamaño nativo y evita que cualquier otra regla vuelva a estirarla.
+     flex-shrink: 0 para que la casilla no se aplaste cuando la etiqueta
+     ocupa dos lineas. */
+  width: auto;
   margin-top: 0.15rem;
   flex-shrink: 0;
   cursor: pointer;
