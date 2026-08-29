@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { despacharAccion, store } from '../../store'
 import ModalShell from '../ModalShell.vue'
+import { fmtAgua, fmtHarina, pctAgua } from '../../data/unidades'
 import type { TipoHarina } from '../../types'
 
 const emit = defineEmits<{ cerrar: [] }>()
@@ -41,7 +42,9 @@ async function confirmar() {
 
 <template>
   <ModalShell titulo="Alimentar Cultivo (0 PA)" :error="error" @cerrar="emit('cerrar')">
-    <p class="info-linea">+1 Vitalidad por 10% de harina, +1 Acidez por 2 tokens de agua. Una vez por día.</p>
+    <p class="info-linea">
+      +1 Vitalidad por 1 token de Harina (10%), +1 Acidez por 2 tokens de Agua ({{ pctAgua(2) }}%). Una vez por día.
+    </p>
 
     <label class="campo-checkbox">
       <input type="checkbox" v-model="usarHarina" :disabled="tiposConHarina.length === 0" />
@@ -50,13 +53,13 @@ async function confirmar() {
     <label v-if="usarHarina" class="campo">
       Tipo de harina
       <select v-model="tipoHarina">
-        <option v-for="t in tiposConHarina" :key="t" :value="t">{{ t }} ({{ yo.reserva_harina[t] }}%)</option>
+        <option v-for="t in tiposConHarina" :key="t" :value="t">{{ t }} — {{ fmtHarina(yo.reserva_harina[t]) }}</option>
       </select>
     </label>
 
     <label class="campo-checkbox">
       <input type="checkbox" v-model="usarAgua" :disabled="yo.reserva_agua < 2" />
-      Usar agua (+1 Acidez) — {{ yo.reserva_agua }} tokens disponibles
+      Usar agua (+1 Acidez) — {{ fmtAgua(yo.reserva_agua) }} disponibles
     </label>
 
     <template #acciones>

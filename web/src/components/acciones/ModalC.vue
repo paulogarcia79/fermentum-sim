@@ -13,12 +13,14 @@ import ModalShell from '../ModalShell.vue'
 import PistaPrecioHarina from '../PistaPrecioHarina.vue'
 import TablaPrecioAgua from '../TablaPrecioAgua.vue'
 import {
+  AGUA_TOKENS_POR_LOTE,
   LOTES_AGUA_VALIDOS,
   PRECIO_AGUA,
   precioCompraHarina,
   precioVentaHarina,
   type LoteAguaPct,
 } from '../../data/preciosHarina'
+import { fmtAgua, fmtHarina, fmtTokensHarina } from '../../data/unidades'
 import type { TipoHarina } from '../../types'
 
 const emit = defineEmits<{ cerrar: [] }>()
@@ -91,17 +93,23 @@ async function confirmar() {
 
     <div v-for="tipo in TIPOS_HARINA" :key="tipo" class="campo">
       <PistaPrecioHarina :tipo="tipo" />
+      <p class="info-linea">En reserva: {{ fmtHarina(yo.reserva_harina[tipo]) }}</p>
       <select v-model="operacionHarina[tipo]">
         <option value="">— sin transacción —</option>
-        <option value="comprar">Comprar — {{ precioCompraHarina(tipo, mercado.posiciones_harina[tipo]) }} Monedas</option>
+        <option value="comprar">
+          Comprar +{{ fmtTokensHarina(100) }} (100%) — {{ precioCompraHarina(tipo, mercado.posiciones_harina[tipo]) }}
+          Monedas
+        </option>
         <option value="vender" :disabled="yo.reserva_harina[tipo] < 100">
-          Vender — {{ precioVentaHarina(tipo, mercado.posiciones_harina[tipo]) }} Monedas
+          Vender −{{ fmtTokensHarina(100) }} (100%) — {{ precioVentaHarina(tipo, mercado.posiciones_harina[tipo]) }}
+          Monedas
         </option>
       </select>
     </div>
 
     <div class="campo">
       <TablaPrecioAgua />
+      <p class="info-linea">En reserva: {{ fmtAgua(yo.reserva_agua) }} de hidratación</p>
       <select v-model="operacionAgua">
         <option value="">— sin transacción —</option>
         <option value="comprar">Comprar lote</option>
@@ -111,7 +119,7 @@ async function confirmar() {
       Tamaño de lote
       <select v-model.number="loteAgua">
         <option v-for="lote in LOTES_AGUA_VALIDOS" :key="lote" :value="lote">
-          {{ lote }}% — {{ precioAgua(lote) }} Monedas
+          {{ AGUA_TOKENS_POR_LOTE[lote] }} ({{ lote }}%) — {{ precioAgua(lote) }} Monedas
         </option>
       </select>
     </label>

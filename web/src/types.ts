@@ -96,6 +96,10 @@ export interface Player {
    * ahora -- el marcador "en vivo". Inyectado por server/views.py, igual que
    * puntos_maestria_final. */
   puntos_horneados: number
+  /** Insumos sin usar contados como en la regla de desperdicio (-1 PM por cada 3,
+   * CORE_MECHANICS.md 3.4): tokens de harina del 10% + tokens de agua del 5%,
+   * sumados 1:1. Lo calcula el servidor (Player.total_tokens_recursos). */
+  total_tokens_recursos: number
   /** Vitalidad que tendra este jugador tras el desgaste de esta noche (Fase III).
    * La calcula el servidor (engine.vitalidad_prevista): la formula del desgaste
    * -- incluida la exencion por Criopreservacion y el -2 de Aletargamiento

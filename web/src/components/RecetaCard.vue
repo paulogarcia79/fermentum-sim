@@ -16,6 +16,7 @@ import type { Recipe, TecnologiaID } from '../types'
 import IconoPan from './IconoPan.vue'
 import IconoHarina from './IconoHarina.vue'
 import IconoAgua from './IconoAgua.vue'
+import { PCT_POR_TOKEN_HARINA, fmtTokensHarina, tokensHarina } from '../data/unidades'
 import EscalaAcidez from './EscalaAcidez.vue'
 import TablaRendimiento from './TablaRendimiento.vue'
 
@@ -74,11 +75,16 @@ const detalleAbierto = ref(false)
       </div>
 
       <div class="requisitos">
-        <span class="req">
-          <span class="icono-req"><IconoHarina :tipo="receta.harina_base" /></span> 1
+        <span
+          class="req"
+          :title="`${fmtTokensHarina(100)} de Harina ${receta.harina_base} del ${PCT_POR_TOKEN_HARINA}% = 100% (una bolsa entera)`"
+        >
+          <span class="icono-req"><IconoHarina :tipo="receta.harina_base" /></span> {{ tokensHarina(100) }}
+          <span class="unidad-secundaria">(100%)</span>
         </span>
-        <span class="req">
+        <span class="req" :title="`${receta.tokens_agua} tokens de Agua = ${receta.hidratacion_pct}% de hidratación`">
           <span class="icono-req"><IconoAgua /></span> {{ receta.tokens_agua }}
+          <span class="unidad-secundaria">({{ receta.hidratacion_pct }}%)</span>
         </span>
       </div>
 
@@ -100,9 +106,12 @@ const detalleAbierto = ref(false)
 
       <div class="tooltip" role="tooltip">
         <p>
-          Requiere: 1 Harina {{ receta.harina_base }} (100%) + {{ receta.tokens_agua }} tokens de Agua ({{
-            receta.hidratacion_pct
-          }}% hidratación)<template v-if="receta.req_tecnologico"> · Requiere {{ receta.req_tecnologico }}</template>
+          Requiere: {{ fmtTokensHarina(100) }} de Harina {{ receta.harina_base }} (100%) +
+          {{ receta.tokens_agua }} tokens de Agua ({{ receta.hidratacion_pct }}% hidratación)<template
+            v-if="receta.req_tecnologico"
+          >
+            · Requiere {{ receta.req_tecnologico }}</template
+          >
         </p>
         <p>Bono de sabor: Acidez ∈ {{ receta.acidez_diana.join(', ') }} al iniciar → +{{ receta.bono_sabor_pts }} pts</p>
         <p>
@@ -130,11 +139,13 @@ const detalleAbierto = ref(false)
           <div class="formula-datos">
             <div class="dato-formula">
               <span class="icono-dato"><IconoHarina :tipo="receta.harina_base" /></span>
-              1x Harina {{ receta.harina_base }}
+              {{ fmtTokensHarina(100) }} de Harina {{ receta.harina_base }}
+              <span class="unidad-secundaria">(100%)</span>
             </div>
             <div class="dato-formula">
               <span class="icono-dato"><IconoAgua /></span>
-              {{ receta.hidratacion_pct }}% Hidratación
+              {{ receta.tokens_agua }} tokens de Agua
+              <span class="unidad-secundaria">({{ receta.hidratacion_pct }}% de hidratación)</span>
             </div>
             <div class="pips-agua">
               <span v-for="n in receta.tokens_agua" :key="n" class="pip-agua" />

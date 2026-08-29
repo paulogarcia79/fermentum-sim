@@ -7,6 +7,7 @@
 import { ref } from 'vue'
 import { despacharAccion } from '../../store'
 import ModalShell from '../ModalShell.vue'
+import { fmtTokensHarina, pctAgua } from '../../data/unidades'
 import type { TipoHarina } from '../../types'
 
 const emit = defineEmits<{ cerrar: [] }>()
@@ -38,7 +39,10 @@ async function confirmar() {
   <ModalShell titulo="Pedido de Urgencia (0 PA, 1 Dato)" :error="error" @cerrar="emit('cerrar')">
     <p class="info-linea">Ignora el mercado por completo. Elige un solo tipo de recurso.</p>
     <div class="opciones-radio">
-      <label><input type="radio" value="harina" v-model="recursoUrgencia" /> Harina (+100%)</label>
+      <label
+        ><input type="radio" value="harina" v-model="recursoUrgencia" /> Harina (+{{ fmtTokensHarina(100) }} ·
+        100%)</label
+      >
       <label><input type="radio" value="agua" v-model="recursoUrgencia" /> Agua</label>
     </div>
     <label v-if="recursoUrgencia === 'harina'" class="campo">
@@ -52,6 +56,7 @@ async function confirmar() {
     <label v-else class="campo">
       Tokens de agua
       <input type="number" v-model.number="aguaTokensUrgencia" min="1" step="1" />
+      <span class="unidad-secundaria">= {{ pctAgua(aguaTokensUrgencia || 0) }}% de hidratación</span>
     </label>
 
     <template #acciones>

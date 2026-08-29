@@ -161,4 +161,14 @@ button.secundario {
   color: var(--color-texto-tenue);
   margin-bottom: 0.5rem;
 }
+
+/* Unidad equivalente entre parentesis (token <-> porcentaje). Ver
+   data/unidades.ts: cada insumo se guarda en una unidad distinta, asi que en
+   todas partes se imprime la primaria de ese sitio y esta al lado, atenuada. */
+.unidad-secundaria {
+  color: var(--color-texto-tenue);
+  font-size: 0.85em;
+  font-weight: 400;
+  white-space: nowrap;
+}
 </style>

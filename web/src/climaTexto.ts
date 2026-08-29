@@ -18,7 +18,7 @@ export function efectoBiologicoTexto(carta: ClimateCard): string | null {
 export function efectoPasivoTexto(carta: ClimateCard): string | null {
   switch (carta.efecto_pasivo) {
     case 'Alta Humedad':
-      return 'Iniciar Receta (Acción B) cuesta 1 token de Agua menos hoy.'
+      return 'Iniciar Receta (Acción B) cuesta 1 token de Agua menos hoy (−5% de hidratación).'
     case 'Aletargamiento Invernal':
       return 'Al final del día, el cultivo base de cada jugador pierde 2 de Vitalidad en vez de 1.'
     default:

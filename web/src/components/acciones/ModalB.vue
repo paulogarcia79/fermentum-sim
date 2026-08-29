@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { despacharAccion, store } from '../../store'
 import ModalShell from '../ModalShell.vue'
+import { fmtAgua, fmtHarina, fmtTokensHarina } from '../../data/unidades'
 
 const emit = defineEmits<{ cerrar: [] }>()
 
@@ -41,8 +42,13 @@ async function confirmar() {
     </label>
 
     <p v-if="recetaSeleccionada" class="info-linea">
-      Requiere: 1 Harina {{ recetaSeleccionada.harina_base }} (100%) + {{ recetaSeleccionada.tokens_agua }} tokens de
-      agua. Bono de sabor si tu Acidez ∈ {{ recetaSeleccionada.acidez_diana.join(', ') }} (actual: {{ yo.acidez }}).
+      Requiere: {{ fmtTokensHarina(100) }} de Harina {{ recetaSeleccionada.harina_base }} (100%) +
+      {{ recetaSeleccionada.tokens_agua }} tokens de Agua ({{ recetaSeleccionada.hidratacion_pct }}% de hidratación).
+      Bono de sabor si tu Acidez ∈ {{ recetaSeleccionada.acidez_diana.join(', ') }} (actual: {{ yo.acidez }}).
+    </p>
+    <p v-if="recetaSeleccionada" class="info-linea">
+      Tienes: {{ fmtHarina(yo.reserva_harina[recetaSeleccionada.harina_base]) }} de Harina
+      {{ recetaSeleccionada.harina_base }} · {{ fmtAgua(yo.reserva_agua) }} de Agua.
     </p>
 
     <label v-if="yo.tecnologias.incubadora" class="campo">

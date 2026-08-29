@@ -5,7 +5,7 @@
 // TermometroAgua.vue al lado) y ModalC.vue (tabla sola, sin termometro).
 import { computed } from 'vue'
 import { store } from '../store'
-import { LOTES_AGUA_VALIDOS, PRECIO_AGUA } from '../data/preciosHarina'
+import { AGUA_TOKENS_POR_LOTE, LOTES_AGUA_VALIDOS, PRECIO_AGUA } from '../data/preciosHarina'
 
 const TEMPERATURAS = [30, 25, 20, 15, 10] as const
 
@@ -17,7 +17,10 @@ const temperaturaActual = computed(() => store.estado!.environment.temperatura_a
     <thead>
       <tr>
         <th>°C \ Lote</th>
-        <th v-for="lote in LOTES_AGUA_VALIDOS" :key="lote">{{ lote }}%</th>
+        <th v-for="lote in LOTES_AGUA_VALIDOS" :key="lote" :title="`Lote de ${lote}% = ${AGUA_TOKENS_POR_LOTE[lote]} tokens de agua`">
+          {{ AGUA_TOKENS_POR_LOTE[lote] }}
+          <span class="unidad-secundaria">({{ lote }}%)</span>
+        </th>
       </tr>
     </thead>
     <tbody>
@@ -33,6 +36,11 @@ const temperaturaActual = computed(() => store.estado!.environment.temperatura_a
 .tabla-agua {
   border-collapse: collapse;
   font-size: 0.72rem;
+}
+
+.tabla-agua thead th .unidad-secundaria {
+  display: block;
+  font-size: 0.75em;
 }
 
 .tabla-agua th {

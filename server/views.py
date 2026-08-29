@@ -96,6 +96,12 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
     for datos_jugador, jugador, asiento in zip(estado["players"], engine.players, sesion.seats):
         datos_jugador["puntos_maestria_final"] = jugador.puntos_maestria_final
         datos_jugador["puntos_horneados"] = jugador.puntos_horneados
+        # Insumos sin usar, en la unidad de la regla de desperdicio de
+        # CORE_MECHANICS.md §3.4 (-1 PM por cada 3): un token de harina del
+        # 10% y uno de agua del 5% cuentan igual. Es un @property, así
+        # que asdict no lo trae, y la división entera de la fórmula no debe
+        # reimplementarse en TypeScript.
+        datos_jugador["total_tokens_recursos"] = jugador.total_tokens_recursos
         datos_jugador["color"] = asiento.color
         datos_jugador["vitalidad_prevista"] = engine.vitalidad_prevista(jugador)
         datos_jugador["en_riesgo_colapso"] = engine.riesgo_colapso(jugador)

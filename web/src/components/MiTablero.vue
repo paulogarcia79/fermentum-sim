@@ -10,10 +10,18 @@ import IconoMonedas from './IconoMonedas.vue'
 import IconoMaestria from './IconoMaestria.vue'
 import { hexDeColor } from '../data/coloresJugador'
 import { TECNOLOGIAS } from '../data/tecnologias'
-import type { HorneadoRecord, TecnologiaID } from '../types'
+import { fmtTokensAgua, fmtTokensHarina, pctAgua, tokensHarina } from '../data/unidades'
+import type { HorneadoRecord, TecnologiaID, TipoHarina } from '../types'
+
+const TIPOS_HARINA: TipoHarina[] = ['Blanca', 'Centeno', 'Integral']
 
 const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
 const colorHex = computed(() => hexDeColor(yo.value.color))
+
+// Espejo de la penalizacion por desperdicio de models.py
+// (puntos_maestria_final: -(total_tokens_recursos // 3)). El conteo en si lo
+// hace el servidor; aqui solo se divide para mostrar el coste ya acumulado.
+const penalizacionDesperdicio = computed(() => -Math.floor(yo.value.total_tokens_recursos / 3))
 
 const EMOJI_TECNOLOGIA: Record<TecnologiaID, string> = {
   incubadora: '🌡',
@@ -99,17 +107,21 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
 
     <div class="sub-titulo">Recursos</div>
     <div class="recursos-grid">
-      <div class="recurso-tile" title="Harina Blanca">
-        <span class="icono-recurso"><IconoHarina tipo="Blanca" /></span>{{ yo.reserva_harina.Blanca }}%
+      <div
+        v-for="tipo in TIPOS_HARINA"
+        :key="tipo"
+        class="recurso-tile"
+        :title="`Harina ${tipo}: ${fmtTokensHarina(yo.reserva_harina[tipo])} del 10% = ${yo.reserva_harina[tipo]}%`"
+      >
+        <span class="icono-recurso"><IconoHarina :tipo="tipo" /></span>{{ tokensHarina(yo.reserva_harina[tipo]) }}
+        <span class="unidad-secundaria">({{ yo.reserva_harina[tipo] }}%)</span>
       </div>
-      <div class="recurso-tile" title="Harina Centeno">
-        <span class="icono-recurso"><IconoHarina tipo="Centeno" /></span>{{ yo.reserva_harina.Centeno }}%
-      </div>
-      <div class="recurso-tile" title="Harina Integral">
-        <span class="icono-recurso"><IconoHarina tipo="Integral" /></span>{{ yo.reserva_harina.Integral }}%
-      </div>
-      <div class="recurso-tile" title="Agua">
+      <div
+        class="recurso-tile"
+        :title="`Agua: ${fmtTokensAgua(yo.reserva_agua)} del 5% = ${pctAgua(yo.reserva_agua)}% de hidratación`"
+      >
         <span class="icono-recurso"><IconoAgua /></span>{{ yo.reserva_agua }}
+        <span class="unidad-secundaria">({{ pctAgua(yo.reserva_agua) }}%)</span>
       </div>
       <div class="recurso-tile" title="Datos de Investigación">
         <span class="icono-recurso"><IconoDatos /></span>{{ yo.datos_investigacion }}
@@ -121,6 +133,15 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
         <span class="icono-recurso emoji">🎲</span>{{ yo.dados_inoculo }}
       </div>
     </div>
+    <p
+      class="linea-desperdicio"
+      :class="{ penaliza: penalizacionDesperdicio < 0 }"
+      title="Al final de la partida pierdes 1 Punto de Maestría por cada 3 tokens de insumo sin usar. Un token de harina (10%) y uno de agua (5%) cuentan igual aquí."
+    >
+      {{ yo.total_tokens_recursos }} tokens sin usar
+      <span v-if="penalizacionDesperdicio < 0">→ {{ penalizacionDesperdicio }} PM al final</span>
+      <span v-else>→ sin penalización todavía</span>
+    </p>
 
     <div class="sub-titulo">Mejoras</div>
     <div class="mejoras-grid">
@@ -283,6 +304,16 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
   color: var(--color-mal);
   font-size: 0.9rem;
   cursor: help;
+}
+
+.linea-desperdicio {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: var(--color-texto-tenue);
+}
+
+.linea-desperdicio.penaliza span {
+  color: var(--color-mal);
 }
 
 .recursos-grid {
