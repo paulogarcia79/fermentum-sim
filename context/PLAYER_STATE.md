@@ -8,12 +8,27 @@ Para la simulación, cada instancia de `Jugador` debe inicializarse y gestionar 
 * `vitalidad` (Integer): Nivel de actividad de la levadura. Límite: Mínimo 0, Máximo 6.
 * `acidez` (Integer): Perfil de ácido láctico/acético. Límite: Mínimo 0, Máximo 6.
 
+### Unidades de Insumo (Tokens)
+
+Los dos insumos físicos del juego se cuentan en **tokens**. Lo único que cambia entre ellos es cuánto vale un token:
+
+| Insumo | 1 token equivale a | Unidad de compra habitual |
+|---|---|---|
+| **Harina** | **10%** | 1 bolsa = 100% = **10 tokens** |
+| **Agua** | **5%** de hidratación | lote del 100% = **20 tokens** |
+
+**Notación canónica** en estos documentos y en la interfaz: **`N (P%)`** — primero el número de tokens, después su porcentaje. Ej.: `10 (100%)` de harina, `20 (100%)` de agua, `2 (10%)` de agua.
+
+Ambos tipos de token cuentan **1:1** en la penalización por desperdicio del final de partida (-1 Punto de Maestría por cada 3 tokens de insumo sin usar — CORE_MECHANICS.md §3.4): un token de harina del 10% y uno de agua del 5% valen exactamente lo mismo a esos efectos. Esa regla es la razón de que la unidad atómica de la harina sea el 10% y no la bolsa entera.
+
+*Nota de implementación:* el código guarda cada insumo en la unidad que le resultó cómoda — `reserva_agua` ya es un conteo de tokens, mientras que `reserva_harina` son porcentajes en múltiplos de 10. La conversión es exacta en ambos sentidos y no hay pérdida de información.
+
 ### Atributos Operativos y Económicos
 * `puntos_accion` (Integer): PA disponibles en el turno actual. (Máximo 2, se reinician en cada Fase II. Puede subir a 3 temporalmente usando "Horas Extras").
 * `datos_investigacion` (Integer): Moneda técnica para comprar mejoras de laboratorio, PA extra (Horas Extras) y Pedidos de Urgencia. Distinta de `monedas` (la divisa comercial).
 * `monedas` (Integer): Divisa comercial del juego (GDD v0.0.2). Se gana al hornear y vender (Acción F) y se gasta en Visitar el Mercado (Acción C) para comprar harina/agua.
-* `reserva_harina` (Dict[String, Integer]): Inventario de harinas representadas en porcentajes (múltiplos de 10%). Ej: `{"Blanca": 100, "Centeno": 20, "Integral": 0}`.
-* `reserva_agua` (Integer): Suma total de los tokens de hidratación disponibles (en múltiplos de 5%).
+* `reserva_harina` (Dict[String, Integer]): Inventario de harinas. Se almacena en porcentajes (múltiplos de 10%), donde **cada 10% es 1 Token de Harina**: 100% = 10 tokens = una bolsa entera. Ej: `{"Blanca": 100, "Centeno": 20, "Integral": 0}` = 10 (100%) de Blanca, 2 (20%) de Centeno, 0 de Integral.
+* `reserva_agua` (Integer): Conteo total de **Tokens de Agua** disponibles. **Cada token = 5% de hidratación**, así que 20 tokens = 100%. A diferencia de `reserva_harina`, este campo ya está expresado en tokens, no en porcentaje.
 * `accion_alimentar_usada` (Boolean): Bandera que se reinicia a `False` al inicio de cada Fase II para limitar el mantenimiento a 1 vez por ronda.
 * `horas_extras_usadas` (Boolean): Bandera que se reinicia a `False` al inicio de cada Fase II (junto con `puntos_accion`) para limitar la acción auxiliar "Horas Extras" a 1 vez por día.
 * `acciones_pa_usadas_hoy` (List[String]): Ids de espacios de acción con costo de PA (B, C, D, E, F, G, H, I, "simposio") ya visitados este Día de Laboratorio por este jugador — cada espacio solo puede visitarse una vez por día (ACTIONS_REGISTRY.md §1). Se llena al gastar el PA de la acción y se reinicia a `[]` al inicio de cada Fase II, junto con `accion_alimentar_usada`. Pedido de Urgencia (0 PA) y las acciones gratuitas (Alimentar, Horas Extras) no participan de esta lista — tienen sus propias banderas dedicadas.
@@ -42,16 +57,16 @@ Al iniciar la simulación (Día 1), el setup baraja el mazo de 8 Cartas de Patro
 * **Reglas base para todos:** `vitalidad` = 1, `acidez` = 1, `dados_inoculo` = 3, `puntos_accion` = 0, `datos_investigacion` = 0, se entrega 1 Receta "Básica" aleatoria, y `tecnologias_activas` inician en `False`.
 * **Asignación según Carta de Patrocinio** (`reserva_harina`, `reserva_agua` y `monedas` provienen íntegramente de la carta repartida a ese jugador; tras el despliegue de insumos las cartas vuelven a la caja):
 
-  | Iniciativa | Harina | Lote de Agua | Monedas Iniciales |
+  | Iniciativa | Harina — Tokens (%) | Agua — Tokens (%) | Monedas Iniciales |
   |---|---|---|---|
-  | 1 | 1x Blanca | 2x (10%) | 9 |
-  | 2 | 1x Blanca | 6x (30%) | 8 |
-  | 3 | 1x Blanca | 12x (60%) | 6 |
-  | 4 | 1x Integral | 6x (30%) | 8 |
-  | 5 | 1x Integral | 12x (60%) | 6 |
-  | 6 | 1x Centeno | 6x (30%) | 8 |
-  | 7 | 1x Centeno | 12x (60%) | 6 |
-  | 8 | 2x Blanca | 20x (100%) | 4 |
+  | 1 | 10 (100%) Blanca | 2 (10%) | 9 |
+  | 2 | 10 (100%) Blanca | 6 (30%) | 8 |
+  | 3 | 10 (100%) Blanca | 12 (60%) | 6 |
+  | 4 | 10 (100%) Integral | 6 (30%) | 8 |
+  | 5 | 10 (100%) Integral | 12 (60%) | 6 |
+  | 6 | 10 (100%) Centeno | 6 (30%) | 8 |
+  | 7 | 10 (100%) Centeno | 12 (60%) | 6 |
+  | 8 | 20 (200%) Blanca | 20 (100%) | 4 |
 
   Los jugadores que reciben números de Iniciativa altos (actúan más tarde en la primera ronda) son compensados con un capital de insumos de mayor valor para equilibrar la ventaja temporal del Investigador Jefe.
 

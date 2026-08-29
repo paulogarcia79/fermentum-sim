@@ -574,9 +574,25 @@
           <li><strong>Cartas de Patrocinio:</strong> 8 cartas, usadas una sola vez, para repartir el orden de turno inicial y los recursos de arranque.</li>
           <li><strong>Dados de Inóculo:</strong> 3 por jugador, sellan la velocidad de fermentación de cada masa iniciada.</li>
           <li><strong>Cubos de Laboratorio:</strong> 8 por jugador, marcan acciones usadas, acidez sellada y tecnologías instaladas.</li>
-          <li><strong>Tokens de Recursos:</strong> harina (Blanca, Integral, Centeno) y agua (múltiplos de 5% de hidratación).</li>
+          <li><strong>Tokens de Recursos:</strong> harina (Blanca, Integral, Centeno) y agua — ver <a href="#unidades">Las dos unidades de insumo</a>.</li>
           <li><strong>Fichas de Monedas</strong> y <strong>Tokens de Datos de Investigación:</strong> las dos divisas del juego.</li>
         </ul>
+
+        <h3 class="sub" id="unidades">Las dos unidades de insumo</h3>
+        <p>Los dos insumos físicos se cuentan en <strong>tokens</strong>. Lo único que cambia entre ellos es cuánto vale un token:</p>
+        <div class="card-grid">
+          <div class="card">
+            <h5><span class="dot" style="background:var(--accent-vitalidad)"></span>Token de Harina = 10&nbsp;%</h5>
+            <p>1 bolsa = 100&nbsp;% = <strong>10 tokens</strong>. El Mercado solo opera en bolsas enteras.</p>
+            <span class="cost">10 (100%) · 5 (50%) · 1 (10%)</span>
+          </div>
+          <div class="card">
+            <h5><span class="dot" style="background:var(--accent-agua)"></span>Token de Agua = 5&nbsp;%</h5>
+            <p>De hidratación. Un lote del 100&nbsp;% son <strong>20 tokens</strong>; el lote más pequeño, 2.</p>
+            <span class="cost">20 (100%) · 12 (60%) · 6 (30%) · 2 (10%)</span>
+          </div>
+        </div>
+        <div class="callout">En todo el reglamento las cantidades se escriben <strong>N&nbsp;(P%)</strong> — primero el número de tokens, después su porcentaje. Ambos tipos de token cuentan <strong>1:1</strong> en la Penalización por Desperdicio del final de la partida (<a href="#s11">§11</a>): un token de harina del 10&nbsp;% y uno de agua del 5&nbsp;% valen lo mismo a esos efectos, y esa es la razón de que la unidad atómica de la harina sea el 10&nbsp;% y no la bolsa entera.</div>
 
         <h3 class="sub">Las dos divisas del juego</h3>
         <p>Fermentum usa dos recursos económicos independientes, que no se convierten entre sí:</p>
@@ -611,17 +627,17 @@
           <table>
             <caption>Cartas de Patrocinio — reparto de recursos iniciales</caption>
             <thead>
-              <tr><th>Iniciativa</th><th>Harina</th><th>Lote de agua</th><th>Monedas</th></tr>
+              <tr><th>Iniciativa</th><th>Harina — tokens (%)</th><th>Agua — tokens (%)</th><th>Monedas</th></tr>
             </thead>
             <tbody>
-              <tr><td>1</td><td class="wrap">1 bolsa de Blanca</td><td>2 tokens (10%)</td><td>9</td></tr>
-              <tr><td>2</td><td class="wrap">1 bolsa de Blanca</td><td>6 tokens (30%)</td><td>8</td></tr>
-              <tr><td>3</td><td class="wrap">1 bolsa de Blanca</td><td>12 tokens (60%)</td><td>6</td></tr>
-              <tr><td>4</td><td class="wrap">1 bolsa de Integral</td><td>6 tokens (30%)</td><td>8</td></tr>
-              <tr><td>5</td><td class="wrap">1 bolsa de Integral</td><td>12 tokens (60%)</td><td>6</td></tr>
-              <tr><td>6</td><td class="wrap">1 bolsa de Centeno</td><td>6 tokens (30%)</td><td>8</td></tr>
-              <tr><td>7</td><td class="wrap">1 bolsa de Centeno</td><td>12 tokens (60%)</td><td>6</td></tr>
-              <tr><td>8</td><td class="wrap">2 bolsas de Blanca</td><td>20 tokens (100%)</td><td>4</td></tr>
+              <tr><td>1</td><td class="wrap">10 (100%) de Blanca</td><td>2 (10%)</td><td>9</td></tr>
+              <tr><td>2</td><td class="wrap">10 (100%) de Blanca</td><td>6 (30%)</td><td>8</td></tr>
+              <tr><td>3</td><td class="wrap">10 (100%) de Blanca</td><td>12 (60%)</td><td>6</td></tr>
+              <tr><td>4</td><td class="wrap">10 (100%) de Integral</td><td>6 (30%)</td><td>8</td></tr>
+              <tr><td>5</td><td class="wrap">10 (100%) de Integral</td><td>12 (60%)</td><td>6</td></tr>
+              <tr><td>6</td><td class="wrap">10 (100%) de Centeno</td><td>6 (30%)</td><td>8</td></tr>
+              <tr><td>7</td><td class="wrap">10 (100%) de Centeno</td><td>12 (60%)</td><td>6</td></tr>
+              <tr><td>8</td><td class="wrap">20 (200%) de Blanca</td><td>20 (100%)</td><td>4</td></tr>
             </tbody>
           </table>
         </div>
@@ -687,16 +703,16 @@
         <h4 class="sub-sub">Acciones principales · costo 1 PA</h4>
 
         <h3 class="sub">B · Iniciar Receta</h3>
-        <p><strong>Costo:</strong> 1 PA + 1 token de harina (100% del tipo que pida la receta) + los tokens de agua exactos según la hidratación. <strong>Límite:</strong> 1 vez por día (por espacio de acción).</p>
+        <p><strong>Costo:</strong> 1 PA + <strong>10 tokens de harina — 10&nbsp;(100%), una bolsa entera</strong> del tipo que pida la receta + los <strong>tokens de agua</strong> exactos que la receta imprima (cada token = 5&nbsp;% de hidratación). <strong>Límite:</strong> 1 vez por día (por espacio de acción).</p>
         <p>Al iniciar la masa se sella su <strong>Memoria Biológica</strong>: el Dado de Inóculo guarda la Vitalidad actual (determina la velocidad de fermentación durante toda la vida de esa masa), y el Cubo de Laboratorio guarda la Acidez actual — solo si cae dentro del rango de Acidez Diana de la carta. Si el cubo queda sellado, la masa obtendrá el Bono de Sabor al hornearse con éxito.</p>
         <p class="wrap" style="font-size:0.9rem;color:var(--ink-muted);">Requiere una estación de fermentación libre (la tercera solo con Cámara B) y al menos 1 Dado de Inóculo disponible.</p>
 
         <h3 class="sub">C · Visitar el Mercado</h3>
         <p><strong>Costo:</strong> 1 PA por visita, sin importar cuántas transacciones incluya. <strong>Límite:</strong> 1 vez por día (por espacio de acción).</p>
         <ul class="rules-list">
-          <li><strong>Comprar Harina:</strong> pagar el coste de Compra visible y recibir 1 bolsa (100%). El visor sube 1 casilla (tope en 5).</li>
-          <li><strong>Vender Harina:</strong> entregar 1 bolsa (100%) y cobrar el valor de Venta visible. El visor baja 1 casilla (tope en 1).</li>
-          <li><strong>Comprar Lote de Agua:</strong> pagar según temperatura actual y tamaño de lote, recibiendo los tokens correspondientes (1 token = 5% hidratación).</li>
+          <li><strong>Comprar Harina:</strong> pagar el coste de Compra visible y recibir <strong>10 tokens — 10&nbsp;(100%)</strong>, una bolsa entera. El visor sube 1 casilla (tope en 5). El Mercado solo opera en bolsas enteras: no se compran ni venden tokens sueltos de harina.</li>
+          <li><strong>Vender Harina:</strong> entregar <strong>10 tokens — 10&nbsp;(100%)</strong> y cobrar el valor de Venta visible. El visor baja 1 casilla (tope en 1).</li>
+          <li><strong>Comprar Lote de Agua:</strong> pagar según temperatura actual y lote elegido, recibiendo el lote completo en tokens (1 token = 5&nbsp;% de hidratación). Los cuatro lotes son <strong>2&nbsp;(10%)</strong>, <strong>6&nbsp;(30%)</strong>, <strong>12&nbsp;(60%)</strong> y <strong>20&nbsp;(100%)</strong>.</li>
         </ul>
         <div class="callout"><strong>Regla de Exclusividad.</strong> Una visita puede combinar varias transacciones, pero como máximo una por tipo de recurso — comprar Blanca, vender Centeno y comprar un lote de agua en la misma visita está permitido; comprar y vender la misma harina, o comprar el mismo tipo dos veces, no lo está.</div>
 
@@ -715,7 +731,7 @@
         <div class="table-wrap">
           <table>
             <caption>Suministro Hídrico Global — Monedas por temperatura y lote</caption>
-            <thead><tr><th>Temperatura</th><th>10%</th><th>30%</th><th>60%</th><th>100%</th></tr></thead>
+            <thead><tr><th>Temperatura</th><th>2 (10%)</th><th>6 (30%)</th><th>12 (60%)</th><th>20 (100%)</th></tr></thead>
             <tbody>
               <tr><td class="name">30 °C</td><td>3</td><td>6</td><td>10</td><td>14</td></tr>
               <tr><td class="name">25 °C</td><td>2</td><td>5</td><td>8</td><td>12</td></tr>
@@ -764,18 +780,18 @@
         <h4 class="sub-sub">Acciones auxiliares y de emergencia · costo 0 PA</h4>
 
         <h3 class="sub">A · Alimentar el Cultivo <em class="aside">(Mantenimiento)</em></h3>
-        <p><strong>Límite:</strong> una vez por día. Gastar 10% de harina (cualquier tipo) por +1 Vitalidad, y/o 10% de agua por +1 Acidez (máximo Nivel 6 en ambos) — uno, otro, o ambos en la misma acción.</p>
+        <p><strong>Límite:</strong> una vez por día. Gastar <strong>1 token de harina — 1&nbsp;(10%)</strong> (cualquier tipo) por +1 Vitalidad, y/o <strong>2 tokens de agua — 2&nbsp;(10%)</strong> por +1 Acidez (máximo Nivel 6 en ambos) — uno, otro, o ambos en la misma acción. Ojo con el agua: son <strong>2</strong> tokens, no 1, porque el token de agua es del 5&nbsp;%.</p>
 
         <h3 class="sub">Horas Extras</h3>
         <p><strong>Costo:</strong> 1 Dato de Investigación. Otorga +1 PA de inmediato para usar ese mismo día. Solo una vez por Día de Laboratorio.</p>
 
         <h3 class="sub">Pedido de Urgencia</h3>
-        <p><strong>Costo:</strong> 1 Dato de Investigación. Ignora el Mercado por completo — sin importar el precio vigente — y obtiene de la reserva general un tipo de recurso a elección: 100% de una harina, o los tokens de agua que se deseen. Sin límite de usos por día; se autolimita solo por los Datos disponibles. Al no costar PA, queda exento de la regla «1 vez por día por espacio de acción» de la <a href="#s6">Fase II</a>.</p>
+        <p><strong>Costo:</strong> 1 Dato de Investigación. Ignora el Mercado por completo — sin importar el precio vigente — y obtiene de la reserva general un tipo de recurso a elección: <strong>10 tokens — 10&nbsp;(100%)</strong> de una harina, o los tokens de agua que se deseen (5&nbsp;% cada uno). Sin límite de usos por día; se autolimita solo por los Datos disponibles. Al no costar PA, queda exento de la regla «1 vez por día por espacio de acción» de la <a href="#s6">Fase II</a>.</p>
 
         <h3 class="sub">Protocolos de Emergencia <em class="aside">(Rescate de Cultivo)</em></h3>
         <p>Solo si la Vitalidad del cultivo base ha llegado a 0 (ver <a href="#s9">Fase III</a>):</p>
         <ul class="rules-list">
-          <li><strong>H · Re-cultivo Manual:</strong> 1 PA + 50% de harina (cualquier tipo, sin costo de agua). Retira la Contaminación y sitúa Vitalidad y Acidez en Nivel 1. <strong>Límite:</strong> 1 vez por día (por espacio de acción), además de requerir Contaminación activa.</li>
+          <li><strong>H · Re-cultivo Manual:</strong> 1 PA + <strong>5 tokens de harina — 5&nbsp;(50%)</strong> (cualquier tipo, sin costo de agua). Retira la Contaminación y sitúa Vitalidad y Acidez en Nivel 1. <strong>Límite:</strong> 1 vez por día (por espacio de acción), además de requerir Contaminación activa.</li>
           <li><strong>I · Inóculo de Emergencia:</strong> 1 PA + 1 Dato de Investigación. Retira la Contaminación y sitúa Vitalidad y Acidez en Nivel 2 — resultado superior al Re-cultivo Manual. <strong>Límite:</strong> 1 vez por día (por espacio de acción), además de requerir Contaminación activa.</li>
         </ul>
       </section>
@@ -792,20 +808,20 @@
           <table>
             <thead>
               <tr>
-                <th>Receta</th><th>Grado</th><th>Harina</th><th>Hidratación</th><th>Acidez diana (bono)</th>
+                <th>Receta</th><th>Grado</th><th>Harina<br><span style="font-weight:400">siempre 10 (100%)</span></th><th>Agua<br><span style="font-weight:400">tokens (hidratación)</span></th><th>Acidez diana (bono)</th>
                 <th>Zona baja</th><th>Zona óptima</th><th>Zona sobre</th>
                 <th>Puntos B/O/S</th><th>Monedas B/O/S</th><th>Requiere</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td class="name">Pan de Campo</td><td>Básica</td><td>Blanca</td><td>60% (12)</td><td>Nivel 3 (+3)</td><td class="z-baja">1–10</td><td class="z-optima">11–15</td><td class="z-sobre">16–20</td><td>4 / 10 / −2</td><td>13 / 17 / 11</td><td class="wrap">—</td></tr>
-              <tr><td class="name">Focaccia</td><td>Básica</td><td>Blanca</td><td>75% (15)</td><td>Nivel 1–2 (+2)</td><td class="z-baja">1–9</td><td class="z-optima">10–14</td><td class="z-sobre">15–20</td><td>3 / 12 / −3</td><td>15 / 19 / 13</td><td class="wrap">—</td></tr>
-              <tr><td class="name">Baguette</td><td>Básica</td><td>Blanca</td><td>65% (13)</td><td>Nivel 2 (+3)</td><td class="z-baja">1–11</td><td class="z-optima">12–15</td><td class="z-sobre">16–20</td><td>5 / 11 / −2</td><td>14 / 18 / 12</td><td class="wrap">—</td></tr>
-              <tr><td class="name">Pizza Napolitana</td><td>Avanzada</td><td>Blanca</td><td>62% (13)</td><td>Nivel 3 (+4)</td><td class="z-baja">1–10</td><td class="z-optima">11–14</td><td class="z-sobre">15–20</td><td>4 / 14 / −4</td><td>15 / 21 / 12</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Brioche</td><td>Avanzada</td><td>Blanca</td><td>52% (11)</td><td>Nivel 1 (+5)</td><td class="z-baja">1–14</td><td class="z-optima">15–17</td><td class="z-sobre">18–20</td><td>5 / 16 / −6</td><td>14 / 21 / 11</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Hogaza Centeno</td><td>Avanzada</td><td>Centeno</td><td>67% (14)</td><td>Nivel 4–5 (+6)</td><td class="z-baja">1–12</td><td class="z-optima">13–16</td><td class="z-sobre">17–20</td><td>6 / 15 / −5</td><td>20 / 27 / 17</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Pan de Semillas</td><td>Avanzada</td><td>Integral</td><td>78% (16)</td><td>Nivel 3–4 (+7)</td><td class="z-baja">1–13</td><td class="z-optima">14–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>19 / 26 / 16</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Panettone</td><td>Avanzada</td><td>Blanca</td><td>47% (10)</td><td>Nivel 1 (+8)</td><td class="z-baja">1–16</td><td class="z-optima">17–18</td><td class="z-sobre">19–20</td><td>8 / 20 / −8</td><td>13 / 22 / 10</td><td class="wrap">Módulo Analítico</td></tr>
+              <tr><td class="name">Pan de Campo</td><td>Básica</td><td>Blanca</td><td>12 (60%)</td><td>Nivel 3 (+3)</td><td class="z-baja">1–10</td><td class="z-optima">11–15</td><td class="z-sobre">16–20</td><td>4 / 10 / −2</td><td>13 / 17 / 11</td><td class="wrap">—</td></tr>
+              <tr><td class="name">Focaccia</td><td>Básica</td><td>Blanca</td><td>15 (75%)</td><td>Nivel 1–2 (+2)</td><td class="z-baja">1–9</td><td class="z-optima">10–14</td><td class="z-sobre">15–20</td><td>3 / 12 / −3</td><td>15 / 19 / 13</td><td class="wrap">—</td></tr>
+              <tr><td class="name">Baguette</td><td>Básica</td><td>Blanca</td><td>13 (65%)</td><td>Nivel 2 (+3)</td><td class="z-baja">1–11</td><td class="z-optima">12–15</td><td class="z-sobre">16–20</td><td>5 / 11 / −2</td><td>14 / 18 / 12</td><td class="wrap">—</td></tr>
+              <tr><td class="name">Pizza Napolitana</td><td>Avanzada</td><td>Blanca</td><td>13 (62%)</td><td>Nivel 3 (+4)</td><td class="z-baja">1–10</td><td class="z-optima">11–14</td><td class="z-sobre">15–20</td><td>4 / 14 / −4</td><td>15 / 21 / 12</td><td class="wrap">Módulo Analítico</td></tr>
+              <tr><td class="name">Brioche</td><td>Avanzada</td><td>Blanca</td><td>11 (52%)</td><td>Nivel 1 (+5)</td><td class="z-baja">1–14</td><td class="z-optima">15–17</td><td class="z-sobre">18–20</td><td>5 / 16 / −6</td><td>14 / 21 / 11</td><td class="wrap">Módulo Analítico</td></tr>
+              <tr><td class="name">Hogaza Centeno</td><td>Avanzada</td><td>Centeno</td><td>14 (67%)</td><td>Nivel 4–5 (+6)</td><td class="z-baja">1–12</td><td class="z-optima">13–16</td><td class="z-sobre">17–20</td><td>6 / 15 / −5</td><td>20 / 27 / 17</td><td class="wrap">Módulo Analítico</td></tr>
+              <tr><td class="name">Pan de Semillas</td><td>Avanzada</td><td>Integral</td><td>16 (78%)</td><td>Nivel 3–4 (+7)</td><td class="z-baja">1–13</td><td class="z-optima">14–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>19 / 26 / 16</td><td class="wrap">Módulo Analítico</td></tr>
+              <tr><td class="name">Panettone</td><td>Avanzada</td><td>Blanca</td><td>10 (47%)</td><td>Nivel 1 (+8)</td><td class="z-baja">1–16</td><td class="z-optima">17–18</td><td class="z-sobre">19–20</td><td>8 / 20 / −8</td><td>13 / 22 / 10</td><td class="wrap">Módulo Analítico</td></tr>
             </tbody>
           </table>
         </div>
@@ -879,7 +895,7 @@
               <tr><td>1</td><td class="name">Puntos Base</td><td class="wrap">Suma de los puntos de todas las recetas horneadas, positivas y negativas (colapsos incluidos).</td></tr>
               <tr><td>2</td><td class="name">Puntos de Sabor</td><td class="wrap">Suma de los bonos de Bono de Sabor de cada carta horneada con el Cubo de Acidez sellado.</td></tr>
               <tr><td>3</td><td class="name">Madurez del Cultivo</td><td class="wrap">(Vitalidad + Acidez actuales) ÷ 2, redondeando hacia arriba.</td></tr>
-              <tr><td>4</td><td class="name">Penalización por Desperdicio</td><td class="wrap">−1 punto por cada 3 tokens de harina o agua sin utilizar.</td></tr>
+              <tr><td>4</td><td class="name">Penalización por Desperdicio</td><td class="wrap">−1 punto por cada 3 <strong>tokens de insumo</strong> sin utilizar. Un token de harina (10&nbsp;%) y uno de agua (5&nbsp;%) cuentan <strong>1:1</strong> aquí — ver <a href="#unidades">Las dos unidades de insumo</a>.</td></tr>
               <tr><td>5</td><td class="name">Penalización por Contaminación</td><td class="wrap">−3 puntos por cada vez que la Vitalidad llegó a 0.</td></tr>
               <tr><td>6</td><td class="name">Conversión de Riqueza</td><td class="wrap">+1 punto por cada 5 Monedas restantes (división entera).</td></tr>
             </tbody>
@@ -906,7 +922,7 @@
               <tr><td class="name">Ola de Calor</td><td>2</td><td>+10 °C</td><td class="wrap">Ninguno</td><td class="wrap">Acelera el avance base en +2 casillas.</td></tr>
               <tr><td class="name">Corriente de Aire</td><td>4</td><td>−5 °C</td><td class="wrap">Ninguno</td><td class="wrap">Ralentiza el avance base en −1 casilla.</td></tr>
               <tr><td class="name">Fallo de Calefacción</td><td>2</td><td>−10 °C</td><td class="wrap">Ninguno</td><td class="wrap">Ralentiza el avance base en −2 casillas.</td></tr>
-              <tr><td class="name">Alta Humedad</td><td>2</td><td>0 °C</td><td class="wrap">Ninguno</td><td class="wrap">Iniciar Receta cuesta 1 token de agua menos ese día.</td></tr>
+              <tr><td class="name">Alta Humedad</td><td>2</td><td>0 °C</td><td class="wrap">Ninguno</td><td class="wrap">Iniciar Receta cuesta 1 token de agua menos ese día (−5&nbsp;% de hidratación).</td></tr>
               <tr><td class="name">Explosión de Levaduras</td><td>2</td><td>0 °C</td><td class="wrap">Todos ganan +1 Vitalidad (máx. 6)</td><td class="wrap">Ninguno.</td></tr>
               <tr><td class="name">Acidificación Acelerada</td><td>2</td><td>0 °C</td><td class="wrap">Todos ganan +1 Acidez (máx. 6)</td><td class="wrap">Ninguno.</td></tr>
               <tr><td class="name">Aletargamiento Invernal</td><td>2</td><td>−5 °C</td><td class="wrap">Ninguno</td><td class="wrap">Desgaste metabólico de −2 Vitalidad en vez de −1.</td></tr>

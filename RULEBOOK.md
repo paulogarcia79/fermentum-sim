@@ -62,10 +62,29 @@ su quinta receta — lo que ocurra primero.
 - **Dados de Inóculo:** 3 por jugador, sellan la velocidad de fermentación de cada masa iniciada.
 - **Cubos de Laboratorio:** 8 por jugador, marcan acciones usadas, acidez sellada y tecnologías
   instaladas.
-- **Tokens de Recursos:** harina (Blanca, Integral, Centeno) y agua (múltiplos de 5% de
-  hidratación).
+- **Tokens de Recursos:** harina (Blanca, Integral, Centeno) y agua — ver [Las dos unidades de
+  insumo](#las-dos-unidades-de-insumo) justo abajo.
 - **Fichas de Monedas** y **Tokens de Datos de Investigación:** las dos divisas del juego (ver más
   abajo).
+
+### Las dos unidades de insumo
+
+Los dos insumos físicos se cuentan en **tokens**. Lo único que cambia entre ellos es cuánto vale
+un token:
+
+| Insumo | 1 token equivale a | Unidad de compra habitual |
+|:---|:---|:---|
+| **Harina** | **10%** | 1 bolsa = 100% = **10 tokens** |
+| **Agua** | **5%** de hidratación | lote del 100% = **20 tokens** |
+
+En todo este reglamento las cantidades se escriben **`N (P%)`** — primero el número de tokens,
+después su porcentaje. Así, `10 (100%)` es una bolsa entera de harina y `20 (100%)` es un lote
+completo de agua.
+
+Ambos tipos de token cuentan **1:1** en la Penalización por Desperdicio del final de la partida
+(ver [Fin del Juego](#11-fin-del-juego-y-puntuación)): un token de harina del 10% y uno de agua
+del 5% valen exactamente lo mismo a esos efectos. Esa es la razón de que la unidad atómica de la
+harina sea el 10% y no la bolsa entera.
 
 ### Las dos divisas del juego
 
@@ -96,16 +115,16 @@ Fermentum usa dos recursos económicos independientes, que no se convierten entr
      y las monedas indicadas en su carta (tabla completa abajo). Hecho esto, todas las cartas de
      Patrocinio vuelven a la caja — no se usan de nuevo en la partida.
 
-   | Iniciativa | Harina | Lote de Agua | Monedas Iniciales |
+   | Iniciativa | Harina — Tokens (%) | Agua — Tokens (%) | Monedas Iniciales |
    |:---:|:---|:---|:---:|
-   | 1 | 1 bolsa de Blanca | 2 tokens (10%) | 9 |
-   | 2 | 1 bolsa de Blanca | 6 tokens (30%) | 8 |
-   | 3 | 1 bolsa de Blanca | 12 tokens (60%) | 6 |
-   | 4 | 1 bolsa de Integral | 6 tokens (30%) | 8 |
-   | 5 | 1 bolsa de Integral | 12 tokens (60%) | 6 |
-   | 6 | 1 bolsa de Centeno | 6 tokens (30%) | 8 |
-   | 7 | 1 bolsa de Centeno | 12 tokens (60%) | 6 |
-   | 8 | 2 bolsas de Blanca | 20 tokens (100%) | 4 |
+   | 1 | 10 (100%) de Blanca | 2 (10%) | 9 |
+   | 2 | 10 (100%) de Blanca | 6 (30%) | 8 |
+   | 3 | 10 (100%) de Blanca | 12 (60%) | 6 |
+   | 4 | 10 (100%) de Integral | 6 (30%) | 8 |
+   | 5 | 10 (100%) de Integral | 12 (60%) | 6 |
+   | 6 | 10 (100%) de Centeno | 6 (30%) | 8 |
+   | 7 | 10 (100%) de Centeno | 12 (60%) | 6 |
+   | 8 | 20 (200%) de Blanca | 20 (100%) | 4 |
 
    Los jugadores con Iniciativa alta (actúan más tarde en la primera ronda) reciben un capital de
    insumos de mayor valor, para compensar la ventaja temporal del Investigador Jefe.
@@ -227,8 +246,8 @@ Cada jugador dispone de **2 Puntos de Acción (PA)** por Día de Laboratorio.
 
 #### B. Iniciar Receta
 
-**Costo:** 1 PA + 1 token de harina (100% del tipo que pida la receta) + los tokens de agua
-exactos según la hidratación de la receta. **Límite:** 1 vez por día (por espacio de acción).
+**Costo:** 1 PA + **10 tokens de harina — 10 (100%), una bolsa entera** del tipo que pida la
+receta + los **tokens de agua** exactos que la receta imprima (cada token = 5% de hidratación). **Límite:** 1 vez por día (por espacio de acción).
 
 Al iniciar la masa, se sella su **Memoria Biológica**: el Dado de Inóculo guarda la Vitalidad
 actual del cultivo base (determina la velocidad de fermentación de esa masa específica durante
@@ -247,13 +266,14 @@ menos 1 Dado de Inóculo disponible.
 El Mercado de Insumos es donde se comercian los recursos del juego:
 
 - **Comprar Harina:** pagar el coste de Compra visible (en Monedas, según la posición actual del
-  visor de ese tipo en la Bolsa de Harinas) y recibir 1 bolsa (100%) de esa harina. El visor se
-  mueve 1 casilla hacia el extremo caro (tope en posición 5).
-- **Vender Harina:** entregar 1 bolsa (100%) de esa harina y cobrar el valor de Venta visible en
-  Monedas. El visor se mueve 1 casilla hacia el extremo barato (tope en posición 1).
+  visor de ese tipo en la Bolsa de Harinas) y recibir **10 tokens — 10 (100%)**, una bolsa entera.
+  El visor se mueve 1 casilla hacia el extremo caro (tope en posición 5). El mercado solo opera en
+  bolsas enteras: no se pueden comprar ni vender tokens sueltos de harina.
+- **Vender Harina:** entregar **10 tokens — 10 (100%)** de esa harina y cobrar el valor de Venta
+  visible en Monedas. El visor se mueve 1 casilla hacia el extremo barato (tope en posición 1).
 - **Comprar Lote de Agua:** pagar el coste en Monedas según la fila de temperatura actual y el
-  tamaño de lote elegido (10%, 30%, 60% o 100%), y recibir los tokens de agua correspondientes (1
-  token = 5% de hidratación).
+  lote elegido, y recibir el lote completo en tokens de agua (1 token = 5% de hidratación). Los
+  cuatro lotes son **2 (10%)**, **6 (30%)**, **12 (60%)** y **20 (100%)**.
 
 **Regla de Exclusividad:** una misma visita puede combinar varias transacciones, pero como máximo
 **una por tipo de recurso** — se puede comprar Blanca, vender Centeno y comprar un lote de agua en
@@ -269,7 +289,7 @@ la misma visita, pero no comprar y vender la misma harina, ni comprar el mismo t
 
 **Suministro Hídrico Global** (Monedas según temperatura y tamaño de lote):
 
-| Temperatura | 10% | 30% | 60% | 100% |
+| Temperatura | 2 (10%) | 6 (30%) | 12 (60%) | 20 (100%) |
 |:---:|:---:|:---:|:---:|:---:|
 | 30°C | 3 | 6 | 10 | 14 |
 | 25°C | 2 | 5 | 8 | 12 |
@@ -332,9 +352,10 @@ recuperando el Dado de Inóculo) a cambio de +1 Dato de Investigación inmediato
 
 #### A. Alimentar el Cultivo (Mantenimiento)
 
-**Límite:** una vez por Día de Laboratorio. Se puede gastar 10% de harina (de cualquier tipo) por
-+1 Vitalidad, y/o 10% de agua por +1 Acidez (máximo Nivel 6 en ambos) — uno, otro, o ambos en la
-misma acción.
+**Límite:** una vez por Día de Laboratorio. Se puede gastar **1 token de harina — 1 (10%)** (de
+cualquier tipo) por +1 Vitalidad, y/o **2 tokens de agua — 2 (10%)** por +1 Acidez (máximo Nivel 6
+en ambos) — uno, otro, o ambos en la misma acción. Ojo con el agua: son **2** tokens, no 1, porque
+el token de agua es del 5%.
 
 #### Horas Extras
 
@@ -344,8 +365,9 @@ mismo día. Solo puede activarse **una vez por Día de Laboratorio** por jugador
 #### Pedido de Urgencia
 
 **Costo:** 1 Dato de Investigación. Ignora el Mercado por completo — sin importar el precio
-vigente — y obtiene directamente de la reserva general **un** tipo de recurso a elección: 100% de
-un tipo de harina, o los tokens de agua que el jugador desee (5% cada uno). A diferencia de Horas
+vigente — y obtiene directamente de la reserva general **un** tipo de recurso a elección: **10
+tokens — 10 (100%)** de un tipo de harina, o los tokens de agua que el jugador desee (5% cada
+uno). A diferencia de Horas
 Extras, no tiene límite de usos por día — se autolimita únicamente por los Datos de Investigación
 disponibles. Al no costar PA, queda exento de la regla "1 vez por día por espacio de acción" de la
 [Fase II](#6-fase-ii-acción) — es intencional, no un descuido.
@@ -355,7 +377,7 @@ disponibles. Al no costar PA, queda exento de la regla "1 vez por día por espac
 Solo pueden ejecutarse si la Vitalidad del cultivo base ha llegado a 0 (ver [Fase
 III](#9-fase-iii-fermentación)):
 
-- **H. Re-cultivo Manual:** Costo 1 PA + 50% de harina (de cualquier tipo, sin costo de agua).
+- **H. Re-cultivo Manual:** Costo 1 PA + **5 tokens de harina — 5 (50%)** (de cualquier tipo, sin costo de agua).
   Retira la Contaminación y sitúa Vitalidad y Acidez en Nivel 1. **Límite:** 1 vez por día (por
   espacio de acción), además de requerir Contaminación activa.
 - **I. Inóculo de Emergencia:** Costo 1 PA + 1 Dato de Investigación. Retira la Contaminación y
@@ -371,16 +393,16 @@ distintas cantidades de copias según el tipo. Todas las Avanzadas requieren la 
 Analítico para poder iniciarse. Los tracks de fermentación de todas las recetas corren de 1 a 20
 casillas.
 
-| Receta | Grado | Harina | Hidratación | Acidez Diana (Bono de Sabor) | Zona Baja | Zona Óptima | Zona Sobre-fermentada | Puntos (Baja / Óptima / Sobre) | Monedas (Baja / Óptima / Sobre) | Requiere |
+| Receta | Grado | Harina (siempre 10 tokens / 100%) | Agua — Tokens (Hidratación) | Acidez Diana (Bono de Sabor) | Zona Baja | Zona Óptima | Zona Sobre-fermentada | Puntos (Baja / Óptima / Sobre) | Monedas (Baja / Óptima / Sobre) | Requiere |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
-| Pan de Campo | Básica | Blanca | 60% (12 tokens) | Nivel 3 (+3) | 1–10 | 11–15 | 16–20 | 4 / 10 / −2 | 13 / 17 / 11 | — |
-| Focaccia | Básica | Blanca | 75% (15 tokens) | Nivel 1–2 (+2) | 1–9 | 10–14 | 15–20 | 3 / 12 / −3 | 15 / 19 / 13 | — |
-| Baguette | Básica | Blanca | 65% (13 tokens) | Nivel 2 (+3) | 1–11 | 12–15 | 16–20 | 5 / 11 / −2 | 14 / 18 / 12 | — |
-| Pizza Napolitana | Avanzada | Blanca | 62% (13 tokens) | Nivel 3 (+4) | 1–10 | 11–14 | 15–20 | 4 / 14 / −4 | 15 / 21 / 12 | Módulo Analítico |
-| Brioche | Avanzada | Blanca | 52% (11 tokens) | Nivel 1 (+5) | 1–14 | 15–17 | 18–20 | 5 / 16 / −6 | 14 / 21 / 11 | Módulo Analítico |
-| Hogaza Centeno | Avanzada | Centeno | 67% (14 tokens) | Nivel 4–5 (+6) | 1–12 | 13–16 | 17–20 | 6 / 15 / −5 | 20 / 27 / 17 | Módulo Analítico |
-| Pan de Semillas | Avanzada | Integral | 78% (16 tokens) | Nivel 3–4 (+7) | 1–13 | 14–16 | 17–20 | 6 / 17 / −5 | 19 / 26 / 16 | Módulo Analítico |
-| Panettone | Avanzada | Blanca | 47% (10 tokens) | Nivel 1 (+8) | 1–16 | 17–18 | 19–20 | 8 / 20 / −8 | 13 / 22 / 10 | Módulo Analítico |
+| Pan de Campo | Básica | Blanca | 12 (60%) | Nivel 3 (+3) | 1–10 | 11–15 | 16–20 | 4 / 10 / −2 | 13 / 17 / 11 | — |
+| Focaccia | Básica | Blanca | 15 (75%) | Nivel 1–2 (+2) | 1–9 | 10–14 | 15–20 | 3 / 12 / −3 | 15 / 19 / 13 | — |
+| Baguette | Básica | Blanca | 13 (65%) | Nivel 2 (+3) | 1–11 | 12–15 | 16–20 | 5 / 11 / −2 | 14 / 18 / 12 | — |
+| Pizza Napolitana | Avanzada | Blanca | 13 (62%) | Nivel 3 (+4) | 1–10 | 11–14 | 15–20 | 4 / 14 / −4 | 15 / 21 / 12 | Módulo Analítico |
+| Brioche | Avanzada | Blanca | 11 (52%) | Nivel 1 (+5) | 1–14 | 15–17 | 18–20 | 5 / 16 / −6 | 14 / 21 / 11 | Módulo Analítico |
+| Hogaza Centeno | Avanzada | Centeno | 14 (67%) | Nivel 4–5 (+6) | 1–12 | 13–16 | 17–20 | 6 / 15 / −5 | 20 / 27 / 17 | Módulo Analítico |
+| Pan de Semillas | Avanzada | Integral | 16 (78%) | Nivel 3–4 (+7) | 1–13 | 14–16 | 17–20 | 6 / 17 / −5 | 19 / 26 / 16 | Módulo Analítico |
+| Panettone | Avanzada | Blanca | 10 (47%) | Nivel 1 (+8) | 1–16 | 17–18 | 19–20 | 8 / 20 / −8 | 13 / 22 / 10 | Módulo Analítico |
 
 *El número entre paréntesis junto a la Acidez Diana es el bono de Puntos de Maestría del Bono de
 Sabor (ver [Acción F](#7-catálogo-de-acciones)); el Bono de Sabor también otorga siempre +2
@@ -494,8 +516,11 @@ puntuación.
 2. **Puntos de Sabor:** suma de los bonos de Bono de Sabor de cada carta horneada con el Cubo de
    Acidez sellado.
 3. **Madurez del Cultivo:** (Vitalidad actual + Acidez actual) ÷ 2, redondeando hacia arriba.
-4. **Penalización por Desperdicio:** −1 punto por cada 3 tokens de harina o agua sin utilizar en
-   la reserva final.
+4. **Penalización por Desperdicio:** −1 punto por cada 3 **tokens de insumo** sin utilizar en la
+   reserva final. Un token de harina (10%) y uno de agua (5%) cuentan **1:1** aquí pese a
+   representar porcentajes distintos: se suman en un único total y de ahí sale la división. Es la
+   única regla que mezcla los dos insumos — ver [Las dos unidades de
+   insumo](#las-dos-unidades-de-insumo).
 5. **Penalización por Contaminación:** −3 puntos por cada vez que la Vitalidad del jugador llegó a
    0 durante la partida.
 6. **Conversión de Riqueza:** +1 punto por cada 5 Monedas restantes en la reserva final (división
@@ -521,7 +546,7 @@ En caso de empate en Puntos de Maestría:
 | Ola de Calor | 2 | +10°C | Ninguno | Acelera el avance base en +2 casillas. |
 | Corriente de Aire | 4 | −5°C | Ninguno | Ralentiza el avance base en −1 casilla. |
 | Fallo de Calefacción | 2 | −10°C | Ninguno | Ralentiza el avance base en −2 casillas. |
-| Alta Humedad | 2 | 0°C | Ninguno | Iniciar Receta cuesta 1 token de agua menos ese día. |
+| Alta Humedad | 2 | 0°C | Ninguno | Iniciar Receta cuesta 1 token de agua menos ese día (−5% de hidratación). |
 | Explosión de Levaduras | 2 | 0°C | Todos ganan +1 Vitalidad (máx. 6). | Ninguno. |
 | Acidificación Acelerada | 2 | 0°C | Todos ganan +1 Acidez (máx. 6). | Ninguno. |
 | Aletargamiento Invernal | 2 | −5°C | Ninguno | Desgaste metabólico de −2 Vitalidad en vez de −1. |

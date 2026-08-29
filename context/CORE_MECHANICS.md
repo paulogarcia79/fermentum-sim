@@ -56,7 +56,7 @@ El final del juego se desencadena de inmediato si ocurre una de estas dos condic
 1. **Puntos Base:** Suma de los puntos de todas las recetas horneadas (positivos y negativos).
 2. **Puntos de Sabor:** Suma de los bonos de Acidez impresos en las cartas que tengan un Cubo de Laboratorio sellado.
 3. **Madurez del Cultivo:** `(Vitalidad Actual + Acidez Actual) / 2` (redondeando hacia arriba).
-4. **Desperdicio (Penalización):** -1 punto de Maestría por cada 3 tokens de insumos (Harina o Agua) sin utilizar en la reserva.
+4. **Desperdicio (Penalización):** -1 punto de Maestría por cada 3 **tokens de insumo** sin utilizar en la reserva. Un **Token de Harina (10%)** y un **Token de Agua (5%)** cuentan **1:1** aquí, pese a representar porcentajes distintos: se suman en un único total (`sum(reserva_harina) / 10 + reserva_agua`) y de ahí sale la división entera por 3. Esta es la única regla del juego que suma los dos insumos, y es la que fija el 10% como unidad atómica de la harina — ver PLAYER_STATE.md §"Unidades de Insumo (Tokens)".
 5. **Conversión de Riqueza:** +1 punto de Maestría por cada 5 Monedas restantes en la reserva final (división entera).
 
 ### Desempate

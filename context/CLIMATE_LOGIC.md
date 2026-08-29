@@ -21,7 +21,7 @@ Este mazo actúa como temporizador del juego (se roba una carta al inicio de cad
 | **Ola de Calor** (x2) | +10°C | Ninguno | Ninguno. (Acelera avance base en +2). |
 | **Corriente de Aire** (x4) | -5°C | Ninguno | Ninguno. (Ralentiza avance base en -1). |
 | **Fallo Calefacción** (x2) | -10°C | Ninguno | Ninguno. (Ralentiza avance base en -2). |
-| **Alta Humedad** (x2) | 0°C | Ninguno | Iniciar Receta (Acción B) cuesta 1 Token de Agua menos este turno. |
+| **Alta Humedad** (x2) | 0°C | Ninguno | Iniciar Receta (Acción B) cuesta 1 Token de Agua menos este turno (-5% de hidratación). |
 | **Explosión Levaduras** (x2) | 0°C | Todos los jugadores ganan +1 Vitalidad (Máx 6). | Ninguno. |
 | **Acidificación Acelerada** (x2)| 0°C | Todos los jugadores ganan +1 Acidez (Máx 6). | Ninguno. |
 | **Aletargamiento Invernal** (x2)| -5°C | Ninguno | Desgaste masivo: En Fase III, el cultivo base sufre -2 Vitalidad (en lugar del -1 normal). |
