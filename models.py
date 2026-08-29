@@ -742,6 +742,24 @@ class Player:
         return self.contador_contaminaciones * -3
 
     @property
+    def puntos_horneados(self) -> int:
+        """
+        Puntos acumulados por horneados hasta ahora: la suma de
+        ``HorneadoRecord.puntos_totales`` (base + bono de sabor) de TODOS los
+        registros, exitosos y colapsos (los colapsos aportan puntos negativos).
+
+        Es exactamente la pareja de términos 1+2 (Puntos Base + Puntos de
+        Sabor) de ``puntos_maestria_final``, expresada por registro — el
+        marcador "en vivo" que la UI muestra durante la partida, a diferencia
+        de la proyección final que además suma madurez, conversión de riqueza
+        y penalizaciones.
+        """
+        return sum(
+            r.puntos_totales
+            for r in self.archivo_horneado_exitoso + self.archivo_colapsos
+        )
+
+    @property
     def puntos_maestria_final(self) -> int:
         """
         Calcula el total de Puntos de Maestría al final de la partida.

@@ -13,6 +13,7 @@ import RegistroEventos from './RegistroEventos.vue'
 import FermentationReportModal from './FermentationReportModal.vue'
 import InicioDiaModal from './InicioDiaModal.vue'
 import FinAnticipadoModal from './FinAnticipadoModal.vue'
+import ResultadoHorneadoModal from './ResultadoHorneadoModal.vue'
 import RankingView from './RankingView.vue'
 
 const estado = computed(() => store.estado!)
@@ -113,7 +114,11 @@ onUnmounted(() => detenerTransmisionEnVivo())
       </div>
     </template>
 
-    <FermentationReportModal v-if="store.reporteDiaPendiente !== null" />
+    <!-- El resultado del propio horneado va primero: es la respuesta
+         inmediata a lo que el jugador acaba de hacer. Si el mismo snapshot
+         tambien cerro el dia, el reporte de Fase III espera a que lo cierre. -->
+    <ResultadoHorneadoModal v-if="store.resultadoHorneado" />
+    <FermentationReportModal v-else-if="store.reporteDiaPendiente !== null" />
     <InicioDiaModal v-else-if="store.inicioDiaPendiente" />
     <FinAnticipadoModal v-else-if="store.finAnticipadoPendiente" />
   </div>

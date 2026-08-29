@@ -358,6 +358,26 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   appears on most passes — accepted deliberately: over-warning is the right failure mode for a
   safety net; getting the rule subtly wrong is not.
 
+  **Live score and bake archive**: `puntos_maestria_final` always shipped but was rendered only
+  on the endgame `RankingView` — during play the score existed nowhere on screen. Now
+  `MiTablero.vue` carries a score strip under the header (`IconoMaestria` glyph +
+  `puntos_horneados`, the new "points from bakes so far" number, with the projected final PM
+  beside it and a tooltip explaining the projection moves for reasons other than baking), and the
+  old one-line archive count is a real "Archivo de Horneados (X/5)" zone — `/5` because the fifth
+  successful bake ends the game — listing each record's recipe, zone, `puntos_totales` (marking the
+  sabor bonus) and monedas, with collapses appended in `--color-mal` since their negative points
+  count toward the score. `TablerosOponentes.vue` shows every opponent's `🍞 X/5` and Maestría
+  (public info). Server side, `Player.puntos_horneados` (models.py, exactly the Puntos
+  Base + Sabor terms of `puntos_maestria_final` expressed per record) and the two
+  `HorneadoRecord` `@property`s `asdict` drops (`puntos_totales`, `zona_resultado`) are injected
+  per player / per record in `server/views.py`'s existing loop — view layer, not
+  `serialization.py`, so the golden snapshot is untouched (tests: `tests/test_puntos_horneados.py`).
+  After a voluntary bake, `ModalF.vue` no longer closes silently: it stores the freshly-applied
+  snapshot's last `archivo_horneado_exitoso` record in `store.resultadoHorneado` and
+  `GameView.vue` shows `ResultadoHorneadoModal.vue` (first in the modal chain). The record must
+  live in the store, not a ModalF ref: Acción F ends the turn, so the response snapshot unmounts
+  `BarraAcciones` (`v-if="esMiTurno"`) — and ModalF with it — before any local state could render.
+
   **Board-game-style layout and per-player color**: the UI is split into a shared "Mesa Común"
   region (`GameView.vue`: `MercadoPanel.vue`'s recipe cards, `SuministrosPanel.vue`'s supply
   lots, and `BarraAcciones.vue`'s action buttons restyled as board-tile "Espacios de Acción" —

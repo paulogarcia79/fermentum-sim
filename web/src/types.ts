@@ -51,6 +51,11 @@ export interface HorneadoRecord {
   fue_colapso: boolean
   datos_obtenidos: number
   monedas_obtenidos: number
+  /** base + bono de sabor. Inyectado por server/views.py (es una @property que
+   * asdict no incluye) -- nunca recalcular aqui. */
+  puntos_totales: number
+  /** Zona alcanzada al hornear, derivada por el servidor (logica de reglas). */
+  zona_resultado: 'colapso' | 'optima' | 'baja'
 }
 
 export interface Technologies {
@@ -87,6 +92,10 @@ export interface Player {
   acciones_pa_usadas_hoy: string[]
   contador_contaminaciones: number
   puntos_maestria_final: number
+  /** Puntos acumulados por horneados (exitosos + colapsos, base + bono) hasta
+   * ahora -- el marcador "en vivo". Inyectado por server/views.py, igual que
+   * puntos_maestria_final. */
+  puntos_horneados: number
   /** Vitalidad que tendra este jugador tras el desgaste de esta noche (Fase III).
    * La calcula el servidor (engine.vitalidad_prevista): la formula del desgaste
    * -- incluida la exencion por Criopreservacion y el -2 de Aletargamiento

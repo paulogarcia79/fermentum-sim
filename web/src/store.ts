@@ -8,7 +8,7 @@
 
 import { reactive } from 'vue'
 import * as api from './api'
-import type { GameEventView, GameStateView } from './types'
+import type { GameEventView, GameStateView, HorneadoRecord } from './types'
 import { reproducirNotificacionTurno } from './sonido'
 
 export interface Sesion {
@@ -46,6 +46,12 @@ interface Store {
   /** True si otro jugador pidio terminar la partida antes de tiempo y este
    * jugador todavia no votó ni descartó el aviso -- ver FinAnticipadoModal.vue. */
   finAnticipadoPendiente: boolean
+  /** Resultado del horneado voluntario (Accion F) recien resuelto, pendiente
+   * de que el jugador lo cierre. Vive en el store y no en ModalF porque la
+   * Accion F termina el turno: el snapshot de respuesta desmonta
+   * BarraAcciones (v-if="esMiTurno") y con ella cualquier ref local -- ver
+   * ResultadoHorneadoModal.vue, montado desde GameView. */
+  resultadoHorneado: HorneadoRecord | null
 }
 
 export const store: Store = reactive({
@@ -62,7 +68,18 @@ export const store: Store = reactive({
   // helpers de localStorage.
   preferencias: cargarPreferenciasLocales(),
   finAnticipadoPendiente: false,
+  resultadoHorneado: null,
 })
+
+/** Ver Store.resultadoHorneado. Lo setea ModalF.vue tras un horneado
+ * confirmado; lo limpia el boton Cerrar de ResultadoHorneadoModal.vue. */
+export function mostrarResultadoHorneado(registro: HorneadoRecord): void {
+  store.resultadoHorneado = registro
+}
+
+export function cerrarResultadoHorneado(): void {
+  store.resultadoHorneado = null
+}
 
 /**
  * Id de la última carta de clima ya mostrada en esta pestaña -- no
@@ -199,6 +216,7 @@ export function cerrarSesion(): void {
   store.reporteDiaPendiente = null
   store.inicioDiaPendiente = false
   store.finAnticipadoPendiente = false
+  store.resultadoHorneado = null
   ultimaCartaClimaId = undefined
   finAnticipadoDescartadoEnConteo = -1
   jugadorEnTurnoAnterior = null
@@ -321,6 +339,7 @@ function volverAVistaDeLobby(): void {
   store.reporteDiaPendiente = null
   store.inicioDiaPendiente = false
   store.finAnticipadoPendiente = false
+  store.resultadoHorneado = null
   ultimaCartaClimaId = undefined
   finAnticipadoDescartadoEnConteo = -1
   jugadorEnTurnoAnterior = null

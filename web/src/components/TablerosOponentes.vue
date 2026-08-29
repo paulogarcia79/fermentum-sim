@@ -38,7 +38,13 @@ function esTurno(i: number): boolean {
         <span>PA {{ p.puntos_accion }}</span>
         <span>Datos {{ p.datos_investigacion }}</span>
         <span>Monedas {{ p.monedas }}</span>
-        <span>{{ p.archivo_horneado_exitoso.length }}✔ / {{ p.archivo_colapsos.length }}⚠</span>
+        <span :title="`${p.archivo_horneado_exitoso.length} horneados exitosos de los 5 que terminan la partida · ${p.archivo_colapsos.length} colapsos`">
+          🍞 {{ p.archivo_horneado_exitoso.length }}/5
+          <template v-if="p.archivo_colapsos.length"> · {{ p.archivo_colapsos.length }}⚠</template>
+        </span>
+        <span :title="`${p.puntos_horneados} pts horneados · proyección final ${p.puntos_maestria_final} PM`">
+          Maestría {{ p.puntos_maestria_final }}
+        </span>
       </div>
       <div class="masas" v-if="p.estaciones_fermentacion.some((s) => s)">
         <span v-for="(slot, idx) in p.estaciones_fermentacion" :key="idx">

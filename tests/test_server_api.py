@@ -89,6 +89,8 @@ def test_partida_completa_de_2_jugadores_por_http() -> None:
     for datos_jugador in estado["players"]:
         assert datos_jugador["vitalidad_prevista"] == 0
         assert datos_jugador["en_riesgo_colapso"] is True
+        # Marcador en vivo de horneados: presente desde el Dia 1 (en cero).
+        assert datos_jugador["puntos_horneados"] == 0
 
     # -- Bruno intenta actuar fuera de su turno --
     r = cliente.post(

@@ -7,9 +7,10 @@ import IconoHarina from './IconoHarina.vue'
 import IconoAgua from './IconoAgua.vue'
 import IconoDatos from './IconoDatos.vue'
 import IconoMonedas from './IconoMonedas.vue'
+import IconoMaestria from './IconoMaestria.vue'
 import { hexDeColor } from '../data/coloresJugador'
 import { TECNOLOGIAS } from '../data/tecnologias'
-import type { TecnologiaID } from '../types'
+import type { HorneadoRecord, TecnologiaID } from '../types'
 
 const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
 const colorHex = computed(() => hexDeColor(yo.value.color))
@@ -29,6 +30,20 @@ const tecAbierta = ref<TecnologiaID | null>(null)
 const avisoColapso = computed(
   () => store.preferencias.alertaContaminacion && yo.value.en_riesgo_colapso,
 )
+
+/** Archivo completo, exitosos primero y colapsos despues -- ambos suman al
+ * marcador (los colapsos en negativo), pero solo los exitosos cuentan para
+ * el gatillo de quinta receta. */
+const registrosArchivo = computed<{ registro: HorneadoRecord; colapso: boolean }[]>(() => [
+  ...yo.value.archivo_horneado_exitoso.map((registro) => ({ registro, colapso: false })),
+  ...yo.value.archivo_colapsos.map((registro) => ({ registro, colapso: true })),
+])
+
+const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
+  optima: 'Zona Óptima',
+  baja: 'Zona Baja',
+  colapso: 'Colapso',
+}
 </script>
 
 <template>
@@ -42,6 +57,17 @@ const avisoColapso = computed(
       <div class="pa-pips">
         <span v-for="i in 3" :key="i" class="pip" :class="{ activo: i <= yo.puntos_accion }">●</span>
       </div>
+    </div>
+
+    <div class="marcador">
+      <span class="icono-marcador"><IconoMaestria /></span>
+      <span class="puntos-horneados">{{ yo.puntos_horneados }} pts horneados</span>
+      <span
+        class="proyeccion"
+        title="Puntuación si la partida terminara ahora: horneados + madurez del cultivo + conversión de riqueza − penalizaciones (desperdicio, contaminación). Cambia también sin hornear."
+      >
+        · proyección final: {{ yo.puntos_maestria_final }} PM
+      </span>
     </div>
 
     <div class="medidores">
@@ -139,9 +165,29 @@ const avisoColapso = computed(
       <p v-if="yo.carpeta_proyectos.length === 0" class="vacio">— vacía —</p>
     </div>
 
-    <div class="archivo">
-      Archivo: {{ yo.archivo_horneado_exitoso.length }} exitosos · {{ yo.archivo_colapsos.length }} colapsos
+    <div class="sub-titulo">
+      Archivo de Horneados ({{ yo.archivo_horneado_exitoso.length }}/5)
     </div>
+    <ul class="archivo-lista">
+      <li
+        v-for="({ registro, colapso }, i) in registrosArchivo"
+        :key="i"
+        class="registro-horneado"
+        :class="{ colapso }"
+      >
+        <span class="nombre-registro">
+          <template v-if="colapso">⚠ </template>{{ registro.recipe.nombre }}
+        </span>
+        <span class="detalle-registro">
+          {{ ETIQUETA_ZONA[registro.zona_resultado] }} ·
+          {{ registro.puntos_totales }} pts<template v-if="registro.bono_sabor_aplicado">
+            (con Bono de Sabor)</template
+          >
+          · {{ registro.monedas_obtenidos }}₥
+        </span>
+      </li>
+      <p v-if="registrosArchivo.length === 0" class="vacio">— todavía nada horneado —</p>
+    </ul>
   </section>
 </template>
 
@@ -383,9 +429,72 @@ const avisoColapso = computed(
   font-style: italic;
 }
 
-.archivo {
-  margin-top: 0.6rem;
-  font-size: 0.8rem;
+/* Marcador de puntos en vivo, bajo la cabecera. */
+.marcador {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.icono-marcador {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+}
+
+.icono-marcador :deep(svg) {
+  width: 100%;
+  height: 100%;
+}
+
+.puntos-horneados {
+  font-weight: 700;
+}
+
+.proyeccion {
   color: var(--color-texto-tenue);
+  font-size: 0.78rem;
+  cursor: help;
+}
+
+/* Archivo de horneados: filas compactas, colapsos en rojo al final. */
+.archivo-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.registro-horneado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--color-borde);
+  border-radius: 5px;
+}
+
+.registro-horneado .nombre-registro {
+  font-weight: 600;
+}
+
+.registro-horneado .detalle-registro {
+  color: var(--color-texto-tenue);
+  font-size: 0.74rem;
+}
+
+.registro-horneado.colapso {
+  border-color: var(--color-mal);
+}
+
+.registro-horneado.colapso .nombre-registro,
+.registro-horneado.colapso .detalle-registro {
+  color: var(--color-mal);
 }
 </style>

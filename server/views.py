@@ -95,9 +95,20 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
     # regla de CLIMATE_LOGIC.md y no debe duplicarse en TypeScript.
     for datos_jugador, jugador, asiento in zip(estado["players"], engine.players, sesion.seats):
         datos_jugador["puntos_maestria_final"] = jugador.puntos_maestria_final
+        datos_jugador["puntos_horneados"] = jugador.puntos_horneados
         datos_jugador["color"] = asiento.color
         datos_jugador["vitalidad_prevista"] = engine.vitalidad_prevista(jugador)
         datos_jugador["en_riesgo_colapso"] = engine.riesgo_colapso(jugador)
+        # Los HorneadoRecord del archivo llevan dos @property que asdict no
+        # incluye y que el cliente no debe recalcular (la zona en particular
+        # es lógica de reglas): se inyectan aquí, registro por registro.
+        for clave_archivo, registros in (
+            ("archivo_horneado_exitoso", jugador.archivo_horneado_exitoso),
+            ("archivo_colapsos", jugador.archivo_colapsos),
+        ):
+            for datos_registro, registro in zip(datos_jugador[clave_archivo], registros):
+                datos_registro["puntos_totales"] = registro.puntos_totales
+                datos_registro["zona_resultado"] = registro.zona_resultado
     estado["ranking"] = [
         {"posicion": posicion, "player_idx": engine.players.index(jugador)}
         for posicion, jugador in engine.calcular_ranking_final()

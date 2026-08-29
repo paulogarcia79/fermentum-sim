@@ -9,7 +9,7 @@
 // mostrar una estimacion antes de confirmar (ver engine.py:resolver_horneado).
 // El servidor sigue siendo quien calcula el resultado real al recibir la accion.
 import { computed, ref } from 'vue'
-import { despacharAccion, store } from '../../store'
+import { despacharAccion, mostrarResultadoHorneado, store } from '../../store'
 import ModalShell from '../ModalShell.vue'
 
 const MONEDAS_BONO_SABOR = 2
@@ -53,6 +53,16 @@ async function confirmar() {
   enviando.value = true
   try {
     await despacharAccion('F', { slot_index: slotIndex.value })
+    // Mostrar el resultado REAL en vez de cerrar en silencio.
+    // `despacharAccion` ya aplico el snapshot fresco, y un horneado
+    // voluntario siempre aterriza en archivo_horneado_exitoso: su ultimo
+    // registro ES este horneado, con puntos_totales/zona_resultado ya
+    // calculados por el servidor. Va al store (no a un ref local) porque la
+    // Accion F termina el turno y este modal se desmonta con BarraAcciones
+    // en cuanto el snapshot llega -- ver ResultadoHorneadoModal.vue.
+    const archivo = yo.value.archivo_horneado_exitoso
+    const registro = archivo[archivo.length - 1]
+    if (registro) mostrarResultadoHorneado(registro)
     emit('cerrar')
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'No se pudo hornear.'
