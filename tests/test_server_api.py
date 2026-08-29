@@ -12,6 +12,7 @@ resto de la suite.
 """
 from __future__ import annotations
 
+import random
 from typing import Any, Dict
 
 from starlette.testclient import TestClient
@@ -24,6 +25,11 @@ def _cliente() -> TestClient:
 
 
 def test_partida_completa_de_2_jugadores_por_http() -> None:
+    # El orden de turno del Día 1 sale del reparto aleatorio de PATROCINIO_CATALOG
+    # (ver bootstrap.create_game), asi que sin sembrar el RNG global esta prueba
+    # era un volado: fallaba ~la mitad de las veces en el assert de
+    # `jugador_en_turno_idx` de mas abajo. La semilla la vuelve determinista.
+    random.seed(21)
     cliente = _cliente()
 
     # -- Crear sala (Alba, host) --
@@ -63,9 +69,10 @@ def test_partida_completa_de_2_jugadores_por_http() -> None:
     assert r.status_code == 200, r.text
     estado = r.json()
     assert estado["fase_actual"] == "fase_ii"
-    # Ambos jugadores parten con la misma vitalidad/datos el Día 1 (ver
-    # PLAYER_STATE.md §2): el desempate de _determinar_investigador_jefe
-    # recae en el primero inscrito.
+    # El Día 1 el orden de turno NO sale del desempate por vitalidad/datos
+    # (ambos jugadores parten iguales, ver PLAYER_STATE.md §2) sino de la
+    # iniciativa de las cartas de Patrocinio repartidas en bootstrap.create_game.
+    # Con la semilla de arriba le toca a Alba (índice 0).
     assert estado["jugador_en_turno_idx"] == 0
     # turno_orden: secuencia completa del dia, [0] = Investigador Jefe.
     assert estado["turno_orden"][0] == estado["jefe_investigador_idx"]
@@ -75,6 +82,13 @@ def test_partida_completa_de_2_jugadores_por_http() -> None:
     assert "mazo_recetas" not in estado["market"]
     assert estado["players"][0]["color"] == "rojo"
     assert estado["players"][1]["color"] == "azul"
+    # Prediccion de colapso: calculada en el servidor porque la formula del
+    # desgaste es una regla de CLIMATE_LOGIC.md y no debe duplicarse en el
+    # cliente. El Dia 1 todos parten con Vitalidad 1, asi que el desgaste
+    # estandar (-1) los deja a todos en riesgo.
+    for datos_jugador in estado["players"]:
+        assert datos_jugador["vitalidad_prevista"] == 0
+        assert datos_jugador["en_riesgo_colapso"] is True
 
     # -- Bruno intenta actuar fuera de su turno --
     r = cliente.post(

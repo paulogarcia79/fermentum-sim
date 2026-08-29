@@ -299,6 +299,36 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   straight in `GameView`). Any failure at any step (room gone, token rejected) just clears the
   stored session and falls back to the normal create/join form.
 
+  **Contamination alert (opt-in)**: hitting Vitalidad 0 in Fase III is one of the harshest swings
+  in the game (-3 PM, a lower Madurez term, Acción B locked until an emergency protocol) and used
+  to be invisible until after it happened. `GameEngine.vitalidad_prevista`/`riesgo_colapso`
+  (`engine.py`) predict tonight's outcome; both share `_delta_desgaste` with the real
+  `_aplicar_desgaste_metabolico`, so the warning can't drift from the actual rule (it already
+  accounts for the Criopreservación exemption and Aletargamiento Invernal's -2). The prediction is
+  exact rather than a guess because the climate card is resolved in Fase I and nothing else in
+  Fase III touches vitality before the decay. `riesgo_colapso` returns False for an
+  already-contaminated player — staying at 0 is not a new episode, the same
+  transition-only rule `Player.ajustar_vitalidad` and `EventoTipo.CONTAMINACION` follow.
+  `server/views.py` ships both as per-player fields from the same zip loop that adds
+  `puntos_maestria_final`/`color` — computed server-side deliberately, since the decay formula is
+  a `CLIMATE_LOGIC.md` rule that must not be duplicated in TypeScript (and it's a `@property`, so
+  `dataclasses.asdict` wouldn't include it). Injected in `views.py`, **not** `serialization.py`,
+  so the golden-game snapshot stays untouched. The alert is opt-in per player, chosen by a
+  checkbox in `LobbyView.vue`'s create/join form (the one screen every player passes through —
+  only the host has a start button) and stored in `store.preferencias` under its own
+  `'fermentum-preferencias'` localStorage key, separate from the session key because
+  `cerrarSesion()` deletes the session and a durable preference should outlive it; for the same
+  reason it is *not* reset in `cerrarSesion()`/`volverAVistaDeLobby()`, unlike the per-game
+  module-level guards. When enabled it drives two things: `MiTablero.vue` paints the Vitalidad
+  pips red plus a `⚠` badge in the previously-unused third column of `.medidor`, and
+  `BarraAcciones.vue` gates "Pasar turno" behind an inline confirmation strip (the
+  `LobbyView.vue` `.confirmacion-inicio` pattern, not a fourth modal in `GameView.vue`'s chain).
+  That confirmation fires only when the player is at risk **and** at least one of their own
+  `acciones_disponibles` entries is still `habilitada` — deliberately reusing already-shipped data
+  instead of reimplementing "could Acción A actually save me" (which needs ≥10 of a *single* flour
+  type, or Pedido de Urgencia, and under Aletargamiento a single +1 isn't enough). Over-warning is
+  the right failure mode for a safety net; getting the rule subtly wrong is not.
+
   **Board-game-style layout and per-player color**: the UI is split into a shared "Mesa Común"
   region (`GameView.vue`: `MercadoPanel.vue`'s recipe cards, `SuministrosPanel.vue`'s supply
   lots, and `BarraAcciones.vue`'s action buttons restyled as board-tile "Espacios de Acción" —

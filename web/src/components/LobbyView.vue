@@ -2,7 +2,13 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from '../api'
 import { ApiFallo } from '../api'
-import { establecerSesion, iniciarPolling, refrescarEstado, store } from '../store'
+import {
+  establecerAlertaContaminacion,
+  establecerSesion,
+  iniciarPolling,
+  refrescarEstado,
+  store,
+} from '../store'
 import type { SalaMetadata } from '../api'
 import { COLORES_JUGADOR, hexDeColor } from '../data/coloresJugador'
 
@@ -253,6 +259,18 @@ onUnmounted(() => {
         </div>
       </label>
 
+      <label class="campo-alerta">
+        <input
+          type="checkbox"
+          :checked="store.preferencias.alertaContaminacion"
+          @change="establecerAlertaContaminacion(($event.target as HTMLInputElement).checked)"
+        />
+        <span>
+          Avisarme si mi masa madre va a colapsar esta noche
+          <small>Marca la Vitalidad en rojo y pide confirmación antes de pasar turno.</small>
+        </span>
+      </label>
+
       <div class="acciones-lobby">
         <template v-if="!llegoPorInvitacion">
           <label class="campo-jugadores">
@@ -393,6 +411,28 @@ input {
 
 .campo-color {
   margin-bottom: 0.9rem;
+}
+
+.campo-alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.9rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.campo-alerta input {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.campo-alerta small {
+  display: block;
+  color: var(--color-texto-tenue);
+  font-size: 0.75rem;
+  margin-top: 0.1rem;
 }
 
 .swatches {

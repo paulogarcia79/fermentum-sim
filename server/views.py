@@ -87,9 +87,17 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
     estado["acciones_disponibles"] = [
         acciones_disponibles(engine, jugador) for jugador in engine.players
     ]
+    # Campos derivados que `dataclasses.asdict` no incluye (son @property o
+    # métodos del engine) más el color, que vive en el asiento y no en el
+    # jugador de dominio. `vitalidad_prevista`/`en_riesgo_colapso` se calculan
+    # aquí y no en el cliente a propósito: la fórmula del desgaste (incluida la
+    # exención por Criopreservación y el -2 de Aletargamiento Invernal) es una
+    # regla de CLIMATE_LOGIC.md y no debe duplicarse en TypeScript.
     for datos_jugador, jugador, asiento in zip(estado["players"], engine.players, sesion.seats):
         datos_jugador["puntos_maestria_final"] = jugador.puntos_maestria_final
         datos_jugador["color"] = asiento.color
+        datos_jugador["vitalidad_prevista"] = engine.vitalidad_prevista(jugador)
+        datos_jugador["en_riesgo_colapso"] = engine.riesgo_colapso(jugador)
     estado["ranking"] = [
         {"posicion": posicion, "player_idx": engine.players.index(jugador)}
         for posicion, jugador in engine.calcular_ranking_final()

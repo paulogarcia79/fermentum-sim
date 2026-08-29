@@ -1200,6 +1200,48 @@ class GameEngine:
             if slot.recipe.esta_sobrefermentada(slot.posicion_track):
                 self.resolver_horneado(player, idx, fue_colapso=True)
 
+    def _delta_desgaste(self, player: Player) -> int:
+        """
+        Desgaste de Vitalidad que ``player`` sufrirá en la Fase III de HOY.
+
+        Fuente única de verdad del cálculo, compartida por
+        ``_aplicar_desgaste_metabolico`` (que lo aplica de verdad) y por
+        ``vitalidad_prevista``/``riesgo_colapso`` (que lo predicen para la UI),
+        de modo que el aviso al jugador no pueda divergir del efecto real.
+
+        Returns:
+            0 si el jugador tiene Criopreservación (Estasis Biológica);
+            si no, ``environment.desgaste_vitalidad_fase_3`` (-1, o -2 con
+            Aletargamiento Invernal activo).
+        """
+        if player.tecnologias.criopreservacion:
+            return 0
+        return self._environment.desgaste_vitalidad_fase_3
+
+    def vitalidad_prevista(self, player: Player) -> int:
+        """
+        Vitalidad que tendrá ``player`` tras el desgaste de esta noche.
+
+        La carta de clima del día ya se resolvió en la Fase I y nada más en la
+        Fase III toca la Vitalidad antes del desgaste, así que durante la Fase II
+        esta predicción es exacta, no una estimación.
+        """
+        return max(0, min(6, player.vitalidad + self._delta_desgaste(player)))
+
+    def riesgo_colapso(self, player: Player) -> bool:
+        """
+        True si el desgaste de esta noche llevará a ``player`` a Vitalidad 0
+        por primera vez, es decir, un episodio de contaminación NUEVO
+        (-3 Puntos de Maestría y bloqueo de la Acción B).
+
+        Un jugador ya contaminado devuelve False: seguir en 0 no es un episodio
+        nuevo, misma regla que aplica ``Player.ajustar_vitalidad`` y que hace
+        que ``EventoTipo.CONTAMINACION`` solo se emita en la transición.
+        """
+        if player.en_estado_contaminacion:
+            return False
+        return self.vitalidad_prevista(player) == 0
+
     def _aplicar_desgaste_metabolico(self) -> None:
         """
         Aplica el Desgaste Metabólico al cultivo base de todos los jugadores.
@@ -1213,9 +1255,8 @@ class GameEngine:
           · Consecuencia de llegar a 0: estado de Contaminación + penalización
             de -3 PM (gestionado automáticamente por ``Player.ajustar_vitalidad``).
         """
-        delta_estandar: int = self._environment.desgaste_vitalidad_fase_3
         for jugador_idx, player in enumerate(self._players):
-            delta: int = 0 if player.tecnologias.criopreservacion else delta_estandar
+            delta: int = self._delta_desgaste(player)
             vit_antes: int = player.vitalidad
             contaminado_antes: bool = player.en_estado_contaminacion
 

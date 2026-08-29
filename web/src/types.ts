@@ -87,6 +87,15 @@ export interface Player {
   acciones_pa_usadas_hoy: string[]
   contador_contaminaciones: number
   puntos_maestria_final: number
+  /** Vitalidad que tendra este jugador tras el desgaste de esta noche (Fase III).
+   * La calcula el servidor (engine.vitalidad_prevista): la formula del desgaste
+   * -- incluida la exencion por Criopreservacion y el -2 de Aletargamiento
+   * Invernal -- es una regla de CLIMATE_LOGIC.md y no se duplica aqui. */
+  vitalidad_prevista: number
+  /** True si el desgaste de esta noche llevara a este jugador a Vitalidad 0
+   * por primera vez (episodio de contaminacion NUEVO: -3 Puntos de Maestria).
+   * Un jugador ya contaminado devuelve false. Ver engine.riesgo_colapso. */
+  en_riesgo_colapso: boolean
 }
 
 export interface ClimateCard {

@@ -22,6 +22,13 @@ const EMOJI_TECNOLOGIA: Record<TecnologiaID, string> = {
 }
 
 const tecAbierta = ref<TecnologiaID | null>(null)
+
+/** Aviso de colapso: opt-in por jugador (se elige en el lobby). `en_riesgo_colapso`
+ * lo calcula el servidor -- ya contempla la exencion por Criopreservacion y el
+ * -2 de Aletargamiento Invernal. */
+const avisoColapso = computed(
+  () => store.preferencias.alertaContaminacion && yo.value.en_riesgo_colapso,
+)
 </script>
 
 <template>
@@ -41,8 +48,20 @@ const tecAbierta = ref<TecnologiaID | null>(null)
       <div class="medidor">
         <span class="etiqueta">Vitalidad</span>
         <div class="pips-track">
-          <span v-for="i in 6" :key="i" class="pip-track vitalidad" :class="{ activo: i <= yo.vitalidad }">●</span>
+          <span
+            v-for="i in 6"
+            :key="i"
+            class="pip-track vitalidad"
+            :class="{ activo: i <= yo.vitalidad, peligro: avisoColapso }"
+            >●</span
+          >
         </div>
+        <span
+          v-if="avisoColapso"
+          class="badge-colapso"
+          :title="`Vitalidad ${yo.vitalidad} → ${yo.vitalidad_prevista} esta noche: entrarás en Contaminación (-3 Puntos de Maestría y no podrás Iniciar Receta). Alimenta el cultivo (Acción A, 0 PA) antes de terminar el día.`"
+          >⚠</span
+        >
       </div>
       <div class="medidor">
         <span class="etiqueta">Acidez</span>
@@ -204,6 +223,20 @@ const tecAbierta = ref<TecnologiaID | null>(null)
 
 .pip-track.activo.acidez {
   color: #7fa8d9;
+}
+
+/* Aviso de colapso: la Vitalidad se pinta en rojo en vez de verde para que
+   el riesgo se vea sin tener que leer nada. Va despues de .activo.vitalidad
+   a proposito -- misma especificidad, gana la ultima regla. */
+.pip-track.activo.peligro {
+  color: var(--color-mal);
+}
+
+.badge-colapso {
+  justify-self: end;
+  color: var(--color-mal);
+  font-size: 0.9rem;
+  cursor: help;
 }
 
 .recursos-grid {

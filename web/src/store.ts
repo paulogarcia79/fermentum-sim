@@ -19,6 +19,12 @@ export interface Sesion {
   nombre: string
 }
 
+export interface Preferencias {
+  /** Avisar cuando la masa madre vaya a colapsar esta noche: badge permanente
+   * en MiTablero.vue + confirmacion al pasar turno en BarraAcciones.vue. */
+  alertaContaminacion: boolean
+}
+
 interface Store {
   sesion: Sesion | null
   estado: GameStateView | null
@@ -32,6 +38,10 @@ interface Store {
   /** True si la carta de clima del dia actual todavia no fue reconocida
    * por el jugador en esta pestaña -- ver EventoClimaticoModal.vue. */
   climaPendiente: boolean
+  /** Preferencias de UI del jugador local, persistidas en localStorage bajo
+   * su propia clave. NO se resetean al cerrar sesion ni al volver al lobby:
+   * son duraderas, a diferencia de las banderas por partida de mas abajo. */
+  preferencias: Preferencias
   /** True si otro jugador pidio terminar la partida antes de tiempo y este
    * jugador todavia no votó ni descartó el aviso -- ver FinAnticipadoModal.vue. */
   finAnticipadoPendiente: boolean
@@ -46,6 +56,10 @@ export const store: Store = reactive({
   cargando: false,
   reporteDiaPendiente: null,
   climaPendiente: false,
+  // `cargarPreferenciasLocales` es una declaracion de funcion (hoisted), asi
+  // que puede usarse aqui aunque este definida mas abajo junto al resto de
+  // helpers de localStorage.
+  preferencias: cargarPreferenciasLocales(),
   finAnticipadoPendiente: false,
 })
 
@@ -108,6 +122,34 @@ const INTERVALO_RESPALDO_EVENTOS_MS = 15000
 // esta en LOBBY, asi que sin esto, cerrar el navegador durante una
 // partida en curso dejaba el asiento inaccesible para siempre.
 const CLAVE_SESION_LOCAL = 'fermentum-sesion'
+
+// Preferencias de UI del jugador. Clave SEPARADA de la sesion a proposito:
+// cerrarSesion() borra la sesion, pero una preferencia es duradera y debe
+// sobrevivir a salir de una partida y entrar a otra.
+const CLAVE_PREFERENCIAS_LOCAL = 'fermentum-preferencias'
+
+function cargarPreferenciasLocales(): Preferencias {
+  const porDefecto: Preferencias = { alertaContaminacion: true }
+  try {
+    const crudo = localStorage.getItem(CLAVE_PREFERENCIAS_LOCAL)
+    if (!crudo) return porDefecto
+    return { ...porDefecto, ...(JSON.parse(crudo) as Partial<Preferencias>) }
+  } catch {
+    return porDefecto
+  }
+}
+
+/** Cambia una preferencia y la persiste. El aviso de contaminacion es opt-in
+ * por jugador (se pregunta en el lobby, ver LobbyView.vue). */
+export function establecerAlertaContaminacion(activa: boolean): void {
+  store.preferencias.alertaContaminacion = activa
+  try {
+    localStorage.setItem(CLAVE_PREFERENCIAS_LOCAL, JSON.stringify(store.preferencias))
+  } catch {
+    // Igual que la sesion: si localStorage falla, la preferencia sigue
+    // valiendo para esta pestaña, solo no sobrevive a una recarga.
+  }
+}
 
 function guardarSesionLocal(s: Sesion): void {
   try {
