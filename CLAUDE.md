@@ -358,6 +358,34 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   appears on most passes — accepted deliberately: over-warning is the right failure mode for a
   safety net; getting the rule subtly wrong is not.
 
+  **Undo (visit-scope)**: `POST /games/{id}/undo` restores the game to the state at the start of
+  the active player's **current visit** — available only to that player, only while the visit is
+  open, unlimited (always back to the same point). Mechanism: `GameSession.tomar_checkpoint()`
+  pickles the engine right before the visit's *first free action* (`enviar_accion` takes it lazily;
+  A / Horas Extras / Pedido de Urgencia don't end the visit, so several can share one checkpoint),
+  detaching `engine._event_sink` around the dump — it's a bound method of the session, so pickling
+  it would drag a full `GameSession` clone along — and `restaurar_checkpoint()` re-wires
+  `difundir_evento` on the restored engine so SSE keeps flowing. A PA action, a pass, or a
+  force-pass **closes** the visit and discards the checkpoint (cleared *after* the mutating call
+  succeeds, never before — fail-fast rejections must not destroy a live checkpoint); the key is
+  `(dia_actual, turno_nonce, player_index)` because the nonce alone doesn't mark visit boundaries
+  (free actions don't bump it). Snapshot-restore was chosen over inverse commands because several
+  mutations are lossy at their clamps (`mover_visor_harina`'s [1,5], `dados_inoculo`'s `min(3,…)`)
+  — an "inverse action" would be wrong exactly at the boundaries. It is safe because every Fase II
+  action is deterministic over public information (`actions.py` imports no `random` and never
+  touches a hidden deck; all reveals live in `fase_I_ambiente`), and inside the undo window only
+  free actions occur, **none of which emit events** — so `engine.eventos` is byte-identical across
+  an undo and client `since` pointers never dangle (no epoch counter needed). The hidden-info rule
+  ("revealed information can never be un-revealed; undo restores from the reveal point") is
+  vacuously true today but wired for the future: `server/commands.py:ACCIONES_QUE_REVELAN` (all
+  `False`) forces a checkpoint re-take right *after* a flagged action resolves — the reveal
+  becomes the new undo floor — and its UI mirror in `web/src/data/descripcionesAcciones.ts` adds
+  a "no se puede deshacer" tooltip warning to flagged actions. The client gets
+  `puede_deshacer` in the state view and shows an "↩ Deshacer" button beside "Pasar turno"
+  (`BarraAcciones.vue`). Checkpoint bytes ride in the persistence pickle (undo survives a
+  restart); `VERSION_FORMATO` bumped to 8 for the `GameSession` shape change, and
+  `reiniciar_a_lobby` clears the checkpoint with the engine. Tests: `tests/test_undo.py`.
+
   **Live score and bake archive**: `puntos_maestria_final` always shipped but was rendered only
   on the endgame `RankingView` — during play the score existed nowhere on screen. Now
   `MiTablero.vue` carries a score strip under the header (`IconoMaestria` glyph +

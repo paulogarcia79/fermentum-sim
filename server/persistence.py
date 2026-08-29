@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 7
+VERSION_FORMATO = 8
 """
 Bumped a 6: `Player` ganó `acciones_pa_usadas_hoy` (espacios de acción con
 costo de PA ya visitados hoy -- ver PLAYER_STATE.md) -- un pickle viejo sin

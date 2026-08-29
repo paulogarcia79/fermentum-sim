@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { pasar, store } from '../store'
+import { deshacer, pasar, store } from '../store'
 import ModalShell from './ModalShell.vue'
 import ModalA from './acciones/ModalA.vue'
 import ModalB from './acciones/ModalB.vue'
@@ -12,7 +12,7 @@ import ModalG from './acciones/ModalG.vue'
 import ModalSimposio from './acciones/ModalSimposio.vue'
 import ModalConfirmacion from './acciones/ModalConfirmacion.vue'
 import ModalPedidoUrgencia from './acciones/ModalPedidoUrgencia.vue'
-import { descripcionesAcciones, type IdAccion } from '../data/descripcionesAcciones'
+import { ACCIONES_QUE_REVELAN, descripcionesAcciones, type IdAccion } from '../data/descripcionesAcciones'
 import { hexDeColor } from '../data/coloresJugador'
 import type { Player } from '../types'
 
@@ -92,6 +92,20 @@ function onPasar() {
   void pasarDeVerdad()
 }
 
+/** Deshacer la visita: restaura al estado previo a la primera accion
+ * gratuita de esta visita. El servidor manda `puede_deshacer` -- el boton
+ * solo existe cuando hay algo que deshacer, y una accion con costo de PA
+ * (que termina la visita) lo hace desaparecer para siempre. */
+const deshaciendo = ref(false)
+async function onDeshacer() {
+  deshaciendo.value = true
+  try {
+    await deshacer()
+  } finally {
+    deshaciendo.value = false
+  }
+}
+
 /** Atajo del modal de confirmación: en vez de pasar, saltar directo a una de
  * las acciones que quedaban -- cierra la confirmación y abre el modal normal
  * de esa acción (mismo flujo que clickear su espacio en el tablero). */
@@ -130,6 +144,9 @@ async function pasarDeVerdad() {
         </button>
         <div class="tooltip" role="tooltip">
           <p>{{ descripcionesAcciones[b.id] }}</p>
+          <p v-if="ACCIONES_QUE_REVELAN.has(b.id)" class="tooltip-motivo">
+            ⚠ Revela información oculta: ese paso no se puede deshacer.
+          </p>
           <p v-if="!estado(b.id).habilitada && estado(b.id).motivo" class="tooltip-motivo">
             ⚠ {{ estado(b.id).motivo }}
           </p>
@@ -137,7 +154,18 @@ async function pasarDeVerdad() {
       </div>
     </div>
 
-    <button class="pasar" :disabled="pasando" @click="onPasar">Pasar turno</button>
+    <div class="fila-controles">
+      <button
+        v-if="store.estado!.puede_deshacer"
+        class="deshacer"
+        :disabled="deshaciendo || pasando"
+        title="Restaura el estado al inicio de tu visita, deshaciendo las acciones gratuitas que hiciste. La información oculta revelada nunca se restaura (hoy ninguna acción revela nada)."
+        @click="onDeshacer"
+      >
+        ↩ Deshacer
+      </button>
+      <button class="pasar" :disabled="pasando || deshaciendo" @click="onPasar">Pasar turno</button>
+    </div>
 
     <ModalShell
       v-if="confirmandoPase"
@@ -305,13 +333,28 @@ async function pasarDeVerdad() {
   display: block;
 }
 
+.fila-controles {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .pasar {
-  width: 100%;
+  flex: 1;
   padding: 0.5rem;
   border-radius: 4px;
   border: 1px solid var(--color-borde);
   background: transparent;
   color: var(--color-texto-tenue);
+}
+
+.deshacer {
+  flex: 0 0 auto;
+  padding: 0.5rem 0.8rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-acento);
+  background: transparent;
+  color: var(--color-acento);
+  cursor: pointer;
 }
 
 /* Modal de confirmación de pase: qué queda por hacer, con atajo directo a

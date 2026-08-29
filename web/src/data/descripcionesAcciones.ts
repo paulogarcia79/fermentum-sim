@@ -33,3 +33,14 @@ export const descripcionesAcciones: Record<IdAccion, string> = {
   pedido_urgencia:
     'Gratis, sin límite por ronda. Costo: 1 Dato de Investigación. Ignora el mercado y obtiene directamente 100% de un tipo de Harina, o los tokens de Agua que elijas — uno de los dos, no ambos.',
 }
+
+/**
+ * Acciones que REVELAN información oculta al resolverse — espejo de
+ * ACCIONES_QUE_REVELAN en server/commands.py. Hoy NINGUNA acción lo hace
+ * (todas operan sobre información pública), pero el contrato ya está
+ * cableado: una acción listada aquí muestra en su tooltip el aviso de que
+ * lo revelado no se puede deshacer (el servidor re-toma el checkpoint de
+ * visita justo después de resolverla, así que un deshacer posterior
+ * restaura DESDE ese punto, nunca antes).
+ */
+export const ACCIONES_QUE_REVELAN: ReadonlySet<IdAccion> = new Set()

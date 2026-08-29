@@ -114,5 +114,10 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
         for posicion, jugador in engine.calcular_ranking_final()
     ]
     estado["votos_fin_anticipado"] = sorted(sesion.votos_fin_anticipado)
+    # True si el jugador activo puede deshacer su visita en curso (hay un
+    # checkpoint tomado en esta misma visita) -- ver POST /games/{id}/undo.
+    # Es informacion publica inofensiva: solo dice "el jugador activo ya
+    # hizo algo gratuito esta visita", que de todas formas se ve en el tablero.
+    estado["puede_deshacer"] = sesion.puede_deshacer()
 
     return estado

@@ -75,3 +75,10 @@ class PartidaNoEnCursoError(RoomError):
 class PartidaNoTerminadaError(RoomError):
     """Se lanza al intentar volver una sala al lobby (``reiniciar_a_lobby``)
     antes de que su partida haya terminado."""
+
+
+class NadaQueDeshacerError(RoomError):
+    """Se lanza al pedir un undo (``POST /games/{id}/undo``) cuando no hay
+    ningún checkpoint restaurable para la visita actual del jugador: todavía
+    no hizo ninguna acción esta visita, o su visita ya terminó (una acción
+    con costo de PA o un pase cierran la visita y descartan el checkpoint)."""

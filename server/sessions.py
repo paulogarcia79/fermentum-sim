@@ -17,6 +17,7 @@ en vez de insinuar lo contrario.
 from __future__ import annotations
 
 import asyncio
+import pickle
 import secrets
 import time
 from dataclasses import dataclass, field
@@ -160,6 +161,18 @@ class GameSession:
     """Índices de jugador que confirmaron terminar la partida antes de
     tiempo (ver ``confirmar_fin_anticipado``) -- se vacía en
     ``reiniciar_a_lobby``, nunca se retira un voto individual."""
+    checkpoint_visita: Optional[bytes] = None
+    """Pickle del ``engine`` tomado justo antes de la primera acción de la
+    visita en curso (con ``_event_sink`` desprendido -- ver
+    ``tomar_checkpoint``). Es lo que restaura ``POST /games/{id}/undo``.
+    Se descarta cuando la visita termina (acción con costo de PA, pase,
+    pase forzado) -- deshacer solo cubre la propia visita en curso."""
+    checkpoint_clave: Optional[Tuple[int, int, int]] = None
+    """(dia_actual, turno_nonce, player_index) de la visita a la que
+    pertenece ``checkpoint_visita``. Las tres piezas son necesarias: el
+    nonce solo cambia al TERMINAR un turno, así que por sí solo no
+    distingue visitas (varias acciones gratuitas comparten nonce), y el
+    día lo desambigua a través de reinicios de partida."""
 
     def __getstate__(self) -> Dict[str, Any]:
         """
@@ -205,6 +218,76 @@ class GameSession:
         SSE conectado a esta sala ahora mismo."""
         for cola in self.suscriptores:
             cola.put_nowait(evento)
+
+    # ------------------------------------------------------------------
+    # Checkpoint de visita (deshacer)
+    # ------------------------------------------------------------------
+    #
+    # Deshacer restaura por snapshot, no por comandos inversos, a propósito:
+    # varias mutaciones del motor son con pérdida (el tope [1, 5] de
+    # mover_visor_harina, el min(3, ...) de dados_inoculo), así que una
+    # "acción inversa" sería INCORRECTA justo en los bordes. Un pickle del
+    # motor restaura el estado byte a byte. Es seguro porque toda acción de
+    # Fase II es determinista sobre información pública (actions.py no
+    # importa random ni toca ningún mazo oculto), y dentro de la ventana de
+    # deshacer -- solo acciones gratuitas, que no emiten eventos -- el log
+    # de eventos queda idéntico, con lo que los punteros `since` de los
+    # clientes nunca quedan por delante del servidor.
+
+    def _clave_visita_actual(self) -> Optional[Tuple[int, int, int]]:
+        """(dia, nonce, jugador activo) de la visita en curso, o None."""
+        if self.engine is None:
+            return None
+        activo = self.engine.jugador_activo
+        if activo is None:
+            return None
+        return (
+            self.engine.environment.dia_actual,
+            self.engine.turno_nonce,
+            self.engine.players.index(activo),
+        )
+
+    def tomar_checkpoint(self) -> None:
+        """
+        Congela el estado del motor como punto de restauración de la visita
+        en curso. ``_event_sink`` es un método ligado a esta misma sesión:
+        se desprende antes del pickle (si no, el pickle arrastraría un clon
+        de toda la GameSession) y se vuelve a colgar de inmediato.
+        """
+        assert self.engine is not None
+        sink = self.engine._event_sink
+        self.engine._event_sink = None
+        try:
+            self.checkpoint_visita = pickle.dumps(self.engine)
+        finally:
+            self.engine._event_sink = sink
+        self.checkpoint_clave = self._clave_visita_actual()
+
+    def restaurar_checkpoint(self) -> None:
+        """
+        Deshace la visita: reemplaza el motor por el checkpoint y vuelve a
+        cablear ``difundir_evento`` como su ``event_sink`` (el clon
+        restaurado trae ``None``). Descarta el checkpoint -- la siguiente
+        acción gratuita re-fotografía exactamente el mismo estado, con lo
+        que "deshacer" es ilimitado pero siempre vuelve al mismo punto.
+        """
+        assert self.checkpoint_visita is not None
+        restaurado: GameEngine = pickle.loads(self.checkpoint_visita)
+        restaurado._event_sink = self.difundir_evento
+        self.engine = restaurado
+        self.limpiar_checkpoint()
+
+    def limpiar_checkpoint(self) -> None:
+        self.checkpoint_visita = None
+        self.checkpoint_clave = None
+
+    def puede_deshacer(self) -> bool:
+        """True si hay un checkpoint restaurable para la visita EN CURSO."""
+        return (
+            self.checkpoint_visita is not None
+            and self.checkpoint_clave is not None
+            and self.checkpoint_clave == self._clave_visita_actual()
+        )
 
     def forzar_pase_por_inactividad(self) -> None:
         """
@@ -273,6 +356,7 @@ class GameSession:
         self.status = RoomStatus.LOBBY
         self.engine = None
         self.votos_fin_anticipado = set()
+        self.limpiar_checkpoint()  # el checkpoint apuntaba al motor recién descartado
 
 
 def _validar_color(color: str, tomados: List[str]) -> None:

@@ -460,6 +460,21 @@ export async function pasar(): Promise<void> {
   }
 }
 
+/** Deshace la visita en curso (restaura al inicio de la visita). El servidor
+ * es la autoridad: el boton solo se muestra cuando estado.puede_deshacer. */
+export async function deshacer(): Promise<void> {
+  if (!store.sesion) return
+  store.cargando = true
+  try {
+    aplicarEstado(await api.deshacerAccion(store.sesion.roomId, store.sesion.token))
+    store.error = null
+  } catch (e) {
+    store.error = e instanceof Error ? e.message : String(e)
+  } finally {
+    store.cargando = false
+  }
+}
+
 /** Milestone 6: cualquier jugador puede forzar el pase del jugador activo
  * si lleva mucho tiempo inactivo. El servidor decide si corresponde --
  * este cliente no intenta llevar la cuenta de cuánto tiempo pasó, solo

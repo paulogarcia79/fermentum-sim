@@ -47,6 +47,18 @@ ACCIONES_QUE_TERMINAN_TURNO: Dict[str, bool] = {
     "pedido_urgencia": False,
 }
 
+# Acciones que REVELAN información oculta al resolverse (robar de un mazo
+# boca abajo, tirar un dado, ...). Hoy NINGUNA lo hace -- se verificó por
+# auditoría: actions.py no importa random ni toca mazo_recetas/mazo_clima/
+# mazo_tendencias; todos los robos ocultos viven en fase_I_ambiente,
+# automáticos, fuera de la ventana de deshacer. El contrato para el futuro:
+# una acción marcada True aquí obliga a RE-TOMAR el checkpoint de visita
+# justo después de resolverse (server/app.py) -- lo revelado se convierte en
+# el nuevo piso del deshacer, nunca se des-revela -- y su modal en la UI
+# debe avisar de antemano que ese paso no se puede deshacer (ver
+# ACCIONES_QUE_REVELAN en web/src/data/descripcionesAcciones.ts, el espejo).
+ACCIONES_QUE_REVELAN: Dict[str, bool] = {accion: False for accion in ACCIONES_QUE_TERMINAN_TURNO}
+
 ACCIONES_VALIDAS = frozenset(ACCIONES_QUE_TERMINAN_TURNO)
 
 

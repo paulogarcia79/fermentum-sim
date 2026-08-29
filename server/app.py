@@ -60,11 +60,12 @@ from exceptions import (
     RuleViolationError,
 )
 from server import persistence
-from server.commands import resolver_comando
+from server.commands import ACCIONES_QUE_REVELAN, ACCIONES_QUE_TERMINAN_TURNO, resolver_comando
 from server.errors import (
     CapacidadInvalidaError,
     ColorInvalidoError,
     ColorYaTomadoError,
+    NadaQueDeshacerError,
     NoActiveTurnError,
     NotHostError,
     PartidaNoEnCursoError,
@@ -108,6 +109,7 @@ _MAPEO_ERRORES: List[Tuple[Type[Exception], int, str]] = [
     (CapacidadInvalidaError, 400, "capacidad_invalida"),
     (PartidaNoEnCursoError, 409, "partida_no_en_curso"),
     (PartidaNoTerminadaError, 409, "partida_no_terminada"),
+    (NadaQueDeshacerError, 409, "nada_que_deshacer"),
     (RoomError, 400, "error_de_sala"),  # respaldo genérico
 ]
 
@@ -464,7 +466,32 @@ def crear_app() -> Starlette:
                     )
                 jugador = engine.players[asiento.player_index]
                 manager = ActionManager(engine)
-                resolver_comando(engine, manager, jugador, accion, params)
+                # Checkpoint de deshacer. Una acción gratuita deja la visita
+                # abierta, así que el estado PRE-acción se fotografía la
+                # primera vez (las siguientes gratuitas de la misma visita
+                # comparten ese punto de restauración). El orden importa:
+                # ActionManager valida todo y revienta ANTES de mutar
+                # (fail-fast), así que si la acción se rechaza hay que
+                # devolver el checkpoint a como estaba -- ni descartar el de
+                # una visita que no terminó, ni conservar uno recién creado
+                # para una acción que nunca ocurrió.
+                es_gratuita = accion in ACCIONES_QUE_TERMINAN_TURNO and not ACCIONES_QUE_TERMINAN_TURNO[accion]
+                checkpoint_nuevo = es_gratuita and not sesion.puede_deshacer()
+                if checkpoint_nuevo:
+                    sesion.tomar_checkpoint()
+                try:
+                    resolver_comando(engine, manager, jugador, accion, params)
+                except FermentumError:
+                    if checkpoint_nuevo:
+                        sesion.limpiar_checkpoint()
+                    raise
+                if not es_gratuita:
+                    sesion.limpiar_checkpoint()  # la visita terminó: nada deshacible
+                # Contrato de ACCIONES_QUE_REVELAN (hoy todas False): lo
+                # revelado no se des-revela -- el checkpoint se re-toma
+                # DESPUÉS de resolver, y ese es el nuevo piso del deshacer.
+                if ACCIONES_QUE_REVELAN.get(accion):
+                    sesion.tomar_checkpoint()
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
                 vista = game_state_view(sesion)
@@ -483,8 +510,41 @@ def crear_app() -> Starlette:
             async with sesion.lock:
                 _requerir_turno_del_jugador(engine, asiento)
                 jugador = engine.players[asiento.player_index]
+                sesion.limpiar_checkpoint()  # el pase cierra la visita
                 engine.pasar_turno(jugador)
                 _avanzar_fase_si_corresponde(sesion)
+                salas.guardar(sesion)
+                vista = game_state_view(sesion)
+        except (FermentumError, RoomError) as exc:
+            return _respuesta_error(exc)
+        return JSONResponse(vista)
+
+    async def deshacer(request: Request) -> JSONResponse:
+        """
+        Deshace la visita en curso del jugador activo: restaura el motor al
+        checkpoint tomado antes de su primera acción de esta visita. Solo
+        el propio jugador activo, solo mientras su visita siga abierta
+        (una acción con costo de PA o un pase la cierran), ilimitado dentro
+        de esa ventana -- siempre vuelve al mismo punto. No emite eventos:
+        dentro de la ventana solo caben acciones gratuitas, que tampoco los
+        emiten, así que el log queda intacto y los punteros `since` de los
+        clientes siguen siendo válidos.
+        """
+        room_id = request.path_params["room_id"]
+        try:
+            token = _requerir_token(request)
+            sesion = salas.obtener(room_id)
+            asiento = sesion.asiento_por_token(token)
+            engine = _requerir_partida_iniciada(sesion)
+
+            async with sesion.lock:
+                _requerir_turno_del_jugador(engine, asiento)
+                if not sesion.puede_deshacer():
+                    raise NadaQueDeshacerError(
+                        "No hay nada que deshacer: todavía no hiciste ninguna "
+                        "acción en esta visita."
+                    )
+                sesion.restaurar_checkpoint()
                 salas.guardar(sesion)
                 vista = game_state_view(sesion)
         except (FermentumError, RoomError) as exc:
@@ -508,6 +568,9 @@ def crear_app() -> Starlette:
 
             async with sesion.lock:
                 sesion.forzar_pase_por_inactividad()
+                # Después (no antes): si el pase forzado se rechaza (jugador
+                # aún activo), su checkpoint de visita debe sobrevivir.
+                sesion.limpiar_checkpoint()
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
                 vista = game_state_view(sesion)
@@ -582,6 +645,7 @@ def crear_app() -> Starlette:
             Route("/games/{room_id}/events/stream", flujo_eventos, methods=["GET"]),
             Route("/games/{room_id}/actions", enviar_accion, methods=["POST"]),
             Route("/games/{room_id}/pass", pasar, methods=["POST"]),
+            Route("/games/{room_id}/undo", deshacer, methods=["POST"]),
             Route("/games/{room_id}/force-pass", forzar_pase, methods=["POST"]),
             Route("/games/{room_id}/confirm-end", confirmar_fin, methods=["POST"]),
             Route("/games/{room_id}/return-to-lobby", volver_a_lobby, methods=["POST"]),
