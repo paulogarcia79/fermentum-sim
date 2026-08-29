@@ -267,7 +267,7 @@ onUnmounted(() => {
         />
         <span>
           Avisarme si mi masa madre va a colapsar esta noche
-          <small>Marca la Vitalidad en rojo y pide confirmación antes de pasar turno.</small>
+          <small>Marca la Vitalidad en rojo y refuerza el aviso al pasar turno.</small>
         </span>
       </label>
 

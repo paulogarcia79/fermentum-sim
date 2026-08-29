@@ -340,14 +340,23 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   `cerrarSesion()` deletes the session and a durable preference should outlive it; for the same
   reason it is *not* reset in `cerrarSesion()`/`volverAVistaDeLobby()`, unlike the per-game
   module-level guards. When enabled it drives two things: `MiTablero.vue` paints the Vitalidad
-  pips red plus a `⚠` badge in the previously-unused third column of `.medidor`, and
-  `BarraAcciones.vue` gates "Pasar turno" behind an inline confirmation strip (the
-  `LobbyView.vue` `.confirmacion-inicio` pattern, not a fourth modal in `GameView.vue`'s chain).
-  That confirmation fires only when the player is at risk **and** at least one of their own
-  `acciones_disponibles` entries is still `habilitada` — deliberately reusing already-shipped data
-  instead of reimplementing "could Acción A actually save me" (which needs ≥10 of a *single* flour
-  type, or Pedido de Urgencia, and under Aletargamiento a single +1 isn't enough). Over-warning is
-  the right failure mode for a safety net; getting the rule subtly wrong is not.
+  pips red plus a `⚠` badge in the previously-unused third column of `.medidor`, and the
+  pass-advice modal (below) additionally shows a red collapse-warning block.
+
+  **Pass-advice modal**: passing is a total forfeit of the rest of the day (PA *and* unused free
+  actions), so `BarraAcciones.vue` gates "Pasar turno" behind a `ModalShell.vue`-based
+  confirmation whenever **any** of the local player's `acciones_disponibles` entries is still
+  `habilitada` — not gated by any preference (this superseded the earlier contamination-only
+  inline `.confirmacion-pase` strip; the opt-in part is now just the danger block inside it). The
+  modal lists the remaining actions by filtering the component's own `BOTONES` table through the
+  server-shipped availability — deliberately reusing already-shipped data instead of
+  reimplementing enablement rules (e.g. "could Acción A actually save me" needs ≥10 of a *single*
+  flour type, or Pedido de Urgencia, and under Aletargamiento a single +1 isn't enough); each row
+  is a shortcut that closes the confirmation and calls the existing `abrir(id)`, dropping into
+  that action's normal modal flow, and the footer offers "Seguir jugando" / "Pasar de todos
+  modos". Since Pedido de Urgencia is enabled whenever the player holds ≥1 Dato, the modal
+  appears on most passes — accepted deliberately: over-warning is the right failure mode for a
+  safety net; getting the rule subtly wrong is not.
 
   **Board-game-style layout and per-player color**: the UI is split into a shared "Mesa Común"
   region (`GameView.vue`: `MercadoPanel.vue`'s recipe cards, `SuministrosPanel.vue`'s supply

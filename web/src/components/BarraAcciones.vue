@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { pasar, store } from '../store'
+import ModalShell from './ModalShell.vue'
 import ModalA from './acciones/ModalA.vue'
 import ModalB from './acciones/ModalB.vue'
 import ModalC from './acciones/ModalC.vue'
@@ -67,28 +68,36 @@ const confirmandoPase = ref(false)
 const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
 
 /** Pasar es una renuncia TOTAL al resto del día: cede los PA restantes y
- * también las acciones gratuitas sin usar (ver engine.pasar_turno). Si el
- * jugador va a colapsar esta noche y todavía le queda algo por hacer, eso es
- * justo lo que hay que avisarle antes de que lo tire.
+ * también las acciones gratuitas sin usar (ver engine.pasar_turno). Antes de
+ * dejar que el jugador tire algo por accidente, se le muestra exactamente qué
+ * le queda -- y un atajo para usarlo -- en un modal de confirmación.
  *
- * "Todavía le queda algo por hacer" se lee de `acciones_disponibles`, que ya
- * lo calcula el servidor, en vez de reimplementar aquí si la Acción A podría
- * salvarlo (necesita ≥10 de UN tipo de harina, o Pedido de Urgencia, y con
- * Aletargamiento Invernal un solo +1 no alcanza). Avisar de más es el modo de
- * fallo correcto para una red de seguridad; equivocarse en la regla, no. */
-const debeConfirmarPase = computed(
-  () =>
-    store.preferencias.alertaContaminacion &&
-    yo.value.en_riesgo_colapso &&
-    disponibilidad.value.some((a) => a.habilitada),
+ * "Qué le queda" se lee de `acciones_disponibles` (filtrando la propia tabla
+ * BOTONES por `habilitada`), que ya lo calcula el servidor por jugador --
+ * nunca se reimplementa aquí ninguna regla de habilitación. */
+const accionesRestantes = computed(() => BOTONES.filter((b) => estado(b.id).habilitada))
+
+/** El bloque rojo de colapso dentro del modal sigue siendo opt-in (checkbox
+ * del lobby); el modal en sí ya no -- aparece siempre que quede algo por
+ * hacer, tenga o no la alerta activada. */
+const avisoColapso = computed(
+  () => store.preferencias.alertaContaminacion && yo.value.en_riesgo_colapso,
 )
 
 function onPasar() {
-  if (debeConfirmarPase.value) {
+  if (accionesRestantes.value.length > 0) {
     confirmandoPase.value = true
     return
   }
   void pasarDeVerdad()
+}
+
+/** Atajo del modal de confirmación: en vez de pasar, saltar directo a una de
+ * las acciones que quedaban -- cierra la confirmación y abre el modal normal
+ * de esa acción (mismo flujo que clickear su espacio en el tablero). */
+function usarAccionRestante(id: IdAccion) {
+  confirmandoPase.value = false
+  abrir(id)
 }
 
 async function pasarDeVerdad() {
@@ -128,22 +137,45 @@ async function pasarDeVerdad() {
       </div>
     </div>
 
-    <button v-if="!confirmandoPase" class="pasar" :disabled="pasando" @click="onPasar">
-      Pasar turno (sin más acciones)
-    </button>
-    <div v-else class="confirmacion-pase">
-      <p>
+    <button class="pasar" :disabled="pasando" @click="onPasar">Pasar turno</button>
+
+    <ModalShell
+      v-if="confirmandoPase"
+      titulo="¿Pasar turno? Todavía puedes actuar"
+      @cerrar="confirmandoPase = false"
+    >
+      <p class="intro-pase">
+        Pasar renuncia a <strong>todo</strong> lo que te queda hoy — incluidas las acciones
+        gratuitas sin usar. Puedes usar cualquiera de estas antes de pasar:
+      </p>
+
+      <ul class="lista-restantes">
+        <li v-for="b in accionesRestantes" :key="b.id">
+          <button type="button" class="accion-restante" @click="usarAccionRestante(b.id)">
+            <span class="titulo-restante">
+              {{ b.etiqueta }} <span class="costo">[{{ b.costo }}]</span>
+            </span>
+            <span class="blurb-restante">{{ descripcionesAcciones[b.id] }}</span>
+          </button>
+        </li>
+      </ul>
+
+      <p v-if="avisoColapso" class="peligro-colapso">
         <strong>⚠ Tu masa madre colapsa esta noche.</strong>
         La Vitalidad bajará de {{ yo.vitalidad }} a {{ yo.vitalidad_prevista }} y entrarás en
-        Contaminación: -3 Puntos de Maestría y no podrás Iniciar Receta hasta usar un protocolo de
-        emergencia. Pasar renuncia también a tus acciones gratuitas sin usar, como Alimentar el
-        cultivo (0 PA).
+        Contaminación: -3 Puntos de Maestría y no podrás Iniciar Receta hasta usar un protocolo
+        de emergencia.
       </p>
-      <div class="acciones-confirmacion">
-        <button :disabled="pasando" @click="confirmandoPase = false">Cancelar</button>
-        <button class="pasar" :disabled="pasando" @click="pasarDeVerdad">Pasar de todos modos</button>
-      </div>
-    </div>
+
+      <template #acciones>
+        <button class="secundario" :disabled="pasando" @click="confirmandoPase = false">
+          Seguir jugando
+        </button>
+        <button class="confirmar-pase" :disabled="pasando" @click="pasarDeVerdad">
+          Pasar de todos modos
+        </button>
+      </template>
+    </ModalShell>
 
     <ModalA v-if="modalAbierto === 'A'" @cerrar="cerrar" />
     <ModalB v-if="modalAbierto === 'B'" @cerrar="cerrar" />
@@ -282,38 +314,84 @@ async function pasarDeVerdad() {
   color: var(--color-texto-tenue);
 }
 
-/* Confirmacion en linea antes de un pase que cuesta caro -- mismo patron que
-   .confirmacion-inicio de LobbyView.vue, en vez de un modal mas en la cadena
-   de GameView.vue. */
-.confirmacion-pase {
+/* Modal de confirmación de pase: qué queda por hacer, con atajo directo a
+   cada acción, y el bloque rojo de colapso (opt-in) cuando aplica. */
+.intro-pase {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.lista-restantes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.accion-restante {
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--color-borde);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--color-texto);
+  cursor: pointer;
+}
+
+.accion-restante:hover {
+  border-color: var(--color-acento);
+}
+
+.titulo-restante {
+  display: block;
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.titulo-restante .costo {
+  display: inline;
+  font-weight: 400;
+}
+
+.blurb-restante {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--color-texto-tenue);
+  margin-top: 0.15rem;
+  line-height: 1.35;
+}
+
+.peligro-colapso {
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.65rem;
   border: 1px solid var(--color-mal);
   border-radius: 6px;
   background: rgba(198, 90, 75, 0.12);
-  padding: 0.6rem 0.75rem;
-}
-
-.confirmacion-pase p {
-  margin: 0 0 0.6rem;
   font-size: 0.78rem;
   line-height: 1.4;
 }
 
-.confirmacion-pase strong {
+.peligro-colapso strong {
   color: var(--color-mal);
 }
 
-.acciones-confirmacion {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.acciones-confirmacion button {
+.secundario,
+.confirmar-pase {
   flex: 1;
-  padding: 0.4rem;
+  padding: 0.45rem;
   border-radius: 4px;
   border: 1px solid var(--color-borde);
   background: transparent;
   color: var(--color-texto);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
+}
+
+.confirmar-pase {
+  border-color: var(--color-mal);
+  color: var(--color-mal);
 }
 </style>
