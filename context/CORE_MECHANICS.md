@@ -21,7 +21,7 @@ Liderada por el Investigador Jefe, esta fase configura las variables globales de
     * Se ajusta el termómetro en el tablero sumando o restando el Modificador Térmico a la base de 20°C.
     * Se sincroniza el "Ábaco de Fermentación" (20°C = 4 Pasos; 25°C = 5 Pasos; 30°C = 6 Pasos).
     * Se aplican Anomalías Biológicas instantáneamente (ej. +1 Vitalidad para todos) o Efectos Pasivos.
-* **Mercado de Tendencias:** Se roba una carta del mazo de Tendencias de Mercado (21 cartas: -2×1, -1×7, 0×5, +1×7, +2×1) y su modificador desplaza simultáneamente los 3 visores de la Bolsa de Harinas (Blanca/Integral/Centeno), cada uno con tope independiente en [1, 5] (sin arrastre más allá del límite).
+* **Mercado de Tendencias (anuncio):** Se revela una carta del mazo de Tendencias de Mercado (21 cartas: -2×1, -1×7, 0×5, +1×7, +2×1) y queda a la vista de todos durante el día. **Este paso no mueve ningún visor:** la carta es un pronóstico y se aplica al final de este mismo día (ver Fase III), por lo que rige los precios del día SIGUIENTE. Los precios de hoy son los que dejó la tendencia de ayer, ya conocidos cuando los jugadores deciden comprar o vender.
 * **Protocolo de Refresco (reabastecimiento):** Recetas — se compactan las cartas supervivientes conservando su orden (más nueva → más antigua) y se revelan cartas nuevas a la izquierda hasta volver a tener 4 recetas visibles, rellenando tanto los huecos dejados por la Acción G del día anterior como el que dejó el descarte de fin de día (ver Fase III). Si el mazo se agota, se baraja el descarte como nuevo mazo. **Este paso ya no descarta ninguna carta** — el descarte de la más antigua se movió al final de la Fase III.
 
 ### FASE II: Acción (Operatividad)
@@ -40,6 +40,7 @@ Ocurre simultáneamente para todos una vez terminada la Fase II.
     * *Resolución:* Se hornea automáticamente (Costo: 0 PA), aplicando los puntos negativos de la carta.
 * **Metabolismo (Desgaste):** La Vitalidad del cultivo base (Zona 1) se reduce automáticamente en -1 punto. (Nota: Los valores de Vitalidad y Acidez nunca pueden bajar de 0 ).
 * **Rotación del Mercado (fin de día):** Se descarta la receta visible más antigua del Mercado Central (la carta real más a la derecha; si ese extremo ya está vacío por una Acción G, se descarta la siguiente carta real hacia la izquierda). El hueco resultante lo rellena el Protocolo de Refresco de la Fase I del día siguiente.
+* **Mercado de Tendencias (aplicación):** Se cobra ahora la carta anunciada esta mañana (ver Fase I): su modificador desplaza simultáneamente los 3 visores de la Bolsa de Harinas (Blanca/Integral/Centeno), cada uno con tope independiente en [1, 5] (sin arrastre más allá del límite). Los precios resultantes son los que regirán el día siguiente. La carta pasa entonces al descarte de Tendencias; si el mazo se agota, se baraja ese descarte como mazo nuevo.
 
 ---
 

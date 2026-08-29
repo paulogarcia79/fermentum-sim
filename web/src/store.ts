@@ -35,9 +35,10 @@ interface Store {
   /** Dia que acaba de concluir y cuyo reporte de Fase III aun no fue
    * reconocido por el jugador -- null cuando no hay ninguno pendiente. */
   reporteDiaPendiente: number | null
-  /** True si la carta de clima del dia actual todavia no fue reconocida
-   * por el jugador en esta pestaña -- ver EventoClimaticoModal.vue. */
-  climaPendiente: boolean
+  /** True si el jugador todavia no reconocio en esta pestaña la apertura del
+   * dia actual: la carta de clima Y la tendencia de mercado anunciada, ambas
+   * reveladas por la misma Fase I -- ver InicioDiaModal.vue. */
+  inicioDiaPendiente: boolean
   /** Preferencias de UI del jugador local, persistidas en localStorage bajo
    * su propia clave. NO se resetean al cerrar sesion ni al volver al lobby:
    * son duraderas, a diferencia de las banderas por partida de mas abajo. */
@@ -55,7 +56,7 @@ export const store: Store = reactive({
   error: null,
   cargando: false,
   reporteDiaPendiente: null,
-  climaPendiente: false,
+  inicioDiaPendiente: false,
   // `cargarPreferenciasLocales` es una declaracion de funcion (hoisted), asi
   // que puede usarse aqui aunque este definida mas abajo junto al resto de
   // helpers de localStorage.
@@ -69,6 +70,12 @@ export const store: Store = reactive({
  * aplicarEstado(), no algo que ningún componente deba leer). `undefined`
  * antes de la primera aplicación de estado, lo que hace que la carta del
  * Día 1 también dispare el modal, no solo las de días siguientes.
+ *
+ * Gatilla el modal de inicio de día COMPLETO (clima + tendencia), aunque solo
+ * mire el clima: ambas cartas se revelan en la misma Fase I, y el clima es la
+ * única de las dos con id estable. Los modificadores de tendencia son enteros
+ * -2..+2 que se repiten entre días, así que una comparación por valor no
+ * distinguiría dos "+1" seguidos.
  */
 let ultimaCartaClimaId: string | null | undefined = undefined
 
@@ -190,7 +197,7 @@ export function cerrarSesion(): void {
   store.ultimoSeqVisto = 0
   store.error = null
   store.reporteDiaPendiente = null
-  store.climaPendiente = false
+  store.inicioDiaPendiente = false
   store.finAnticipadoPendiente = false
   ultimaCartaClimaId = undefined
   finAnticipadoDescartadoEnConteo = -1
@@ -244,7 +251,7 @@ export function aplicarEstado(nuevo: GameStateView): void {
 
   const cartaId = nuevo.environment.ultima_carta_clima?.id ?? null
   if (cartaId !== null && cartaId !== ultimaCartaClimaId) {
-    store.climaPendiente = true
+    store.inicioDiaPendiente = true
   }
   ultimaCartaClimaId = cartaId
 
@@ -286,8 +293,8 @@ export function reconocerReporteDia(): void {
   store.reporteDiaPendiente = null
 }
 
-export function reconocerClima(): void {
-  store.climaPendiente = false
+export function reconocerInicioDia(): void {
+  store.inicioDiaPendiente = false
 }
 
 /** El jugador descartó el aviso de fin anticipado ("Ahora no"). No vuelve a
@@ -312,7 +319,7 @@ function volverAVistaDeLobby(): void {
   store.eventos = []
   store.ultimoSeqVisto = 0
   store.reporteDiaPendiente = null
-  store.climaPendiente = false
+  store.inicioDiaPendiente = false
   store.finAnticipadoPendiente = false
   ultimaCartaClimaId = undefined
   finAnticipadoDescartadoEnConteo = -1

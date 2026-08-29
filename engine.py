@@ -123,6 +123,12 @@ AGUA_TOKENS_POR_LOTE: Dict[int, int] = {10: 2, 30: 6, 60: 12, 100: 20}
 # ===========================================================================
 
 
+def _texto_modificador(modificador: int) -> str:
+    """Modificador de tendencia para mensajes al jugador: ``+2`` / ``-1`` /
+    ``sin cambio`` (en vez del poco natural ``+0``)."""
+    return f"{modificador:+d}" if modificador else "sin cambio"
+
+
 @dataclass
 class Market:
     """
@@ -144,9 +150,12 @@ class Market:
       · ``posiciones_harina``: 3 visores compartidos (Blanca/Integral/Centeno), cada uno
         una posición 1-5 que indexa ``PRECIOS_HARINA`` para el costo de Comprar/Vender
         Harina en la Acción C (Visitar el Mercado).
-      · ``mazo_tendencias``/``descarte_tendencias``: mazo de 21 cartas robado una vez
-        por Fase I (antes del Protocolo de Refresco) para desplazar los 3 visores
-        simultáneamente.
+      · ``mazo_tendencias``/``descarte_tendencias``: mazo de 21 cartas que desplaza
+        los 3 visores simultáneamente, también en dos mitades (CORE_MECHANICS.md §2):
+        se **revela** al inicio del día (Fase I, ``robar_tendencia``) como pronóstico,
+        y se **aplica** al final del día (Fase III, ``aplicar_tendencia_pendiente``),
+        de modo que rige los precios del día SIGUIENTE. Entre ambos momentos la carta
+        vive en ``tendencia_pendiente``, a la vista de todos.
 
     Attributes:
         recetas_visibles: Lista de NUM_RECIPE_SLOTS slots de recetas activas.
@@ -155,7 +164,12 @@ class Market:
         descarte_recetas: Recetas descartadas del mercado (se remezclan si el mazo se agota).
         posiciones_harina: Posición actual (1-5) de cada visor de la Bolsa de Harinas.
         mazo_tendencias: Mazo de Tendencias de Mercado sin robar todavía.
-        descarte_tendencias: Cartas de Tendencia ya robadas (se remezclan si se agota).
+        descarte_tendencias: Cartas de Tendencia ya APLICADAS (se remezclan si el mazo
+            se agota). La carta revelada hoy todavía no está aquí: ver
+            ``tendencia_pendiente``.
+        tendencia_pendiente: Carta revelada al inicio del día y pendiente de aplicarse
+            al final de este mismo día. ``None`` fuera de esa ventana (incluido el
+            Día 1 antes de su Fase I, que por eso se juega con los precios iniciales).
     """
 
     recetas_visibles: List[Optional[Recipe]]
@@ -170,6 +184,7 @@ class Market:
     )
     mazo_tendencias: List[int] = field(default_factory=list)
     descarte_tendencias: List[int] = field(default_factory=list)
+    tendencia_pendiente: Optional[int] = None
 
     # ------------------------------------------------------------------
     # Factory Method
@@ -332,17 +347,22 @@ class Market:
         )
 
     # ------------------------------------------------------------------
-    # Mazo de Tendencias de Mercado (Fase I)
+    # Mazo de Tendencias de Mercado (se revela en Fase I, se aplica en Fase III)
     # ------------------------------------------------------------------
 
     def robar_tendencia(self) -> int:
         """
-        Roba la carta superior del mazo de Tendencias de Mercado, remezclando el
-        descarte como nuevo mazo si estaba agotado (mismo patrón que el mazo de
-        recetas en ``protocolo_refresco``).
+        Revela la carta superior del mazo de Tendencias de Mercado (Fase I),
+        remezclando el descarte como nuevo mazo si estaba agotado (mismo patrón
+        que el mazo de recetas en ``protocolo_refresco``).
+
+        **Solo revela: NO mueve los visores.** La carta queda en
+        ``tendencia_pendiente`` a la vista de todos durante el día y se aplica al
+        final del mismo (``aplicar_tendencia_pendiente``), por lo que rige los
+        precios del día siguiente y no los de hoy.
 
         Returns:
-            El modificador entero de la carta robada (-2, -1, 0, +1 o +2).
+            El modificador entero de la carta revelada (-2, -1, 0, +1 o +2).
         """
         if not self.mazo_tendencias and self.descarte_tendencias:
             self.mazo_tendencias = self.descarte_tendencias[:]
@@ -350,7 +370,25 @@ class Market:
             random.shuffle(self.mazo_tendencias)
 
         modificador: int = self.mazo_tendencias.pop(0)
+        self.tendencia_pendiente = modificador
+        return modificador
+
+    def aplicar_tendencia_pendiente(self) -> Optional[int]:
+        """
+        Aplica al final del día (Fase III) la tendencia revelada esta mañana:
+        desplaza los 3 visores y manda la carta al descarte.
+
+        Returns:
+            El modificador aplicado, o ``None`` si no había ninguno pendiente
+            (p.ej. si se llama dos veces, o antes de la primera Fase I).
+        """
+        modificador: Optional[int] = self.tendencia_pendiente
+        if modificador is None:
+            return None
+
+        self.aplicar_tendencia(modificador)
         self.descarte_tendencias.append(modificador)
+        self.tendencia_pendiente = None
         return modificador
 
     def aplicar_tendencia(self, modificador: int) -> None:
@@ -733,8 +771,11 @@ class GameEngine:
              Los efectos biológicos inmediatos (+Vitalidad / +Acidez) se aplican
              a todos los jugadores instantáneamente.
              Si el mazo se agota, se activa el gatillo de fin de partida.
-          4. **Mercado de Tendencias**: roba una carta y desplaza los 3 visores
-             de la Bolsa de Harinas simultáneamente.
+          4. **Mercado de Tendencias**: revela una carta como pronóstico y la deja
+             en ``Market.tendencia_pendiente``. **No mueve los visores todavía**:
+             se aplica al final de este mismo día (``resolver_fase_III``), así que
+             rige los precios de mañana. Los de hoy son los que dejó la tendencia
+             de ayer, ya visibles durante toda la jornada.
           5. **Protocolo de Refresco**: reabastece el mercado de recetas hasta
              ``NUM_RECIPE_SLOTS``, rellenando los huecos dejados por Acción G y
              por el descarte de fin del día anterior. Ya no descarta aquí.
@@ -775,20 +816,18 @@ class GameEngine:
                         f"({carta.modificador_termico:+d}°C).",
             )
 
-        # Paso 4: Mercado de Tendencias — desplaza la Bolsa de Harinas
-        posiciones_antes = dict(self._market.posiciones_harina)
+        # Paso 4: Mercado de Tendencias — SOLO se anuncia. La Bolsa de Harinas no
+        # se mueve hoy: la carta se aplica al final de este día (Fase III) y por
+        # tanto rige los precios de mañana. Los precios de hoy son los que dejó
+        # la tendencia de ayer, ya visibles cuando los jugadores decidieron.
         modificador_tendencia: int = self._market.robar_tendencia()
-        self._market.aplicar_tendencia(modificador_tendencia)
         self._emit(
-            EventoTipo.TENDENCIA_MERCADO,
-            datos={
-                "modificador": modificador_tendencia,
-                "posiciones_antes": {t.value: p for t, p in posiciones_antes.items()},
-                "posiciones_despues": {
-                    t.value: p for t, p in self._market.posiciones_harina.items()
-                },
-            },
-            mensaje=f"Tendencia de mercado: harinas se mueven {modificador_tendencia:+d}.",
+            EventoTipo.TENDENCIA_ANUNCIADA,
+            datos={"modificador": modificador_tendencia},
+            mensaje=(
+                f"Tendencia anunciada ({_texto_modificador(modificador_tendencia)}): "
+                "se aplicará al final del día y regirá los precios de mañana."
+            ),
         )
 
         # Paso 5: Protocolo de Refresco del mercado (reabastece a NUM_RECIPE_SLOTS;
@@ -1098,6 +1137,27 @@ class GameEngine:
                 },
                 mensaje=f"El mercado descartó la receta más antigua: "
                         f"'{descartada.nombre}'.",
+            )
+
+        # Bolsa de Harinas: se aplica ahora la tendencia anunciada esta mañana,
+        # así que los precios que quedan son los que regirán mañana. Mismo
+        # reparto fin-de-día/inicio-de-día que la rotación de recetas de arriba.
+        posiciones_antes = dict(self._market.posiciones_harina)
+        modificador_tendencia: Optional[int] = self._market.aplicar_tendencia_pendiente()
+        if modificador_tendencia is not None:
+            self._emit(
+                EventoTipo.TENDENCIA_MERCADO,
+                datos={
+                    "modificador": modificador_tendencia,
+                    "posiciones_antes": {t.value: p for t, p in posiciones_antes.items()},
+                    "posiciones_despues": {
+                        t.value: p for t, p in self._market.posiciones_harina.items()
+                    },
+                },
+                mensaje=(
+                    f"Tendencia aplicada ({_texto_modificador(modificador_tendencia)}): "
+                    "así quedan los precios de la Bolsa de Harinas para mañana."
+                ),
             )
 
         fin: bool = self._evaluar_fin_de_juego()

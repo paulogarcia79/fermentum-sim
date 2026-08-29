@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Aviso al resto de jugadores cuando alguien pide terminar la partida antes
 // de tiempo (POST /games/{id}/confirm-end). Mismo tratamiento de modal
-// obligatorio que EventoClimaticoModal.vue: se arma desde el estado actual
+// obligatorio que InicioDiaModal.vue: se arma desde el estado actual
 // (store.estado.votos_fin_anticipado), no del registro de eventos, y lo
 // gobierna un flag del store (store.finAnticipadoPendiente) con un guard no
 // reactivo -- ver store.ts. A diferencia de los otros modales obligatorios

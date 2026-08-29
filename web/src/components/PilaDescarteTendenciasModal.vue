@@ -8,9 +8,10 @@ import CartaTendencia from './CartaTendencia.vue'
 
 const emit = defineEmits<{ cerrar: [] }>()
 
-// La ultima entrada es "la carta de hoy" (ver MazoTendenciasPanel.vue) -- se
-// excluye para no listarla como ya descartada.
-const descarte = computed(() => store.estado!.market.descarte_tendencias.slice(0, -1).reverse())
+// `descarte_tendencias` ya solo contiene cartas APLICADAS -- la revelada hoy
+// esta en `tendencia_pendiente` y no aqui, asi que se listan todas (la mas
+// reciente primero).
+const descarte = computed(() => [...store.estado!.market.descarte_tendencias].reverse())
 </script>
 
 <template>

@@ -54,7 +54,9 @@ su quinta receta — lo que ocurra primero.
   cada pan — ver [Catálogo de Recetas](#8-catálogo-de-recetas).
 - **Cartas de Clima:** 30 cartas que regulan la temperatura y los eventos biológicos del
   laboratorio — ver [Anexo](#12-anexo-resumen-de-mazos).
-- **Cartas de Tendencias de Mercado:** 21 cartas que mueven el precio de la harina cada día.
+- **Cartas de Tendencias de Mercado:** 21 cartas que mueven el precio de la harina. Cada una se
+  anuncia al inicio de un día y se aplica al final de ese mismo día, fijando los precios del
+  siguiente.
 - **Cartas de Patrocinio:** 8 cartas usadas una sola vez, al preparar la partida, para repartir el
   orden de turno inicial y los recursos de arranque.
 - **Dados de Inóculo:** 3 por jugador, sellan la velocidad de fermentación de cada masa iniciada.
@@ -132,8 +134,9 @@ estrictas, siempre en este orden:
 
 1. **Fase I: Ambiente** — se preparan las variables globales del día.
 2. **Fase II: Acción** — los jugadores usan sus Puntos de Acción.
-3. **Fase III: Fermentación** — resolución automática de las masas, desgaste del cultivo base y
-   rotación del Mercado de Recetas (se descarta la más antigua).
+3. **Fase III: Fermentación** — resolución automática de las masas, desgaste del cultivo base,
+   rotación del Mercado de Recetas (se descarta la más antigua) y aplicación de la Tendencia de
+   Mercado anunciada esa mañana, que fija los precios del día siguiente.
 
 ---
 
@@ -167,14 +170,15 @@ cultivo base.
    queda vigente durante el resto del día — ver el catálogo completo en el
    [Anexo](#12-anexo-resumen-de-mazos).
 
-### 5.3 Mercado de Tendencias
+### 5.3 Anuncio de la Tendencia de Mercado
 
-Se roba la carta superior del mazo de Tendencias de Mercado (21 cartas) y su modificador desplaza
-**simultáneamente** los 3 visores de la Bolsa de Harinas (Blanca, Integral y Centeno). Cada visor
-tiene su propio tope independiente entre la posición 1 (más barata) y la posición 5 (más cara): si
-el desplazamiento lo llevaría más allá del límite, simplemente se detiene en ese límite, sin
-arrastre ni efecto acumulado. Si el mazo se agota, se reutiliza su descarte, barajado de nuevo,
-como mazo nuevo.
+Se revela la carta superior del mazo de Tendencias de Mercado (21 cartas) y se deja **a la vista de
+todos** durante el resto del día.
+
+**Este paso no mueve ningún visor.** La carta es un pronóstico: se aplica al final de este mismo
+día (§9.5) y, por tanto, fija los precios de la Bolsa de Harinas del **día siguiente**. Los precios
+que rigen hoy son los que dejó la tendencia anunciada ayer, de modo que cualquiera que compre o
+venda harina hoy (Acción C) lo hace conociendo ya hacia dónde se moverá el mercado esta noche.
 
 ### 5.4 Protocolo de Refresco del Mercado de Recetas
 
@@ -438,6 +442,21 @@ Al cerrar el día, se descarta la carta de receta situada en la estación más a
 Mercado Central (la más antigua). Si esa estación ya estaba vacía por una Acción G, se descarta la
 siguiente carta real hacia la izquierda. El hueco que deja se rellena en el Protocolo de Refresco
 del día siguiente (§5.4).
+
+### 9.5 Aplicación de la Tendencia de Mercado
+
+Ahora se cobra la carta de Tendencia anunciada esta mañana (§5.3). Su modificador desplaza
+**simultáneamente** los 3 visores de la Bolsa de Harinas (Blanca, Integral y Centeno). Cada visor
+tiene su propio tope independiente entre la posición 1 (más barata) y la posición 5 (más cara): si
+el desplazamiento lo llevaría más allá del límite, simplemente se detiene en ese límite, sin
+arrastre ni efecto acumulado.
+
+Los precios que quedan tras este paso son los que regirán durante **todo el día siguiente**. La
+carta pasa entonces al descarte de Tendencias; si el mazo se agota, se reutiliza ese descarte,
+barajado de nuevo, como mazo nuevo.
+
+> El Día 1 se juega con los precios de inicio de partida (los 3 visores en la posición 3), ya que
+> la primera tendencia no se aplica hasta el final de ese día.
 
 ---
 

@@ -1,23 +1,33 @@
 <script setup lang="ts">
 // Mazo de Tendencias de Mercado como objeto fisico -- mismo tratamiento que
 // MazoClimaPanel.vue le da al mazo de clima (pila de descarte hojeable a la
-// izquierda, mazo boca-abajo en el medio, carta de hoy revelada a la
-// derecha). A diferencia del clima, Market no guarda un campo separado para
-// "la carta activa" -- Market.robar_tendencia() empuja el modificador
-// robado directo a descarte_tendencias, asi que "la carta de hoy" es
-// simplemente la ultima entrada, y la pila de descarte real es todo lo
-// demas (misma derivacion que descarte_clima usa en MazoClimaPanel.vue).
+// izquierda, mazo boca-abajo en el medio, carta revelada a la derecha).
+//
+// Aqui hay TRES cosas distintas, porque una tendencia se revela un dia y se
+// cobra al final de ese mismo dia (ver engine.py: robar_tendencia /
+// aplicar_tendencia_pendiente):
+//   · `tendencia_pendiente`: la carta revelada esta mañana. Todavia no movio
+//     nada; se aplica esta noche y rige los precios de MAÑANA. Es el aviso
+//     permanente que el jugador necesita mientras decide si compra o vende.
+//   · ultima de `descarte_tendencias`: la que se aplico anoche, es decir la
+//     que fija los precios de HOY.
+//   · el resto del descarte: historial.
 import { computed, ref } from 'vue'
 import { store } from '../store'
+import { textoTendencia } from '../tendenciaTexto'
 import CartaTendencia from './CartaTendencia.vue'
 import PilaDescarteTendenciasModal from './PilaDescarteTendenciasModal.vue'
 
 const mercado = computed(() => store.estado!.market)
 
-const tendencias = computed(() => mercado.value.descarte_tendencias)
-const descarte = computed(() => tendencias.value.slice(0, -1))
+// El descarte ya solo contiene cartas APLICADAS: la revelada hoy vive aparte
+// en `tendencia_pendiente` hasta que la Fase III la cobra.
+const descarte = computed(() => mercado.value.descarte_tendencias)
 const topeDescarte = computed(() => descarte.value.slice(-3))
-const tendenciaHoy = computed(() => (tendencias.value.length ? tendencias.value[tendencias.value.length - 1] : null))
+const tendenciaPendiente = computed(() => mercado.value.tendencia_pendiente)
+const tendenciaVigente = computed(() =>
+  descarte.value.length ? descarte.value[descarte.value.length - 1] : null,
+)
 
 const pilaDescarteAbierta = ref(false)
 </script>
@@ -61,10 +71,23 @@ const pilaDescarteAbierta = ref(false)
       </div>
 
       <div class="pila carta-revelada">
-        <CartaTendencia :modificador="tendenciaHoy" />
-        <span class="etiqueta-pila">Carta de hoy</span>
+        <CartaTendencia :modificador="tendenciaPendiente" />
+        <span class="etiqueta-pila">Se aplica esta noche</span>
       </div>
     </div>
+
+    <p v-if="tendenciaPendiente !== null" class="aviso-pendiente">
+      ⏳ <strong>Anunciada hoy, se cobra esta noche.</strong> No cambia los precios de hoy:
+      fija los de mañana. {{ textoTendencia(tendenciaPendiente) }}
+    </p>
+
+    <p class="nota-vigente">
+      Precios de hoy:
+      <template v-if="tendenciaVigente !== null">
+        los dejó la tendencia de anoche ({{ tendenciaVigente >= 0 ? '+' : '' }}{{ tendenciaVigente }}).
+      </template>
+      <template v-else>los de inicio de partida — todavía no se aplicó ninguna tendencia.</template>
+    </p>
 
     <PilaDescarteTendenciasModal v-if="pilaDescarteAbierta" @cerrar="pilaDescarteAbierta = false" />
   </section>
@@ -89,6 +112,22 @@ const pilaDescarteAbierta = ref(false)
   flex-wrap: wrap;
   gap: 0.15rem 0.9rem;
   font-size: 0.8rem;
+  color: var(--color-texto-tenue);
+}
+
+.aviso-pendiente {
+  margin: 0.75rem 0 0;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--color-acento);
+  border-radius: 6px;
+  background: rgba(217, 154, 63, 0.15);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.nota-vigente {
+  margin: 0.4rem 0 0;
+  font-size: 0.72rem;
   color: var(--color-texto-tenue);
 }
 

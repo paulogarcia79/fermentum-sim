@@ -30,6 +30,14 @@ def test_dia_1_emite_eventos_globales_y_desgaste_por_jugador() -> None:
     assert tipos.count(EventoTipo.MERCADO_REFRESCADO) == 1  # reabastecimiento (inicio del dia)
     assert tipos.count(EventoTipo.RECETA_DESCARTADA) == 1  # rotacion (fin del dia)
     assert tipos.count(EventoTipo.DESGASTE) == 2  # uno por jugador
+    # La tendencia se anuncia al inicio del dia y se aplica al final, una vez cada uno.
+    assert tipos.count(EventoTipo.TENDENCIA_ANUNCIADA) == 1
+    assert tipos.count(EventoTipo.TENDENCIA_MERCADO) == 1
+    assert tipos.index(EventoTipo.TENDENCIA_ANUNCIADA) < tipos.index(EventoTipo.TENDENCIA_MERCADO)
+
+    anuncio = next(ev for ev in engine.eventos if ev.tipo == EventoTipo.TENDENCIA_ANUNCIADA)
+    aplicacion = next(ev for ev in engine.eventos if ev.tipo == EventoTipo.TENDENCIA_MERCADO)
+    assert anuncio.datos["modificador"] == aplicacion.datos["modificador"]
 
     descartada = next(ev for ev in engine.eventos if ev.tipo == EventoTipo.RECETA_DESCARTADA)
     assert descartada.jugador_idx is None  # evento global

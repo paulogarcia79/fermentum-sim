@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Overlay para hojear toda la pila de descarte de clima (no solo la ultima
-// carta) -- mismas convenciones de overlay que EventoClimaticoModal.vue.
+// carta) -- mismas convenciones de overlay que InicioDiaModal.vue.
 // descarte_clima ya llega sin redactar desde server/views.py (es
 // informacion publica), asi que no hace falta ningun endpoint nuevo.
 import { computed } from 'vue'

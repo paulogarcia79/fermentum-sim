@@ -156,8 +156,9 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   overhaul** (branch `rules-gdd-0.0.2`): introduces a `Player.monedas` economy — Acción C
   (`accion_C_visitar_mercado`) replaced the old random-lot Acción C (Adquirir Insumos, now removed
   along with `SupplyLote`/`Market.suministros`) with priced buy/sell of flour against a shared,
-  3-track `Market.posiciones_harina` "Bolsa de Harinas" (moved by both player transactions and a
-  new daily Mercado de Tendencias draw in Fase I) plus temperature-priced water lots
+  3-track `Market.posiciones_harina` "Bolsa de Harinas" (moved by both player transactions and the
+  daily Mercado de Tendencias — announced in Fase I, applied in Fase III, see below) plus
+  temperature-priced water lots
   (`engine.PRECIO_AGUA`); Acción F now pays out Monedas per zone on top of the existing
   points/Datos logic (`Recipe.monedas_baja/optima/sobre`, flat `+2` Monedas Bono de Sabor); setup
   (`bootstrap.create_game`) now deals from an 8-card `PATROCINIO_CATALOG` instead of a hardcoded
@@ -269,22 +270,41 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   player several points with no action on their part, and they need to be told, not left to infer
   it from state changing between polls.
 
-  **Climate-event modal**: `EventoClimaticoModal.vue` gives the Fase I climate card the same
-  mandatory-modal treatment, explaining its concrete effects in plain language (translated from
+  **Start-of-day modal**: `InicioDiaModal.vue` (formerly `EventoClimaticoModal.vue`) gives both
+  cards revealed by Fase I — the climate card *and* the announced Mercado de Tendencias card — one
+  mandatory-modal treatment, explaining their concrete effects in plain language (translated from
   the raw `efecto_biologico`/`efecto_pasivo` enum values — e.g. "Iniciar Receta costará 1 token de
-  Agua menos hoy," not just "Alta Humedad") rather than leaving it to `ClimaBanner.vue`'s
-  always-there strip to be noticed. Unlike the Fase III report, this one is built straight from
-  current state (`environment.ultima_carta_clima`/`temperatura_actual`, already present, not
-  event-log filtering) — deliberately more robust across the return-to-lobby/second-game reset
-  (a fresh game's event `seq` restarts at 0). `store.ts` tracks a non-reactive
-  `ultimaCartaClimaId` (module-level, per tab) to detect when the card actually changed, seeded
-  `undefined` so Day 1's card triggers it too, not just later days; reset alongside the other
-  per-game flags in `cerrarSesion()`/`volverAVistaDeLobby()`. Reconnecting or loading into an
-  already-started game shows the current day's card once for that tab even if others already
-  dismissed it — deliberate (it's "here's today's situation," unlike the Fase III report, which
-  is about a past transition and is suppressed on reconnect). `GameView.vue` sequences it after
-  `FermentationReportModal` (`v-else-if`) since both can go pending from the same day-transition
-  state push, and the Fase III report is the more consequential one to see first.
+  Agua menos hoy," not just "Alta Humedad") rather than leaving them to the board panels to be
+  noticed. Both are covered by one modal, not two chained ones, so a player dismisses a single
+  thing per day. The load-bearing distinction the modal has to make unmistakable is that the
+  climate card governs **today** while the trend governs **tomorrow**: it says so outright and
+  then shows a concrete today-vs-tomorrow buy/sell price table for all three flours, computed
+  client-side from `web/src/data/preciosHarina.ts` (the existing mirror of `engine.PRECIOS_HARINA`)
+  by clamping `posiciones_harina[tipo] + tendencia_pendiente` to [1, 5]. Unlike the Fase III
+  report, this one is built straight from current state
+  (`environment.ultima_carta_clima`/`temperatura_actual` and `market.tendencia_pendiente`, already
+  present, not event-log filtering) — deliberately more robust across the
+  return-to-lobby/second-game reset (a fresh game's event `seq` restarts at 0). `store.ts` tracks a
+  non-reactive `ultimaCartaClimaId` (module-level, per tab) to detect when the day actually turned
+  over, seeded `undefined` so Day 1 triggers it too, not just later days; reset alongside the other
+  per-game flags in `cerrarSesion()`/`volverAVistaDeLobby()`. It keys off the *climate* card even
+  though it gates both halves, because the climate card is the only one of the two with a stable
+  `id` — trend modifiers are ints in -2..+2 that repeat, so two "+1" days in a row would defeat a
+  value-identity guard. Reconnecting or loading into an already-started game shows the current
+  day's cards once for that tab even if others already dismissed them — deliberate (it's "here's
+  today's situation," unlike the Fase III report, which is about a past transition and is
+  suppressed on reconnect). `GameView.vue` sequences it after `FermentationReportModal`
+  (`v-else-if`) since both can go pending from the same day-transition state push, and the Fase III
+  report is the more consequential one to see first.
+
+  The trend's persistent, all-day counterpart lives in `MazoTendenciasPanel.vue`, which now
+  distinguishes three things that used to be conflated: `market.tendencia_pendiente` (revealed this
+  morning, applies tonight — the prominent slot), the last entry of `descarte_tendencias` (applied
+  last night, so it is what sets *today's* prices), and the rest of the discard (history). Before
+  this change `robar_tendencia()` pushed straight to the discard, so that panel derived "today's
+  card" as the discard's last element and `PilaDescarteTendenciasModal.vue` had to `slice(0, -1)`
+  it back off; both assumptions are gone. `PistaPrecioHarina.vue` additionally marks the cell each
+  visor will move to tonight with a dashed outline, next to the solid `.actual` bracket.
 
   **Session persistence / reconnect**: `store.ts` saves `Sesion` (room id + player token) to
   `localStorage` on every `establecerSesion` call. Without this, closing the browser mid-game was
@@ -413,13 +433,18 @@ apply an action.
 ### Core game loop, in one paragraph
 
 Each "Día de Laboratorio" is Phase I (reveal climate card, adjust `temperatura_actual`, assign
-Investigador Jefe, refill the recipe market back to `NUM_RECIPE_SLOTS`=4 — `Market.protocolo_refresco`,
+Investigador Jefe, *announce* the day's Mercado de Tendencias card without applying it —
+`Market.robar_tendencia`, emits `TENDENCIA_ANUNCIADA`, refill the recipe market back to
+`NUM_RECIPE_SLOTS`=4 — `Market.protocolo_refresco`,
 refill-only, no discard) → Phase II (round-robin, 2 PA per player, one action per
 visit until no player has PA or an unused free action — see the turn-economy rule above) → Phase
 III (every active `FermentationSlot` advances by
 `temperatura_actual/5 + dado_inoculo + modificador_incubadora`; overshoot into
 `zona_sobrefermentada` auto-bakes at 0 PA cost with a penalty; then all players lose 1 vitality,
 2 if "Aletargamiento Invernal" is active; then the market's oldest visible recipe is discarded —
-`Market.descartar_receta_mas_antigua`, emits `RECETA_DESCARTADA`). The game ends when the climate deck is exhausted or
+`Market.descartar_receta_mas_antigua`, emits `RECETA_DESCARTADA`; then this morning's announced
+trend is finally applied to the three flour price tracks —
+`Market.aplicar_tendencia_pendiente`, emits `TENDENCIA_MERCADO` — so it governs *tomorrow's*
+prices). The game ends when the climate deck is exhausted or
 any player successfully bakes their 5th recipe (collapsed bakes don't count), then scores per
 `CORE_MECHANICS.md` §3.

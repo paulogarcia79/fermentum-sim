@@ -119,7 +119,13 @@ export interface Market {
   recetas_visibles: (Recipe | null)[]
   descarte_recetas: Recipe[]
   posiciones_harina: Record<TipoHarina, number>
+  /** Tendencias ya APLICADAS (la revelada hoy todavia no esta aqui -- ver
+   * `tendencia_pendiente`). */
   descarte_tendencias: number[]
+  /** Carta de Tendencia revelada esta manana y pendiente de aplicarse al final
+   * de HOY: no mueve los precios de hoy, rige los de manana. `null` fuera de esa
+   * ventana (incluido el Dia 1 antes de su Fase I). Ver engine.py: Market. */
+  tendencia_pendiente: number | null
   mazo_recetas_restantes: number
   mazo_tendencias_restantes: number
 }

@@ -32,6 +32,9 @@ class EventoTipo(str, Enum):
 
     JEFE_ASIGNADO = "jefe_asignado"
     CLIMA_REVELADO = "clima_revelado"
+    # La tendencia se anuncia al inicio del día (pronóstico, no mueve nada
+    # todavía) y se aplica al final del mismo, rigiendo los precios de mañana.
+    TENDENCIA_ANUNCIADA = "tendencia_anunciada"
     TENDENCIA_MERCADO = "tendencia_mercado"
     MERCADO_REFRESCADO = "mercado_refrescado"
     RECETA_DESCARTADA = "receta_descartada"

@@ -1,6 +1,6 @@
 // Traduccion de los valores crudos de ClimateCard (models.py: EfectoBiologico /
 // EfectoClimatico) a texto en español para el jugador. Compartido por
-// CartaClima.vue (recuadro de efecto en la carta) y EventoClimaticoModal.vue
+// CartaClima.vue (recuadro de efecto en la carta) y InicioDiaModal.vue
 // (lista de detalle), para que ambos usen exactamente la misma redaccion.
 import type { ClimateCard } from './types'
 

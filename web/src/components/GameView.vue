@@ -11,7 +11,7 @@ import TablerosOponentes from './TablerosOponentes.vue'
 import BarraAcciones from './BarraAcciones.vue'
 import RegistroEventos from './RegistroEventos.vue'
 import FermentationReportModal from './FermentationReportModal.vue'
-import EventoClimaticoModal from './EventoClimaticoModal.vue'
+import InicioDiaModal from './InicioDiaModal.vue'
 import FinAnticipadoModal from './FinAnticipadoModal.vue'
 import RankingView from './RankingView.vue'
 
@@ -114,7 +114,7 @@ onUnmounted(() => detenerTransmisionEnVivo())
     </template>
 
     <FermentationReportModal v-if="store.reporteDiaPendiente !== null" />
-    <EventoClimaticoModal v-else-if="store.climaPendiente" />
+    <InicioDiaModal v-else-if="store.inicioDiaPendiente" />
     <FinAnticipadoModal v-else-if="store.finAnticipadoPendiente" />
   </div>
 </template>

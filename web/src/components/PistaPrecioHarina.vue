@@ -13,6 +13,16 @@ const props = defineProps<{ tipo: TipoHarina }>()
 
 const posicionActual = computed(() => store.estado!.market.posiciones_harina[props.tipo])
 const tabla = computed(() => PRECIOS_HARINA[props.tipo])
+
+/** Posicion a la que saltara el visor esta noche, cuando se aplique la
+ * tendencia ya anunciada -- `null` si no hay ninguna pendiente o si el tope
+ * [1, 5] hace que no se mueva. Replica engine.py: Market.aplicar_tendencia. */
+const posicionPrevista = computed(() => {
+  const modificador = store.estado!.market.tendencia_pendiente
+  if (modificador === null) return null
+  const destino = Math.max(1, Math.min(5, posicionActual.value + modificador))
+  return destino === posicionActual.value ? null : destino
+})
 </script>
 
 <template>
@@ -28,7 +38,12 @@ const tabla = computed(() => PRECIOS_HARINA[props.tipo])
           <td
             v-for="(precio, i) in tabla.compra"
             :key="'c' + i"
-            :class="{ actual: i + 1 === posicionActual, arriba: i + 1 === posicionActual }"
+            :class="{
+              actual: i + 1 === posicionActual,
+              arriba: i + 1 === posicionActual,
+              prevista: i + 1 === posicionPrevista,
+            }"
+            :title="i + 1 === posicionPrevista ? 'Aquí quedará el visor esta noche' : undefined"
           >
             {{ precio }}
           </td>
@@ -38,7 +53,12 @@ const tabla = computed(() => PRECIOS_HARINA[props.tipo])
           <td
             v-for="(precio, i) in tabla.venta"
             :key="'v' + i"
-            :class="{ actual: i + 1 === posicionActual, abajo: i + 1 === posicionActual }"
+            :class="{
+              actual: i + 1 === posicionActual,
+              abajo: i + 1 === posicionActual,
+              prevista: i + 1 === posicionPrevista,
+            }"
+            :title="i + 1 === posicionPrevista ? 'Aquí quedará el visor esta noche' : undefined"
           >
             {{ precio }}
           </td>
@@ -109,5 +129,14 @@ const tabla = computed(() => PRECIOS_HARINA[props.tipo])
 .tabla-precios td.abajo {
   border-bottom-color: var(--color-acento);
   border-top-color: transparent;
+}
+
+/* Destino de la tendencia ya anunciada: donde quedara el visor esta noche.
+   Punteado y sin relleno para que se lea como "todavia no", frente al
+   recuadro solido de .actual. */
+.tabla-precios td.prevista {
+  border-color: var(--color-texto-tenue);
+  border-style: dashed;
+  color: var(--color-texto);
 }
 </style>

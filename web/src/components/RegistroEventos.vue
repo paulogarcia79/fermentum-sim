@@ -12,6 +12,8 @@ function jugadorNombre(idx: number | null): string {
 const ICONOS: Record<string, string> = {
   jefe_asignado: '👑',
   clima_revelado: '⛅',
+  tendencia_anunciada: '📣',
+  tendencia_mercado: '📈',
   mercado_refrescado: '🔄',
   receta_descartada: '🗑',
   masa_avanzo: '📈',

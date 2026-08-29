@@ -235,6 +235,19 @@ def mostrar_mercado(engine: GameEngine) -> None:
               f"Venta: {market.precio_venta_harina(tipo)}  "
               f"(visor: {market.posiciones_harina[tipo]}/5)")
 
+    # Tendencia ya anunciada: no afecta los precios de arriba, se aplica al
+    # final de HOY y rige los de mañana (ver engine.Market.robar_tendencia).
+    if market.tendencia_pendiente is not None:
+        signo = (
+            f"{market.tendencia_pendiente:+d}"
+            if market.tendencia_pendiente
+            else "sin cambio"
+        )
+        print(_c(_C.CYAN,
+                 f"    Tendencia anunciada: {signo} "
+                 f"— se aplica al final del día y rige los precios de mañana "
+                 f"(los de arriba NO cambian hoy)."))
+
     # Suministro Hídrico Global (precio según temperatura actual)
     temp = engine.environment.temperatura_actual
     fila_agua = PRECIO_AGUA.get(temp, {})

@@ -387,7 +387,8 @@
       },
       null,
       null
-    ]
+    ],
+    "tendencia_pendiente": null
   },
   "partida_terminada": false,
   "players": [
@@ -503,7 +504,7 @@
         null
       ],
       "horas_extras_usadas": false,
-      "monedas": 3,
+      "monedas": 4,
       "nombre": "Alba",
       "puntos_accion": 0,
       "reserva_agua": 0,
@@ -676,7 +677,7 @@
         null
       ],
       "horas_extras_usadas": false,
-      "monedas": 19,
+      "monedas": 20,
       "nombre": "Bruno",
       "puntos_accion": 0,
       "reserva_agua": 1,
