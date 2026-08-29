@@ -8,8 +8,9 @@
 
 import { reactive } from 'vue'
 import * as api from './api'
-import type { GameEventView, GameStateView, HorneadoRecord } from './types'
-import { reproducirNotificacionTurno } from './sonido'
+import type { AvisoAccionView, GameEventView, GameStateView, HorneadoRecord } from './types'
+import { reproducirNotificacionTurno, reproducirSonido } from './sonido'
+import { SONIDOS_ACCION, type IdSonido } from './data/sonidosAccion'
 
 export interface Sesion {
   roomId: string
@@ -23,6 +24,10 @@ export interface Preferencias {
   /** Avisar cuando la masa madre vaya a colapsar esta noche: badge permanente
    * en MiTablero.vue + confirmacion al pasar turno en BarraAcciones.vue. */
   alertaContaminacion: boolean
+  /** Efectos de sonido: un timbre distinto por accion de cualquier jugador
+   * (ver data/sonidosAccion.ts) mas el aviso de turno. Activado por defecto,
+   * con el interruptor en la cabecera de GameView.vue. */
+  sonido: boolean
 }
 
 interface Store {
@@ -153,7 +158,7 @@ const CLAVE_SESION_LOCAL = 'fermentum-sesion'
 const CLAVE_PREFERENCIAS_LOCAL = 'fermentum-preferencias'
 
 function cargarPreferenciasLocales(): Preferencias {
-  const porDefecto: Preferencias = { alertaContaminacion: true }
+  const porDefecto: Preferencias = { alertaContaminacion: true, sonido: true }
   try {
     const crudo = localStorage.getItem(CLAVE_PREFERENCIAS_LOCAL)
     if (!crudo) return porDefecto
@@ -167,6 +172,16 @@ function cargarPreferenciasLocales(): Preferencias {
  * por jugador (se pregunta en el lobby, ver LobbyView.vue). */
 export function establecerAlertaContaminacion(activa: boolean): void {
   store.preferencias.alertaContaminacion = activa
+  persistirPreferencias()
+}
+
+/** Interruptor de sonido, en la cabecera de la partida (GameView.vue). */
+export function establecerSonido(activo: boolean): void {
+  store.preferencias.sonido = activo
+  persistirPreferencias()
+}
+
+function persistirPreferencias(): void {
   try {
     localStorage.setItem(CLAVE_PREFERENCIAS_LOCAL, JSON.stringify(store.preferencias))
   } catch {
@@ -286,7 +301,9 @@ export function aplicarEstado(nuevo: GameStateView): void {
     nuevo.jugador_en_turno_idx === miIndice &&
     (jugadorEnTurnoAnterior !== miIndice || diaAvanzo)
   ) {
-    reproducirNotificacionTurno()
+    // Un poco despues: si el turno llego porque un oponente acaba de
+    // actuar, su sonido de accion esta sonando ahora mismo.
+    if (store.preferencias.sonido) reproducirNotificacionTurno(0.35)
   }
   jugadorEnTurnoAnterior = nuevo.jugador_en_turno_idx
 
@@ -396,6 +413,31 @@ function iniciarEventSource(): void {
     `/games/${store.sesion.roomId}/events/stream` +
     `?since=${store.ultimoSeqVisto}&player_token=${encodeURIComponent(store.sesion.token)}`
   const es = new EventSource(url)
+
+  // Canal efimero paralelo (server/sessions.py:AvisoAccion): un frame con
+  // nombre `accion` por cada movimiento de cualquier jugador. Llega aqui y
+  // NO a onmessage precisamente por tener nombre, asi que el log de eventos
+  // de abajo no se entera. No trae `id:`, asi que tampoco mueve el
+  // Last-Event-ID -- un aviso no puede descolocar el resume del log.
+  //
+  // No hace falta ningun guard de "no repetir al reconectar" (como el
+  // sembrarTurnoSinSonido() del aviso de turno): los avisos no tienen
+  // backlog, asi que reconectar no reproduce nada de lo ya ocurrido.
+  es.addEventListener('accion', (mensaje) => {
+    let aviso: AvisoAccionView
+    try {
+      aviso = JSON.parse((mensaje as MessageEvent).data) as AvisoAccionView
+    } catch {
+      return
+    }
+    const sonido = SONIDOS_ACCION[aviso.accion as IdSonido]
+    if (sonido && store.preferencias.sonido) reproducirSonido(sonido)
+    // Ademas del sonido: hasta ahora, 11 de las 12 acciones no emitian
+    // ningun evento, asi que el tablero de un oponente solo se actualizaba
+    // cuando caia el poll de respaldo (hasta 4s despues). Refrescar aqui
+    // hace que lo que se oye y lo que se ve lleguen juntos.
+    void refrescarEstado()
+  })
 
   es.onmessage = (mensaje) => {
     try {

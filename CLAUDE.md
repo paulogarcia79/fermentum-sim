@@ -97,6 +97,17 @@ open-ended `StreamingResponse` generator regardless of whether a concurrent acti
 (confirmed experimentally). Confirmed working live in a real browser (Milestone 5 follow-up): an
 action from one player updates another player's screen without waiting for a poll tick.
 
+`tests/test_avisos_accion.py` covers the ephemeral per-action channel (`AvisoAccion`, see
+Architecture below): the frame format (`event: accion` and, load-bearing, **no `id:` line**,
+contrasted against a numbered log frame), `difundir_accion` fanning out to every subscriber, the
+four routes that broadcast (`/actions`, `/pass`, `/force-pass`, `/undo`), a fail-fast-rejected
+action broadcasting nothing, and — the guardrail — a free action plus an undo leaving
+`len(engine.eventos)` unchanged, which is the invariant that forced this to be a separate channel
+instead of a new `EventoTipo`. Same `TestClient` limitation as `test_sse.py`, so the stream is
+not consumed end-to-end; it hooks a fake queue onto the live `GameSession` (reachable via
+`app.state.salas`) instead. The end-to-end wire format was verified separately against a real
+`uvicorn` with a second client on the stream, and the audio confirmed by ear in a browser.
+
 `tests/test_robustness.py` covers the three Milestone 6 additions: force-pass (rejects before the
 inactivity threshold, succeeds after it, rejects with no active turn), `RoomManager.limpiar_inactivas`
 (removes only genuinely idle rooms, respects the longer EN_CURSO threshold, deletes the matching
@@ -426,6 +437,22 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   tooltip). Used identically in the market, the hand (`MiTablero.vue`), and own stations
   (`EstacionCard.vue`) for one consistent recipe representation everywhere.
 
+  The 12 action spaces are split into the three families `context/ACTIONS_REGISTRY.md` itself
+  defines, each its own bordered zone with a header, a cost badge and an accent color:
+  **Principales** (`B C D E F G simposio`, 1 PA, end your turn), **Gratuitas**
+  (`A horas_extras pedido_urgencia`, 0 PA, chainable) and **Protocolos de Emergencia** (`H I`).
+  Principales and Gratuitas sit side by side (`2fr 1fr`), Emergencia spans the full width below,
+  and all three stack under 800px — the same breakpoint `.columnas` uses. The easy mistake this
+  layout must not make: the emergency zone's badge says **1 PA, not 0 PA** — `H`/`I` are reactive
+  by *availability* (they need active contamination), not by cost, and they charge a PA and end
+  the turn exactly like the main actions. That zone is always rendered and merely greys out when
+  there is no contamination (`disponibilidad.py` already returns them disabled with a `motivo`, so
+  no backend involvement) — the layout never jumps and a player learns the rescue exists before
+  needing it — and only lights up red when actually contaminated. The group table lives in
+  `web/src/data/descripcionesAcciones.ts` as `GRUPOS_ACCION`, next to the `IdAccion` type it
+  already owns, so `BarraAcciones.vue` keeps no parallel catalog; its pass-confirmation modal
+  flattens that same table rather than a second list.
+
   Every player picks a color from a fixed 6-entry palette (`data/coloresJugador.ts`, mirroring
   `server/sessions.py:COLORES_DISPONIBLES`) in `LobbyView.vue` before creating/joining — needed
   for opponent identification (`TablerosOponentes.vue`'s color dot, `MiTablero.vue`'s accent
@@ -462,6 +489,60 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   `GameSession`/`Seat` shape change (this and last session's `color` field) should invalidate old
   on-disk pickles per the module's own documented policy, rather than loading a stale object that
   crashes the first time new code touches a field it doesn't have.
+
+  **Per-action sound effects**: every player move plays a distinct sound in *every* connected
+  tab (including the actor's), so a player can tell by ear what someone else just did.
+  `web/src/sonido.ts` (which already held the turn chime) now exposes a `tocarTonos(Tono[])`
+  primitive plus a `Sonido` union — `{clase:'sintetizado'}` today, `{clase:'archivo', url}`
+  implemented but unexercised, so one recipe can become an `.ogg` without touching the trigger.
+  The recipes live in `web/src/data/sonidosAccion.ts`, keyed by
+  `IdSonido = IdAccion | 'pasar' | 'deshacer'` so a missing action is a compile error (same trick
+  as `GrupoAccion.id: IdAccion`). Everything is synthesized rather than shipped as files, for the
+  same reason `Icono*.vue` hand-authors every SVG: this repo has no binary assets and no asset
+  pipeline. Design is **timbre per family, pitch per action** — the three action zones share a
+  waveform (Principales an ascending `triangle` pair, Gratuitas a short quiet high `sine` tick,
+  Emergencia a descending low `sawtooth`), so the family is instantly readable and the specific
+  action is learnable; Hornear breaks family with a three-note arpeggio. Toggle is
+  `store.preferencias.sonido` (default **on**, unlike `alertaContaminacion`), driven by a 🔊/🔇
+  button in `GameView.vue`'s header — deliberately not in `BarraAcciones.vue`, which unmounts on
+  `v-if="esMiTurno"`, i.e. precisely when someone else is the one making noise. The turn chime
+  now takes a delay argument and fires 0.35 s late so it doesn't collide with the action sound of
+  the opponent who just ceded the turn.
+
+  **Action broadcast (`AvisoAccion`) — why it is not a `GameEvent`**: the engine's event log only
+  covers automatic, no-player-input changes, so of the 12 actions only F emitted anything
+  (`HORNEADO`, via `resolver_horneado`). The other 11 produced no SSE frame at all — opponents'
+  boards lagged behind by up to one 4 s backup poll. A new `EventoTipo` per action is not merely
+  inelegant, it is **unsound**: the free actions (`A`, `horas_extras`, `pedido_urgencia`) happen
+  inside the undo window, and `GameSession.restaurar_checkpoint` does `pickle.loads` of the whole
+  engine, so `engine.eventos` would *shrink* on an undo and every client's `since` /
+  `Last-Event-ID` pointer would sit past the end of the server's list — `engine.eventos[desde:]`
+  returning `[]` forever. That is exactly the invariant `server/sessions.py`'s checkpoint comment
+  already spelled out. So an action broadcast rides a **separate ephemeral channel over the same
+  SSE connection**: `server/sessions.py:AvisoAccion` (a frozen dataclass next to `Seat`, kept out
+  of `events.py` for the same reason `server/errors.py` is kept out of `exceptions.py`),
+  fanned out by `GameSession.difundir_accion` over the same `suscriptores` queues (widened to
+  `Queue[Union[GameEvent, AvisoAccion]]`), and written by `server/app.py:_formatear_sse_aviso` as
+  `event: accion` + `data:` with **no `id:` line**. The missing `id:` is load-bearing: a browser
+  only advances `Last-Event-ID` on frames that carry one, so an aviso cannot disturb the event
+  log's resume pointer (an index into `engine.eventos`, which an aviso never enters) — and since
+  it is never in the log, an undo cannot dangle it. A sound already played is not state: there is
+  no backlog and nothing replays on reconnect, which is the wanted behaviour. Unlike
+  `difundir_evento` it is **not** registered as the engine's `event_sink` — the engine doesn't
+  know the HTTP action ids, so `app.py` calls it, in the four routes that represent a move
+  (`/actions`, `/pass`, `/force-pass`, `/undo`), always *after* the mutation succeeded so a
+  fail-fast rejection never makes a sound, and *before* `_avanzar_fase_si_corresponde` so the
+  action's frame precedes the Fase III events it triggered. No `VERSION_FORMATO` bump: no
+  persisted field changed (`suscriptores` was already excluded from `__getstate__`).
+  `forzar_pase_por_inactividad` now returns the passed player's index instead of `None`, so the
+  route doesn't recompute who was active. Client side, `store.ts`'s `iniciarEventSource` adds an
+  `addEventListener('accion', …)` — named frames never reach the existing `onmessage`, so the
+  event log is untouched — which plays the sound *and* calls `refrescarEstado()`; that refetch is
+  the part that makes opponents' boards update in step with the sound instead of up to 4 s later.
+  `crear_app()` now hangs its `RoomManager` on `app.state.salas`, purely so tests can reach the
+  live `GameSession` and attach a fake subscriber. Tests: `tests/test_avisos_accion.py`, whose
+  last case is the guardrail for the invariant above (a free action + an undo must leave
+  `len(engine.eventos)` unchanged).
 
 `agents.py` is currently an empty placeholder file.
 

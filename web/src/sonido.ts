@@ -1,10 +1,34 @@
-// sonido.ts -- notificacion sonora de turno. Sin assets de audio en el
-// proyecto (web/public/ solo tiene favicon.svg) y sin poder obtener/licenciar
-// un archivo externo desde este entorno, se sintetiza un timbre corto con
-// Web Audio en vez de reproducir un <audio src>. Si mas adelante se quiere
-// un sonido real, solo hay que reemplazar reproducirNotificacionTurno() --
-// el trigger en store.ts no cambia.
+// sonido.ts -- sintesis de los efectos de sonido del juego. Sin assets de
+// audio en el proyecto (web/public/ solo tiene favicon.svg) y sin poder
+// obtener/licenciar un archivo externo desde este entorno, cada sonido se
+// escribe a mano como una receta de tonos Web Audio en vez de reproducir un
+// <audio src> -- el mismo criterio que siguen los Icono*.vue, que dibujan
+// cada silueta a mano en SVG en vez de importar imagenes.
+//
+// La tabla de recetas vive en data/sonidosAccion.ts; aqui solo esta el
+// motorcito que las reproduce.
 let contexto: AudioContext | null = null
+
+/** Un tono dentro de una receta: todo relativo al inicio de la reproduccion. */
+export interface Tono {
+  frecuencia: number
+  /** Segundos desde el inicio del sonido. 0 = inmediato. */
+  retraso: number
+  duracion: number
+  onda: OscillatorType
+  /** Pico de ganancia (0-1). Los sonidos frecuentes van mas bajos. */
+  ganancia: number
+}
+
+/**
+ * Un sonido reproducible. Hoy todas las entradas son `sintetizado`; la rama
+ * `archivo` existe para poder cambiar una receta concreta por un .ogg real
+ * sin tocar nada del disparador (store.ts) ni de la tabla. Esta implementada
+ * entera, pero sin ejercitar hasta que se use por primera vez.
+ */
+export type Sonido =
+  | { clase: 'sintetizado'; tonos: Tono[] }
+  | { clase: 'archivo'; url: string; volumen?: number }
 
 /**
  * Crea (o retoma, si el navegador la suspendio) el AudioContext. Los
@@ -27,8 +51,11 @@ export function habilitarAudio(): void {
   }
 }
 
-/** Timbre corto de dos tonos (subida rapida) para avisar que llego el turno. */
-export function reproducirNotificacionTurno(): void {
+/**
+ * Primitivo de sintesis: reproduce una lista de tonos como un solo sonido.
+ * Un fallo aqui nunca debe interrumpir el juego, asi que se traga todo.
+ */
+function tocarTonos(tonos: Tono[]): void {
   try {
     if (!contexto) {
       console.debug('[sonido] Sin AudioContext -- habilitarAudio() no corrio todavia en esta pestaña.')
@@ -43,29 +70,48 @@ export function reproducirNotificacionTurno(): void {
       void contexto.resume()
     }
     const ahora = contexto.currentTime
-    const tonos: [frecuencia: number, inicio: number][] = [
-      [880, ahora],
-      [1108.73, ahora + 0.11],
-    ]
 
-    for (const [frecuencia, inicio] of tonos) {
+    for (const tono of tonos) {
       const oscilador = contexto.createOscillator()
       const ganancia = contexto.createGain()
-      oscilador.type = 'sine'
-      oscilador.frequency.value = frecuencia
+      oscilador.type = tono.onda
+      oscilador.frequency.value = tono.frecuencia
       oscilador.connect(ganancia)
       ganancia.connect(contexto.destination)
 
-      const fin = inicio + 0.16
+      const inicio = ahora + tono.retraso
+      const fin = inicio + tono.duracion
       ganancia.gain.setValueAtTime(0, inicio)
-      ganancia.gain.linearRampToValueAtTime(0.22, inicio + 0.012)
+      ganancia.gain.linearRampToValueAtTime(tono.ganancia, inicio + 0.012)
       ganancia.gain.exponentialRampToValueAtTime(0.0001, fin)
 
       oscilador.start(inicio)
       oscilador.stop(fin + 0.02)
     }
   } catch (e) {
-    // Igual que arriba: un fallo aqui nunca debe interrumpir el juego.
-    console.debug('[sonido] reproducirNotificacionTurno() falló:', e)
+    console.debug('[sonido] tocarTonos() falló:', e)
   }
+}
+
+/** Reproduce cualquier `Sonido`, venga de sintesis o de un archivo. */
+export function reproducirSonido(sonido: Sonido): void {
+  if (sonido.clase === 'sintetizado') {
+    tocarTonos(sonido.tonos)
+    return
+  }
+  try {
+    const audio = new Audio(sonido.url)
+    audio.volume = sonido.volumen ?? 0.5
+    void audio.play()
+  } catch (e) {
+    console.debug('[sonido] reproducirSonido(archivo) falló:', e)
+  }
+}
+
+/** Timbre corto de dos tonos (subida rapida) para avisar que llego el turno. */
+export function reproducirNotificacionTurno(retraso = 0): void {
+  tocarTonos([
+    { frecuencia: 880, retraso, duracion: 0.16, onda: 'sine', ganancia: 0.22 },
+    { frecuencia: 1108.73, retraso: retraso + 0.11, duracion: 0.16, onda: 'sine', ganancia: 0.22 },
+  ])
 }

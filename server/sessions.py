@@ -22,7 +22,7 @@ import secrets
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from bootstrap import create_game
 from engine import GameEngine
@@ -118,6 +118,35 @@ class Seat:
     y por ``RoomManager.limpiar_inactivas``."""
 
 
+@dataclass(frozen=True)
+class AvisoAccion:
+    """
+    Aviso efímero de que un jugador acaba de ejecutar una acción, difundido a
+    los clientes SSE para que puedan sonar un efecto distinto por acción (y
+    refrescar el estado en el acto, en vez de esperar al poll de respaldo).
+
+    NO es un ``GameEvent`` y deliberadamente no vive en ``events.py``: ese
+    archivo es el log del motor sobre cambios automáticos, y este es un
+    concepto de transporte del servidor -- la misma separación que hay entre
+    ``exceptions.py`` y ``server/errors.py``.
+
+    Y no PUEDE ser un ``GameEvent``, además de no deber serlo: las acciones
+    gratuitas ocurren dentro de la ventana de deshacer, y ``restaurar_checkpoint``
+    hace ``pickle.loads`` del motor entero, así que restaura ``engine._eventos``
+    tal cual. Un evento por acción gratuita haría que ``len(engine.eventos)``
+    ENCOGIERA tras un deshacer, dejando el puntero ``since``/``Last-Event-ID``
+    de cada cliente por delante del servidor para siempre (ver el comentario
+    del checkpoint de visita, más abajo). Un aviso, en cambio, nunca entra en
+    el log: no tiene backlog, no se reproduce al reconectar y un deshacer no
+    puede dejarlo colgando. Un sonido ya sonado no es estado.
+    """
+
+    accion: str
+    """Id de acción de ``ACCIONES_QUE_TERMINAN_TURNO``, o ``"pasar"`` /
+    ``"deshacer"`` para los movimientos que no pasan por ``/actions``."""
+    jugador_idx: int
+
+
 @dataclass
 class GameSession:
     """
@@ -155,7 +184,9 @@ class GameSession:
     seats: List[Seat] = field(default_factory=list)
     engine: Optional[GameEngine] = None
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
-    suscriptores: List["asyncio.Queue[GameEvent]"] = field(default_factory=list)
+    suscriptores: List["asyncio.Queue[Union[GameEvent, AvisoAccion]]"] = field(
+        default_factory=list
+    )
     creado_en: float = field(default_factory=time.time)
     votos_fin_anticipado: Set[int] = field(default_factory=set)
     """Índices de jugador que confirmaron terminar la partida antes de
@@ -218,6 +249,19 @@ class GameSession:
         SSE conectado a esta sala ahora mismo."""
         for cola in self.suscriptores:
             cola.put_nowait(evento)
+
+    def difundir_accion(self, accion: str, jugador_idx: int) -> None:
+        """
+        Gemelo efímero de ``difundir_evento`` para las acciones de jugador
+        (ver ``AvisoAccion``). A diferencia de aquel, NO se registra como
+        ``event_sink`` del motor: el motor no conoce los ids de acción del
+        protocolo HTTP, así que lo llama ``server/app.py``, que sí -- y solo
+        DESPUÉS de que la mutación haya tenido éxito, para que una acción
+        rechazada por fail-fast no llegue a sonar en ninguna pestaña.
+        """
+        aviso = AvisoAccion(accion=accion, jugador_idx=jugador_idx)
+        for cola in self.suscriptores:
+            cola.put_nowait(aviso)
 
     # ------------------------------------------------------------------
     # Checkpoint de visita (deshacer)
@@ -289,7 +333,7 @@ class GameSession:
             and self.checkpoint_clave == self._clave_visita_actual()
         )
 
-    def forzar_pase_por_inactividad(self) -> None:
+    def forzar_pase_por_inactividad(self) -> int:
         """
         Pasa el turno del jugador activo si lleva al menos
         ``UMBRAL_INACTIVIDAD_SEGUNDOS`` sin ninguna petición autenticada —
@@ -300,6 +344,11 @@ class GameSession:
         El llamador (``server/app.py``) es responsable de sostener
         ``self.lock`` mientras invoca este método, igual que para
         cualquier otra mutación del motor.
+
+        Returns:
+            El índice del jugador cuyo turno se pasó -- para que el llamador
+            pueda difundirlo (``difundir_accion``) sin tener que recalcular
+            quién estaba activo antes de la mutación.
 
         Raises:
             NoActiveTurnError: No hay ningún turno activo que forzar.
@@ -317,7 +366,9 @@ class GameSession:
                 f"'{asiento.nombre}' lleva {inactividad:.0f}s inactivo; "
                 f"se requieren {UMBRAL_INACTIVIDAD_SEGUNDOS}s para forzar el pase."
             )
+        idx = self.engine.players.index(jugador)
         self.engine.pasar_turno(jugador)
+        return idx
 
     def confirmar_fin_anticipado(self, player_index: int) -> bool:
         """

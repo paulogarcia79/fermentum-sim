@@ -185,3 +185,15 @@ export interface ApiError {
   error: string
   mensaje: string
 }
+
+/**
+ * Aviso efimero de que un jugador ejecuto una accion -- espejo de
+ * server/sessions.py:AvisoAccion. No es un GameEventView: llega por el canal
+ * `event: accion` del SSE, no entra en el log de eventos y no tiene `seq`.
+ * Ver data/sonidosAccion.ts.
+ */
+export interface AvisoAccionView {
+  /** Id de accion, o 'pasar' / 'deshacer'. */
+  accion: string
+  jugador_idx: number
+}

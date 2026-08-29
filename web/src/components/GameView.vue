@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
-import { confirmarFinAnticipado, detenerTransmisionEnVivo, forzarPase, store } from '../store'
+import {
+  confirmarFinAnticipado,
+  detenerTransmisionEnVivo,
+  establecerSonido,
+  forzarPase,
+  store,
+} from '../store'
 import MazoClimaPanel from './MazoClimaPanel.vue'
 import MercadoPanel from './MercadoPanel.vue'
 import BolsaHarinasPanel from './BolsaHarinasPanel.vue'
@@ -50,7 +56,25 @@ onUnmounted(() => detenerTransmisionEnVivo())
 <template>
   <div class="game-view">
     <header class="cabecera">
-      <h1>🍞 Fermentum — Sala {{ store.sesion?.roomId }}</h1>
+      <div class="fila-titulo">
+        <h1>🍞 Fermentum — Sala {{ store.sesion?.roomId }}</h1>
+        <!-- Vive aqui y no en BarraAcciones.vue porque ese componente solo
+             se monta con v-if="esMiTurno", y el control tiene que existir
+             justo cuando el que actua es otro. -->
+        <button
+          class="interruptor-sonido"
+          :class="{ apagado: !store.preferencias.sonido }"
+          :title="
+            store.preferencias.sonido
+              ? 'Silenciar los efectos de sonido de las acciones'
+              : 'Activar los efectos de sonido de las acciones'
+          "
+          :aria-pressed="store.preferencias.sonido"
+          @click="establecerSonido(!store.preferencias.sonido)"
+        >
+          {{ store.preferencias.sonido ? '🔊' : '🔇' }}
+        </button>
+      </div>
       <p class="turno-indicador" :class="{ 'mi-turno': esMiTurno }">
         <template v-if="estado.partida_terminada">La partida ha terminado.</template>
         <template v-else-if="esMiTurno">Es tu turno.</template>
@@ -125,6 +149,27 @@ onUnmounted(() => detenerTransmisionEnVivo())
 </template>
 
 <style scoped>
+.fila-titulo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.interruptor-sonido {
+  flex: 0 0 auto;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--color-borde);
+  background: transparent;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.interruptor-sonido.apagado {
+  opacity: 0.55;
+}
+
 .cabecera h1 {
   margin-bottom: 0.1rem;
   font-size: 1.4rem;

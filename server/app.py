@@ -38,7 +38,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-from typing import Any, AsyncIterator, Dict, List, Tuple, Type
+from typing import Any, AsyncIterator, Dict, List, Tuple, Type, Union
 
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -77,7 +77,14 @@ from server.errors import (
     RoomNotJoinableError,
     UnknownPlayerTokenError,
 )
-from server.sessions import MAX_JUGADORES, GameSession, RoomManager, RoomStatus, Seat
+from server.sessions import (
+    MAX_JUGADORES,
+    AvisoAccion,
+    GameSession,
+    RoomManager,
+    RoomStatus,
+    Seat,
+)
 from server.views import game_state_view
 
 # ===========================================================================
@@ -238,6 +245,24 @@ def _evento_a_dict(ev: GameEvent) -> Dict[str, Any]:
 def _formatear_sse(seq: int, evento: GameEvent) -> str:
     payload = json.dumps(_evento_a_dict(evento), ensure_ascii=False)
     return f"id: {seq}\ndata: {payload}\n\n"
+
+
+def _formatear_sse_aviso(aviso: AvisoAccion) -> str:
+    """
+    Frame efímero de acción de jugador (ver ``AvisoAccion``), en un canal
+    paralelo sobre la misma conexión: lleva nombre (``event: accion``, así
+    que llega a un ``addEventListener('accion', ...)`` y no al ``onmessage``
+    del log de eventos) y **deliberadamente NINGUNA línea ``id:``**.
+
+    Lo segundo es lo que sostiene todo el diseño: el navegador solo mueve su
+    ``Last-Event-ID`` cuando el frame trae ``id:``, así que un aviso no puede
+    descolocar el puntero de resume del log de eventos -- que es un índice
+    dentro de ``engine.eventos``, donde un aviso nunca entra.
+    """
+    payload = json.dumps(
+        {"accion": aviso.accion, "jugador_idx": aviso.jugador_idx}, ensure_ascii=False
+    )
+    return f"event: accion\ndata: {payload}\n\n"
 
 
 INTERVALO_LIMPIEZA_SEGUNDOS = 10 * 60
@@ -402,7 +427,7 @@ def crear_app() -> Starlette:
         except ValueError:
             desde = 0
 
-        cola: "asyncio.Queue[GameEvent]" = asyncio.Queue()
+        cola: "asyncio.Queue[Union[GameEvent, AvisoAccion]]" = asyncio.Queue()
         # Suscribirse y leer el backlog bajo el mismo lock que protege toda
         # mutación del motor: ninguna emisión concurrente puede colarse
         # entre "ya me suscribí" y "ya leí lo que había hasta ahora" (ver
@@ -422,6 +447,10 @@ def crear_app() -> Starlette:
                         evento = await asyncio.wait_for(cola.get(), timeout=15)
                     except asyncio.TimeoutError:
                         yield ": keepalive\n\n"  # evita que un proxy cierre la conexión inactiva
+                        continue
+                    if isinstance(evento, AvisoAccion):
+                        # No incrementa `seq`: un aviso no es parte del log.
+                        yield _formatear_sse_aviso(evento)
                         continue
                     seq += 1
                     yield _formatear_sse(seq, evento)
@@ -492,6 +521,12 @@ def crear_app() -> Starlette:
                 # DESPUÉS de resolver, y ese es el nuevo piso del deshacer.
                 if ACCIONES_QUE_REVELAN.get(accion):
                     sesion.tomar_checkpoint()
+                # Aquí y no antes: la acción ya se aplicó, así que una
+                # rechazada por fail-fast no suena en ninguna pestaña. Y
+                # antes de avanzar de fase, para que el aviso de la acción
+                # llegue por delante de los eventos de Fase III que ella misma
+                # disparó.
+                sesion.difundir_accion(accion, asiento.player_index)
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
                 vista = game_state_view(sesion)
@@ -512,6 +547,7 @@ def crear_app() -> Starlette:
                 jugador = engine.players[asiento.player_index]
                 sesion.limpiar_checkpoint()  # el pase cierra la visita
                 engine.pasar_turno(jugador)
+                sesion.difundir_accion("pasar", asiento.player_index)
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
                 vista = game_state_view(sesion)
@@ -545,6 +581,7 @@ def crear_app() -> Starlette:
                         "acción en esta visita."
                     )
                 sesion.restaurar_checkpoint()
+                sesion.difundir_accion("deshacer", asiento.player_index)
                 salas.guardar(sesion)
                 vista = game_state_view(sesion)
         except (FermentumError, RoomError) as exc:
@@ -567,10 +604,11 @@ def crear_app() -> Starlette:
             engine = _requerir_partida_iniciada(sesion)
 
             async with sesion.lock:
-                sesion.forzar_pase_por_inactividad()
+                idx_pasado = sesion.forzar_pase_por_inactividad()
                 # Después (no antes): si el pase forzado se rechaza (jugador
                 # aún activo), su checkpoint de visita debe sobrevivir.
                 sesion.limpiar_checkpoint()
+                sesion.difundir_accion("pasar", idx_pasado)
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
                 vista = game_state_view(sesion)
@@ -634,7 +672,7 @@ def crear_app() -> Starlette:
             }
         )
 
-    return Starlette(
+    aplicacion = Starlette(
         routes=[
             Route("/games", crear_sala, methods=["POST"]),
             Route("/games/{room_id}", ver_sala, methods=["GET"]),
@@ -652,6 +690,13 @@ def crear_app() -> Starlette:
         ],
         lifespan=_crear_lifespan(salas),
     )
+    # El RoomManager es privado del closure de arriba; exponerlo en
+    # `app.state` no cambia ninguna ruta y le da a las pruebas la unica cosa
+    # que HTTP no puede devolver: la GameSession viva, para poder engancharle
+    # un suscriptor falso y observar lo que se difunde (ver
+    # tests/test_avisos_accion.py).
+    aplicacion.state.salas = salas
+    return aplicacion
 
 
 app = crear_app()
