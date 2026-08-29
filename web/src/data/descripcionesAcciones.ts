@@ -44,3 +44,69 @@ export const descripcionesAcciones: Record<IdAccion, string> = {
  * restaura DESDE ese punto, nunca antes).
  */
 export const ACCIONES_QUE_REVELAN: ReadonlySet<IdAccion> = new Set()
+
+/**
+ * Los tres grupos de espacios de acción del tablero, en el orden en que se
+ * pintan -- espejo de la división que hace context/ACTIONS_REGISTRY.md:
+ * §2 "Catálogo de Acciones Principales (Costo: 1 PA)" y §3 "Acciones
+ * Auxiliares y de Emergencia (Costo: 0 PA)", con los Protocolos de Emergencia
+ * separados en su propia zona.
+ *
+ * OJO con la tercera zona: H e I son reactivas por DISPONIBILIDAD (solo se
+ * habilitan con Contaminación activa), no por coste -- cuestan 1 PA y terminan
+ * el turno igual que las principales. Su insignia dice 1 PA, no 0 PA.
+ *
+ * La tabla vive aquí, junto a IdAccion y las descripciones, para que
+ * BarraAcciones.vue no tenga que mantener un segundo catálogo en paralelo.
+ */
+export type GrupoAccionId = 'principales' | 'gratuitas' | 'emergencia'
+
+export interface GrupoAccion {
+  id: GrupoAccionId
+  /** Título de la zona. */
+  titulo: string
+  /** Insignia de coste en la cabecera: lo que cuesta CADA espacio de la zona. */
+  costo: string
+  /** La regla que define al grupo, en una línea. */
+  nota: string
+  acciones: { id: IdAccion; etiqueta: string; costo: string }[]
+}
+
+export const GRUPOS_ACCION: readonly GrupoAccion[] = [
+  {
+    id: 'principales',
+    titulo: 'Acciones Principales',
+    costo: '1 PA',
+    nota: 'Terminan tu turno · un espacio distinto por visita',
+    acciones: [
+      { id: 'B', etiqueta: 'Iniciar Receta', costo: '1 PA' },
+      { id: 'C', etiqueta: 'Visitar Mercado', costo: '1 PA' },
+      { id: 'D', etiqueta: 'Implementar Mejora', costo: '1 PA' },
+      { id: 'E', etiqueta: 'Pliegues', costo: '1 PA' },
+      { id: 'F', etiqueta: 'Hornear y Vender', costo: '1 PA' },
+      { id: 'G', etiqueta: 'Investigar Protocolo', costo: '1 PA' },
+      { id: 'simposio', etiqueta: 'Simposio Técnico', costo: '1 PA' },
+    ],
+  },
+  {
+    id: 'gratuitas',
+    titulo: 'Acciones Gratuitas',
+    costo: '0 PA',
+    nota: 'No terminan tu turno · puedes encadenarlas',
+    acciones: [
+      { id: 'A', etiqueta: 'Alimentar Cultivo', costo: '0 PA' },
+      { id: 'horas_extras', etiqueta: 'Horas Extras', costo: '0 PA' },
+      { id: 'pedido_urgencia', etiqueta: 'Pedido de Urgencia', costo: '0 PA' },
+    ],
+  },
+  {
+    id: 'emergencia',
+    titulo: 'Protocolos de Emergencia',
+    costo: '1 PA',
+    nota: 'Solo con Contaminación activa (Vitalidad 0)',
+    acciones: [
+      { id: 'H', etiqueta: 'Re-cultivo Manual', costo: '1 PA' },
+      { id: 'I', etiqueta: 'Inóculo de Emergencia', costo: '1 PA' },
+    ],
+  },
+]

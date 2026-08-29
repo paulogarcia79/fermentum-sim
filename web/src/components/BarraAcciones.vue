@@ -12,24 +12,19 @@ import ModalG from './acciones/ModalG.vue'
 import ModalSimposio from './acciones/ModalSimposio.vue'
 import ModalConfirmacion from './acciones/ModalConfirmacion.vue'
 import ModalPedidoUrgencia from './acciones/ModalPedidoUrgencia.vue'
-import { ACCIONES_QUE_REVELAN, descripcionesAcciones, type IdAccion } from '../data/descripcionesAcciones'
+import {
+  ACCIONES_QUE_REVELAN,
+  GRUPOS_ACCION,
+  descripcionesAcciones,
+  type IdAccion,
+} from '../data/descripcionesAcciones'
 import { hexDeColor } from '../data/coloresJugador'
 import type { Player } from '../types'
 
-const BOTONES: { id: IdAccion; etiqueta: string; costo: string }[] = [
-  { id: 'B', etiqueta: 'Iniciar Receta', costo: '1 PA' },
-  { id: 'C', etiqueta: 'Visitar Mercado', costo: '1 PA' },
-  { id: 'D', etiqueta: 'Implementar Mejora', costo: '1 PA' },
-  { id: 'E', etiqueta: 'Pliegues', costo: '1 PA' },
-  { id: 'F', etiqueta: 'Hornear y Vender', costo: '1 PA' },
-  { id: 'G', etiqueta: 'Investigar Protocolo', costo: '1 PA' },
-  { id: 'simposio', etiqueta: 'Simposio Técnico', costo: '1 PA' },
-  { id: 'H', etiqueta: 'Re-cultivo Manual', costo: '1 PA' },
-  { id: 'I', etiqueta: 'Inóculo Emergencia', costo: '1 PA' },
-  { id: 'A', etiqueta: 'Alimentar Cultivo', costo: '0 PA' },
-  { id: 'horas_extras', etiqueta: 'Horas Extras', costo: '0 PA' },
-  { id: 'pedido_urgencia', etiqueta: 'Pedido de Urgencia', costo: '0 PA' },
-]
+/** Los 12 espacios en plano, sin zonas -- para el modal de confirmación de
+ * pase, que los lista como una sola lista de "lo que te queda por hacer".
+ * Deriva de GRUPOS_ACCION para que no haya dos catálogos que mantener. */
+const ACCIONES_PLANAS = GRUPOS_ACCION.flatMap((g) => g.acciones)
 
 const disponibilidad = computed(() => store.estado!.acciones_disponibles[store.sesion!.playerIndex])
 
@@ -73,13 +68,19 @@ const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
  * le queda -- y un atajo para usarlo -- en un modal de confirmación.
  *
  * "Qué le queda" se lee de `acciones_disponibles` (filtrando la propia tabla
- * BOTONES por `habilitada`), que ya lo calcula el servidor por jugador --
+ * ACCIONES_PLANAS por `habilitada`), que ya lo calcula el servidor por
+ * jugador --
  * nunca se reimplementa aquí ninguna regla de habilitación. */
-const accionesRestantes = computed(() => BOTONES.filter((b) => estado(b.id).habilitada))
+const accionesRestantes = computed(() => ACCIONES_PLANAS.filter((b) => estado(b.id).habilitada))
 
 /** El bloque rojo de colapso dentro del modal sigue siendo opt-in (checkbox
  * del lobby); el modal en sí ya no -- aparece siempre que quede algo por
  * hacer, tenga o no la alerta activada. */
+/** La zona de Protocolos de Emergencia siempre se ve (para que el jugador
+ * sepa que el rescate existe antes de necesitarlo), pero solo se enciende en
+ * rojo cuando de verdad está en juego. */
+const contaminado = computed(() => yo.value.en_estado_contaminacion)
+
 const avisoColapso = computed(
   () => store.preferencias.alertaContaminacion && yo.value.en_riesgo_colapso,
 )
@@ -127,31 +128,50 @@ async function pasarDeVerdad() {
 
 <template>
   <section class="barra-acciones">
-    <div class="grid-botones">
-      <div v-for="b in BOTONES" :key="b.id" class="envoltorio-boton">
-        <div v-if="jugadoresQueUsaron(b.id).length > 0" class="marcadores-jugador">
-          <span
-            v-for="p in jugadoresQueUsaron(b.id)"
-            :key="p.nombre"
-            class="marcador-jugador"
-            :class="{ gratis: ESPACIOS_GRATIS_UNA_VEZ_POR_DIA.includes(b.id) }"
-            :style="{ '--color-marcador': hexDeColor(p.color) }"
-            :title="`${p.nombre} ya visitó este espacio hoy`"
-          />
+    <div class="zonas">
+      <section
+        v-for="g in GRUPOS_ACCION"
+        :key="g.id"
+        class="zona-accion"
+        :class="[`zona-${g.id}`, { activa: g.id === 'emergencia' && contaminado }]"
+      >
+        <header class="cabecera-zona">
+          <h4>{{ g.titulo }}</h4>
+          <span class="insignia-costo">{{ g.costo }}</span>
+          <p class="nota-zona">{{ g.nota }}</p>
+        </header>
+
+        <div class="grid-botones">
+          <div v-for="b in g.acciones" :key="b.id" class="envoltorio-boton">
+            <div v-if="jugadoresQueUsaron(b.id).length > 0" class="marcadores-jugador">
+              <span
+                v-for="p in jugadoresQueUsaron(b.id)"
+                :key="p.nombre"
+                class="marcador-jugador"
+                :class="{ gratis: ESPACIOS_GRATIS_UNA_VEZ_POR_DIA.includes(b.id) }"
+                :style="{ '--color-marcador': hexDeColor(p.color) }"
+                :title="`${p.nombre} ya visitó este espacio hoy`"
+              />
+            </div>
+            <button
+              :disabled="!estado(b.id).habilitada"
+              :title="estado(b.id).motivo"
+              @click="abrir(b.id)"
+            >
+              {{ b.etiqueta }}
+            </button>
+            <div class="tooltip" role="tooltip">
+              <p>{{ descripcionesAcciones[b.id] }}</p>
+              <p v-if="ACCIONES_QUE_REVELAN.has(b.id)" class="tooltip-motivo">
+                ⚠ Revela información oculta: ese paso no se puede deshacer.
+              </p>
+              <p v-if="!estado(b.id).habilitada && estado(b.id).motivo" class="tooltip-motivo">
+                ⚠ {{ estado(b.id).motivo }}
+              </p>
+            </div>
+          </div>
         </div>
-        <button :disabled="!estado(b.id).habilitada" :title="estado(b.id).motivo" @click="abrir(b.id)">
-          {{ b.etiqueta }} <span class="costo">[{{ b.costo }}]</span>
-        </button>
-        <div class="tooltip" role="tooltip">
-          <p>{{ descripcionesAcciones[b.id] }}</p>
-          <p v-if="ACCIONES_QUE_REVELAN.has(b.id)" class="tooltip-motivo">
-            ⚠ Revela información oculta: ese paso no se puede deshacer.
-          </p>
-          <p v-if="!estado(b.id).habilitada && estado(b.id).motivo" class="tooltip-motivo">
-            ⚠ {{ estado(b.id).motivo }}
-          </p>
-        </div>
-      </div>
+      </section>
     </div>
 
     <div class="fila-controles">
@@ -239,11 +259,89 @@ async function pasarDeVerdad() {
 </template>
 
 <style scoped>
+/* Tres zonas de tablero, una por familia de acciones (ver GRUPOS_ACCION):
+   Principales y Gratuitas en paralelo -- 2fr/1fr porque son 7 espacios contra
+   3 -- y Emergencia a lo ancho debajo. Se apilan bajo 800px, el mismo
+   breakpoint que usa .columnas en GameView.vue. */
+.zonas {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+@media (max-width: 800px) {
+  .zonas {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Cada zona tiñe su cabecera y el borde superior de sus espacios con
+   --acento-zona; sin overflow: hidden, o recortaría los tooltips de los
+   espacios (que se posicionan por encima del tile). */
+.zona-accion {
+  border: 1px solid var(--color-borde);
+  border-top: 2px solid var(--acento-zona);
+  border-radius: 8px;
+  padding: 0.6rem;
+}
+
+.zona-principales {
+  --acento-zona: var(--color-acento);
+}
+
+.zona-gratuitas {
+  --acento-zona: var(--color-bien);
+}
+
+.zona-emergencia {
+  grid-column: 1 / -1;
+  --acento-zona: var(--color-mal);
+}
+
+/* Solo cuando el rescate está realmente en juego. */
+.zona-emergencia.activa {
+  border-color: var(--color-mal);
+  background: rgba(198, 90, 75, 0.08);
+}
+
+.cabecera-zona {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin-bottom: 0.55rem;
+}
+
+.cabecera-zona h4 {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--acento-zona);
+}
+
+.insignia-costo {
+  padding: 0.05rem 0.35rem;
+  border: 1px solid var(--acento-zona);
+  border-radius: 999px;
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  color: var(--acento-zona);
+}
+
+.nota-zona {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.7rem;
+  line-height: 1.3;
+  color: var(--color-texto-tenue);
+}
+
 .grid-botones {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 0.6rem;
-  margin-bottom: 0.75rem;
 }
 
 .envoltorio-boton {
@@ -255,7 +353,7 @@ async function pasarDeVerdad() {
   padding: 0.6rem 0.5rem 0.5rem;
   border-radius: 6px;
   border: 1px solid var(--color-borde);
-  border-top: 3px solid var(--color-acento);
+  border-top: 3px solid var(--acento-zona, var(--color-acento));
   background: var(--color-fondo);
   color: var(--color-texto);
   font-size: 0.82rem;
@@ -327,10 +425,11 @@ async function pasarDeVerdad() {
   opacity: 1;
 }
 
+/* El coste por espacio ya no se repite en cada tile (lo dice la insignia de
+   su zona); esto solo aplica a la lista plana del modal de pase. */
 .costo {
   color: var(--color-texto-tenue);
   font-size: 0.75rem;
-  display: block;
 }
 
 .fila-controles {
@@ -396,7 +495,6 @@ async function pasarDeVerdad() {
 }
 
 .titulo-restante .costo {
-  display: inline;
   font-weight: 400;
 }
 
