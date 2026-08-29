@@ -897,7 +897,8 @@ class ActionManager:
         player.consumir_punto_accion("G")
 
         if carpeta_llena and indice_descartar is not None:
-            player.carpeta_proyectos.pop(indice_descartar)
+            descartada: Recipe = player.carpeta_proyectos.pop(indice_descartar)
+            self._engine.market.descarte_recetas.append(descartada)
 
         player.carpeta_proyectos.append(receta)
 
@@ -946,7 +947,8 @@ class ActionManager:
                     f"(tamaño actual: {len(player.carpeta_proyectos)})."
                 )
             player.consumir_punto_accion("simposio")
-            player.carpeta_proyectos.pop(indice)
+            descartada: Recipe = player.carpeta_proyectos.pop(indice)
+            self._engine.market.descarte_recetas.append(descartada)
             player.datos_investigacion += 1
 
         else:  # "estacion"
@@ -961,6 +963,7 @@ class ActionManager:
                     "No hay masa activa que descartar en el Simposio Técnico."
                 )
             player.consumir_punto_accion("simposio")
+            self._engine.market.descarte_recetas.append(slot.recipe)
             player.estaciones_fermentacion[indice] = None
             player.dados_inoculo = min(3, player.dados_inoculo + 1)
             player.datos_investigacion += 1

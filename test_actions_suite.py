@@ -270,6 +270,7 @@ if idx_r is not None:
     check("G: receta en carpeta", lambda: None if len(p1.carpeta_proyectos) == 1 else (_ for _ in ()).throw(AssertionError()))
 
 p1.carpeta_proyectos = list(RECIPE_CATALOG.values())[:3]
+receta_desplazada = p1.carpeta_proyectos[0]
 p1.puntos_accion = 2
 p1.acciones_pa_usadas_hoy = []
 market.protocolo_refresco()
@@ -278,6 +279,7 @@ if idx_r2 is not None:
     xraises(CarpetaFullError, "G carpeta llena sin descarte", lambda: manager.accion_G_investigar_protocolo(p1, idx_r2))
     manager.accion_G_investigar_protocolo(p1, idx_r2, indice_descartar=0)
     check("G carpeta llena con descarte: size=3", lambda: None if len(p1.carpeta_proyectos) == 3 else (_ for _ in ()).throw(AssertionError()))
+    check("G carpeta llena con descarte: va al descarte del mercado", lambda: None if receta_desplazada in market.descarte_recetas else (_ for _ in ()).throw(AssertionError()))
 
 p1.puntos_accion = 1
 p1.acciones_pa_usadas_hoy = []
@@ -286,12 +288,14 @@ xraises(InvalidActionError, "G indice mercado invalido", lambda: manager.accion_
 # ========================================================================
 print("--- Simposio Tecnico ---")
 p1.carpeta_proyectos = list(RECIPE_CATALOG.values())[:2]
+receta_descartada_carpeta = p1.carpeta_proyectos[0]
 p1.puntos_accion = 2
 datos_s = p1.datos_investigacion
 
 manager.accion_simposio_tecnico(p1, "carpeta", 0)
 check("Simposio carpeta: +1 dato", lambda: None if p1.datos_investigacion == datos_s + 1 else (_ for _ in ()).throw(AssertionError()))
 check("Simposio carpeta: size=1", lambda: None if len(p1.carpeta_proyectos) == 1 else (_ for _ in ()).throw(AssertionError()))
+check("Simposio carpeta: va al descarte del mercado", lambda: None if receta_descartada_carpeta in market.descarte_recetas else (_ for _ in ()).throw(AssertionError()))
 
 fslot = FermentationSlot(recipe=receta_b, dado_inoculo=2, posicion_track=3, bono_sabor=False, modificador_incubadora=0)
 p1.estaciones_fermentacion = [fslot, None, None]
@@ -304,6 +308,7 @@ manager.accion_simposio_tecnico(p1, "estacion", 0)
 check("Simposio estacion: +1 dato", lambda: None if p1.datos_investigacion == datos_s2 + 1 else (_ for _ in ()).throw(AssertionError()))
 check("Simposio estacion: slot liberado", lambda: None if p1.estaciones_fermentacion[0] is None else (_ for _ in ()).throw(AssertionError()))
 check("Simposio estacion: dado recuperado (1->2)", lambda: None if p1.dados_inoculo == 2 else (_ for _ in ()).throw(AssertionError(f"dados={p1.dados_inoculo}")))
+check("Simposio estacion: receta va al descarte del mercado", lambda: None if receta_b in market.descarte_recetas else (_ for _ in ()).throw(AssertionError()))
 
 p1.puntos_accion = 1
 xraises(InvalidActionError, "Simposio origen invalido", lambda: manager.accion_simposio_tecnico(p1, "horno", 0))
