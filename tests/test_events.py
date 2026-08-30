@@ -87,13 +87,19 @@ def test_mercado_reabastece_no_descarta() -> None:
     assert all(r is not None for r in market.recetas_visibles)
 
 
+def _stock_harinas(player, receta) -> None:
+    """Deja en la reserva exactamente las harinas que la receta imprime."""
+    for tipo, pct in receta.requisito_harina.items():
+        player.reserva_harina[tipo] = pct
+
+
 def test_horneado_manual_emite_evento_no_colapso() -> None:
     engine = setup_game(["Alba", "Bruno"])
     manager = ActionManager(engine)
     p1 = engine.players[0]
     receta = p1.carpeta_proyectos[0]
 
-    p1.reserva_harina[receta.harina_base.value] = 100
+    _stock_harinas(p1, receta)
     p1.reserva_agua = receta.tokens_agua
     p1.puntos_accion = 2
     slot = manager.accion_B_iniciar_receta(p1, receta)
@@ -122,7 +128,7 @@ def test_horneado_una_celda_bajo_optima_no_da_datos() -> None:
     p1 = engine.players[0]
     receta = p1.carpeta_proyectos[0]
 
-    p1.reserva_harina[receta.harina_base.value] = 100
+    _stock_harinas(p1, receta)
     p1.reserva_agua = receta.tokens_agua
     p1.puntos_accion = 2
     slot = manager.accion_B_iniciar_receta(p1, receta)
@@ -143,7 +149,7 @@ def test_colapso_estructural_emite_horneado_colapso_y_masa_avanzo() -> None:
     p1 = engine.players[0]
     receta = p1.carpeta_proyectos[0]
 
-    p1.reserva_harina[receta.harina_base.value] = 100
+    _stock_harinas(p1, receta)
     p1.reserva_agua = receta.tokens_agua
     p1.puntos_accion = 2
     slot = manager.accion_B_iniciar_receta(p1, receta)

@@ -12,7 +12,7 @@
 // receta ya iniciada) la Escala de Acidez muestra el Registro de pH real en
 // vez de solo la diana objetivo.
 import { computed, ref } from 'vue'
-import type { Recipe, TecnologiaID } from '../types'
+import type { Grado, Recipe, TecnologiaID } from '../types'
 import IconoPan from './IconoPan.vue'
 import IconoHarina from './IconoHarina.vue'
 import IconoAgua from './IconoAgua.vue'
@@ -20,6 +20,15 @@ import { PCT_POR_TOKEN_HARINA, fmtTokensHarina, tokensHarina } from '../data/uni
 import EscalaAcidez from './EscalaAcidez.vue'
 import TablaRendimiento from './TablaRendimiento.vue'
 import PistaMedida, { type BandaPista } from './PistaMedida.vue'
+
+// Que imprime cada grado. El grado no se elige: lo deriva models.py del reparto
+// de harinas (`_grado_desde_harinas`), y las dos formas legales -- 100% y 50+50 --
+// son exactamente las dos que la Bolsa de Harinas sabe vender.
+const REGLA_GRADO: Record<Grado, string> = {
+  'Básica': 'una bolsa entera de Blanca',
+  'Intermedia': 'media bolsa de dos harinas distintas',
+  'Avanzada': 'una bolsa entera de harina especial',
+}
 
 const NOMBRE_TECNOLOGIA: Record<TecnologiaID, string> = {
   incubadora: 'Incubadora',
@@ -49,6 +58,18 @@ const bandas = computed<BandaPista[]>(() => {
   ]
 })
 
+// 100% = una bolsa entera (10 tokens); 50% = media bolsa (5), la unidad que la
+// Accion C ya vende con `comprar_media`.
+function etiquetaBolsa(pct: number): string {
+  return pct === 100 ? 'una bolsa entera' : 'media bolsa'
+}
+
+const textoHarinas = computed(() =>
+  props.receta.harinas
+    .map(([tipo, pct]) => `${fmtTokensHarina(pct)} de Harina ${tipo} (${pct}%)`)
+    .join(' + '),
+)
+
 const centroExacto = computed(() =>
   Math.floor((props.receta.zona_optima[0] + props.receta.zona_optima[1]) / 2),
 )
@@ -63,7 +84,7 @@ const detalleAbierto = ref(false)
         <div class="ico-m icono-pan-envoltorio"><IconoPan :id="receta.id" /></div>
         <div class="titulo">
           <span class="nombre">{{ receta.nombre }}</span>
-          <span class="grado">{{ receta.grado }}</span>
+          <span class="grado" :class="`grado-${receta.grado.toLowerCase()}`">{{ receta.grado }}</span>
         </div>
         <button
           type="button"
@@ -78,11 +99,13 @@ const detalleAbierto = ref(false)
 
       <div class="requisitos">
         <span
+          v-for="[tipo, pct] in receta.harinas"
+          :key="tipo"
           class="req"
-          :title="`${fmtTokensHarina(100)} de Harina ${receta.harina_base} del ${PCT_POR_TOKEN_HARINA}% = 100% (una bolsa entera)`"
+          :title="`${fmtTokensHarina(pct)} de Harina ${tipo} del ${PCT_POR_TOKEN_HARINA}% = ${pct}% (${etiquetaBolsa(pct)})`"
         >
-          <span class="ico-xs"><IconoHarina :tipo="receta.harina_base" /></span> {{ tokensHarina(100) }}
-          <span class="unidad-secundaria">(100%)</span>
+          <span class="ico-xs"><IconoHarina :tipo="tipo" /></span> {{ tokensHarina(pct) }}
+          <span class="unidad-secundaria">({{ pct }}%)</span>
         </span>
         <span class="req" :title="`${receta.tokens_agua} tokens de Agua = ${receta.hidratacion_pct}% de hidratación`">
           <span class="ico-xs"><IconoAgua /></span> {{ receta.tokens_agua }}
@@ -101,7 +124,7 @@ const detalleAbierto = ref(false)
 
       <div class="tooltip" role="tooltip">
         <p>
-          Requiere: {{ fmtTokensHarina(100) }} de Harina {{ receta.harina_base }} (100%) +
+          Requiere: {{ textoHarinas }} +
           {{ receta.tokens_agua }} tokens de Agua ({{ receta.hidratacion_pct }}% hidratación)<template
             v-if="receta.req_tecnologico"
           >
@@ -120,11 +143,14 @@ const detalleAbierto = ref(false)
     <template v-else>
       <div class="cabecera-completa">
         <h4 class="titulo-completo">Receta de Protocolo: <strong>{{ receta.nombre }}</strong></h4>
-        <span class="ico-s"><IconoHarina :tipo="receta.harina_base" /></span>
+        <span class="harinas-cabecera">
+          <span v-for="[tipo] in receta.harinas" :key="tipo" class="ico-s"><IconoHarina :tipo="tipo" /></span>
+        </span>
       </div>
       <p class="grado-linea">
-        Grado: {{ receta.grado
-        }}<span v-if="receta.req_tecnologico"> · requiere {{ NOMBRE_TECNOLOGIA[receta.req_tecnologico] }}</span>
+        Grado: <span class="grado" :class="`grado-${receta.grado.toLowerCase()}`">{{ receta.grado }}</span>
+        <span class="unidad-secundaria"> · {{ REGLA_GRADO[receta.grado] }}</span
+        ><span v-if="receta.req_tecnologico"> · requiere {{ NOMBRE_TECNOLOGIA[receta.req_tecnologico] }}</span>
       </p>
 
       <div class="formula-base">
@@ -132,10 +158,10 @@ const detalleAbierto = ref(false)
         <div class="formula-cuerpo">
           <div class="ico-l"><IconoPan :id="receta.id" /></div>
           <div class="formula-datos">
-            <div class="dato-formula">
-              <span class="ico-xs"><IconoHarina :tipo="receta.harina_base" /></span>
-              {{ fmtTokensHarina(100) }} de Harina {{ receta.harina_base }}
-              <span class="unidad-secundaria">(100%)</span>
+            <div v-for="[tipo, pct] in receta.harinas" :key="tipo" class="dato-formula">
+              <span class="ico-xs"><IconoHarina :tipo="tipo" /></span>
+              {{ fmtTokensHarina(pct) }} de Harina {{ tipo }}
+              <span class="unidad-secundaria">({{ pct }}% — {{ etiquetaBolsa(pct) }})</span>
             </div>
             <div class="dato-formula">
               <span class="ico-xs"><IconoAgua /></span>
@@ -329,9 +355,33 @@ const detalleAbierto = ref(false)
   text-overflow: ellipsis;
 }
 
+/* El grado se diferencia por PESO tipografico, no por color: el sistema reserva
+   --cobre (lo tuyo/interactivo) y --verdin (estado de mercado) para significados
+   propios, y los colores de estado nunca se usan decorativamente. */
 .grado {
   font-size: var(--t-micro);
   color: var(--tinta-tenue);
+}
+
+.grado-básica {
+  font-weight: 400;
+}
+
+.grado-intermedia {
+  font-weight: 600;
+}
+
+.grado-avanzada {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta);
+}
+
+.harinas-cabecera {
+  display: inline-flex;
+  gap: var(--e1);
+  flex: 0 0 auto;
 }
 
 .boton-info {

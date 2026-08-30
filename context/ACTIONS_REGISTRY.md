@@ -10,10 +10,13 @@
 ---
 
 ## 2. Catálogo de Acciones Principales (Costo: 1 PA)
-*(Nota: La Acción A original se mueve a auxiliares. La Acción B ahora requiere restar 100 unidades — es decir 10 Tokens de Harina, el 100% — de la harina específica en el diccionario).*
+*(Nota: La Acción A original se mueve a auxiliares. La Acción B resta 100 unidades en total — es decir 10 Tokens de Harina, el 100%, una bolsa entera — repartidas entre las harinas que la carta imprima).*
 
 ### B. Iniciar Receta
-* **Costo:** 1 PA + **10 Tokens de Harina — 10 (100%), una bolsa entera** del tipo que pida la receta + los **Tokens de Agua** exactos que la receta imprima (ver RECIPE_DATABASE.md; cada token = 5% de hidratación).
+* **Costo:** 1 PA + **10 Tokens de Harina — 10 (100%) en total, una bolsa entera** + los **Tokens de Agua** exactos que la receta imprima (ver RECIPE_DATABASE.md; cada token = 5% de hidratación).
+    * El reparto de esa bolsa lo dicta el **grado** de la receta, que a su vez lo dicta lo que la carta imprime (RECIPE_DATABASE.md §4): **Básica** = 10 Tokens de Blanca; **Intermedia** = 5 Tokens — 5 (50%), media bolsa — de cada una de dos harinas distintas; **Avanzada** = 10 Tokens de una harina especial (Centeno o Integral).
+    * Se exigen **todas** las harinas impresas: con una Intermedia, tener una de las dos mitades no basta y el rechazo nombra las dos.
+* **Requisito tecnológico:** El que la carta declare en `req_tecnologico`, si declara alguno. **Lo declara la carta, no su grado** — una carta de harina especial sin requisito es jugable desde el Día 1, y una Intermedia puede exigir el Módulo Analítico.
 * **Límite:** 1 vez por día (por espacio de acción — ver §1).
 * **Memoria Biológica:** Se sella el Dado de Inóculo (con la Vitalidad actual) y el Cubo de Laboratorio (con la Acidez actual) en la carta de receta.
 * **Condición:** El Cubo de Acidez solo se sella si la acidez del cultivo base se encuentra dentro del rango con bonificación de sabor exigido por la receta.

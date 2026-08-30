@@ -105,6 +105,15 @@ def create_game(nombres: List[str], event_sink: Optional[EventSink] = None) -> G
             )
         )
 
+    # La Básica repartida sale del mazo del mercado (RULEBOOK.md §3.4): en el
+    # mazo físico cada protocolo tiene varias copias, así que se retira UNA por
+    # jugador, no el protocolo entero. `remove` compara por igualdad y `Recipe`
+    # es frozen, de modo que todas las copias son intercambiables.
+    for player in players:
+        for receta in player.carpeta_proyectos:
+            if receta in market.mazo_recetas:
+                market.mazo_recetas.remove(receta)
+
     # Orden de turno del Día 1: índices en `players`, ascendente por Iniciativa.
     orden_inicial: List[int] = sorted(
         range(len(dealt)), key=lambda i: dealt[i].iniciativa

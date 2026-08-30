@@ -568,7 +568,7 @@
         <ul class="rules-list">
           <li><strong>Tablero Central (El Laboratorio):</strong> controla el estado global — termómetro/Ábaco de Fermentación, mercado de recetas, Bolsa de Harinas y Suministro Hídrico Global, y el Track de Orden de Turno.</li>
           <li><strong>Tableros Individuales:</strong> uno por jugador, dividido en zonas — Cultivo Base (Vitalidad y Acidez), Estaciones de Fermentación (3, la tercera bloqueada al inicio), Tecnologías de Laboratorio, y Carpeta de Proyectos.</li>
-          <li><strong>Cartas de Receta:</strong> 36 en total (18 Básicas, 18 Avanzadas) — ver <a href="#s8">Catálogo de Recetas</a>.</li>
+          <li><strong>Cartas de Receta:</strong> 36 en total — <strong>12 protocolos distintos</strong> (4 Básicas, 4 Intermedias, 4 Avanzadas) con distinto número de copias cada uno: las Básicas son comunes y las Avanzadas escasas. Ver <a href="#s8">Catálogo de Recetas</a>.</li>
           <li><strong>Cartas de Clima:</strong> 30 cartas que regulan la temperatura y los eventos biológicos del laboratorio.</li>
           <li><strong>Cartas de Tendencias de Mercado:</strong> 21 cartas que mueven el precio de la harina cada día.</li>
           <li><strong>Cartas de Patrocinio:</strong> 8 cartas, usadas una sola vez, para repartir el orden de turno inicial y los recursos de arranque.</li>
@@ -619,8 +619,9 @@
               <li><strong>Despliegue de Insumos:</strong> cada jugador toma de la reserva general la harina, el lote de agua y las monedas indicadas en su carta. Hecho esto, las cartas vuelven a la caja — no se vuelven a usar.</li>
             </ul>
           </li>
-          <li><strong>Carpeta de Proyectos inicial:</strong> separar las recetas Básicas, barajarlas, y entregar 1 al azar a cada jugador (inactiva, en su Carpeta de Proyectos). El resto vuelve al mazo general.</li>
-          <li><strong>Mercado inicial:</strong> revelar las primeras 4 cartas del mazo de recetas. Colocar los 3 visores de la Bolsa de Harinas en la posición central (<strong>3 de 5</strong>).</li>
+          <li><strong>Carpeta de Proyectos inicial:</strong> separar las cartas Básicas, barajarlas, y entregar a cada jugador 1 al azar <strong>de un protocolo distinto</strong> (con 4 protocolos Básicos, una partida a 4 jugadores los reparte todos), inactiva en su Carpeta de Proyectos. El resto vuelve al mazo general.</li>
+          <li><strong>Mazo de mercado:</strong> barajar juntas todas las cartas <strong>Avanzadas e Intermedias</strong> — las que un jugador va al mercado a buscar — y colocar debajo, barajadas aparte, las <strong>Básicas</strong> restantes. Las Básicas van al fondo porque cada jugador ya empieza con una: en el mercado son la reserva, no la oferta.</li>
+          <li><strong>Mercado inicial:</strong> revelar las primeras 4 cartas de ese mazo (serán Avanzadas o Intermedias mezcladas; las Básicas no asoman mientras quede mazo principal). Colocar los 3 visores de la Bolsa de Harinas en la posición central (<strong>3 de 5</strong>).</li>
         </ol>
 
         <div class="table-wrap">
@@ -703,7 +704,14 @@
         <h4 class="sub-sub">Acciones principales · costo 1 PA</h4>
 
         <h3 class="sub">B · Iniciar Receta</h3>
-        <p><strong>Costo:</strong> 1 PA + <strong>10 tokens de harina — 10&nbsp;(100%), una bolsa entera</strong> del tipo que pida la receta + los <strong>tokens de agua</strong> exactos que la receta imprima (cada token = 5&nbsp;% de hidratación). <strong>Límite:</strong> 1 vez por día (por espacio de acción).</p>
+        <p><strong>Costo:</strong> 1 PA + <strong>10 tokens de harina — 10&nbsp;(100%), una bolsa entera en total</strong> + los <strong>tokens de agua</strong> exactos que la receta imprima (cada token = 5&nbsp;% de hidratación). <strong>Límite:</strong> 1 vez por día (por espacio de acción).</p>
+        <p>Entre cuántos tipos se reparte esa bolsa lo dice el <strong>grado</strong> de la receta (ver <a href="#s8">Catálogo de Recetas</a>):</p>
+        <ul class="rules-list">
+          <li><strong>Básica:</strong> 10 tokens — 10&nbsp;(100%) de Harina Blanca.</li>
+          <li><strong>Intermedia:</strong> 5 tokens — 5&nbsp;(50%), media bolsa, de <strong>cada una</strong> de las dos harinas que imprima.</li>
+          <li><strong>Avanzada:</strong> 10 tokens — 10&nbsp;(100%) de la harina <strong>especial</strong> que imprima (Centeno o Integral).</li>
+        </ul>
+        <p>Hay que tener <strong>todas</strong> las harinas impresas: con una Intermedia, disponer de una de las dos mitades no basta. Si la carta imprime además una <strong>tecnología requerida</strong>, esa mejora debe estar instalada — lo exige la carta concreta, no su grado: una Intermedia puede pedir el Módulo Analítico y una carta de harina especial puede no pedir nada.</p>
         <p>Al iniciar la masa se sella su <strong>Memoria Biológica</strong>: el Dado de Inóculo guarda la Vitalidad actual (determina la velocidad de fermentación durante toda la vida de esa masa), y el Cubo de Laboratorio guarda la Acidez actual — solo si cae dentro del rango de Acidez Diana de la carta. Si el cubo queda sellado, la masa obtendrá el Bono de Sabor al hornearse con éxito.</p>
         <p class="wrap" style="font-size:0.9rem;color:var(--ink-muted);">Requiere una estación de fermentación libre (la tercera solo con Cámara B) y al menos 1 Dado de Inóculo disponible.</p>
 
@@ -801,7 +809,27 @@
 
       <section class="rule" id="s8">
         <div class="section-head"><span class="n">08</span><h2>Catálogo de recetas</h2></div>
-        <p>El mazo oficial contiene 36 cartas — 18 de grado Básica y 18 de grado Avanzada, con distintas cantidades de copias según el tipo. Todas las Avanzadas requieren Módulo Analítico para poder iniciarse. Los tracks de fermentación de todas las recetas corren de 1 a 20 casillas.</p>
+        <p>Hay <strong>12 protocolos distintos: 4 Básicas, 4 Intermedias y 4 Avanzadas.</strong> El mazo físico son 36 cartas, porque cada protocolo lleva un número distinto de copias — 4 por Básica, 3 por Intermedia, 2 por Avanzada (ver <a href="#s12">Anexo</a>). La escasez es, por sí sola, una segunda barrera para las Avanzadas: no basta con poder pagarlas, tienen que salir. Los tracks de fermentación de todas las recetas corren de 1 a 20 casillas.</p>
+
+        <h3 class="sub">Los tres grados</h3>
+        <p>El grado de una receta <strong>es</strong> la harina que imprime — no es una etiqueta aparte:</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Grado</th><th>Imprime</th><th>Coste en la Bolsa (visor en 1 → 5)</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Básica</td><td class="wrap">Harina Blanca 100% (una bolsa entera)</td><td>2 – 6 Monedas</td></tr>
+              <tr><td class="name">Intermedia</td><td class="wrap">50% + 50% de <strong>dos harinas distintas</strong> (dos medias bolsas)</td><td>3 – 7 … 5 – 9 Monedas</td></tr>
+              <tr><td class="name">Avanzada</td><td class="wrap">100% de <strong>una harina especial</strong> — Centeno o Integral</td><td>4 – 8 (Integral) / 6 – 10 (Centeno)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>Harina especial</strong> = Centeno o Integral. La Blanca es el producto común y la pista más barata de las tres; es precisamente lo que impide que una Básica sea una Avanzada.</p>
+        <p>Solo existen esas dos formas de pago —una bolsa entera, o dos medias— y no es una restricción arbitraria: la Bolsa de Harinas únicamente vende bolsa entera y media bolsa (ver <a href="#s7">Acción C</a>), nunca tokens sueltos. Por eso una Intermedia no sale más cara por el peso de la harina, sino por la <strong>liquidez</strong>: obliga a tener dos pistas surtidas a la vez, y cada media bolsa se compra redondeando hacia arriba.</p>
+        <p>La <strong>tecnología requerida</strong> la declara cada carta por separado. No la implica el grado: Miche es una Intermedia que no pide nada, y una futura carta de harina especial podría no pedir nada tampoco.</p>
+
+        <h3 class="sub">Puntuación por grado</h3>
+        <p>Los Puntos de Maestría de la Zona Óptima están escalonados por grado y <strong>no se solapan</strong>: Básica <strong>9 – 12</strong>, Intermedia <strong>13 – 16</strong>, Avanzada <strong>17 – 20</strong>.</p>
+        <p class="wrap" style="font-size:0.9rem;color:var(--ink-muted);">Las Monedas y el ancho de las zonas <strong>no</strong> están escalonados: son el eje que distingue, dentro de un mismo grado, una carta de puntos baratos de una carta caja fuerte. Compárense Hogaza Centeno (17 puntos, 27 Monedas, zona óptima de 4 casillas) y Pumpernickel (20 puntos, 28 Monedas, pero solo 3 casillas de zona óptima y un colapso de −8). El Bono de Sabor va por libre igual: Panettone es Intermedia y aun así tiene el mayor bono del juego (+8) — no es la carta de más puntos, es la de más sabor.</p>
 
         <div class="zone-legend">
           <span class="lb">Baja</span><span class="lo">Óptima</span><span class="ls">Sobre-fermentada</span>
@@ -811,20 +839,24 @@
           <table>
             <thead>
               <tr>
-                <th>Receta</th><th>Grado</th><th>Harina<br><span style="font-weight:400">siempre 10 (100%)</span></th><th>Agua<br><span style="font-weight:400">tokens (hidratación)</span></th><th>Acidez diana (bono)</th>
+                <th>Receta</th><th>Grado</th><th>Harina<br><span style="font-weight:400">siempre 10 (100%) en total</span></th><th>Agua<br><span style="font-weight:400">tokens (hidratación)</span></th><th>Acidez diana (bono)</th>
                 <th>Zona baja</th><th>Zona óptima</th><th>Zona sobre</th>
                 <th>Puntos B/O/S</th><th>Monedas B/O/S</th><th>Requiere</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td class="name">Pan de Campo</td><td>Básica</td><td>Blanca</td><td>12 (60%)</td><td>Nivel 3 (+3)</td><td class="z-baja">1–10</td><td class="z-optima">11–15</td><td class="z-sobre">16–20</td><td>4 / 10 / −2</td><td>13 / 17 / 11</td><td class="wrap">—</td></tr>
-              <tr><td class="name">Focaccia</td><td>Básica</td><td>Blanca</td><td>15 (75%)</td><td>Nivel 1–2 (+2)</td><td class="z-baja">1–9</td><td class="z-optima">10–14</td><td class="z-sobre">15–20</td><td>3 / 12 / −3</td><td>15 / 19 / 13</td><td class="wrap">—</td></tr>
-              <tr><td class="name">Baguette</td><td>Básica</td><td>Blanca</td><td>13 (65%)</td><td>Nivel 2 (+3)</td><td class="z-baja">1–11</td><td class="z-optima">12–15</td><td class="z-sobre">16–20</td><td>5 / 11 / −2</td><td>14 / 18 / 12</td><td class="wrap">—</td></tr>
-              <tr><td class="name">Pizza Napolitana</td><td>Avanzada</td><td>Blanca</td><td>13 (62%)</td><td>Nivel 3 (+4)</td><td class="z-baja">1–10</td><td class="z-optima">11–14</td><td class="z-sobre">15–20</td><td>4 / 14 / −4</td><td>15 / 21 / 12</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Brioche</td><td>Avanzada</td><td>Blanca</td><td>11 (52%)</td><td>Nivel 1 (+5)</td><td class="z-baja">1–14</td><td class="z-optima">15–17</td><td class="z-sobre">18–20</td><td>5 / 16 / −6</td><td>14 / 21 / 11</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Hogaza Centeno</td><td>Avanzada</td><td>Centeno</td><td>14 (67%)</td><td>Nivel 4–5 (+6)</td><td class="z-baja">1–12</td><td class="z-optima">13–16</td><td class="z-sobre">17–20</td><td>6 / 15 / −5</td><td>20 / 27 / 17</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Pan de Semillas</td><td>Avanzada</td><td>Integral</td><td>16 (78%)</td><td>Nivel 3–4 (+7)</td><td class="z-baja">1–13</td><td class="z-optima">14–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>19 / 26 / 16</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Panettone</td><td>Avanzada</td><td>Blanca</td><td>10 (47%)</td><td>Nivel 1 (+8)</td><td class="z-baja">1–16</td><td class="z-optima">17–18</td><td class="z-sobre">19–20</td><td>8 / 20 / −8</td><td>13 / 22 / 10</td><td class="wrap">Módulo Analítico</td></tr>
+<tr><td class="name">Pan de Campo</td><td>Básica</td><td class="wrap">Blanca 100%</td><td>12 (60%)</td><td>Nivel 3 (+3)</td><td class="z-baja">1–10</td><td class="z-optima">11–15</td><td class="z-sobre">16–20</td><td>4 / 10 / −2</td><td>13 / 17 / 11</td><td class="wrap">—</td></tr>
+              <tr><td class="name">Pan de Molde</td><td>Básica</td><td class="wrap">Blanca 100%</td><td>11 (55%)</td><td>Nivel 1–2 (+2)</td><td class="z-baja">1–8</td><td class="z-optima">9–14</td><td class="z-sobre">15–20</td><td>3 / 9 / −2</td><td>12 / 16 / 10</td><td class="wrap">—</td></tr>
+              <tr><td class="name">Baguette</td><td>Básica</td><td class="wrap">Blanca 100%</td><td>13 (65%)</td><td>Nivel 2 (+3)</td><td class="z-baja">1–11</td><td class="z-optima">12–15</td><td class="z-sobre">16–20</td><td>5 / 11 / −2</td><td>14 / 18 / 12</td><td class="wrap">—</td></tr>
+              <tr><td class="name">Focaccia</td><td>Básica</td><td class="wrap">Blanca 100%</td><td>15 (75%)</td><td>Nivel 1–2 (+2)</td><td class="z-baja">1–9</td><td class="z-optima">10–14</td><td class="z-sobre">15–20</td><td>3 / 12 / −3</td><td>15 / 19 / 13</td><td class="wrap">—</td></tr>
+              <tr><td class="name">Miche</td><td>Intermedia</td><td class="wrap">Blanca 50% + Integral 50%</td><td>14 (70%)</td><td>Nivel 3–4 (+4)</td><td class="z-baja">1–11</td><td class="z-optima">12–16</td><td class="z-sobre">17–20</td><td>5 / 13 / −4</td><td>16 / 20 / 13</td><td class="wrap">—</td></tr>
+              <tr><td class="name">Pizza Napolitana</td><td>Intermedia</td><td class="wrap">Blanca 50% + Integral 50%</td><td>13 (62%)</td><td>Nivel 3 (+4)</td><td class="z-baja">1–10</td><td class="z-optima">11–14</td><td class="z-sobre">15–20</td><td>4 / 14 / −4</td><td>15 / 21 / 12</td><td class="wrap">Módulo Analítico</td></tr>
+              <tr><td class="name">Brioche</td><td>Intermedia</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>11 (52%)</td><td>Nivel 1 (+5)</td><td class="z-baja">1–14</td><td class="z-optima">15–17</td><td class="z-sobre">18–20</td><td>5 / 16 / −6</td><td>14 / 21 / 11</td><td class="wrap">Módulo Analítico</td></tr>
+              <tr><td class="name">Panettone</td><td>Intermedia</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>10 (47%)</td><td>Nivel 1 (+8)</td><td class="z-baja">1–16</td><td class="z-optima">17–18</td><td class="z-sobre">19–20</td><td>8 / 16 / −8</td><td>13 / 22 / 10</td><td class="wrap">Módulo Analítico</td></tr>
+              <tr><td class="name">Hogaza Centeno</td><td>Avanzada</td><td class="wrap">Centeno 100%</td><td>14 (67%)</td><td>Nivel 4–5 (+6)</td><td class="z-baja">1–12</td><td class="z-optima">13–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>20 / 27 / 17</td><td class="wrap">Módulo Analítico</td></tr>
+              <tr><td class="name">Pan Semillas</td><td>Avanzada</td><td class="wrap">Integral 100%</td><td>16 (78%)</td><td>Nivel 3–4 (+7)</td><td class="z-baja">1–13</td><td class="z-optima">14–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>19 / 26 / 16</td><td class="wrap">Módulo Analítico</td></tr>
+              <tr><td class="name">Pan Graham</td><td>Avanzada</td><td class="wrap">Integral 100%</td><td>16 (80%)</td><td>Nivel 4–5 (+6)</td><td class="z-baja">1–13</td><td class="z-optima">14–17</td><td class="z-sobre">18–20</td><td>6 / 19 / −6</td><td>18 / 26 / 15</td><td class="wrap">Módulo Analítico</td></tr>
+              <tr><td class="name">Pumpernickel</td><td>Avanzada</td><td class="wrap">Centeno 100%</td><td>17 (85%)</td><td>Nivel 5–6 (+8)</td><td class="z-baja">1–15</td><td class="z-optima">16–18</td><td class="z-sobre">19–20</td><td>8 / 20 / −8</td><td>16 / 28 / 12</td><td class="wrap">Módulo Analítico</td></tr>
             </tbody>
           </table>
         </div>
@@ -872,7 +904,7 @@
             <tbody>
               <tr><td class="name">Incubadora</td><td><span class="chip datos">3 Datos</span></td><td class="wrap">Ajusta la temperatura local ±5 °C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima.</td></tr>
               <tr><td class="name">Cámara B</td><td><span class="chip datos">4 Datos</span></td><td class="wrap">Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas.</td></tr>
-              <tr><td class="name">Módulo Analítico</td><td><span class="chip datos">3 Datos</span></td><td class="wrap">+1 Dato extra al hornear exactamente en el centro de la Zona Óptima, y habilita el inicio de recetas Avanzadas.</td></tr>
+              <tr><td class="name">Módulo Analítico</td><td><span class="chip datos">3 Datos</span></td><td class="wrap">+1 Dato extra al hornear exactamente en el centro de la Zona Óptima, y habilita el inicio de toda receta que lo declare como tecnología requerida (hoy, todas las Avanzadas y tres de las cuatro Intermedias).</td></tr>
               <tr><td class="name">Criopreservación</td><td><span class="chip datos">2 Datos</span></td><td class="wrap">Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III.</td></tr>
             </tbody>
           </table>
@@ -948,7 +980,19 @@
         </div>
 
         <h3 class="sub">Mazo de Recetas <em class="aside">(36 cartas)</em></h3>
-        <p>18 Básicas + 18 Avanzadas — ver la composición exacta y todos los valores en el <a href="#s8">Catálogo de Recetas</a>.</p>
+        <p>12 protocolos distintos, con distinto número de copias según el grado:</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Grado</th><th>Protocolos</th><th>Copias de cada uno</th><th>Cartas</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Básica</td><td>4</td><td>4</td><td>16</td></tr>
+              <tr><td class="name">Intermedia</td><td>4</td><td>3</td><td>12</td></tr>
+              <tr><td class="name">Avanzada</td><td>4</td><td>2</td><td>8</td></tr>
+              <tr><td class="name"><strong>Total</strong></td><td><strong>12</strong></td><td>—</td><td><strong>36</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Las Básicas son comunes y las Avanzadas escasas: la rareza es una barrera independiente del precio. Antes de barajar el mazo de mercado se separa una Básica por jugador para las Carpetas de Proyectos iniciales (ver <a href="#s3">Preparación</a>), y las Básicas restantes se barajan al fondo del mazo. Todos los valores de cada protocolo, en el <a href="#s8">Catálogo de Recetas</a>.</p>
 
         <h3 class="sub">Mazo de Patrocinios <em class="aside">(8 cartas)</em></h3>
         <p>Se usa una única vez, en la preparación de la partida — ver la tabla completa en <a href="#s3">Preparación de la Partida</a>. No vuelve a barajarse ni a jugarse durante la partida.</p>

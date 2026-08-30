@@ -45,8 +45,15 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 8
+VERSION_FORMATO = 9
 """
+Bumped a 9: `Recipe` cambió de forma -- `harina_base: TipoHarina` pasó a
+`harinas: Tuple[Tuple[TipoHarina, int], ...]` (recetas de una o dos harinas,
+grados Básica/Intermedia/Avanzada) y el catálogo se re-escaló a 12 cartas. Un
+pickle viejo contiene objetos `Recipe` sin `harinas`, que reventarían la primera
+vez que una vista intente renderizarlos; descartarlos al cargar convierte eso en
+una línea de log. Las partidas en curso al desplegar se pierden: asumido.
+
 Bumped a 6: `Player` ganó `acciones_pa_usadas_hoy` (espacios de acción con
 costo de PA ya visitados hoy -- ver PLAYER_STATE.md) -- un pickle viejo sin
 ese campo debe descartarse limpiamente en vez de fallar la primera vez que

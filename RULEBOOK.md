@@ -50,8 +50,10 @@ su quinta receta — lo que ocurra primero.
 - **Tableros Individuales:** uno por jugador, dividido en zonas — Cultivo Base (Vitalidad y
   Acidez), Estaciones de Fermentación (3, la tercera bloqueada al inicio), Tecnologías de
   Laboratorio, y Carpeta de Proyectos (recetas investigadas pero no iniciadas).
-- **Cartas de Receta:** 36 en total (18 Básicas, 18 Avanzadas), definen el protocolo de horneado de
-  cada pan — ver [Catálogo de Recetas](#8-catálogo-de-recetas).
+- **Cartas de Receta:** 36 en total — **12 protocolos distintos** (4 Básicas, 4 Intermedias, 4
+  Avanzadas) con distinto número de copias cada uno: las Básicas son comunes y las Avanzadas
+  escasas. Definen el protocolo de horneado de cada pan — ver
+  [Catálogo de Recetas](#8-catálogo-de-recetas).
 - **Cartas de Clima:** 30 cartas que regulan la temperatura y los eventos biológicos del
   laboratorio — ver [Anexo](#12-anexo-resumen-de-mazos).
 - **Cartas de Tendencias de Mercado:** 21 cartas que mueven el precio de la harina. Cada una se
@@ -129,13 +131,18 @@ Fermentum usa dos recursos económicos independientes, que no se convierten entr
    Los jugadores con Iniciativa alta (actúan más tarde en la primera ronda) reciben un capital de
    insumos de mayor valor, para compensar la ventaja temporal del Investigador Jefe.
 
-4. **Carpeta de Proyectos inicial:** separar todas las recetas de grado Básica del mazo general,
-   barajarlas, y entregar 1 al azar a cada jugador — se coloca boca arriba en su Carpeta de
+4. **Carpeta de Proyectos inicial:** separar todas las cartas de grado Básica del mazo general,
+   barajarlas, y entregar a cada jugador 1 al azar **de un protocolo distinto** (con 4 protocolos
+   Básicos, una partida a 4 jugadores los reparte todos) — se coloca boca arriba en su Carpeta de
    Proyectos, en estado inactivo. Deberá usarse la acción Iniciar Receta durante la partida para
    activarla. Las recetas básicas restantes se remezclan de vuelta en el mazo general.
-5. **Mercado inicial:** revelar las primeras 4 cartas del mazo general de recetas (la distribución
-   de grados es aleatoria, ya que las básicas de arranque ya se separaron). Colocar los 3 visores
-   de la Bolsa de Harinas en la posición central (**3 de 5**) para Blanca, Integral y Centeno.
+5. **Mazo de mercado:** barajar juntas todas las cartas **Avanzadas e Intermedias** — son las
+   cartas que un jugador va al mercado a buscar — y colocar debajo, barajadas aparte, las
+   **Básicas** restantes. Las Básicas van al fondo porque cada jugador ya empieza con una: en el
+   mercado son la reserva para cuando el mazo principal se agote, no la oferta.
+6. **Mercado inicial:** revelar las primeras 4 cartas de ese mazo (serán Avanzadas o Intermedias
+   mezcladas; las Básicas no asoman mientras quede mazo principal). Colocar los 3 visores de la
+   Bolsa de Harinas en la posición central (**3 de 5**) para Blanca, Integral y Centeno.
 
 Cada jugador arranca, sin importar su carta de Patrocinio, con: Vitalidad 1, Acidez 1, 3 Dados de
 Inóculo, 0 Puntos de Acción, 0 Datos de Investigación, todas las Tecnologías desactivadas, y 1
@@ -249,8 +256,23 @@ Cada jugador dispone de **2 Puntos de Acción (PA)** por Día de Laboratorio.
 
 #### B. Iniciar Receta
 
-**Costo:** 1 PA + **10 tokens de harina — 10 (100%), una bolsa entera** del tipo que pida la
-receta + los **tokens de agua** exactos que la receta imprima (cada token = 5% de hidratación). **Límite:** 1 vez por día (por espacio de acción).
+**Costo:** 1 PA + **10 tokens de harina — 10 (100%), una bolsa entera en total** + los **tokens de
+agua** exactos que la receta imprima (cada token = 5% de hidratación). **Límite:** 1 vez por día
+(por espacio de acción).
+
+Entre cuántos tipos se reparte esa bolsa lo dice el **grado** de la receta (ver
+[Catálogo de Recetas](#8-catálogo-de-recetas)):
+
+| Grado | Se paga con |
+|:---|:---|
+| **Básica** | 10 tokens — 10 (100%) de Harina Blanca |
+| **Intermedia** | 5 tokens — 5 (50%), media bolsa, de **cada una** de las dos harinas que imprima |
+| **Avanzada** | 10 tokens — 10 (100%) de la harina **especial** que imprima (Centeno o Integral) |
+
+Hay que tener **todas** las harinas impresas: con una Intermedia, disponer de una de las dos
+mitades no basta. Si la carta imprime además una **tecnología requerida**, esa mejora debe estar
+instalada — lo exige la carta concreta, no su grado: una Intermedia puede pedir el Módulo
+Analítico y una carta de harina especial puede no pedir nada.
 
 Al iniciar la masa, se sella su **Memoria Biológica**: el Dado de Inóculo guarda la Vitalidad
 actual del cultivo base (determina la velocidad de fermentación de esa masa específica durante
@@ -411,21 +433,66 @@ III](#9-fase-iii-fermentación)):
 
 ## 8. Catálogo de Recetas
 
-El mazo oficial de recetas contiene 36 cartas — 18 de grado Básica y 18 de grado Avanzada, con
-distintas cantidades de copias según el tipo. Todas las Avanzadas requieren la tecnología Módulo
-Analítico para poder iniciarse. Los tracks de fermentación de todas las recetas corren de 1 a 20
-casillas.
+Hay **12 protocolos distintos: 4 Básicas, 4 Intermedias y 4 Avanzadas.** El mazo físico son 36
+cartas, porque cada protocolo lleva un número distinto de copias — 4 por Básica, 3 por Intermedia,
+2 por Avanzada (ver [Anexo](#12-anexo-resumen-de-mazos)). La escasez es, por sí sola, una segunda
+barrera para las Avanzadas: no basta con poder pagarlas, tienen que salir. Los tracks de
+fermentación de todas las recetas corren de 1 a 20 casillas.
 
-| Receta | Grado | Harina (siempre 10 tokens / 100%) | Agua — Tokens (Hidratación) | Acidez Diana (Bono de Sabor) | Zona Baja | Zona Óptima | Zona Sobre-fermentada | Puntos (Baja / Óptima / Sobre) | Monedas (Baja / Óptima / Sobre) | Requiere |
+### Los tres grados
+
+El grado de una receta **es** la harina que imprime — no es una etiqueta aparte:
+
+| Grado | Imprime | Coste en la Bolsa (visor en 1 → 5) |
+|:---|:---|:---|
+| **Básica** | Harina Blanca 100% (una bolsa entera) | 2 – 6 Monedas |
+| **Intermedia** | 50% + 50% de **dos harinas distintas** (dos medias bolsas) | 3 – 7 … 5 – 9 Monedas |
+| **Avanzada** | 100% de **una harina especial** — Centeno o Integral | 4 – 8 (Integral) / 6 – 10 (Centeno) |
+
+**Harina especial** = Centeno o Integral. La Blanca es el producto común y la pista más barata de
+las tres; es precisamente lo que impide que una Básica sea una Avanzada.
+
+Solo existen esas dos formas de pago —una bolsa entera, o dos medias— y no es una restricción
+arbitraria: la Bolsa de Harinas únicamente vende bolsa entera y media bolsa
+(ver [Acción C](#7-catálogo-de-acciones)), nunca tokens sueltos. Por eso una Intermedia no sale
+más cara por el peso de la harina, sino por la **liquidez**: obliga a tener dos pistas surtidas a
+la vez, y cada media bolsa se compra redondeando hacia arriba.
+
+La **tecnología requerida** la declara cada carta por separado. No la implica el grado: Miche es
+una Intermedia que no pide nada, y una futura carta de harina especial podría no pedir nada
+tampoco.
+
+### Puntuación por grado
+
+Los Puntos de Maestría de la Zona Óptima están escalonados por grado y **no se solapan**:
+
+| Grado | Puntos en Zona Óptima |
+|:---|:---:|
+| Básica | 9 – 12 |
+| Intermedia | 13 – 16 |
+| Avanzada | 17 – 20 |
+
+Las **Monedas y el ancho de las zonas no** están escalonados: son el eje que distingue, dentro de
+un mismo grado, una carta de puntos baratos de una carta caja fuerte. Compárense Hogaza Centeno
+(17 puntos, 27 Monedas, zona óptima de 4 casillas) y Pumpernickel (20 puntos, 28 Monedas, pero
+solo 3 casillas de zona óptima y un colapso de −8). El Bono de Sabor va por libre igual: Panettone
+es Intermedia y aun así tiene el mayor bono del juego (+8) — no es la carta de más puntos, es la
+de más sabor.
+
+| Receta | Grado | Harina (siempre 10 tokens / 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono de Sabor) | Zona Baja | Zona Óptima | Zona Sobre-fermentada | Puntos (Baja / Óptima / Sobre) | Monedas (Baja / Óptima / Sobre) | Requiere |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
-| Pan de Campo | Básica | Blanca | 12 (60%) | Nivel 3 (+3) | 1–10 | 11–15 | 16–20 | 4 / 10 / −2 | 13 / 17 / 11 | — |
-| Focaccia | Básica | Blanca | 15 (75%) | Nivel 1–2 (+2) | 1–9 | 10–14 | 15–20 | 3 / 12 / −3 | 15 / 19 / 13 | — |
-| Baguette | Básica | Blanca | 13 (65%) | Nivel 2 (+3) | 1–11 | 12–15 | 16–20 | 5 / 11 / −2 | 14 / 18 / 12 | — |
-| Pizza Napolitana | Avanzada | Blanca | 13 (62%) | Nivel 3 (+4) | 1–10 | 11–14 | 15–20 | 4 / 14 / −4 | 15 / 21 / 12 | Módulo Analítico |
-| Brioche | Avanzada | Blanca | 11 (52%) | Nivel 1 (+5) | 1–14 | 15–17 | 18–20 | 5 / 16 / −6 | 14 / 21 / 11 | Módulo Analítico |
-| Hogaza Centeno | Avanzada | Centeno | 14 (67%) | Nivel 4–5 (+6) | 1–12 | 13–16 | 17–20 | 6 / 15 / −5 | 20 / 27 / 17 | Módulo Analítico |
-| Pan de Semillas | Avanzada | Integral | 16 (78%) | Nivel 3–4 (+7) | 1–13 | 14–16 | 17–20 | 6 / 17 / −5 | 19 / 26 / 16 | Módulo Analítico |
-| Panettone | Avanzada | Blanca | 10 (47%) | Nivel 1 (+8) | 1–16 | 17–18 | 19–20 | 8 / 20 / −8 | 13 / 22 / 10 | Módulo Analítico |
+| Pan de Campo | Básica | Blanca 100% | 12 (60%) | Nivel 3 (+3) | 1–10 | 11–15 | 16–20 | 4 / 10 / −2 | 13 / 17 / 11 | — |
+| Pan de Molde | Básica | Blanca 100% | 11 (55%) | Nivel 1–2 (+2) | 1–8 | 9–14 | 15–20 | 3 / 9 / −2 | 12 / 16 / 10 | — |
+| Baguette | Básica | Blanca 100% | 13 (65%) | Nivel 2 (+3) | 1–11 | 12–15 | 16–20 | 5 / 11 / −2 | 14 / 18 / 12 | — |
+| Focaccia | Básica | Blanca 100% | 15 (75%) | Nivel 1–2 (+2) | 1–9 | 10–14 | 15–20 | 3 / 12 / −3 | 15 / 19 / 13 | — |
+| Miche | Intermedia | Blanca 50% + Integral 50% | 14 (70%) | Nivel 3–4 (+4) | 1–11 | 12–16 | 17–20 | 5 / 13 / −4 | 16 / 20 / 13 | — |
+| Pizza Napolitana | Intermedia | Blanca 50% + Integral 50% | 13 (62%) | Nivel 3 (+4) | 1–10 | 11–14 | 15–20 | 4 / 14 / −4 | 15 / 21 / 12 | Módulo Analítico |
+| Brioche | Intermedia | Blanca 50% + Centeno 50% | 11 (52%) | Nivel 1 (+5) | 1–14 | 15–17 | 18–20 | 5 / 16 / −6 | 14 / 21 / 11 | Módulo Analítico |
+| Panettone | Intermedia | Blanca 50% + Centeno 50% | 10 (47%) | Nivel 1 (+8) | 1–16 | 17–18 | 19–20 | 8 / 16 / −8 | 13 / 22 / 10 | Módulo Analítico |
+| Hogaza Centeno | Avanzada | Centeno 100% | 14 (67%) | Nivel 4–5 (+6) | 1–12 | 13–16 | 17–20 | 6 / 17 / −5 | 20 / 27 / 17 | Módulo Analítico |
+| Pan Semillas | Avanzada | Integral 100% | 16 (78%) | Nivel 3–4 (+7) | 1–13 | 14–16 | 17–20 | 6 / 17 / −5 | 19 / 26 / 16 | Módulo Analítico |
+| Pan Graham | Avanzada | Integral 100% | 16 (80%) | Nivel 4–5 (+6) | 1–13 | 14–17 | 18–20 | 6 / 19 / −6 | 18 / 26 / 15 | Módulo Analítico |
+| Pumpernickel | Avanzada | Centeno 100% | 17 (85%) | Nivel 5–6 (+8) | 1–15 | 16–18 | 19–20 | 8 / 20 / −8 | 16 / 28 / 12 | Módulo Analítico |
 
 *El número entre paréntesis junto a la Acidez Diana es el bono de Puntos de Maestría del Bono de
 Sabor (ver [Acción F](#7-catálogo-de-acciones)); el Bono de Sabor también otorga siempre +2
@@ -514,7 +581,7 @@ una solo puede instalarse una vez, pero un jugador puede llegar a tener varias d
 |:---|:---:|:---|
 | **Incubadora** | 3 Datos | Permite ajustar la temperatura local ±5°C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima. |
 | **Cámara B** | 4 Datos | Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas. |
-| **Módulo Analítico** | 3 Datos | Otorga +1 Dato de Investigación extra al hornear exactamente en el centro de la Zona Óptima, y habilita el inicio de recetas de grado Avanzada. |
+| **Módulo Analítico** | 3 Datos | Otorga +1 Dato de Investigación extra al hornear exactamente en el centro de la Zona Óptima, y habilita el inicio de toda receta que lo declare como tecnología requerida (hoy, todas las Avanzadas y tres de las cuatro Intermedias). |
 | **Criopreservación** | 2 Datos | Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III. |
 
 ---
@@ -586,8 +653,21 @@ En caso de empate en Puntos de Maestría:
 
 ### Mazo de Recetas (36 cartas)
 
-18 Básicas + 18 Avanzadas — ver la composición exacta y todos los valores en el [Catálogo de
-Recetas](#8-catálogo-de-recetas).
+12 protocolos distintos, con distinto número de copias según el grado:
+
+| Grado | Protocolos | Copias de cada uno | Cartas |
+|:---|:---:|:---:|:---:|
+| Básica | 4 | 4 | 16 |
+| Intermedia | 4 | 3 | 12 |
+| Avanzada | 4 | 2 | 8 |
+| **Total** | **12** | — | **36** |
+
+Las Básicas son comunes y las Avanzadas escasas: la rareza es una barrera independiente del
+precio. Antes de barajar el mazo de mercado se separa una Básica por jugador para las Carpetas de
+Proyectos iniciales (ver [Preparación](#3-preparación-de-la-partida)), y las Básicas restantes se
+barajan al fondo del mazo.
+
+Todos los valores de cada protocolo, en el [Catálogo de Recetas](#8-catálogo-de-recetas).
 
 ### Mazo de Patrocinios (8 cartas)
 

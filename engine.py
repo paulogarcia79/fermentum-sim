@@ -46,8 +46,11 @@ from models import (
     Recipe,
     TipoHarina,
     build_tendencias_deck,
+    TOTAL_MAZO_RECETAS,
+    expandir_copias,
     get_recetas_avanzadas,
     get_recetas_basicas,
+    get_recetas_intermedias,
 )
 
 # ===========================================================================
@@ -219,21 +222,39 @@ class Market:
         """
         Construye el mercado en su estado inicial de partida.
 
-        El mazo de recetas se compone de todas las avanzadas (mezcladas) seguidas
-        de las básicas al fondo. Se revelan las primeras NUM_RECIPE_SLOTS cartas.
-        Los 3 visores de la Bolsa de Harinas inician en ``POSICION_HARINA_INICIAL``
-        y el mazo de Tendencias de Mercado (21 cartas) se baraja.
+        El mazo de recetas son las 36 cartas físicas (cada protocolo con sus
+        copias, ver ``COPIAS_POR_GRADO``): las "de compra" -- Avanzadas e
+        Intermedias mezcladas entre sí -- con las Básicas barajadas al fondo
+        como reserva.
+        Se revelan las primeras NUM_RECIPE_SLOTS cartas. Los 3 visores de la Bolsa
+        de Harinas inician en ``POSICION_HARINA_INICIAL`` y el mazo de Tendencias
+        de Mercado (21 cartas) se baraja.
+
+        Las Intermedias van MEZCLADAS con las Avanzadas, no en un tercer estrato
+        por debajo: el escalón medio existe para escalarse durante la partida, y
+        un mazo en escalera estricta lo haría aparecer justo cuando ya sobra.
+        Las Básicas siguen al fondo por la razón de siempre: cada jugador ya
+        empieza con una, así que en el mercado son la red de seguridad para
+        cuando el mazo principal se agota.
 
         Returns:
             Instancia de Market lista para el inicio de la partida.
         """
-        avanzadas: List[Recipe] = get_recetas_avanzadas()
-        basicas: List[Recipe] = get_recetas_basicas()
-        random.shuffle(avanzadas)
+        # Cartas de compra: lo que un jugador va al mercado a buscar. Cada
+        # protocolo entra con sus copias físicas (COPIAS_POR_GRADO): las Básicas
+        # son comunes y las Avanzadas escasas, así que la rareza es una barrera
+        # independiente del precio.
+        principales: List[Recipe] = expandir_copias(
+            get_recetas_avanzadas() + get_recetas_intermedias()
+        )
+        basicas: List[Recipe] = expandir_copias(get_recetas_basicas())
+        random.shuffle(principales)
         random.shuffle(basicas)
-        # Las recetas avanzadas dominan el mercado; las básicas están al fondo
-        # disponibles si el mazo de avanzadas se agota.
-        mazo: List[Recipe] = avanzadas + basicas
+        mazo: List[Recipe] = principales + basicas
+        assert len(mazo) == TOTAL_MAZO_RECETAS, (
+            f"El mazo de recetas debe tener exactamente {TOTAL_MAZO_RECETAS} "
+            f"cartas, los dos estratos suman {len(mazo)}."
+        )
 
         visibles: List[Optional[Recipe]] = [
             (mazo.pop(0) if mazo else None) for _ in range(NUM_RECIPE_SLOTS)

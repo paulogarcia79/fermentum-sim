@@ -25,7 +25,7 @@ import math
 import random
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Mapping, Optional, Tuple
+from typing import Dict, Iterable, List, Mapping, Optional, Tuple
 from types import MappingProxyType
 
 
@@ -35,9 +35,20 @@ from types import MappingProxyType
 
 
 class Grado(str, Enum):
-    """Nivel de complejidad de una receta de panificación."""
+    """
+    Nivel de complejidad de una receta de panificación.
+
+    El grado NO se elige libremente: es una consecuencia de las harinas que la
+    carta imprime (ver ``_grado_desde_harinas``). Se conserva como campo — y no
+    como ``@property`` — porque ``dataclasses.asdict`` sólo serializa campos, y
+    ``serialization.snapshot`` es lo que alimenta tanto el snapshot dorado como
+    el estado que viaja al cliente. ``Recipe.__post_init__`` valida que el campo
+    coincida con lo que implican las harinas, de modo que una carta mal
+    etiquetada es un error de importación, no un fallo de renderizado.
+    """
 
     BASICA = "Básica"
+    INTERMEDIA = "Intermedia"
     AVANZADA = "Avanzada"
 
 
@@ -59,6 +70,22 @@ class TecnologiaID(str, Enum):
     CAMARA_B = "camara_b"
     MODULO_ANALITICO = "modulo_analitico"
     CRIOPRESERVACION = "criopreservacion"
+
+    @property
+    def nombre_legible(self) -> str:
+        """
+        Nombre de la mejora tal y como se imprime en el tablero.
+
+        Los valores del enum son nombres de atributo (``modulo_analitico``), no
+        texto para leer: cualquier mensaje dirigido a un jugador debe pasar por
+        aquí. Vive en el enum para que exista UNA tabla y no una por consumidor.
+        """
+        return {
+            TecnologiaID.INCUBADORA: "Incubadora",
+            TecnologiaID.CAMARA_B: "Cámara B",
+            TecnologiaID.MODULO_ANALITICO: "Módulo Analítico",
+            TecnologiaID.CRIOPRESERVACION: "Criopreservación",
+        }[self]
 
 
 class EfectoClimatico(str, Enum):
@@ -88,6 +115,65 @@ class EfectoBiologico(str, Enum):
 # ===========================================================================
 
 
+HARINAS_ESPECIALES: Tuple[TipoHarina, ...] = (TipoHarina.CENTENO, TipoHarina.INTEGRAL)
+"""
+Harinas "especiales": las dos que no son el producto básico del mercado.
+La Blanca es la harina común (la más barata de las tres pistas de la Bolsa,
+2-6 Monedas la bolsa entera); Centeno e Integral cuestan 6-10 y 4-8, y son
+las únicas que pueden sostener una receta Avanzada.
+"""
+
+PCT_RECETA_TOTAL: int = 100
+"""Porcentaje de harina que consume CUALQUIER receta, sea cual sea su grado."""
+
+
+def _grado_desde_harinas(harinas: Tuple[Tuple[TipoHarina, int], ...]) -> Grado:
+    """
+    Deriva el grado de una receta a partir de las harinas que imprime.
+
+    La regla es la definición del grado, no una heurística:
+      · Una sola harina Blanca al 100%      -> Básica
+      · Una sola harina especial al 100%    -> Avanzada
+      · Dos harinas distintas al 50% cada una -> Intermedia
+
+    Las dos formas legales (100 y 50+50) son exactamente las dos que la Bolsa
+    de Harinas sabe vender: bolsa entera (10 tokens) y media bolsa (5 tokens).
+    No existe un primitivo de compra por token suelto, así que un reparto
+    90/10 sería impagable en el mercado.
+
+    Raises:
+        ValueError: Si el reparto no es ninguna de las dos formas legales
+            (número de harinas, tipos repetidos o porcentajes incorrectos).
+    """
+    if len(harinas) == 1:
+        (tipo, pct), = harinas
+        if pct != PCT_RECETA_TOTAL:
+            raise ValueError(
+                f"Una receta de una sola harina debe pedir {PCT_RECETA_TOTAL}%; "
+                f"recibido {pct}% de {tipo.value}."
+            )
+        return Grado.AVANZADA if tipo in HARINAS_ESPECIALES else Grado.BASICA
+
+    if len(harinas) == 2:
+        (tipo_a, pct_a), (tipo_b, pct_b) = harinas
+        if tipo_a is tipo_b:
+            raise ValueError(
+                f"Una receta Intermedia mezcla dos harinas DISTINTAS; "
+                f"recibido {tipo_a.value} dos veces."
+            )
+        mitad = PCT_RECETA_TOTAL // 2
+        if pct_a != mitad or pct_b != mitad:
+            raise ValueError(
+                f"Una receta Intermedia se reparte {mitad}/{mitad} (media bolsa "
+                f"de cada tipo); recibido {pct_a}/{pct_b}."
+            )
+        return Grado.INTERMEDIA
+
+    raise ValueError(
+        f"Una receta imprime una o dos harinas; recibidas {len(harinas)}."
+    )
+
+
 @dataclass(frozen=True)
 class Recipe:
     """
@@ -99,8 +185,12 @@ class Recipe:
     Attributes:
         id: Identificador único de la receta (snake_case, ej. "pan_de_campo").
         nombre: Nombre legible para mostrar en la interfaz.
-        grado: Nivel de complejidad (Básica / Avanzada).
-        harina_base: Tipo de token de harina que consume la receta.
+        grado: Nivel de complejidad (Básica / Intermedia / Avanzada). Derivado de
+            ``harinas`` y validado en ``__post_init__``; ver ``_grado_desde_harinas``.
+        harinas: Harinas impresas en la carta, como pares (tipo, porcentaje), en
+            el orden en que deben mostrarse. Suman siempre 100%: una entrada al
+            100% (Básica si es Blanca, Avanzada si es especial) o dos entradas
+            distintas al 50% (Intermedia).
         hidratacion_pct: Porcentaje total de hidratación de la masa.
         tokens_agua: Cantidad de tokens de agua (5% c/u) requeridos para iniciarla.
         acidez_diana: Conjunto de niveles de acidez que activan el Bono de Sabor.
@@ -122,7 +212,7 @@ class Recipe:
     id: str
     nombre: str
     grado: Grado
-    harina_base: TipoHarina
+    harinas: Tuple[Tuple[TipoHarina, int], ...]
     hidratacion_pct: int
     tokens_agua: int
     acidez_diana: Tuple[int, ...]
@@ -137,6 +227,41 @@ class Recipe:
     monedas_optima: int
     monedas_sobre: int
     req_tecnologico: Optional[TecnologiaID]
+
+    def __post_init__(self) -> None:
+        """
+        Valida que el grado impreso coincida con las harinas impresas.
+
+        Sólo valida: no asigna nada, así que es compatible con frozen=True.
+        Como ``RECIPE_CATALOG`` es una constante de nivel de módulo, una carta
+        mal etiquetada revienta en ``import models`` — nunca a mitad de partida.
+
+        Raises:
+            ValueError: Si el reparto de harinas es ilegal, o si ``grado`` no es
+                el que ese reparto implica.
+        """
+        esperado = _grado_desde_harinas(self.harinas)
+        if self.grado is not esperado:
+            impresas = " + ".join(f"{t.value} {p}%" for t, p in self.harinas)
+            raise ValueError(
+                f"Receta '{self.id}': declara grado '{self.grado.value}' pero "
+                f"imprime {impresas}, que implica '{esperado.value}'."
+            )
+
+    # ------------------------------------------------------------------
+    # Requerimiento de insumos (derivado de las harinas impresas)
+    # ------------------------------------------------------------------
+
+    @property
+    def requisito_harina(self) -> Dict[str, int]:
+        """
+        Harinas requeridas como ``{nombre_tipo: porcentaje}``.
+
+        Deliberadamente con la MISMA forma que ``Player.reserva_harina``, para que
+        validar y cobrar el coste sea un único bucle sobre claves que coinciden
+        (ver ``ActionManager._require_harinas`` y la Acción B).
+        """
+        return {tipo.value: pct for tipo, pct in self.harinas}
 
     # ------------------------------------------------------------------
     # Métodos de consulta de zona (sin efectos secundarios)
@@ -962,11 +1087,12 @@ class Environment:
 # ===========================================================================
 
 _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
+    # --- BÁSICAS: una bolsa entera de Blanca (9-12 puntos) ---
     "pan_de_campo": Recipe(
         id="pan_de_campo",
         nombre="Pan de Campo",
         grado=Grado.BASICA,
-        harina_base=TipoHarina.BLANCA,
+        harinas=((TipoHarina.BLANCA, 100),),
         hidratacion_pct=60,
         tokens_agua=12,
         acidez_diana=(3,),
@@ -982,31 +1108,32 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_sobre=11,
         req_tecnologico=None,
     ),
-    "focaccia": Recipe(
-        id="focaccia",
-        nombre="Focaccia",
+    # La zona óptima más ancha del juego (6 espacios): la carta indulgente.
+    "pan_de_molde": Recipe(
+        id="pan_de_molde",
+        nombre="Pan de Molde",
         grado=Grado.BASICA,
-        harina_base=TipoHarina.BLANCA,
-        hidratacion_pct=75,
-        tokens_agua=15,
+        harinas=((TipoHarina.BLANCA, 100),),
+        hidratacion_pct=55,
+        tokens_agua=11,
         acidez_diana=(1, 2),
         bono_sabor_pts=2,
-        zona_baja=(1, 9),
-        zona_optima=(10, 14),
+        zona_baja=(1, 8),
+        zona_optima=(9, 14),
         zona_sobrefermentada=(15, 20),
         puntos_baja=3,
-        puntos_optimos=12,
-        penalizacion_colapso=-3,
-        monedas_baja=15,
-        monedas_optima=19,
-        monedas_sobre=13,
+        puntos_optimos=9,
+        penalizacion_colapso=-2,
+        monedas_baja=12,
+        monedas_optima=16,
+        monedas_sobre=10,
         req_tecnologico=None,
     ),
     "baguette": Recipe(
         id="baguette",
         nombre="Baguette",
         grado=Grado.BASICA,
-        harina_base=TipoHarina.BLANCA,
+        harinas=((TipoHarina.BLANCA, 100),),
         hidratacion_pct=65,
         tokens_agua=13,
         acidez_diana=(2,),
@@ -1022,11 +1149,54 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_sobre=12,
         req_tecnologico=None,
     ),
+    "focaccia": Recipe(
+        id="focaccia",
+        nombre="Focaccia",
+        grado=Grado.BASICA,
+        harinas=((TipoHarina.BLANCA, 100),),
+        hidratacion_pct=75,
+        tokens_agua=15,
+        acidez_diana=(1, 2),
+        bono_sabor_pts=2,
+        zona_baja=(1, 9),
+        zona_optima=(10, 14),
+        zona_sobrefermentada=(15, 20),
+        puntos_baja=3,
+        puntos_optimos=12,
+        penalizacion_colapso=-3,
+        monedas_baja=15,
+        monedas_optima=19,
+        monedas_sobre=13,
+        req_tecnologico=None,
+    ),
+
+    # --- INTERMEDIAS: media bolsa de dos harinas distintas (13-16 puntos) ---
+    # La única Intermedia sin requisito tecnológico: la entrada al escalón medio.
+    "miche": Recipe(
+        id="miche",
+        nombre="Miche",
+        grado=Grado.INTERMEDIA,
+        harinas=((TipoHarina.BLANCA, 50), (TipoHarina.INTEGRAL, 50)),
+        hidratacion_pct=70,
+        tokens_agua=14,
+        acidez_diana=(3, 4),
+        bono_sabor_pts=4,
+        zona_baja=(1, 11),
+        zona_optima=(12, 16),
+        zona_sobrefermentada=(17, 20),
+        puntos_baja=5,
+        puntos_optimos=13,
+        penalizacion_colapso=-4,
+        monedas_baja=16,
+        monedas_optima=20,
+        monedas_sobre=13,
+        req_tecnologico=None,
+    ),
     "pizza_napolitana": Recipe(
         id="pizza_napolitana",
         nombre="Pizza Napolitana",
-        grado=Grado.AVANZADA,
-        harina_base=TipoHarina.BLANCA,
+        grado=Grado.INTERMEDIA,
+        harinas=((TipoHarina.BLANCA, 50), (TipoHarina.INTEGRAL, 50)),
         hidratacion_pct=62,
         tokens_agua=13,
         acidez_diana=(3,),
@@ -1045,8 +1215,8 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
     "brioche": Recipe(
         id="brioche",
         nombre="Brioche",
-        grado=Grado.AVANZADA,
-        harina_base=TipoHarina.BLANCA,
+        grado=Grado.INTERMEDIA,
+        harinas=((TipoHarina.BLANCA, 50), (TipoHarina.CENTENO, 50)),
         hidratacion_pct=52,
         tokens_agua=11,
         acidez_diana=(1,),
@@ -1062,11 +1232,35 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_sobre=11,
         req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
+    # Ventana óptima de 2 espacios y el mayor Bono de Sabor del juego:
+    # no es la carta de más puntos, sino la de más sabor.
+    "panettone": Recipe(
+        id="panettone",
+        nombre="Panettone",
+        grado=Grado.INTERMEDIA,
+        harinas=((TipoHarina.BLANCA, 50), (TipoHarina.CENTENO, 50)),
+        hidratacion_pct=47,
+        tokens_agua=10,
+        acidez_diana=(1,),
+        bono_sabor_pts=8,
+        zona_baja=(1, 16),
+        zona_optima=(17, 18),
+        zona_sobrefermentada=(19, 20),
+        puntos_baja=8,
+        puntos_optimos=16,
+        penalizacion_colapso=-8,
+        monedas_baja=13,
+        monedas_optima=22,
+        monedas_sobre=10,
+        req_tecnologico=TecnologiaID.MODULO_ANALITICO,
+    ),
+
+    # --- AVANZADAS: una bolsa entera de harina especial (17-20 puntos) ---
     "hogaza_centeno": Recipe(
         id="hogaza_centeno",
         nombre="Hogaza Centeno",
         grado=Grado.AVANZADA,
-        harina_base=TipoHarina.CENTENO,
+        harinas=((TipoHarina.CENTENO, 100),),
         hidratacion_pct=67,
         tokens_agua=14,
         acidez_diana=(4, 5),
@@ -1075,7 +1269,7 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         zona_optima=(13, 16),
         zona_sobrefermentada=(17, 20),
         puntos_baja=6,
-        puntos_optimos=15,
+        puntos_optimos=17,
         penalizacion_colapso=-5,
         monedas_baja=20,
         monedas_optima=27,
@@ -1086,7 +1280,7 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         id="pan_semillas",
         nombre="Pan Semillas",
         grado=Grado.AVANZADA,
-        harina_base=TipoHarina.INTEGRAL,
+        harinas=((TipoHarina.INTEGRAL, 100),),
         hidratacion_pct=78,
         tokens_agua=16,
         acidez_diana=(3, 4),
@@ -1102,24 +1296,46 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_sobre=16,
         req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
-    "panettone": Recipe(
-        id="panettone",
-        nombre="Panettone",
+    "pan_graham": Recipe(
+        id="pan_graham",
+        nombre="Pan Graham",
         grado=Grado.AVANZADA,
-        harina_base=TipoHarina.BLANCA,
-        hidratacion_pct=47,
-        tokens_agua=10,
-        acidez_diana=(1,),
+        harinas=((TipoHarina.INTEGRAL, 100),),
+        hidratacion_pct=80,
+        tokens_agua=16,
+        acidez_diana=(4, 5),
+        bono_sabor_pts=6,
+        zona_baja=(1, 13),
+        zona_optima=(14, 17),
+        zona_sobrefermentada=(18, 20),
+        puntos_baja=6,
+        puntos_optimos=19,
+        penalizacion_colapso=-6,
+        monedas_baja=18,
+        monedas_optima=26,
+        monedas_sobre=15,
+        req_tecnologico=TecnologiaID.MODULO_ANALITICO,
+    ),
+    # El techo del catálogo: centeno puro, la acidez diana más alta y la
+    # ventana óptima más estrecha (3 espacios) frente a un colapso de -8.
+    "pumpernickel": Recipe(
+        id="pumpernickel",
+        nombre="Pumpernickel",
+        grado=Grado.AVANZADA,
+        harinas=((TipoHarina.CENTENO, 100),),
+        hidratacion_pct=85,
+        tokens_agua=17,
+        acidez_diana=(5, 6),
         bono_sabor_pts=8,
-        zona_baja=(1, 16),
-        zona_optima=(17, 18),
+        zona_baja=(1, 15),
+        zona_optima=(16, 18),
         zona_sobrefermentada=(19, 20),
         puntos_baja=8,
         puntos_optimos=20,
         penalizacion_colapso=-8,
-        monedas_baja=13,
-        monedas_optima=22,
-        monedas_sobre=10,
+        monedas_baja=16,
+        monedas_optima=28,
+        monedas_sobre=12,
         req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
 }
@@ -1127,8 +1343,20 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
 RECIPE_CATALOG: Mapping[str, Recipe] = MappingProxyType(_RECIPE_CATALOG_DATA)
 """
 Catálogo maestro de recetas. Solo lectura en tiempo de ejecución (MappingProxyType).
-Contiene las 8 recetas del juego: 3 Básicas + 5 Avanzadas.
+Contiene las 12 recetas del juego: 4 Básicas + 4 Intermedias + 4 Avanzadas.
 Todas las referencias a recetas en el estado del juego apuntan a estas instancias.
+
+El grado de cada carta lo dictan sus harinas (``_grado_desde_harinas``), y
+``Recipe.__post_init__`` lo verifica al construir este diccionario: una carta mal
+etiquetada aborta ``import models``, no una partida a medias.
+
+Bandas de ``puntos_optimos`` por grado, sin solape (RECIPE_DATABASE.md §3):
+Básica 9-12, Intermedia 13-16, Avanzada 17-20. Las Monedas y el ancho de las
+zonas NO están bandeados: siguen siendo el eje que distingue una carta de puntos
+baratos de una carta caja-fuerte dentro del mismo grado.
+
+Son 4 Básicas y no 3 porque ``bootstrap.create_game`` reparte una Básica distinta
+por jugador (hasta 4) y ciclaba ``i % len`` con sólo tres.
 """
 
 
@@ -1243,6 +1471,63 @@ baraja una copia de esta tupla y reparte 1 carta por jugador sentado (1-4 jugado
 # ===========================================================================
 
 
+COPIAS_POR_GRADO: Mapping[Grado, int] = MappingProxyType({
+    Grado.BASICA: 4,
+    Grado.INTERMEDIA: 3,
+    Grado.AVANZADA: 2,
+})
+"""
+Copias de cada protocolo en el mazo físico de recetas (RULEBOOK.md §12).
+
+Las Básicas son comunes y las Avanzadas escasas: la rareza es una barrera
+independiente del precio -- no basta con poder pagar una Avanzada, tiene que
+salir. Con 4 protocolos por grado: 4·4 + 4·3 + 4·2 = 36 cartas.
+
+Va por GRADO y no por carta (a diferencia de ``ClimateCard.cantidad``, que es un
+campo por carta) porque el grado ya lo derivan las harinas impresas: una tabla
+por carta serían 12 números derivables que podrían desmentir al reglamento.
+"""
+
+TOTAL_MAZO_RECETAS: int = 36
+"""Tamaño del mazo físico de recetas. Ver ``COPIAS_POR_GRADO``."""
+
+
+def expandir_copias(recetas: Iterable[Recipe]) -> List[Recipe]:
+    """
+    Expande cada protocolo a sus copias físicas según ``COPIAS_POR_GRADO``.
+
+    Retorna la lista SIN barajar, igual que ``build_climate_deck``: el orden
+    aleatorio lo aplica quien construye el mazo (``Market.crear_inicial``), que
+    además necesita barajar por estratos y no el mazo entero.
+
+    Las copias son la MISMA instancia repetida: ``Recipe`` es ``frozen=True``, así
+    que compartir referencias es seguro y es lo que ya hace el mazo de clima.
+    """
+    deck: List[Recipe] = []
+    for receta in recetas:
+        deck.extend([receta] * COPIAS_POR_GRADO[receta.grado])
+    return deck
+
+
+def build_recipe_deck() -> List[Recipe]:
+    """
+    Mazo de recetas completo (36 cartas), sin barajar.
+
+    ``Market.crear_inicial`` no lo usa -- necesita los dos estratos por separado
+    para barajarlos aparte -- pero esta función fija la integridad del catálogo en
+    un solo sitio, igual que ``build_climate_deck`` para el clima.
+
+    Raises:
+        AssertionError: Si el total no suma exactamente TOTAL_MAZO_RECETAS.
+    """
+    deck: List[Recipe] = expandir_copias(RECIPE_CATALOG.values())
+    assert len(deck) == TOTAL_MAZO_RECETAS, (
+        f"El mazo de recetas debe tener exactamente {TOTAL_MAZO_RECETAS} cartas, "
+        f"el catálogo actual genera {len(deck)}."
+    )
+    return deck
+
+
 def build_climate_deck() -> List[ClimateCard]:
     """
     Construye el mazo de clima completo expandiendo cada carta según su `cantidad`.
@@ -1302,6 +1587,16 @@ def get_recetas_basicas() -> List[Recipe]:
         Lista de Recipe con grado == Grado.BASICA.
     """
     return [r for r in RECIPE_CATALOG.values() if r.grado == Grado.BASICA]
+
+
+def get_recetas_intermedias() -> List[Recipe]:
+    """
+    Retorna todas las recetas de grado 'Intermedia' del catálogo maestro.
+
+    Returns:
+        Lista de Recipe con grado == Grado.INTERMEDIA.
+    """
+    return [r for r in RECIPE_CATALOG.values() if r.grado == Grado.INTERMEDIA]
 
 
 def get_recetas_avanzadas() -> List[Recipe]:

@@ -37,6 +37,7 @@ from models import (
     Grado,
     HorneadoRecord,
     Player,
+    Recipe,
     TecnologiaID,
     TipoHarina,
     seleccionar_receta_inicial,
@@ -114,12 +115,32 @@ def _barra(valor: int, maximo: int = 6, largo: int = 12) -> str:
 # ===========================================================================
 
 _NOMBRE_ESTACION = {0: "Est-01", 1: "Est-02", 2: "Est-03(B)"}
-_NOMBRE_TECNOLOGIA = {
-    TecnologiaID.INCUBADORA: "Incubadora",
-    TecnologiaID.CAMARA_B: "Cámara B",
-    TecnologiaID.MODULO_ANALITICO: "Módulo Analítico",
-    TecnologiaID.CRIOPRESERVACION: "Criopreservación",
+# Los nombres los imprime el propio enum (models.TecnologiaID.nombre_legible),
+# para que la CLI no mantenga una segunda tabla que se desincronice.
+_NOMBRE_TECNOLOGIA = {t: t.nombre_legible for t in TecnologiaID}
+
+_COLOR_GRADO = {
+    Grado.BASICA: _C.WHITE,
+    Grado.INTERMEDIA: _C.CYAN,
+    Grado.AVANZADA: _C.MAGENTA,
 }
+
+
+def _fmt_harinas(receta: Recipe) -> str:
+    """
+    Harinas impresas en la carta: "Blanca 100%" o "Blanca 50% + Centeno 50%".
+
+    Se lee de ``receta.harinas`` (no de ``requisito_harina``) porque las cartas
+    imprimen sus harinas en un orden fijo y el diccionario derivado no lo promete.
+    """
+    return " + ".join(f"{tipo.value} {pct}%" for tipo, pct in receta.harinas)
+
+
+def _fmt_requisito_tecnologico(receta: Recipe) -> str:
+    """Sufijo " [req: X]" si la carta exige una mejora, cadena vacía si no."""
+    if receta.req_tecnologico is None:
+        return ""
+    return f" [req: {_NOMBRE_TECNOLOGIA[receta.req_tecnologico]}]"
 
 
 def _render_slot(idx: int, slot: Optional[FermentationSlot]) -> str:
@@ -218,12 +239,11 @@ def mostrar_mercado(engine: GameEngine) -> None:
         if receta is None:
             print(_c(_C.DIM, f"    [{i}] — vacía —"))
         else:
-            grado_c = _C.MAGENTA if receta.grado == Grado.AVANZADA else _C.WHITE
-            req = ""
-            if receta.req_tecnologico is not None:
-                req = _c(_C.DIM, f" [req: {_NOMBRE_TECNOLOGIA[receta.req_tecnologico]}]")
+            grado_c = _COLOR_GRADO[receta.grado]
+            req = _c(_C.DIM, _fmt_requisito_tecnologico(receta))
             print(f"    [{i}] {_c(grado_c, receta.nombre):<28} "
                   f"Grado:{receta.grado.value[0]} "
+                  f"Harina:{_fmt_harinas(receta):<26} "
                   f"Opt:[{receta.zona_optima[0]}-{receta.zona_optima[1]}] "
                   f"Pts:{receta.puntos_optimos}{req}")
 
@@ -383,9 +403,9 @@ def _params_accion_B(player: Player, engine: GameEngine) -> Optional[dict]:
 
     print("  Recetas en carpeta:")
     for i, r in enumerate(player.carpeta_proyectos):
-        req = f" [req Módulo Analítico]" if r.grado == Grado.AVANZADA else ""
-        print(f"    [{i}] {r.nombre}  {r.grado.value}  Harina:{r.harina_base.value}  "
-              f"Agua:{r.tokens_agua}  Óptima:[{r.zona_optima[0]}-{r.zona_optima[1]}]{req}")
+        print(f"    [{i}] {r.nombre}  {r.grado.value}  Harina:{_fmt_harinas(r)}  "
+              f"Agua:{r.tokens_agua}  Óptima:[{r.zona_optima[0]}-{r.zona_optima[1]}]"
+              f"{_fmt_requisito_tecnologico(r)}")
 
     idx = _pedir_int("Índice de receta a iniciar", 0, len(player.carpeta_proyectos) - 1)
     if idx is None:

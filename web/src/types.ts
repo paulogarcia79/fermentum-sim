@@ -8,7 +8,7 @@
 //     mazo_tendencias -- ya no hay SupplyLote/suministros, GDD v0.0.2), Fase
 //   - disponibilidad.py: AccionDisponible
 
-export type Grado = 'Básica' | 'Avanzada'
+export type Grado = 'Básica' | 'Intermedia' | 'Avanzada'
 export type TipoHarina = 'Blanca' | 'Centeno' | 'Integral'
 export type TecnologiaID = 'incubadora' | 'camara_b' | 'modulo_analitico' | 'criopreservacion'
 export type FaseActual = 'preparacion' | 'fase_i' | 'fase_ii' | 'fase_iii' | 'terminada'
@@ -17,7 +17,11 @@ export interface Recipe {
   id: string
   nombre: string
   grado: Grado
-  harina_base: TipoHarina
+  // Harinas impresas en la carta, como pares [tipo, porcentaje], en orden de
+  // impresion. Suman siempre 100: una entrada al 100% (Basica si es Blanca,
+  // Avanzada si es especial) o dos entradas distintas al 50% (Intermedia).
+  // El `grado` de arriba lo deriva models.py de este reparto.
+  harinas: [TipoHarina, number][]
   hidratacion_pct: number
   tokens_agua: number
   acidez_diana: number[]

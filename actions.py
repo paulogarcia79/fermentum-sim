@@ -61,7 +61,6 @@ from exceptions import (
 from models import (
     EfectoClimatico,
     FermentationSlot,
-    Grado,
     HorneadoRecord,
     Player,
     Recipe,
@@ -180,24 +179,30 @@ class ActionManager:
                 f"'{player.nombre}' ya usó el espacio de acción '{accion_id}' hoy."
             )
 
-    def _require_harina_tipo(
-        self, player: Player, tipo: TipoHarina, pct_minimo: int = 100
-    ) -> None:
+    def _require_harinas(self, player: Player, receta: Recipe) -> None:
         """
-        Verifica que el jugador tenga al menos ``pct_minimo`` en el valor del tipo
-        de harina especificado en el diccionario ``reserva_harina``.
+        Verifica que el jugador tenga TODAS las harinas que la receta imprime.
 
-        Args:
-            pct_minimo: Porcentaje mínimo requerido (múltiplo de 10). Por defecto 100.
+        ``receta.requisito_harina`` tiene la misma forma que ``player.reserva_harina``
+        (``{nombre_tipo: porcentaje}``), así que la comprobación es un único bucle
+        sobre claves que coinciden, sea la receta de una harina (Básica/Avanzada,
+        100%) o de dos (Intermedia, 50% + 50%).
+
+        Informa de TODOS los tipos que faltan, no solo del primero: con una receta
+        Intermedia, saber que falta una de las dos mitades no dice cuál comprar.
 
         Raises:
-            MissingResourceError: Si el valor en la reserva es insuficiente.
+            MissingResourceError: Si falta cualquiera de las harinas requeridas.
         """
-        disponible = player.reserva_harina.get(tipo.value, 0)
-        if disponible < pct_minimo:
+        faltantes = [
+            f"{pct}% de Harina {tipo} (tiene {player.reserva_harina.get(tipo, 0)}%)"
+            for tipo, pct in receta.requisito_harina.items()
+            if player.reserva_harina.get(tipo, 0) < pct
+        ]
+        if faltantes:
             raise MissingResourceError(
-                f"'{player.nombre}' necesita {pct_minimo}% de Harina {tipo.value} "
-                f"pero solo tiene {disponible}%."
+                f"'{player.nombre}' no puede iniciar '{receta.nombre}': "
+                f"necesita {'; '.join(faltantes)}."
             )
 
     def _require_cualquier_harina(self, player: Player, pct_minimo: int) -> None:
@@ -356,7 +361,9 @@ class ActionManager:
         Acción B: Iniciar Receta (ACTIONS_REGISTRY.md §2B).
 
         Costo:   1 PA
-                 + 1 Token de Harina (tipo == receta.harina_base)
+                 + las harinas impresas en la carta (``receta.requisito_harina``),
+                   siempre 100% en total: una bolsa entera de un tipo (Básica /
+                   Avanzada) o media bolsa de cada uno de dos tipos (Intermedia)
                  + receta.tokens_agua tokens de agua (pago exacto), o
                    receta.tokens_agua - 1 si "Alta Humedad" es el efecto
                    pasivo vigente (CLIMATE_LOGIC.md §2).
@@ -372,11 +379,11 @@ class ActionManager:
           · player.dados_inoculo >= 1 (hay dados disponibles para sellar).
           · Debe existir una estación de fermentación libre.
             (Estación 03 solo con Cámara B activa.)
-          · Recetas Avanzadas requieren Módulo Analítico instalado.
+          · La mejora declarada en ``receta.req_tecnologico`` debe estar instalada.
           · modificador_incubadora ≠ 0 solo si Incubadora está instalada.
 
         Efectos sobre el estado:
-          1. Consume 1 PA, 1 harina del tipo correcto, tokens_agua exactos.
+          1. Consume 1 PA, las harinas impresas en la carta, tokens_agua exactos.
           2. Consume 1 dado de inóculo (dados_inoculo -= 1).
           3. Crea y coloca el FermentationSlot en la primera estación libre.
           4. Retira la receta de carpeta_proyectos.
@@ -393,7 +400,7 @@ class ActionManager:
         Raises:
             NotEnoughActionPointsError: PA insuficientes.
             RuleViolationError: Receta no en carpeta, vitalidad=0,
-                Avanzada sin Módulo Analítico, o sin estación disponible.
+                requisito tecnológico sin instalar, o sin estación disponible.
             StationBlockedError: Todas las estaciones están ocupadas o
                 la única libre (03) requiere Cámara B.
             MissingResourceError: Harina, agua o dados de inóculo insuficientes.
@@ -417,10 +424,16 @@ class ActionManager:
                 f"Proyectos de '{player.nombre}'. Investígala primero (Acción G)."
             )
 
-        if receta.grado == Grado.AVANZADA and not player.tecnologias.modulo_analitico:
+        # El requisito tecnológico lo declara CADA carta (``req_tecnologico``), no
+        # su grado: desde que el grado se deriva de las harinas impresas, atarlo a
+        # Grado.AVANZADA significaría que cualquier carta de harina especial queda
+        # bloqueada por el Módulo Analítico, se quiera o no.
+        if receta.req_tecnologico is not None and not player.tecnologias.esta_activa(
+            receta.req_tecnologico
+        ):
             raise RuleViolationError(
-                f"La receta '{receta.nombre}' es de grado Avanzado y requiere "
-                "el Módulo Analítico. Instálalo primero (Acción D)."
+                f"La receta '{receta.nombre}' requiere "
+                f"{receta.req_tecnologico.nombre_legible}. Instálala primero (Acción D)."
             )
 
         indice_estacion: Optional[int] = player.indice_estacion_disponible
@@ -441,7 +454,7 @@ class ActionManager:
         if self._engine.environment.efecto_pasivo_activo == EfectoClimatico.ALTA_HUMEDAD:
             tokens_agua_requeridos -= 1
 
-        self._require_harina_tipo(player, receta.harina_base, 100)
+        self._require_harinas(player, receta)
         self._require_agua(player, tokens_agua_requeridos)
 
         if modificador_incubadora not in (-1, 0, 1):
@@ -459,8 +472,10 @@ class ActionManager:
 
         player.consumir_punto_accion("B")
 
-        # Consumir 100% del tipo de harina requerido
-        player.reserva_harina[receta.harina_base.value] -= 100
+        # Consumir las harinas impresas en la carta (100% en total: una bolsa
+        # entera, o media bolsa de cada uno de dos tipos si es Intermedia)
+        for tipo, pct in receta.requisito_harina.items():
+            player.reserva_harina[tipo] -= pct
 
         # Consumir tokens de agua (pago exacto; -1 con Alta Humedad activa)
         player.reserva_agua -= tokens_agua_requeridos

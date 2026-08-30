@@ -66,7 +66,7 @@ regression baseline to check against, since none existed before. If a deliberate
 alters this golden game's outcome, regenerate the snapshot rather than hand-editing it.
 
 `test_actions_suite.py` is a hand-rolled suite (`check()` / `xraises()` helpers) that exercises
-every `ActionManager` action's happy path and failure path (60/60 passing). It's a standalone
+every `ActionManager` action's happy path and failure path (96/96 passing). It's a standalone
 script, not pytest — run it directly.
 
 `tests/test_turn_state_machine.py` exercises the non-blocking `iniciar_dia`/`jugador_activo`/
@@ -191,6 +191,69 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   single "one upgrade per game" total, with a 4th tech (Criopreservación) added; and endgame
   scoring gained a "Conversión de riqueza" term. Recipe zone/point/Monedas values were rebalanced
   across the board — see `context/RECIPE_DATABASE.md`.
+
+  **Three recipe grades, defined by the flour a card prints.** `Recipe.harina_base:
+  TipoHarina` became `harinas: Tuple[Tuple[TipoHarina, int], ...]` — the flours the card prints,
+  as (type, pct) pairs, always summing to 100%. `Grado` gained `INTERMEDIA`, and the grade is no
+  longer authored: `models._grado_desde_harinas` derives it (Blanca 100 → Básica, one *special*
+  flour 100 → Avanzada, two distinct types 50/50 → Intermedia), and `Recipe.__post_init__` raises
+  when the `grado` field disagrees. Three pieces make that sound:
+  - **Only two payment shapes are legal, and that is not arbitrary** — the Bolsa de Harinas
+    vends a whole bag (10 tokens) and a half bag (5, `comprar_media`, `⌈p/2⌉`) and nothing else,
+    so a 90/10 split would need a per-token buy primitive that doesn't exist. The cost ladder
+    then falls out of `PRECIOS_HARINA` with no new table: Básica 2–6, Intermedia 3–7…5–9,
+    Avanzada 4–8/6–10 Monedas.
+  - **`grado` stays a *field*, not a `@property`.** This is the load-bearing implementation
+    choice: `serialization.snapshot` is `dataclasses.asdict`, which serializes fields and never
+    properties, so a computed `grado` would silently vanish from the golden snapshot and from
+    every client payload — and `Recipe` is nested in four places (`carpeta_proyectos`,
+    `estaciones_fermentacion[].recipe`, `market.recetas_visibles`,
+    `archivo_horneado_exitoso[].recipe`), so injecting it in `views.py` is not one line.
+    Validating in `__post_init__` buys the same "cannot lie" guarantee for free, and because
+    `RECIPE_CATALOG` is a module-level constant a mislabelled card fails at `import models`.
+  - **The tech gate left `grado`.** Acción B used to read `grado == AVANZADA and not
+    modulo_analitico`; with the grade derived, that would have auto-gated *any* future special-
+    flour card. It now reads the per-card `req_tecnologico` (a field that already existed, already
+    shipped to the client, and was read by nothing) via the existing
+    `Technologies.esta_activa(TecnologiaID)`. Miche is deliberately the one ungated Intermedia, so
+    the middle rung has an entry that doesn't require Acción D first.
+
+  `requisito_harina` is a derived `Dict[str, int]` keyed exactly like `Player.reserva_harina`, so
+  `ActionManager._require_harinas` (which replaced `_require_harina_tipo`) and Acción B's spend are
+  each one loop over matching shapes rather than a branch per grade; the rejection names *every*
+  missing flour, since with an Intermedia "you lack flour" doesn't say which half to go buy. The
+  catalog grew to 12 (4/4/4): four Básicas because `bootstrap.create_game` cycles `i % len` and
+  dealt player 4 a copy of player 1's card with only three, and the extra cards also thicken a deck
+  feeding `NUM_RECIPE_SLOTS = 4`. `puntos_optimos` is banded per grade with no overlap (9–12 /
+  13–16 / 17–20) while Monedas and zone widths deliberately are **not**, so "cheap points vs. cash
+  cow" survives as a design axis inside a grade. Panettone prints Blanca, and Blanca-100 can only
+  be a Básica, so it became an Intermedia (20 → 16 pts) rather than being re-floured into a rye
+  bread; Pumpernickel is the new 20-point apex, pure rye by definition. `disponibilidad.py` needs
+  no change (its `"B"` clause never checked flour); `VERSION_FORMATO` went to 9 because old pickles
+  hold `Recipe`s with no `harinas`.
+
+  One trap this change sprang, worth knowing about before adding a grade or a card:
+  `Market.crear_inicial` built its deck as `get_recetas_avanzadas() + get_recetas_basicas()`, so
+  the moment Pizza/Brioche/Panettone stopped being Avanzadas the **entire Intermedia tier fell out
+  of the market** — unreachable, with every test still green. The deck is now
+  `avanzadas + intermedias` shuffled together (the cards you go shopping for) with Básicas
+  shuffled at the bottom as the fallback, and *not* a strict three-tier ladder: Intermedias below
+  every Avanzada would surface the middle rung exactly when a player no longer needs it. A grade
+  that isn't named in `crear_inicial` is invisible, so `tests/test_recetas_grado.py` asserts the
+  deck contains every catalog card and all three grades.
+
+  **The deck is 36 physical cards, not 12.** `RULEBOOK.md` always described a printed deck with
+  copies while the sim dealt one card per protocol; that divergence is now closed.
+  `models.COPIAS_POR_GRADO` (4 per Básica / 3 per Intermedia / 2 per Avanzada = 16+12+8) plus
+  `expandir_copias` / `build_recipe_deck` mirror the `ClimateCard.cantidad` + `build_climate_deck`
+  pair exactly — expand, don't shuffle, assert the total. Copies are **per grade, not per card**,
+  unlike `ClimateCard.cantidad`: the grade is already derived from the flours, so a per-card table
+  would be 12 derivable numbers free to contradict the rulebook. Copies are the same frozen
+  instance repeated, so a market slot can legitimately show two Pan Grahams at once. Scarcity is
+  the point: 8 Avanzada cards in 36 makes them rare as well as expensive.
+  `bootstrap.create_game` then removes **one copy** per player of the Básica it dealt (`list.remove`,
+  equality on a frozen dataclass) — one copy, not the protocol, or a 4-player game would empty the
+  reserve stratum. Tests: `tests/test_recetas_grado.py`.
 
   **Acción E (Pliegues) — the second Monedas sink, and the only 0-PA action that occupies an
   action space.** E used to cost 1 PA for a flat +1 track space, i.e. a whole turn for one space;

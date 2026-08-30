@@ -57,7 +57,15 @@ engine = GameEngine([p1, p2], env, market)
 manager = ActionManager(engine)
 
 receta_b = next(r for r in RECIPE_CATALOG.values() if r.grado == Grado.BASICA)
+receta_int = next(r for r in RECIPE_CATALOG.values() if r.grado == Grado.INTERMEDIA)
 receta_av = next(r for r in RECIPE_CATALOG.values() if r.grado == Grado.AVANZADA)
+
+
+def stock_harinas(player, receta, extra=0):
+    """Deja en la reserva exactamente lo que la receta pide (mas `extra` de cada tipo)."""
+    player.reserva_harina = {"Blanca": 0, "Centeno": 0, "Integral": 0}
+    for tipo, pct in receta.requisito_harina.items():
+        player.reserva_harina[tipo] = pct + extra
 
 # ========================================================================
 print("--- A: Alimentar ---")
@@ -92,8 +100,7 @@ p1.acidez = 3
 p1.puntos_accion = 2
 p1.dados_inoculo = 3
 p1.carpeta_proyectos = [receta_b]
-p1.reserva_harina = {"Blanca": 0, "Centeno": 0, "Integral": 0}
-p1.reserva_harina[receta_b.harina_base.value] = 100
+stock_harinas(p1, receta_b)
 p1.reserva_agua = receta_b.tokens_agua + 5
 p1.estaciones_fermentacion = [None, None, None]
 
@@ -108,8 +115,7 @@ p1.acciones_pa_usadas_hoy = []
 xraises(RuleViolationError, "B receta no en carpeta", lambda: manager.accion_B_iniciar_receta(p1, receta_b))
 
 p1.carpeta_proyectos = [receta_b]
-p1.reserva_harina = {"Blanca": 0, "Centeno": 0, "Integral": 0}
-p1.reserva_harina[receta_b.harina_base.value] = 100
+stock_harinas(p1, receta_b)
 p1.reserva_agua = 200
 p1.estaciones_fermentacion = [slot, slot, slot]
 p1.puntos_accion = 2
@@ -120,7 +126,29 @@ p1.carpeta_proyectos = [receta_av]
 p1.estaciones_fermentacion = [None, None, None]
 p1.puntos_accion = 2
 p1.acciones_pa_usadas_hoy = []
-xraises(RuleViolationError, "B avanzada sin Modulo Analitico", lambda: manager.accion_B_iniciar_receta(p1, receta_av))
+xraises(RuleViolationError, "B sin la mejora que exige req_tecnologico", lambda: manager.accion_B_iniciar_receta(p1, receta_av))
+
+# Receta Intermedia: cobra media bolsa de CADA uno de sus dos tipos.
+p1.tecnologias.modulo_analitico = True
+p1.carpeta_proyectos = [receta_int]
+p1.estaciones_fermentacion = [None, None, None]
+p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
+p1.dados_inoculo = 3
+stock_harinas(p1, receta_int)
+p1.reserva_agua = receta_int.tokens_agua + 5
+manager.accion_B_iniciar_receta(p1, receta_int)
+check("B intermedia: cobra las dos harinas", lambda: None if all(p1.reserva_harina[t] == 0 for t in receta_int.requisito_harina) else (_ for _ in ()).throw(AssertionError()))
+
+# Con una sola de las dos mitades en reserva, la Intermedia se rechaza.
+p1.carpeta_proyectos = [receta_int]
+p1.estaciones_fermentacion = [None, None, None]
+p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
+stock_harinas(p1, receta_int)
+p1.reserva_harina[list(receta_int.requisito_harina)[1]] = 0
+xraises(MissingResourceError, "B intermedia con solo una harina", lambda: manager.accion_B_iniciar_receta(p1, receta_int))
+p1.tecnologias.modulo_analitico = False
 
 p1.vitalidad = 0
 p1.en_estado_contaminacion = True
