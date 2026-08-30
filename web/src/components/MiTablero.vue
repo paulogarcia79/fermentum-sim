@@ -50,7 +50,7 @@ const registrosArchivo = computed<{ registro: HorneadoRecord; colapso: boolean }
 
 const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
   optima: 'Zona Óptima',
-  baja: 'Zona Baja',
+  pre_fermento: 'Pre-fermento',
   colapso: 'Colapso',
 }
 </script>

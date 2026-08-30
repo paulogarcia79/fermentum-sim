@@ -44,24 +44,28 @@
             2
           ],
           "bono_sabor_pts": 3,
-          "zona_baja": [
+          "zona_crecimiento": [
             1,
+            5
+          ],
+          "zona_pre_fermento": [
+            6,
             11
           ],
           "zona_optima": [
             12,
             15
           ],
-          "zona_sobrefermentada": [
+          "zona_colapso": [
             16,
             20
           ],
-          "puntos_baja": 5,
+          "puntos_pre_fermento": 5,
           "puntos_optimos": 11,
           "penalizacion_colapso": -2,
-          "monedas_baja": 14,
+          "monedas_pre_fermento": 14,
           "monedas_optima": 18,
-          "monedas_sobre": 12
+          "monedas_colapso": 12
         },
         {
           "id": "pizza_napolitana",
@@ -83,24 +87,28 @@
             3
           ],
           "bono_sabor_pts": 4,
-          "zona_baja": [
+          "zona_crecimiento": [
             1,
+            5
+          ],
+          "zona_pre_fermento": [
+            6,
             10
           ],
           "zona_optima": [
             11,
             14
           ],
-          "zona_sobrefermentada": [
+          "zona_colapso": [
             15,
             20
           ],
-          "puntos_baja": 4,
+          "puntos_pre_fermento": 4,
           "puntos_optimos": 14,
           "penalizacion_colapso": -4,
-          "monedas_baja": 15,
+          "monedas_pre_fermento": 15,
           "monedas_optima": 21,
-          "monedas_sobre": 12
+          "monedas_colapso": 12
         },
         {
           "id": "pan_semillas",
@@ -119,24 +127,28 @@
             4
           ],
           "bono_sabor_pts": 7,
-          "zona_baja": [
+          "zona_crecimiento": [
             1,
+            6
+          ],
+          "zona_pre_fermento": [
+            7,
             13
           ],
           "zona_optima": [
             14,
             16
           ],
-          "zona_sobrefermentada": [
+          "zona_colapso": [
             17,
             20
           ],
-          "puntos_baja": 6,
+          "puntos_pre_fermento": 6,
           "puntos_optimos": 17,
           "penalizacion_colapso": -5,
-          "monedas_baja": 19,
+          "monedas_pre_fermento": 19,
           "monedas_optima": 26,
-          "monedas_sobre": 16
+          "monedas_colapso": 16
         }
       ],
       "archivo_horneado_exitoso": [],
@@ -189,24 +201,28 @@
             3
           ],
           "bono_sabor_pts": 3,
-          "zona_baja": [
+          "zona_crecimiento": [
             1,
+            5
+          ],
+          "zona_pre_fermento": [
+            6,
             10
           ],
           "zona_optima": [
             11,
             15
           ],
-          "zona_sobrefermentada": [
+          "zona_colapso": [
             16,
             20
           ],
-          "puntos_baja": 4,
+          "puntos_pre_fermento": 4,
           "puntos_optimos": 10,
           "penalizacion_colapso": -2,
-          "monedas_baja": 13,
+          "monedas_pre_fermento": 13,
           "monedas_optima": 17,
-          "monedas_sobre": 11
+          "monedas_colapso": 11
         },
         {
           "id": "pizza_napolitana",
@@ -228,24 +244,28 @@
             3
           ],
           "bono_sabor_pts": 4,
-          "zona_baja": [
+          "zona_crecimiento": [
             1,
+            5
+          ],
+          "zona_pre_fermento": [
+            6,
             10
           ],
           "zona_optima": [
             11,
             14
           ],
-          "zona_sobrefermentada": [
+          "zona_colapso": [
             15,
             20
           ],
-          "puntos_baja": 4,
+          "puntos_pre_fermento": 4,
           "puntos_optimos": 14,
           "penalizacion_colapso": -4,
-          "monedas_baja": 15,
+          "monedas_pre_fermento": 15,
           "monedas_optima": 21,
-          "monedas_sobre": 12
+          "monedas_colapso": 12
         },
         {
           "id": "brioche",
@@ -267,24 +287,28 @@
             1
           ],
           "bono_sabor_pts": 5,
-          "zona_baja": [
+          "zona_crecimiento": [
             1,
+            7
+          ],
+          "zona_pre_fermento": [
+            8,
             14
           ],
           "zona_optima": [
             15,
             17
           ],
-          "zona_sobrefermentada": [
+          "zona_colapso": [
             18,
             20
           ],
-          "puntos_baja": 5,
+          "puntos_pre_fermento": 5,
           "puntos_optimos": 16,
           "penalizacion_colapso": -6,
-          "monedas_baja": 14,
+          "monedas_pre_fermento": 14,
           "monedas_optima": 21,
-          "monedas_sobre": 11
+          "monedas_colapso": 11
         }
       ],
       "archivo_horneado_exitoso": [],
@@ -573,24 +597,28 @@
           1
         ],
         "bono_sabor_pts": 5,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          7
+        ],
+        "zona_pre_fermento": [
+          8,
           14
         ],
         "zona_optima": [
           15,
           17
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           18,
           20
         ],
-        "puntos_baja": 5,
+        "puntos_pre_fermento": 5,
         "puntos_optimos": 16,
         "penalizacion_colapso": -6,
-        "monedas_baja": 14,
+        "monedas_pre_fermento": 14,
         "monedas_optima": 21,
-        "monedas_sobre": 11
+        "monedas_colapso": 11
       },
       {
         "id": "pizza_napolitana",
@@ -612,24 +640,28 @@
           3
         ],
         "bono_sabor_pts": 4,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          5
+        ],
+        "zona_pre_fermento": [
+          6,
           10
         ],
         "zona_optima": [
           11,
           14
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           15,
           20
         ],
-        "puntos_baja": 4,
+        "puntos_pre_fermento": 4,
         "puntos_optimos": 14,
         "penalizacion_colapso": -4,
-        "monedas_baja": 15,
+        "monedas_pre_fermento": 15,
         "monedas_optima": 21,
-        "monedas_sobre": 12
+        "monedas_colapso": 12
       },
       {
         "id": "pan_graham",
@@ -648,24 +680,28 @@
           5
         ],
         "bono_sabor_pts": 6,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          6
+        ],
+        "zona_pre_fermento": [
+          7,
           13
         ],
         "zona_optima": [
           14,
           17
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           18,
           20
         ],
-        "puntos_baja": 6,
+        "puntos_pre_fermento": 6,
         "puntos_optimos": 19,
         "penalizacion_colapso": -6,
-        "monedas_baja": 18,
+        "monedas_pre_fermento": 18,
         "monedas_optima": 26,
-        "monedas_sobre": 15
+        "monedas_colapso": 15
       },
       null
     ],
@@ -691,24 +727,28 @@
           4
         ],
         "bono_sabor_pts": 4,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          5
+        ],
+        "zona_pre_fermento": [
+          6,
           11
         ],
         "zona_optima": [
           12,
           16
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           17,
           20
         ],
-        "puntos_baja": 5,
+        "puntos_pre_fermento": 5,
         "puntos_optimos": 13,
         "penalizacion_colapso": -4,
-        "monedas_baja": 16,
+        "monedas_pre_fermento": 16,
         "monedas_optima": 20,
-        "monedas_sobre": 13
+        "monedas_colapso": 13
       },
       {
         "id": "hogaza_centeno",
@@ -727,24 +767,28 @@
           5
         ],
         "bono_sabor_pts": 6,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          6
+        ],
+        "zona_pre_fermento": [
+          7,
           12
         ],
         "zona_optima": [
           13,
           16
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           17,
           20
         ],
-        "puntos_baja": 6,
+        "puntos_pre_fermento": 6,
         "puntos_optimos": 17,
         "penalizacion_colapso": -5,
-        "monedas_baja": 20,
+        "monedas_pre_fermento": 20,
         "monedas_optima": 27,
-        "monedas_sobre": 17
+        "monedas_colapso": 17
       },
       {
         "id": "miche",
@@ -767,24 +811,28 @@
           4
         ],
         "bono_sabor_pts": 4,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          5
+        ],
+        "zona_pre_fermento": [
+          6,
           11
         ],
         "zona_optima": [
           12,
           16
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           17,
           20
         ],
-        "puntos_baja": 5,
+        "puntos_pre_fermento": 5,
         "puntos_optimos": 13,
         "penalizacion_colapso": -4,
-        "monedas_baja": 16,
+        "monedas_pre_fermento": 16,
         "monedas_optima": 20,
-        "monedas_sobre": 13
+        "monedas_colapso": 13
       },
       {
         "id": "miche",
@@ -807,24 +855,28 @@
           4
         ],
         "bono_sabor_pts": 4,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          5
+        ],
+        "zona_pre_fermento": [
+          6,
           11
         ],
         "zona_optima": [
           12,
           16
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           17,
           20
         ],
-        "puntos_baja": 5,
+        "puntos_pre_fermento": 5,
         "puntos_optimos": 13,
         "penalizacion_colapso": -4,
-        "monedas_baja": 16,
+        "monedas_pre_fermento": 16,
         "monedas_optima": 20,
-        "monedas_sobre": 13
+        "monedas_colapso": 13
       },
       {
         "id": "panettone",
@@ -846,24 +898,28 @@
           1
         ],
         "bono_sabor_pts": 8,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          10
+        ],
+        "zona_pre_fermento": [
+          11,
           16
         ],
         "zona_optima": [
           17,
           18
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           19,
           20
         ],
-        "puntos_baja": 8,
+        "puntos_pre_fermento": 8,
         "puntos_optimos": 16,
         "penalizacion_colapso": -8,
-        "monedas_baja": 13,
+        "monedas_pre_fermento": 13,
         "monedas_optima": 22,
-        "monedas_sobre": 10
+        "monedas_colapso": 10
       },
       {
         "id": "brioche",
@@ -885,24 +941,28 @@
           1
         ],
         "bono_sabor_pts": 5,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          7
+        ],
+        "zona_pre_fermento": [
+          8,
           14
         ],
         "zona_optima": [
           15,
           17
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           18,
           20
         ],
-        "puntos_baja": 5,
+        "puntos_pre_fermento": 5,
         "puntos_optimos": 16,
         "penalizacion_colapso": -6,
-        "monedas_baja": 14,
+        "monedas_pre_fermento": 14,
         "monedas_optima": 21,
-        "monedas_sobre": 11
+        "monedas_colapso": 11
       },
       {
         "id": "panettone",
@@ -924,24 +984,28 @@
           1
         ],
         "bono_sabor_pts": 8,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          10
+        ],
+        "zona_pre_fermento": [
+          11,
           16
         ],
         "zona_optima": [
           17,
           18
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           19,
           20
         ],
-        "puntos_baja": 8,
+        "puntos_pre_fermento": 8,
         "puntos_optimos": 16,
         "penalizacion_colapso": -8,
-        "monedas_baja": 13,
+        "monedas_pre_fermento": 13,
         "monedas_optima": 22,
-        "monedas_sobre": 10
+        "monedas_colapso": 10
       },
       {
         "id": "pan_semillas",
@@ -960,24 +1024,28 @@
           4
         ],
         "bono_sabor_pts": 7,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          6
+        ],
+        "zona_pre_fermento": [
+          7,
           13
         ],
         "zona_optima": [
           14,
           16
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           17,
           20
         ],
-        "puntos_baja": 6,
+        "puntos_pre_fermento": 6,
         "puntos_optimos": 17,
         "penalizacion_colapso": -5,
-        "monedas_baja": 19,
+        "monedas_pre_fermento": 19,
         "monedas_optima": 26,
-        "monedas_sobre": 16
+        "monedas_colapso": 16
       },
       {
         "id": "pumpernickel",
@@ -996,24 +1064,28 @@
           6
         ],
         "bono_sabor_pts": 8,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          9
+        ],
+        "zona_pre_fermento": [
+          10,
           15
         ],
         "zona_optima": [
           16,
           18
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           19,
           20
         ],
-        "puntos_baja": 8,
+        "puntos_pre_fermento": 8,
         "puntos_optimos": 20,
         "penalizacion_colapso": -8,
-        "monedas_baja": 16,
+        "monedas_pre_fermento": 16,
         "monedas_optima": 28,
-        "monedas_sobre": 12
+        "monedas_colapso": 12
       },
       {
         "id": "focaccia",
@@ -1032,24 +1104,28 @@
           2
         ],
         "bono_sabor_pts": 2,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          4
+        ],
+        "zona_pre_fermento": [
+          5,
           9
         ],
         "zona_optima": [
           10,
           14
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           15,
           20
         ],
-        "puntos_baja": 3,
+        "puntos_pre_fermento": 3,
         "puntos_optimos": 12,
         "penalizacion_colapso": -3,
-        "monedas_baja": 15,
+        "monedas_pre_fermento": 15,
         "monedas_optima": 19,
-        "monedas_sobre": 13
+        "monedas_colapso": 13
       },
       {
         "id": "focaccia",
@@ -1068,24 +1144,28 @@
           2
         ],
         "bono_sabor_pts": 2,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          4
+        ],
+        "zona_pre_fermento": [
+          5,
           9
         ],
         "zona_optima": [
           10,
           14
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           15,
           20
         ],
-        "puntos_baja": 3,
+        "puntos_pre_fermento": 3,
         "puntos_optimos": 12,
         "penalizacion_colapso": -3,
-        "monedas_baja": 15,
+        "monedas_pre_fermento": 15,
         "monedas_optima": 19,
-        "monedas_sobre": 13
+        "monedas_colapso": 13
       },
       {
         "id": "pan_de_molde",
@@ -1104,24 +1184,28 @@
           2
         ],
         "bono_sabor_pts": 2,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          3
+        ],
+        "zona_pre_fermento": [
+          4,
           8
         ],
         "zona_optima": [
           9,
           14
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           15,
           20
         ],
-        "puntos_baja": 3,
+        "puntos_pre_fermento": 3,
         "puntos_optimos": 9,
         "penalizacion_colapso": -2,
-        "monedas_baja": 12,
+        "monedas_pre_fermento": 12,
         "monedas_optima": 16,
-        "monedas_sobre": 10
+        "monedas_colapso": 10
       },
       {
         "id": "pan_de_campo",
@@ -1139,24 +1223,28 @@
           3
         ],
         "bono_sabor_pts": 3,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          5
+        ],
+        "zona_pre_fermento": [
+          6,
           10
         ],
         "zona_optima": [
           11,
           15
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           16,
           20
         ],
-        "puntos_baja": 4,
+        "puntos_pre_fermento": 4,
         "puntos_optimos": 10,
         "penalizacion_colapso": -2,
-        "monedas_baja": 13,
+        "monedas_pre_fermento": 13,
         "monedas_optima": 17,
-        "monedas_sobre": 11
+        "monedas_colapso": 11
       },
       {
         "id": "focaccia",
@@ -1175,24 +1263,28 @@
           2
         ],
         "bono_sabor_pts": 2,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          4
+        ],
+        "zona_pre_fermento": [
+          5,
           9
         ],
         "zona_optima": [
           10,
           14
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           15,
           20
         ],
-        "puntos_baja": 3,
+        "puntos_pre_fermento": 3,
         "puntos_optimos": 12,
         "penalizacion_colapso": -3,
-        "monedas_baja": 15,
+        "monedas_pre_fermento": 15,
         "monedas_optima": 19,
-        "monedas_sobre": 13
+        "monedas_colapso": 13
       },
       {
         "id": "pan_de_molde",
@@ -1211,24 +1303,28 @@
           2
         ],
         "bono_sabor_pts": 2,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          3
+        ],
+        "zona_pre_fermento": [
+          4,
           8
         ],
         "zona_optima": [
           9,
           14
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           15,
           20
         ],
-        "puntos_baja": 3,
+        "puntos_pre_fermento": 3,
         "puntos_optimos": 9,
         "penalizacion_colapso": -2,
-        "monedas_baja": 12,
+        "monedas_pre_fermento": 12,
         "monedas_optima": 16,
-        "monedas_sobre": 10
+        "monedas_colapso": 10
       },
       {
         "id": "baguette",
@@ -1246,24 +1342,28 @@
           2
         ],
         "bono_sabor_pts": 3,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          5
+        ],
+        "zona_pre_fermento": [
+          6,
           11
         ],
         "zona_optima": [
           12,
           15
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           16,
           20
         ],
-        "puntos_baja": 5,
+        "puntos_pre_fermento": 5,
         "puntos_optimos": 11,
         "penalizacion_colapso": -2,
-        "monedas_baja": 14,
+        "monedas_pre_fermento": 14,
         "monedas_optima": 18,
-        "monedas_sobre": 12
+        "monedas_colapso": 12
       },
       {
         "id": "pan_de_campo",
@@ -1281,24 +1381,28 @@
           3
         ],
         "bono_sabor_pts": 3,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          5
+        ],
+        "zona_pre_fermento": [
+          6,
           10
         ],
         "zona_optima": [
           11,
           15
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           16,
           20
         ],
-        "puntos_baja": 4,
+        "puntos_pre_fermento": 4,
         "puntos_optimos": 10,
         "penalizacion_colapso": -2,
-        "monedas_baja": 13,
+        "monedas_pre_fermento": 13,
         "monedas_optima": 17,
-        "monedas_sobre": 11
+        "monedas_colapso": 11
       },
       {
         "id": "focaccia",
@@ -1317,24 +1421,28 @@
           2
         ],
         "bono_sabor_pts": 2,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          4
+        ],
+        "zona_pre_fermento": [
+          5,
           9
         ],
         "zona_optima": [
           10,
           14
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           15,
           20
         ],
-        "puntos_baja": 3,
+        "puntos_pre_fermento": 3,
         "puntos_optimos": 12,
         "penalizacion_colapso": -3,
-        "monedas_baja": 15,
+        "monedas_pre_fermento": 15,
         "monedas_optima": 19,
-        "monedas_sobre": 13
+        "monedas_colapso": 13
       },
       {
         "id": "pan_de_campo",
@@ -1352,24 +1460,28 @@
           3
         ],
         "bono_sabor_pts": 3,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          5
+        ],
+        "zona_pre_fermento": [
+          6,
           10
         ],
         "zona_optima": [
           11,
           15
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           16,
           20
         ],
-        "puntos_baja": 4,
+        "puntos_pre_fermento": 4,
         "puntos_optimos": 10,
         "penalizacion_colapso": -2,
-        "monedas_baja": 13,
+        "monedas_pre_fermento": 13,
         "monedas_optima": 17,
-        "monedas_sobre": 11
+        "monedas_colapso": 11
       },
       {
         "id": "baguette",
@@ -1387,24 +1499,28 @@
           2
         ],
         "bono_sabor_pts": 3,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          5
+        ],
+        "zona_pre_fermento": [
+          6,
           11
         ],
         "zona_optima": [
           12,
           15
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           16,
           20
         ],
-        "puntos_baja": 5,
+        "puntos_pre_fermento": 5,
         "puntos_optimos": 11,
         "penalizacion_colapso": -2,
-        "monedas_baja": 14,
+        "monedas_pre_fermento": 14,
         "monedas_optima": 18,
-        "monedas_sobre": 12
+        "monedas_colapso": 12
       },
       {
         "id": "baguette",
@@ -1422,24 +1538,28 @@
           2
         ],
         "bono_sabor_pts": 3,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          5
+        ],
+        "zona_pre_fermento": [
+          6,
           11
         ],
         "zona_optima": [
           12,
           15
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           16,
           20
         ],
-        "puntos_baja": 5,
+        "puntos_pre_fermento": 5,
         "puntos_optimos": 11,
         "penalizacion_colapso": -2,
-        "monedas_baja": 14,
+        "monedas_pre_fermento": 14,
         "monedas_optima": 18,
-        "monedas_sobre": 12
+        "monedas_colapso": 12
       },
       {
         "id": "pan_de_molde",
@@ -1458,24 +1578,28 @@
           2
         ],
         "bono_sabor_pts": 2,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          3
+        ],
+        "zona_pre_fermento": [
+          4,
           8
         ],
         "zona_optima": [
           9,
           14
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           15,
           20
         ],
-        "puntos_baja": 3,
+        "puntos_pre_fermento": 3,
         "puntos_optimos": 9,
         "penalizacion_colapso": -2,
-        "monedas_baja": 12,
+        "monedas_pre_fermento": 12,
         "monedas_optima": 16,
-        "monedas_sobre": 10
+        "monedas_colapso": 10
       },
       {
         "id": "pan_de_molde",
@@ -1494,24 +1618,28 @@
           2
         ],
         "bono_sabor_pts": 2,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          3
+        ],
+        "zona_pre_fermento": [
+          4,
           8
         ],
         "zona_optima": [
           9,
           14
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           15,
           20
         ],
-        "puntos_baja": 3,
+        "puntos_pre_fermento": 3,
         "puntos_optimos": 9,
         "penalizacion_colapso": -2,
-        "monedas_baja": 12,
+        "monedas_pre_fermento": 12,
         "monedas_optima": 16,
-        "monedas_sobre": 10
+        "monedas_colapso": 10
       }
     ],
     "descarte_recetas": [
@@ -1532,24 +1660,28 @@
           6
         ],
         "bono_sabor_pts": 8,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          9
+        ],
+        "zona_pre_fermento": [
+          10,
           15
         ],
         "zona_optima": [
           16,
           18
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           19,
           20
         ],
-        "puntos_baja": 8,
+        "puntos_pre_fermento": 8,
         "puntos_optimos": 20,
         "penalizacion_colapso": -8,
-        "monedas_baja": 16,
+        "monedas_pre_fermento": 16,
         "monedas_optima": 28,
-        "monedas_sobre": 12
+        "monedas_colapso": 12
       },
       {
         "id": "panettone",
@@ -1571,24 +1703,28 @@
           1
         ],
         "bono_sabor_pts": 8,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          10
+        ],
+        "zona_pre_fermento": [
+          11,
           16
         ],
         "zona_optima": [
           17,
           18
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           19,
           20
         ],
-        "puntos_baja": 8,
+        "puntos_pre_fermento": 8,
         "puntos_optimos": 16,
         "penalizacion_colapso": -8,
-        "monedas_baja": 13,
+        "monedas_pre_fermento": 13,
         "monedas_optima": 22,
-        "monedas_sobre": 10
+        "monedas_colapso": 10
       },
       {
         "id": "pan_graham",
@@ -1607,24 +1743,28 @@
           5
         ],
         "bono_sabor_pts": 6,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          6
+        ],
+        "zona_pre_fermento": [
+          7,
           13
         ],
         "zona_optima": [
           14,
           17
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           18,
           20
         ],
-        "puntos_baja": 6,
+        "puntos_pre_fermento": 6,
         "puntos_optimos": 19,
         "penalizacion_colapso": -6,
-        "monedas_baja": 18,
+        "monedas_pre_fermento": 18,
         "monedas_optima": 26,
-        "monedas_sobre": 15
+        "monedas_colapso": 15
       },
       {
         "id": "hogaza_centeno",
@@ -1643,24 +1783,28 @@
           5
         ],
         "bono_sabor_pts": 6,
-        "zona_baja": [
+        "zona_crecimiento": [
           1,
+          6
+        ],
+        "zona_pre_fermento": [
+          7,
           12
         ],
         "zona_optima": [
           13,
           16
         ],
-        "zona_sobrefermentada": [
+        "zona_colapso": [
           17,
           20
         ],
-        "puntos_baja": 6,
+        "puntos_pre_fermento": 6,
         "puntos_optimos": 17,
         "penalizacion_colapso": -5,
-        "monedas_baja": 20,
+        "monedas_pre_fermento": 20,
         "monedas_optima": 27,
-        "monedas_sobre": 17
+        "monedas_colapso": 17
       }
     ],
     "posiciones_harina": {

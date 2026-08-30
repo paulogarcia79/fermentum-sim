@@ -61,10 +61,12 @@
 * **Costo:** 1 PA.
 * **Límite:** 1 vez por día (por espacio de acción — ver §1). No aplica al colapso automático de Fase III (sobrefermentación), que no pasa por este espacio ni consume PA.
 * **Efecto:** El jugador obtiene Puntos de Maestría según la zona en la que se encuentre el marcador. Al hornear, además cobra ingresos en Monedas, y si está en Zona Óptima también recibe Datos de Investigación.
+* **Prohibición:** una masa en **Crecimiento** no se puede hornear — todavía no es pan. `ActionManager.accion_F_hornear` lanza `RuleViolationError` y `disponibilidad.py` apaga el espacio con el motivo "La masa aún está creciendo". Se comprueba contra las zonas **efectivas** del jugador, aunque el crecimiento nunca se amplía, de modo que esa frontera no se mueve al instalar el Módulo Analítico. Para abandonar una masa que aún crece está el Simposio Técnico (1 Dato). Esto es lo que cierra el agujero de iniciar una receta y hornearla el mismo día desde la casilla 0, que pagaba como zona baja.
 * **Resolución por zona:**
+    * *Crecimiento:* no se hornea (ver arriba). Sin puntos, sin Monedas, sin Datos.
     * *Zona Óptima:* Ingreso completo en Monedas (`monedas_optima`) + Puntos de Maestría íntegros (`puntos_optimos`) + Datos de Investigación (1; **2 con Módulo Analítico**, y **3** si además es el centro exacto). Las zonas se leen ya ensanchadas por el Módulo del jugador: una posición que sin la mejora sería zona baja puede pagar como óptima con ella.
-    * *Zona Baja:* Venta con margen reducido en Monedas (`monedas_baja`) + Puntos de Maestría reducidos (`puntos_baja`), sin Datos.
-    * *Zona Sobre-fermentada (colapso, Fase III):* Recuperación del coste base en Monedas (`monedas_sobre`) + Puntos de Maestría negativos (`penalizacion_colapso`), sin Datos.
+    * *Pre-fermento:* Venta con margen reducido en Monedas (`monedas_pre_fermento`) + Puntos de Maestría reducidos (`puntos_pre_fermento`), sin Datos.
+    * *Colapso (Fase III):* Recuperación del coste base en Monedas (`monedas_colapso`) + Puntos de Maestría negativos (`penalizacion_colapso`), sin Datos.
 * **Bono de Sabor:** si la carta conserva el Cubo de Acidez sellado (y el horneado no fue un colapso), se suma el bono de Puntos de Maestría impreso en la carta (`bono_sabor_pts`) **y** +2 Monedas adicionales al ingreso de la venta.
 
 ### G. Investigar Protocolo

@@ -154,16 +154,21 @@ def _render_slot(idx: int, slot: Optional[FermentationSlot]) -> str:
         return _c(_C.DIM, f"    {nombre}: — libre —")
     receta = slot.recipe.nombre
     pos = slot.posicion_track
+    # Zonas IMPRESAS: la CLI no conoce al propietario aquí, así que no puede aplicar
+    # la ampliación del Módulo Analítico. Ver _render_slot's caller si algún día
+    # necesita las efectivas.
     zo_min, zo_max = slot.recipe.zona_optima
-    zsf_min = slot.recipe.zona_sobrefermentada[0]
+    receta_carta = slot.recipe
 
     # Indicador de zona
-    if pos >= zsf_min:
-        zona_str = _c(_C.RED + _C.BOLD, f"POS {pos:>2} ⚠ SOBREFERMENTADA")
-    elif zo_min <= pos <= zo_max:
+    if receta_carta.esta_en_colapso(pos):
+        zona_str = _c(_C.RED + _C.BOLD, f"POS {pos:>2} ⚠ COLAPSO")
+    elif receta_carta.esta_en_zona_optima(pos):
         zona_str = _c(_C.GREEN, f"POS {pos:>2} ✔ Zona Óptima [{zo_min}-{zo_max}]")
+    elif receta_carta.esta_en_pre_fermento(pos):
+        zona_str = _c(_C.YELLOW, f"POS {pos:>2}   Pre-fermento")
     else:
-        zona_str = _c(_C.YELLOW, f"POS {pos:>2}   Zona Baja")
+        zona_str = _c(_C.DIM, f"POS {pos:>2}   Crecimiento (no se hornea)")
 
     dado_str = _c(_C.CYAN, f"D{slot.dado_inoculo}")
     bono_str = _c(_C.MAGENTA, "♦Bono") if slot.bono_sabor else _c(_C.DIM, "○")

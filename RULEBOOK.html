@@ -21,6 +21,8 @@
     --accent-monedas: #93691a;
     --accent-datos: #4c58ab;
 
+    --zone-crecimiento-bg: #f7f2e8;
+    --zone-crecimiento-ink: #9a8b6d;
     --zone-baja-bg: #f3e6cd;
     --zone-baja-ink: #7a5a17;
     --zone-optima-bg: #dcefdc;
@@ -53,6 +55,8 @@
       --accent-monedas: #d1a740;
       --accent-datos: #8a94db;
 
+      --zone-crecimiento-bg: #2a2720;
+      --zone-crecimiento-ink: #9c917c;
       --zone-baja-bg: #3a3221;
       --zone-baja-ink: #e0bc74;
       --zone-optima-bg: #223328;
@@ -474,6 +478,7 @@
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
 
+  td.z-crecimiento { background: var(--zone-crecimiento-bg) !important; color: var(--zone-crecimiento-ink); font-weight: 400; }
   td.z-baja { background: var(--zone-baja-bg) !important; color: var(--zone-baja-ink); font-weight: 600; }
   td.z-optima { background: var(--zone-optima-bg) !important; color: var(--zone-optima-ink); font-weight: 600; }
   td.z-sobre { background: var(--zone-sobre-bg) !important; color: var(--zone-sobre-ink); font-weight: 600; }
@@ -493,6 +498,7 @@
     padding: 0.22rem 0.6rem;
     border-radius: 5px;
   }
+  .zone-legend .lc { background: var(--zone-crecimiento-bg); color: var(--zone-crecimiento-ink); }
   .zone-legend .lb { background: var(--zone-baja-bg); color: var(--zone-baja-ink); }
   .zone-legend .lo { background: var(--zone-optima-bg); color: var(--zone-optima-ink); }
   .zone-legend .ls { background: var(--zone-sobre-bg); color: var(--zone-sobre-ink); }
@@ -757,11 +763,13 @@
 
         <h3 class="sub">F · Hornear y Vender <em class="aside">(Finalización de Protocolo)</em></h3>
         <p><strong>Costo:</strong> 1 PA. <strong>Límite:</strong> 1 vez por día (por espacio de acción) — no aplica al colapso automático de Fase III. Finaliza el protocolo de una masa y la vende de inmediato: se obtienen Puntos de Maestría, Monedas y (en Zona Óptima) Datos de Investigación, según la zona del track donde se encuentre el marcador.</p>
+        <p><strong>No se puede hornear una masa en Crecimiento.</strong> Todavía no es pan: la Acción F la rechaza y el espacio aparece deshabilitado. Toda masa nace en Crecimiento al iniciarse la receta y sale de él en cuanto la fermentación la lleva al Pre-fermento. Para deshacerte de una masa que aún crece, el <strong>Simposio Técnico</strong> la descarta y paga 1 Dato.</p>
 
         <div class="zone-legend">
-          <span class="lb">Zona Baja — masa cruda</span>
+          <span class="lc">Crecimiento — no se hornea</span>
+          <span class="lb">Pre-fermento — masa cruda</span>
           <span class="lo">Zona Óptima</span>
-          <span class="ls">Zona Sobre-fermentada — colapso</span>
+          <span class="ls">Colapso</span>
         </div>
 
         <div class="table-wrap">
@@ -769,9 +777,10 @@
             <caption>Resolución de Hornear y Vender por zona</caption>
             <thead><tr><th>Zona</th><th>Puntos de Maestría</th><th>Monedas</th><th>Datos</th></tr></thead>
             <tbody>
-              <tr><td class="z-optima">Óptima</td><td class="wrap">Puntos íntegros de la carta</td><td class="wrap">Ingreso completo</td><td class="wrap">Sí (+1, +1 extra en centro exacto con Módulo Analítico)</td></tr>
-              <tr><td class="z-baja">Baja</td><td class="wrap">Puntos reducidos</td><td class="wrap">Venta con margen reducido</td><td class="wrap">No</td></tr>
-              <tr><td class="z-sobre">Sobre-fermentada</td><td class="wrap">Penalización negativa</td><td class="wrap">Recuperación del coste base, sin margen</td><td class="wrap">No</td></tr>
+              <tr><td class="z-crecimiento">Crecimiento</td><td class="wrap">—</td><td class="wrap">—</td><td class="wrap">— <em>no se hornea</em></td></tr>
+              <tr><td class="z-baja">Pre-fermento</td><td class="wrap">Puntos reducidos</td><td class="wrap">Venta con margen reducido</td><td class="wrap">No</td></tr>
+              <tr><td class="z-optima">Óptima</td><td class="wrap">Puntos íntegros de la carta</td><td class="wrap">Ingreso completo</td><td class="wrap">Sí (+1, +1 con Módulo Analítico, +1 más en centro exacto)</td></tr>
+              <tr><td class="z-sobre">Colapso</td><td class="wrap">Penalización negativa</td><td class="wrap">Recuperación del coste base, sin margen</td><td class="wrap">No</td></tr>
             </tbody>
           </table>
         </div>
@@ -842,23 +851,23 @@
             <thead>
               <tr>
                 <th>Receta</th><th>Grado</th><th>Coste<br><span style="font-weight:400">Monedas</span></th><th>Harina<br><span style="font-weight:400">siempre 10 (100%) en total</span></th><th>Agua<br><span style="font-weight:400">tokens (hidratación)</span></th><th>Acidez diana (bono)</th>
-                <th>Zona baja</th><th>Zona óptima</th><th>Zona sobre</th>
+                <th>Crecim.</th><th>Pre-ferm.</th><th>Óptima</th><th>Colapso</th>
                 <th>Puntos B/O/S</th><th>Monedas B/O/S</th>
               </tr>
             </thead>
             <tbody>
-<tr><td class="name">Pan de Campo</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>12 (60%)</td><td>Nivel 3 (+3)</td><td class="z-baja">1–10</td><td class="z-optima">11–15</td><td class="z-sobre">16–20</td><td>4 / 10 / −2</td><td>13 / 17 / 11</td></tr>
-              <tr><td class="name">Pan de Molde</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>11 (55%)</td><td>Nivel 1–2 (+2)</td><td class="z-baja">1–8</td><td class="z-optima">9–14</td><td class="z-sobre">15–20</td><td>3 / 9 / −2</td><td>12 / 16 / 10</td></tr>
-              <tr><td class="name">Baguette</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>13 (65%)</td><td>Nivel 2 (+3)</td><td class="z-baja">1–11</td><td class="z-optima">12–15</td><td class="z-sobre">16–20</td><td>5 / 11 / −2</td><td>14 / 18 / 12</td></tr>
-              <tr><td class="name">Focaccia</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>15 (75%)</td><td>Nivel 1–2 (+2)</td><td class="z-baja">1–9</td><td class="z-optima">10–14</td><td class="z-sobre">15–20</td><td>3 / 12 / −3</td><td>15 / 19 / 13</td></tr>
-              <tr><td class="name">Miche</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Integral 50%</td><td>14 (70%)</td><td>Nivel 3–4 (+4)</td><td class="z-baja">1–11</td><td class="z-optima">12–16</td><td class="z-sobre">17–20</td><td>5 / 13 / −4</td><td>16 / 20 / 13</td></tr>
-              <tr><td class="name">Pizza Napolitana</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Integral 50%</td><td>13 (62%)</td><td>Nivel 3 (+4)</td><td class="z-baja">1–10</td><td class="z-optima">11–14</td><td class="z-sobre">15–20</td><td>4 / 14 / −4</td><td>15 / 21 / 12</td></tr>
-              <tr><td class="name">Brioche</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>11 (52%)</td><td>Nivel 1 (+5)</td><td class="z-baja">1–14</td><td class="z-optima">15–17</td><td class="z-sobre">18–20</td><td>5 / 16 / −6</td><td>14 / 21 / 11</td></tr>
-              <tr><td class="name">Panettone</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>10 (47%)</td><td>Nivel 1 (+8)</td><td class="z-baja">1–16</td><td class="z-optima">17–18</td><td class="z-sobre">19–20</td><td>8 / 16 / −8</td><td>13 / 22 / 10</td></tr>
-              <tr><td class="name">Hogaza Centeno</td><td>Avanzada</td><td>3</td><td class="wrap">Centeno 100%</td><td>14 (67%)</td><td>Nivel 4–5 (+6)</td><td class="z-baja">1–12</td><td class="z-optima">13–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>20 / 27 / 17</td></tr>
-              <tr><td class="name">Pan Semillas</td><td>Avanzada</td><td>3</td><td class="wrap">Integral 100%</td><td>16 (78%)</td><td>Nivel 3–4 (+7)</td><td class="z-baja">1–13</td><td class="z-optima">14–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>19 / 26 / 16</td></tr>
-              <tr><td class="name">Pan Graham</td><td>Avanzada</td><td>3</td><td class="wrap">Integral 100%</td><td>16 (80%)</td><td>Nivel 4–5 (+6)</td><td class="z-baja">1–13</td><td class="z-optima">14–17</td><td class="z-sobre">18–20</td><td>6 / 19 / −6</td><td>18 / 26 / 15</td></tr>
-              <tr><td class="name">Pumpernickel</td><td>Avanzada</td><td>3</td><td class="wrap">Centeno 100%</td><td>17 (85%)</td><td>Nivel 5–6 (+8)</td><td class="z-baja">1–15</td><td class="z-optima">16–18</td><td class="z-sobre">19–20</td><td>8 / 20 / −8</td><td>16 / 28 / 12</td></tr>
+<tr><td class="name">Pan de Campo</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>12 (60%)</td><td>Nivel 3 (+3)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–10</td><td class="z-optima">11–15</td><td class="z-sobre">16–20</td><td>4 / 10 / −2</td><td>13 / 17 / 11</td></tr>
+              <tr><td class="name">Pan de Molde</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>11 (55%)</td><td>Nivel 1–2 (+2)</td><td class="z-crecimiento">1–3</td><td class="z-baja">4–8</td><td class="z-optima">9–14</td><td class="z-sobre">15–20</td><td>3 / 9 / −2</td><td>12 / 16 / 10</td></tr>
+              <tr><td class="name">Baguette</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>13 (65%)</td><td>Nivel 2 (+3)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–11</td><td class="z-optima">12–15</td><td class="z-sobre">16–20</td><td>5 / 11 / −2</td><td>14 / 18 / 12</td></tr>
+              <tr><td class="name">Focaccia</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>15 (75%)</td><td>Nivel 1–2 (+2)</td><td class="z-crecimiento">1–4</td><td class="z-baja">5–9</td><td class="z-optima">10–14</td><td class="z-sobre">15–20</td><td>3 / 12 / −3</td><td>15 / 19 / 13</td></tr>
+              <tr><td class="name">Miche</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Integral 50%</td><td>14 (70%)</td><td>Nivel 3–4 (+4)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–11</td><td class="z-optima">12–16</td><td class="z-sobre">17–20</td><td>5 / 13 / −4</td><td>16 / 20 / 13</td></tr>
+              <tr><td class="name">Pizza Napolitana</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Integral 50%</td><td>13 (62%)</td><td>Nivel 3 (+4)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–10</td><td class="z-optima">11–14</td><td class="z-sobre">15–20</td><td>4 / 14 / −4</td><td>15 / 21 / 12</td></tr>
+              <tr><td class="name">Brioche</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>11 (52%)</td><td>Nivel 1 (+5)</td><td class="z-crecimiento">1–7</td><td class="z-baja">8–14</td><td class="z-optima">15–17</td><td class="z-sobre">18–20</td><td>5 / 16 / −6</td><td>14 / 21 / 11</td></tr>
+              <tr><td class="name">Panettone</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>10 (47%)</td><td>Nivel 1 (+8)</td><td class="z-crecimiento">1–10</td><td class="z-baja">11–16</td><td class="z-optima">17–18</td><td class="z-sobre">19–20</td><td>8 / 16 / −8</td><td>13 / 22 / 10</td></tr>
+              <tr><td class="name">Hogaza Centeno</td><td>Avanzada</td><td>3</td><td class="wrap">Centeno 100%</td><td>14 (67%)</td><td>Nivel 4–5 (+6)</td><td class="z-crecimiento">1–6</td><td class="z-baja">7–12</td><td class="z-optima">13–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>20 / 27 / 17</td></tr>
+              <tr><td class="name">Pan Semillas</td><td>Avanzada</td><td>3</td><td class="wrap">Integral 100%</td><td>16 (78%)</td><td>Nivel 3–4 (+7)</td><td class="z-crecimiento">1–6</td><td class="z-baja">7–13</td><td class="z-optima">14–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>19 / 26 / 16</td></tr>
+              <tr><td class="name">Pan Graham</td><td>Avanzada</td><td>3</td><td class="wrap">Integral 100%</td><td>16 (80%)</td><td>Nivel 4–5 (+6)</td><td class="z-crecimiento">1–6</td><td class="z-baja">7–13</td><td class="z-optima">14–17</td><td class="z-sobre">18–20</td><td>6 / 19 / −6</td><td>18 / 26 / 15</td></tr>
+              <tr><td class="name">Pumpernickel</td><td>Avanzada</td><td>3</td><td class="wrap">Centeno 100%</td><td>17 (85%)</td><td>Nivel 5–6 (+8)</td><td class="z-crecimiento">1–9</td><td class="z-baja">10–15</td><td class="z-optima">16–18</td><td class="z-sobre">19–20</td><td>8 / 20 / −8</td><td>16 / 28 / 12</td></tr>
             </tbody>
           </table>
         </div>

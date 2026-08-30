@@ -50,10 +50,39 @@ const ampliada = computed(() => tieneZonaAmpliada(props.receta))
 
 const bandas = computed<BandaPista[]>(() => {
   const z = zonas.value
+  // `etiqueta`/`rango` viajan CON la banda: PistaMedida las posiciona con la misma
+  // aritmetica que usa para dibujarla, asi que el nombre no puede desalinearse de la
+  // zona que nombra. Los rangos salen de `zonasDe`, o sea de las zonas EFECTIVAS:
+  // con Modulo Analitico instalado, la optima se etiqueta ya ensanchada.
   return [
-    { desde: z.baja[0] - 1, hasta: z.baja[1], tono: 'baja' },
-    { desde: z.optima[0] - 1, hasta: z.optima[1], tono: 'optima' },
-    { desde: z.sobre[0] - 1, hasta: TRACK_MAX, tono: 'sobre' },
+    {
+      desde: z.crecimiento[0] - 1,
+      hasta: z.crecimiento[1],
+      tono: 'crecimiento',
+      etiqueta: 'Crecimiento',
+      rango: `${z.crecimiento[0]}–${z.crecimiento[1]}`,
+    },
+    {
+      desde: z.preFermento[0] - 1,
+      hasta: z.preFermento[1],
+      tono: 'baja',
+      etiqueta: 'Pre-fermento',
+      rango: `${z.preFermento[0]}–${z.preFermento[1]}`,
+    },
+    {
+      desde: z.optima[0] - 1,
+      hasta: z.optima[1],
+      tono: 'optima',
+      etiqueta: 'Óptima',
+      rango: `${z.optima[0]}–${z.optima[1]}`,
+    },
+    {
+      desde: z.colapso[0] - 1,
+      hasta: TRACK_MAX,
+      tono: 'sobre',
+      etiqueta: 'Colapso',
+      rango: `${z.colapso[0]}–${z.colapso[1]}`,
+    },
   ]
 })
 
@@ -128,7 +157,7 @@ const detalleAbierto = ref(false)
       <div class="escala-puntos">
         <PistaMedida :valor="null" :max="TRACK_MAX" :bandas="bandas" modo="posicion" lectura="" compacta />
         <div class="etiquetas-puntos">
-          <span class="pts baja dato">{{ receta.puntos_baja }}</span>
+          <span class="pts baja dato">{{ receta.puntos_pre_fermento }}</span>
           <span class="pts optima dato">{{ receta.puntos_optimos }}</span>
           <span class="pts sobre dato">{{ receta.penalizacion_colapso }}</span>
         </div>
@@ -145,7 +174,7 @@ const detalleAbierto = ref(false)
           Analítico, y +1 más en el centro exacto {{ centroExacto }})
         </p>
         <p>
-          Sobrefermentada desde {{ zonas.sobre[0] }}: colapso automático.<template v-if="ampliada">
+          Colapso desde {{ zonas.colapso[0] }}: horneado automático con penalización. Crecimiento 1–{{ zonas.crecimiento[1] }}: la masa aún no es pan, no se puede hornear.<template v-if="ampliada">
             Zona ensanchada por tu Módulo Analítico.</template
           >
         </p>
@@ -205,11 +234,6 @@ const detalleAbierto = ref(false)
         <div class="eyebrow">Track Biológico (Fermentación)</div>
         <div class="escala-puntos">
           <PistaMedida :valor="null" :max="TRACK_MAX" :bandas="bandas" modo="posicion" lectura="" />
-          <div class="etiquetas-zona">
-            <span class="baja">Baja</span>
-            <span class="optima">Óptima</span>
-            <span class="sobre">Sobre-fermentada</span>
-          </div>
         </div>
       </div>
 
@@ -325,22 +349,6 @@ const detalleAbierto = ref(false)
 
 .formula-base > .eyebrow {
   margin-bottom: var(--e1);
-}
-
-.etiquetas-zona {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--t-micro);
-  color: var(--tinta-tenue);
-  margin-top: 2px;
-}
-
-.etiquetas-zona .optima {
-  color: var(--vital);
-}
-
-.etiquetas-zona .sobre {
-  color: var(--riesgo);
 }
 
 /* -- Modo compacto -- */

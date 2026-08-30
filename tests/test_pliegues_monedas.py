@@ -331,7 +331,7 @@ def test_el_sobrepliegue_hacia_sobrefermentada_es_legal_y_no_se_recorta() -> Non
 def test_fase_iii_hornea_en_colapso_la_masa_sobreplegada() -> None:
     engine, manager, p1 = _partida()
     slot = _con_masas(p1, 1)[0]
-    slot.posicion_track = slot.recipe.zona_sobrefermentada[0] - 1
+    slot.posicion_track = slot.recipe.zona_colapso[0] - 1
     horneados0 = len(p1.archivo_horneado_exitoso)
 
     engine.iniciar_dia()

@@ -1,11 +1,14 @@
 <script setup lang="ts">
-// Tabla de rendimiento por zona (Monedas / Puntos de Maestria / Datos) --
-// monedas_*/puntos_*/penalizacion_colapso son campos fijos de Recipe (nunca
-// mostrados en ningun otro lugar de la UI hasta ahora); Datos es una regla
-// pareja para todas las recetas (0 en Baja/Sobre, 1 en Optima, +1 extra solo
-// en el centro exacto y solo con Modulo Analitico -- engine.py:
-// _calcular_datos_horneado), no un campo por receta, asi que se anota como
-// nota al pie en vez de una columna con contenido variable.
+// Tabla de rendimiento por las CUATRO zonas (Monedas / Puntos de Maestria / Datos).
+//
+// Crecimiento no tiene numeros a proposito: no se puede hornear ahi (Accion F la
+// rechaza), asi que la carta no imprime pago para esa zona -- una fila de guiones
+// ensena la regla mejor que tres ceros, que insinuarian que hornear ahi es legal
+// pero pobre.
+//
+// Datos SIGUE siendo una regla pareja para todas las recetas, no un campo por
+// receta: 0 salvo en Optima, donde da 1 (+1 con Modulo Analitico y +1 mas en el
+// centro exacto -- engine.py: _calcular_datos_horneado). De ahi la nota al pie.
 import { computed } from 'vue'
 import type { Recipe } from '../types'
 import IconoMonedas from './IconoMonedas.vue'
@@ -29,6 +32,12 @@ const centroExacto = computed(() => Math.floor((props.receta.zona_optima[0] + pr
         </tr>
       </thead>
       <tbody>
+        <tr class="fila-crecimiento">
+          <th>Crecimiento</th>
+          <td>—</td>
+          <td>—</td>
+          <td>—</td>
+        </tr>
         <tr class="fila-optima">
           <th>Óptima</th>
           <td>{{ receta.monedas_optima }}</td>
@@ -36,20 +45,21 @@ const centroExacto = computed(() => Math.floor((props.receta.zona_optima[0] + pr
           <td>1*</td>
         </tr>
         <tr class="fila-baja">
-          <th>Baja</th>
-          <td>{{ receta.monedas_baja }}</td>
-          <td>{{ receta.puntos_baja }}</td>
+          <th>Pre-fermento</th>
+          <td>{{ receta.monedas_pre_fermento }}</td>
+          <td>{{ receta.puntos_pre_fermento }}</td>
           <td>0</td>
         </tr>
         <tr class="fila-sobre">
-          <th>Sobre</th>
-          <td>{{ receta.monedas_sobre }}</td>
+          <th>Colapso</th>
+          <td>{{ receta.monedas_colapso }}</td>
           <td>{{ receta.penalizacion_colapso }}</td>
           <td>0</td>
         </tr>
       </tbody>
     </table>
-    <p class="nota-pie">* +1 Dato extra en el centro exacto ({{ centroExacto }}) con Módulo Analítico.</p>
+    <p class="nota-pie">Crecimiento (1–{{ receta.zona_crecimiento[1] }}): la masa aún no es pan, no se puede hornear.</p>
+    <p class="nota-pie">* +1 Dato con Módulo Analítico, y +1 más en el centro exacto ({{ centroExacto }}).</p>
     <p class="nota-pie">Bono de Sabor (sin colapso): +{{ receta.bono_sabor_pts }} Maestría, +2 Monedas.</p>
   </div>
 </template>
@@ -88,6 +98,11 @@ const centroExacto = computed(() => Math.floor((props.receta.zona_optima[0] + pr
   text-align: left;
   color: var(--tinta-tenue);
   font-weight: 400;
+}
+
+.fila-crecimiento td,
+.fila-crecimiento th {
+  color: var(--tinta-tenue);
 }
 
 .fila-optima {

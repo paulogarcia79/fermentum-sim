@@ -81,6 +81,17 @@ const enPartida = computed(() => store.sesion !== null && store.estado !== null)
   --lavado-verdin: rgba(78, 155, 143, 0.15);
   --lavado-riesgo: rgba(208, 85, 63, 0.12);
   --lavado-vital: rgba(123, 182, 98, 0.12);
+
+  /* Bandas de instrumento (PistaMedida). Los --lavado-* estan calibrados para
+     SUPERFICIES grandes -- una fila de tabla, un bloque de aviso -- donde un tinte
+     del 12% basta para teñir sin gritar. En un carril de 10px sobre --mesa (#100d0b)
+     ese mismo 12% compone a #1d2115: invisible. Estas versiones son el mismo color
+     a la opacidad que hace falta para leerse de un vistazo en una franja estrecha. */
+  --banda-vital: rgba(123, 182, 98, 0.38);
+  --banda-riesgo: rgba(208, 85, 63, 0.35);
+  --banda-neutra: rgba(162, 145, 124, 0.3);
+  --banda-tenue: rgba(162, 145, 124, 0.05);
+  --banda-trama: rgba(162, 145, 124, 0.24);
   --velo-modal: rgba(0, 0, 0, 0.72);
 
   /* Elevacion: las cartas son lo unico que se levanta de la mesa. */

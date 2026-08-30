@@ -34,9 +34,13 @@ const bandas = computed<BandaPista[]>(() => {
   const z = zonas.value
   if (!z) return []
   return [
-    { desde: z.baja[0] - 1, hasta: z.baja[1], tono: 'baja' },
+    // Crecimiento va con trama, no con un tono mas palido: es una zona de otra clase
+    // (no se puede hornear ahi). Sin etiquetas: aqui la masa tiene su propio marcador
+    // y la tarjeta compacta no tiene sitio para una fila de nombres.
+    { desde: z.crecimiento[0] - 1, hasta: z.crecimiento[1], tono: 'crecimiento' },
+    { desde: z.preFermento[0] - 1, hasta: z.preFermento[1], tono: 'baja' },
     { desde: z.optima[0] - 1, hasta: z.optima[1], tono: 'optima' },
-    { desde: z.sobre[0] - 1, hasta: TRACK_MAX, tono: 'sobre' },
+    { desde: z.colapso[0] - 1, hasta: TRACK_MAX, tono: 'sobre' },
   ]
 })
 
@@ -56,7 +60,7 @@ const posicionFantasma = computed(() => {
 const tonoProyectado = computed<'riesgo' | 'vital' | 'cobre' | null>(() => {
   const z = zonas.value
   if (!props.slot || posicionFantasma.value === null || !z) return null
-  if (posicionFantasma.value >= z.sobre[0]) return 'riesgo'
+  if (posicionFantasma.value >= z.colapso[0]) return 'riesgo'
   if (posicionFantasma.value >= z.optima[0] && posicionFantasma.value <= z.optima[1]) return 'vital'
   return 'cobre'
 })

@@ -121,15 +121,16 @@ def _receta_de_prueba(**overrides) -> Recipe:
         tokens_agua=12,
         acidez_diana=(3,),
         bono_sabor_pts=3,
-        zona_baja=(1, 10),
+        zona_crecimiento=(1, 5),
+        zona_pre_fermento=(6, 10),
         zona_optima=(11, 15),
-        zona_sobrefermentada=(16, 20),
-        puntos_baja=4,
+        zona_colapso=(16, 20),
+        puntos_pre_fermento=4,
         puntos_optimos=10,
         penalizacion_colapso=-2,
-        monedas_baja=13,
+        monedas_pre_fermento=13,
         monedas_optima=17,
-        monedas_sobre=11,
+        monedas_colapso=11,
     )
     campos.update(overrides)
     return Recipe(**campos)

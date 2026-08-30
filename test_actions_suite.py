@@ -331,8 +331,16 @@ p1.monedas = monedas_antes_e
 # ========================================================================
 print("--- F: Hornear ---")
 p1.estaciones_fermentacion = [slot, None, None]
-slot.posicion_track = 5
+# Una masa en CRECIMIENTO no se puede hornear: la masa todavia no es pan.
+slot.posicion_track = receta_b.zona_crecimiento[1]
 p1.puntos_accion = 2
+xraises(RuleViolationError, "F rechaza una masa en crecimiento", lambda: manager.accion_F_hornear(p1, slot_index=0))
+check("F rechazada no ocupa el espacio", lambda: None if "F" not in p1.acciones_pa_usadas_hoy else (_ for _ in ()).throw(AssertionError()))
+check("F rechazada no gasta PA", lambda: None if p1.puntos_accion == 2 else (_ for _ in ()).throw(AssertionError()))
+
+# Una casilla mas adelante ya es pre-fermento y si hornea.
+slot.posicion_track = receta_b.zona_pre_fermento[0]
+p1.acciones_pa_usadas_hoy = []
 
 rec = manager.accion_F_hornear(p1, slot_index=0)
 check("F: HorneadoRecord devuelto", lambda: None if rec is not None else (_ for _ in ()).throw(AssertionError()))

@@ -26,20 +26,26 @@ export interface Recipe {
   tokens_agua: number
   acidez_diana: number[]
   bono_sabor_pts: number
-  zona_baja: [number, number]
+  zona_crecimiento: [number, number]
+  zona_pre_fermento: [number, number]
   zona_optima: [number, number]
-  zona_sobrefermentada: [number, number]
-  puntos_baja: number
+  zona_colapso: [number, number]
+  puntos_pre_fermento: number
   puntos_optimos: number
   penalizacion_colapso: number
-  monedas_baja: number
+  monedas_pre_fermento: number
   monedas_optima: number
-  monedas_sobre: number
+  monedas_colapso: number
   // Zonas [baja, optima, sobre] ya ampliadas por el Modulo Analitico del jugador
   // que posee la carta. Solo lo inyecta server/views.py en las recetas que alguien
   // POSEE (carpeta, estaciones, archivos); las del mercado llegan sin el campo y se
   // leen con sus zonas impresas. Ver web/src/data/zonasReceta.ts.
-  zonas_efectivas?: [[number, number], [number, number], [number, number]]
+  zonas_efectivas?: [
+    [number, number],
+    [number, number],
+    [number, number],
+    [number, number],
+  ]
 }
 
 export interface FermentationSlot {
@@ -63,7 +69,7 @@ export interface HorneadoRecord {
    * asdict no incluye) -- nunca recalcular aqui. */
   puntos_totales: number
   /** Zona alcanzada al hornear, derivada por el servidor (logica de reglas). */
-  zona_resultado: 'colapso' | 'optima' | 'baja'
+  zona_resultado: 'colapso' | 'optima' | 'pre_fermento'
 }
 
 export interface Technologies {

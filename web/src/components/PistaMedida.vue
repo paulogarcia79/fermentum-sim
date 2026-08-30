@@ -19,7 +19,20 @@ import { computed } from 'vue'
 export interface BandaPista {
   desde: number
   hasta: number
-  tono: 'baja' | 'optima' | 'sobre' | 'neutra'
+  tono: 'crecimiento' | 'baja' | 'optima' | 'sobre' | 'neutra'
+  /**
+   * Nombre de la zona. Si CUALQUIER banda lo trae, la pista dibuja una fila de
+   * etiquetas bajo el carril, con cada celda dimensionada en proporcion a su banda
+   * -- asi la etiqueta y la banda que nombra no pueden desalinearse, que es lo que
+   * pasaria si el consumidor las posicionara por su cuenta.
+   */
+  etiqueta?: string
+  /**
+   * Rango legible ("6-11"), ya formateado por el consumidor. No se deriva aqui a
+   * proposito: `desde` usa una convencion de borde izquierdo con -1 (ver los
+   * consumidores) que este componente no tiene por que conocer.
+   */
+  rango?: string
 }
 
 type Tono = 'cobre' | 'vital' | 'riesgo' | 'frio' | 'verdin'
@@ -83,6 +96,14 @@ const ticks = computed(() => {
   return ms
 })
 
+const hayEtiquetas = computed(() => props.bandas.some((b) => b.etiqueta))
+
+// Un separador en el borde IZQUIERDO de cada banda salvo la primera (esa es el
+// principio del carril). Distinto de `ticks`, que es una regla fija cada 5 casillas
+// sin relacion con las zonas: esto marca donde una zona acaba y empieza la siguiente,
+// que es justo lo que no se veia con cuatro lavados pegados unos a otros.
+const separadores = computed(() => props.bandas.slice(1).map((b) => b.desde))
+
 const colorPrevisto = computed(() => (props.tonoPrevisto ? VAR_TONO[props.tonoPrevisto] : undefined))
 
 const lecturaFinal = computed(() => {
@@ -110,6 +131,13 @@ const lecturaFinal = computed(() => {
 
       <span v-for="t in ticks" :key="`t${t}`" class="tick" :style="{ left: `${pct(t)}%` }" />
 
+      <span
+        v-for="(sep, i) in separadores"
+        :key="`s${i}`"
+        class="separador"
+        :style="{ left: `${pct(sep)}%` }"
+      />
+
       <span v-if="modo === 'nivel' && valor !== null" class="relleno" :style="{ width: `${pct(valor)}%` }" />
 
       <span
@@ -121,6 +149,20 @@ const lecturaFinal = computed(() => {
     </div>
 
     <span v-if="lecturaFinal" class="lectura dato">{{ lecturaFinal }}</span>
+
+    <div v-if="hayEtiquetas" class="etiquetas-banda">
+      <span
+        v-for="(b, i) in bandas"
+        :key="`e${i}`"
+        class="celda-banda"
+        :class="`celda-${b.tono}`"
+        :style="{ flexGrow: pct(b.hasta) - pct(b.desde) }"
+        :title="b.etiqueta"
+      >
+        <span class="nombre-banda">{{ b.etiqueta }}</span>
+        <span v-if="b.rango" class="rango-banda dato">{{ b.rango }}</span>
+      </span>
+    </div>
   </div>
 </template>
 
@@ -179,14 +221,28 @@ const lecturaFinal = computed(() => {
   border-radius: 1px;
 }
 
+/* Crecimiento se distingue por TRAMA, no por tono: es una zona de otra clase
+   (no se hornea ahi), no una version palida del pre-fermento. Un rayado se lee
+   incluso en escala de grises o con la pantalla atenuada, que es donde dos lavados
+   del mismo color a distinta opacidad dejan de distinguirse. */
+.banda-crecimiento {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--banda-tenue),
+    var(--banda-tenue) 3px,
+    var(--banda-trama) 3px,
+    var(--banda-trama) 6px
+  );
+}
+
 .banda-baja {
-  background: rgba(162, 145, 124, 0.18);
+  background: var(--banda-neutra);
 }
 .banda-optima {
-  background: var(--lavado-vital);
+  background: var(--banda-vital);
 }
 .banda-sobre {
-  background: var(--lavado-riesgo);
+  background: var(--banda-riesgo);
 }
 .banda-neutra {
   background: rgba(162, 145, 124, 0.1);
@@ -198,6 +254,18 @@ const lecturaFinal = computed(() => {
   bottom: 0;
   width: 1px;
   background: var(--borde);
+  transform: translateX(-0.5px);
+}
+
+/* Limite REAL entre zonas, a diferencia de .tick (regla fija cada 5 casillas).
+   Sobresale del carril para que el corte se vea aunque las bandas vecinas tengan
+   tonos parecidos. */
+.separador {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--borde-fuerte);
   transform: translateX(-0.5px);
 }
 
@@ -233,5 +301,74 @@ const lecturaFinal = computed(() => {
   color: var(--tinta-tenue);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+/* -- Fila de etiquetas de zona (solo si alguna banda trae `etiqueta`) -- */
+.etiquetas-banda {
+  /* Debajo del carril y alineada con el: columna 2 cuando hay etiqueta de pista
+     (rejilla de 3), columna 1 cuando no (rejilla de 2). Espeja la misma condicion
+     `:has(.etiqueta)` que define las columnas mas arriba. */
+  grid-column: 2 / 3;
+  display: flex;
+  align-items: stretch;
+  margin-top: 3px;
+  font-size: var(--t-micro);
+  line-height: 1.15;
+  color: var(--tinta-tenue);
+}
+
+.pista-medida:not(:has(.etiqueta)) .etiquetas-banda {
+  grid-column: 1 / 2;
+}
+
+.celda-banda {
+  /* flex-grow va en proporcion al ancho de su banda (lo fija el :style inline),
+     asi la celda queda bajo la banda que nombra.
+
+     El min-width es deliberado y tiene un coste: la optima de Panettone son 2 de 20
+     casillas (~31px de 310), y el rango "17-18" necesita ~33px a 11px de mono, asi
+     que sin minimo se recortaria justo el numero que da la respuesta. Con el, las
+     celdas muy estrechas quedan un poco mas anchas que su banda y desplazan a las
+     vecinas: las etiquetas pasan a ser APROXIMADAS. La precision la siguen dando los
+     .separador del carril, que se dibujan en el limite exacto. */
+  flex-basis: 0;
+  min-width: 2.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-inline: 1px;
+  border-left: 1px solid var(--borde);
+}
+
+.celda-banda:first-child {
+  border-left: none;
+}
+
+.nombre-banda {
+  /* Una zona estrecha (la optima de Panettone son 2 de 20 casillas) no tiene sitio
+     para el nombre: se recorta y el `title` lo conserva completo. El rango, que es
+     corto, se mantiene siempre visible. */
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rango-banda {
+  font-size: var(--t-micro);
+  opacity: 0.85;
+}
+
+.celda-optima .nombre-banda {
+  color: var(--vital);
+}
+
+.celda-sobre .nombre-banda {
+  color: var(--riesgo);
+}
+
+.celda-crecimiento {
+  opacity: 0.75;
 }
 </style>

@@ -45,6 +45,14 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     harina_total = sum(player.reserva_harina.values())
     tiene_recurso_alimentar = harina_total >= 10 or player.reserva_agua >= 2
     hay_estacion_activa = len(player.masas_activas) > 0
+    # Una masa en crecimiento no se puede hornear (la Acción F la rechaza). Se mide
+    # contra las zonas EFECTIVAS, igual que ActionManager, para que el botón y la
+    # acción no puedan discrepar.
+    ampliacion_optima = engine.ampliacion_zona_optima(player)
+    hay_masa_horneable = any(
+        not slot.recipe.esta_en_crecimiento(slot.posicion_track, ampliacion_optima)
+        for _, slot in player.masas_activas
+    )
     hay_estacion_libre = player.indice_estacion_disponible is not None
     hay_receta_visible = any(r is not None for r in engine.market.recetas_visibles)
     # Precio de la receta visible MÁS BARATA, no el mínimo global: las Básicas viven
@@ -110,12 +118,18 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         "E" not in usados and (puede_plegar_masa or puede_recuperar_vitalidad),
         motivo_e,
     )
+    if "F" in usados:
+        motivo_f = "Ya usaste este espacio hoy"
+    elif not tiene_pa:
+        motivo_f = "Sin PA"
+    elif not hay_estacion_activa:
+        motivo_f = "Sin masas activas"
+    else:
+        motivo_f = "La masa aún está creciendo"
     agregar(
         "F",
-        "F" not in usados and tiene_pa and hay_estacion_activa,
-        "Ya usaste este espacio hoy"
-        if "F" in usados
-        else ("Sin PA" if not tiene_pa else "Sin masas activas"),
+        "F" not in usados and tiene_pa and hay_estacion_activa and hay_masa_horneable,
+        motivo_f,
     )
     if "G" in usados:
         motivo_g = "Ya usaste este espacio hoy"

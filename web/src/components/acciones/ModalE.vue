@@ -79,9 +79,9 @@ function bandasDe(indice: number): BandaPista[] {
   const r = estacionesActivas.value.find((e) => e.i === indice)?.s.recipe
   if (!r) return []
   return [
-    { desde: r.zona_baja[0] - 1, hasta: r.zona_baja[1], tono: 'baja' },
+    { desde: r.zona_pre_fermento[0] - 1, hasta: r.zona_pre_fermento[1], tono: 'baja' },
     { desde: r.zona_optima[0] - 1, hasta: r.zona_optima[1], tono: 'optima' },
-    { desde: r.zona_sobrefermentada[0] - 1, hasta: TRACK_MAX, tono: 'sobre' },
+    { desde: r.zona_colapso[0] - 1, hasta: TRACK_MAX, tono: 'sobre' },
   ]
 }
 
@@ -98,7 +98,7 @@ function tonoResultante(indice: number): 'riesgo' | 'vital' | 'cobre' {
   const r = estacionesActivas.value.find((e) => e.i === indice)?.s.recipe
   const p = posicionResultante(indice)
   if (!r) return 'cobre'
-  if (p >= r.zona_sobrefermentada[0]) return 'riesgo'
+  if (p >= r.zona_colapso[0]) return 'riesgo'
   if (p >= r.zona_optima[0] && p <= r.zona_optima[1]) return 'vital'
   return 'cobre'
 }

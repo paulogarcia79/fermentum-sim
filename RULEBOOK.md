@@ -352,9 +352,15 @@ encuentre el marcador:
 
 | Zona | Puntos de Maestría | Monedas | Datos de Investigación |
 |:---|:---|:---|:---:|
-| **Óptima** | Puntos íntegros de la carta | Ingreso completo de la carta | Sí (+1, +1 extra si se hornea en el centro exacto con Módulo Analítico) |
-| **Baja** (masa cruda) | Puntos reducidos de la carta | Venta con margen reducido | No |
-| **Sobre-fermentada** (colapso, resuelto automáticamente en Fase III) | Penalización negativa de la carta | Recuperación del coste base, sin margen | No |
+| **Crecimiento** (la masa aún no es pan) | — | — | — |
+| **Pre-fermento** (masa cruda) | Puntos reducidos de la carta | Venta con margen reducido | No |
+| **Óptima** | Puntos íntegros de la carta | Ingreso completo de la carta | Sí (+1, +1 extra con Módulo Analítico, +1 más en el centro exacto) |
+| **Colapso** (resuelto automáticamente en Fase III) | Penalización negativa de la carta | Recuperación del coste base, sin margen | No |
+
+**No se puede hornear una masa en Crecimiento.** Todavía no es pan: la Acción F la rechaza, y el
+espacio aparece deshabilitado. Toda masa nace en Crecimiento al iniciarse la receta y sale de él
+en cuanto la fermentación la lleva al Pre-fermento. Si quieres deshacerte de una masa que aún
+crece, el **Simposio Técnico** la descarta y te da 1 Dato de Investigación a cambio.
 
 **Bono de Sabor:** si la carta conserva el Cubo de Acidez sellado desde que se inició la receta
 (y el horneado **no** fue un colapso), se suman los puntos de sabor impresos en la carta **y**
@@ -488,20 +494,25 @@ solo 3 casillas de zona óptima y un colapso de −8). El Bono de Sabor va por l
 es Intermedia y aun así tiene el mayor bono del juego (+8) — no es la carta de más puntos, es la
 de más sabor.
 
-| Receta | Grado | Coste (Monedas) | Harina (siempre 10 tokens / 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono de Sabor) | Zona Baja | Zona Óptima | Zona Sobre-fermentada | Puntos (Baja / Óptima / Sobre) | Monedas (Baja / Óptima / Sobre) |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Pan de Campo | Básica | 1 | Blanca 100% | 12 (60%) | Nivel 3 (+3) | 1–10 | 11–15 | 16–20 | 4 / 10 / −2 | 13 / 17 / 11 |
-| Pan de Molde | Básica | 1 | Blanca 100% | 11 (55%) | Nivel 1–2 (+2) | 1–8 | 9–14 | 15–20 | 3 / 9 / −2 | 12 / 16 / 10 |
-| Baguette | Básica | 1 | Blanca 100% | 13 (65%) | Nivel 2 (+3) | 1–11 | 12–15 | 16–20 | 5 / 11 / −2 | 14 / 18 / 12 |
-| Focaccia | Básica | 1 | Blanca 100% | 15 (75%) | Nivel 1–2 (+2) | 1–9 | 10–14 | 15–20 | 3 / 12 / −3 | 15 / 19 / 13 |
-| Miche | Intermedia | 2 | Blanca 50% + Integral 50% | 14 (70%) | Nivel 3–4 (+4) | 1–11 | 12–16 | 17–20 | 5 / 13 / −4 | 16 / 20 / 13 |
-| Pizza Napolitana | Intermedia | 2 | Blanca 50% + Integral 50% | 13 (62%) | Nivel 3 (+4) | 1–10 | 11–14 | 15–20 | 4 / 14 / −4 | 15 / 21 / 12 |
-| Brioche | Intermedia | 2 | Blanca 50% + Centeno 50% | 11 (52%) | Nivel 1 (+5) | 1–14 | 15–17 | 18–20 | 5 / 16 / −6 | 14 / 21 / 11 |
-| Panettone | Intermedia | 2 | Blanca 50% + Centeno 50% | 10 (47%) | Nivel 1 (+8) | 1–16 | 17–18 | 19–20 | 8 / 16 / −8 | 13 / 22 / 10 |
-| Hogaza Centeno | Avanzada | 3 | Centeno 100% | 14 (67%) | Nivel 4–5 (+6) | 1–12 | 13–16 | 17–20 | 6 / 17 / −5 | 20 / 27 / 17 |
-| Pan Semillas | Avanzada | 3 | Integral 100% | 16 (78%) | Nivel 3–4 (+7) | 1–13 | 14–16 | 17–20 | 6 / 17 / −5 | 19 / 26 / 16 |
-| Pan Graham | Avanzada | 3 | Integral 100% | 16 (80%) | Nivel 4–5 (+6) | 1–13 | 14–17 | 18–20 | 6 / 19 / −6 | 18 / 26 / 15 |
-| Pumpernickel | Avanzada | 3 | Centeno 100% | 17 (85%) | Nivel 5–6 (+8) | 1–15 | 16–18 | 19–20 | 8 / 20 / −8 | 16 / 28 / 12 |
+| Receta | Grado | Coste (Monedas) | Harina (siempre 10 tokens / 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono de Sabor) | Crecimiento | Pre-fermento | Óptima | Colapso | Puntos (Pre-f. / Óptima / Colapso) | Monedas (Pre-f. / Óptima / Colapso) |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Pan de Campo | Básica | 1 | Blanca 100% | 12 (60%) | Nivel 3 (+3) | 1–5 | 6–10 | 11–15 | 16–20 | 4 / 10 / −2 | 13 / 17 / 11 |
+| Pan de Molde | Básica | 1 | Blanca 100% | 11 (55%) | Nivel 1–2 (+2) | 1–3 | 4–8 | 9–14 | 15–20 | 3 / 9 / −2 | 12 / 16 / 10 |
+| Baguette | Básica | 1 | Blanca 100% | 13 (65%) | Nivel 2 (+3) | 1–5 | 6–11 | 12–15 | 16–20 | 5 / 11 / −2 | 14 / 18 / 12 |
+| Focaccia | Básica | 1 | Blanca 100% | 15 (75%) | Nivel 1–2 (+2) | 1–4 | 5–9 | 10–14 | 15–20 | 3 / 12 / −3 | 15 / 19 / 13 |
+| Miche | Intermedia | 2 | Blanca 50% + Integral 50% | 14 (70%) | Nivel 3–4 (+4) | 1–5 | 6–11 | 12–16 | 17–20 | 5 / 13 / −4 | 16 / 20 / 13 |
+| Pizza Napolitana | Intermedia | 2 | Blanca 50% + Integral 50% | 13 (62%) | Nivel 3 (+4) | 1–5 | 6–10 | 11–14 | 15–20 | 4 / 14 / −4 | 15 / 21 / 12 |
+| Brioche | Intermedia | 2 | Blanca 50% + Centeno 50% | 11 (52%) | Nivel 1 (+5) | 1–7 | 8–14 | 15–17 | 18–20 | 5 / 16 / −6 | 14 / 21 / 11 |
+| Panettone | Intermedia | 2 | Blanca 50% + Centeno 50% | 10 (47%) | Nivel 1 (+8) | 1–10 | 11–16 | 17–18 | 19–20 | 8 / 16 / −8 | 13 / 22 / 10 |
+| Hogaza Centeno | Avanzada | 3 | Centeno 100% | 14 (67%) | Nivel 4–5 (+6) | 1–6 | 7–12 | 13–16 | 17–20 | 6 / 17 / −5 | 20 / 27 / 17 |
+| Pan Semillas | Avanzada | 3 | Integral 100% | 16 (78%) | Nivel 3–4 (+7) | 1–6 | 7–13 | 14–16 | 17–20 | 6 / 17 / −5 | 19 / 26 / 16 |
+| Pan Graham | Avanzada | 3 | Integral 100% | 16 (80%) | Nivel 4–5 (+6) | 1–6 | 7–13 | 14–17 | 18–20 | 6 / 19 / −6 | 18 / 26 / 15 |
+| Pumpernickel | Avanzada | 3 | Centeno 100% | 17 (85%) | Nivel 5–6 (+8) | 1–9 | 10–15 | 16–18 | 19–20 | 8 / 20 / −8 | 16 / 28 / 12 |
+
+*El track de fermentación de cada carta se divide en **cuatro** zonas. **Crecimiento** no tiene
+columna de pago porque **no se puede hornear ahí**: la masa todavía no es pan y la
+[Acción F](#7-catálogo-de-acciones) la rechaza. Para abandonar una masa que aún crece está el
+Simposio Técnico. Las otras tres sí pagan, y sus valores son las columnas de Puntos y Monedas.*
 
 *La columna **Coste** es lo que cuesta llevarse la carta del Mercado Central con la
 [Acción G](#7-catálogo-de-acciones); va impresa en la carta. No confundir con la harina y el agua,
@@ -537,6 +548,10 @@ receta, esa masa en curso **no se ve afectada** — sigue avanzando con el valor
 sellado en el momento de la mezcla original.
 
 ### 9.2 Colapso Estructural (Sobre-fermentación)
+
+Las cuatro zonas del track, de menos a más fermentada: **Crecimiento** (la masa aún no es pan, no
+se puede hornear), **Pre-fermento** (cruda, hornea con puntos y Monedas reducidos), **Óptima**
+(puntos completos y +1 Dato) y **Colapso** (horneado automático con penalización).
 
 Si, tras aplicar el Avance Final, la posición de una masa entra en su Zona Sobre-fermentada, la
 masa colapsa de inmediato: se hornea automáticamente con costo 0 PA, aplicando la penalización de

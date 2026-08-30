@@ -45,8 +45,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 10
+VERSION_FORMATO = 11
 """
+Bumped a 11: `Recipe` cambia de forma otra vez -- la pista de fermentacion pasa de
+tres zonas a CUATRO (`zona_crecimiento` nueva, y `zona_baja`/`zona_sobrefermentada`
+renombradas a `zona_pre_fermento`/`zona_colapso`, con sus pagos). Un pickle viejo trae
+Recipes con la forma de tres zonas.
+
 Bumped a 10: dos formas persistidas cambian a la vez -- `Recipe` PIERDE
 `req_tecnologico` (ninguna receta esta ya restringida por tecnologia) y
 `HorneadoRecord` GANA `ampliacion_aplicada` (la ampliacion de zona optima del Modulo

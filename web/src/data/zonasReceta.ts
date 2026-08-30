@@ -14,22 +14,38 @@
 import type { Recipe } from '../types'
 
 export interface ZonasReceta {
-  baja: [number, number]
+  crecimiento: [number, number]
+  preFermento: [number, number]
   optima: [number, number]
-  sobre: [number, number]
+  colapso: [number, number]
 }
 
 export function zonasDe(receta: Recipe): ZonasReceta {
   const efectivas = receta.zonas_efectivas
   if (efectivas) {
-    const [baja, optima, sobre] = efectivas
-    return { baja, optima, sobre }
+    const [crecimiento, preFermento, optima, colapso] = efectivas
+    return { crecimiento, preFermento, optima, colapso }
   }
   return {
-    baja: receta.zona_baja,
+    crecimiento: receta.zona_crecimiento,
+    preFermento: receta.zona_pre_fermento,
     optima: receta.zona_optima,
-    sobre: receta.zona_sobrefermentada,
+    colapso: receta.zona_colapso,
   }
+}
+
+/**
+ * True si la masa en `posicion` todavia crece y por tanto NO se puede hornear.
+ * Espeja `Recipe.esta_en_crecimiento`: es el caso por defecto, no un rango cerrado,
+ * de modo que la casilla 0 -- donde nace toda masa -- cuenta como crecimiento.
+ */
+export function estaEnCrecimiento(receta: Recipe, posicion: number): boolean {
+  const z = zonasDe(receta)
+  return !(
+    (posicion >= z.preFermento[0] && posicion <= z.preFermento[1]) ||
+    (posicion >= z.optima[0] && posicion <= z.optima[1]) ||
+    posicion >= z.colapso[0]
+  )
 }
 
 /** True si la receta se muestra con la zona optima ensanchada por el Modulo Analitico. */

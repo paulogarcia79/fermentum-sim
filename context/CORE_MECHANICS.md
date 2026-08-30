@@ -36,7 +36,8 @@ Fase donde los jugadores intervienen en su laboratorio mediante un sistema de "R
 Ocurre simultáneamente para todos una vez terminada la Fase II.
 * **Cinética Biológica (Avance de Masas):** Las masas en la Zona 2 avanzan en sus tracks según la siguiente ecuación:
     > `Avance Final = (Temperatura Ambiental / 5) + (Valor del Dado de Inóculo) + (Modificadores de Tecnología)` 
-* **Colapso Estructural:** Si el avance hace que una masa supere la zona óptima de horneado (llegando a sobre-fermentación), la masa colapsa. 
+* **Cuatro zonas del track:** de menos a más fermentada — **Crecimiento** (la masa aún no es pan: la Acción F la rechaza, no hay pago posible), **Pre-fermento** (cruda, hornea con puntos y Monedas reducidos), **Óptima** (puntos completos y Datos) y **Colapso**. Toda masa nace en la casilla 0, que cuenta como Crecimiento: `Recipe.esta_en_crecimiento` es el caso por DEFECTO y no un rango cerrado, precisamente para que ninguna posición quede sin zona y pagando por accidente.
+* **Colapso Estructural:** Si el avance hace que una masa supere la zona óptima de horneado (llegando al Colapso), la masa colapsa. 
     * *Resolución:* Se hornea automáticamente (Costo: 0 PA), aplicando los puntos negativos de la carta.
     * *Zona efectiva, no impresa:* el umbral se lee contra las zonas **del propietario de la masa**, no contra las de la carta. El Módulo Analítico ensancha la zona óptima 1 casilla por lado y con ella empuja el umbral de colapso una casilla más arriba (`Recipe.zonas_efectivas`, ver RECIPE_DATABASE.md §1). Es un efecto en vivo: instalar el Módulo salva una masa que ya está fermentando.
 * **Metabolismo (Desgaste):** La Vitalidad del cultivo base (Zona 1) se reduce automáticamente en -1 punto. (Nota: Los valores de Vitalidad y Acidez nunca pueden bajar de 0 ).

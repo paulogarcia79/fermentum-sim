@@ -41,6 +41,7 @@ from models import (
     EfectoBiologico,
     EfectoClimatico,
     Environment,
+    AMPLIACION_OPTIMA_MODULO,
     FermentationSlot,
     Grado,
     HorneadoRecord,
@@ -82,17 +83,6 @@ El Módulo era una compra trampa cuando su único efecto era el bono de centro e
 había que clavar el centro unas tres veces sólo para amortizar su precio. Ahora paga
 en toda la zona, que es lo que convierte al Módulo en el motor de investigación de la
 partida (y lo que justifica su precio de 4 Datos en ``actions.COSTOS_TECNOLOGIA``).
-"""
-
-AMPLIACION_OPTIMA_MODULO: int = 1
-"""
-Casillas que el Módulo Analítico añade a CADA lado de la zona óptima.
-
-Es un efecto EN VIVO, no sellado en la masa como ``modificador_incubadora``: se
-recalcula en cada resolución a partir de las tecnologías del propietario, así que
-instalar el Módulo salva una masa que ya está fermentando. Como la ampliación se come
-la zona sobrefermentada por arriba, **también retrasa el umbral de colapso** — ver
-``Recipe.zonas_efectivas``, donde vive toda la aritmética.
 """
 
 PRECIO_RECETA: Mapping[Grado, int] = MappingProxyType({
@@ -1305,7 +1295,7 @@ class GameEngine:
           1. **Cinética Biológica**: avanza todas las masas activas de todos los
              jugadores usando la fórmula de avance del Ábaco de Fermentación.
           2. **Colapso Estructural**: si una masa supera el límite inferior de su
-             ``zona_sobrefermentada``, se hornea automáticamente con 0 PA y la
+             ``zona_colapso``, se hornea automáticamente con 0 PA y la
              penalización correspondiente.
           3. **Desgaste Metabólico**: reduce la Vitalidad del cultivo base de cada
              jugador en -1 (o -2 con «Aletargamiento Invernal» activo).
@@ -1340,7 +1330,7 @@ class GameEngine:
           · ``modificador_incubadora`` = ajuste local -1/0/+1 si el jugador tiene
             la tecnología Incubadora activa.
 
-        Si tras el avance la posición ≥ ``zona_sobrefermentada[0]``, se activa
+        Si tras el avance la posición ≥ ``zona_colapso[0]``, se activa
         el Colapso Estructural (horneado automático de emergencia, 0 PA).
 
         Args:
@@ -1386,7 +1376,7 @@ class GameEngine:
             # Contra la zona AMPLIADA del propietario: con Módulo Analítico el umbral
             # de colapso está una casilla más arriba, así que una masa que colapsaría
             # sin la mejora sobrevive con ella.
-            if slot.recipe.esta_sobrefermentada(
+            if slot.recipe.esta_en_colapso(
                 slot.posicion_track, self.ampliacion_zona_optima(player)
             ):
                 self.resolver_horneado(player, idx, fue_colapso=True)
@@ -1497,15 +1487,15 @@ class GameEngine:
 
         Lógica de puntuación y venta (GDD v0.0.2 Módulo III §F — "Hornear y Vender"):
           · **Colapso**: ``puntos_base = recipe.penalizacion_colapso`` (negativo),
-            ``monedas = recipe.monedas_sobre``. El bono de sabor NO se aplica
+            ``monedas = recipe.monedas_colapso``. El bono de sabor NO se aplica
             (ni en Puntos de Maestría ni en Monedas) — la fermentación fue un fracaso.
           · **Zona óptima**: ``puntos_base = recipe.puntos_optimos``,
             ``monedas = recipe.monedas_optima``. Se acreditan Datos de Investigación
             (+ extra si centro exacto + Módulo Analítico). El bono de sabor SE aplica
             si el Cubo de Laboratorio estaba sellado: +``bono_sabor_pts`` de la receta
             y +``MONEDAS_BONO_SABOR`` (2) Monedas.
-          · **Zona baja** (masa cruda): ``puntos_base = recipe.puntos_baja``,
-            ``monedas = recipe.monedas_baja``. Sin Datos de Investigación.
+          · **Pre-fermento** (masa cruda): ``puntos_base = recipe.puntos_pre_fermento``,
+            ``monedas = recipe.monedas_pre_fermento``. Sin Datos de Investigación.
             El bono de sabor SE aplica igual que en zona óptima.
 
         Efectos sobre el estado del jugador:
@@ -1647,12 +1637,12 @@ class GameEngine:
         +=======================+============================================+
         | Colapso (forzado)     | ``recipe.penalizacion_colapso`` (negativo) |
         +-----------------------+--------------------------------------------+
-        | Zona sobrefermentada  | ``recipe.penalizacion_colapso``            |
+        | Zona de colapso       | ``recipe.penalizacion_colapso``            |
         | (manual desde esa pos)| (hornear desde allí sigue siendo colapso)  |
         +-----------------------+--------------------------------------------+
         | Zona óptima           | ``recipe.puntos_optimos``                  |
         +-----------------------+--------------------------------------------+
-        | Zona baja             | ``recipe.puntos_baja``                     |
+        | Pre-fermento          | ``recipe.puntos_pre_fermento``             |
         +-----------------------+--------------------------------------------+
 
         Args:
@@ -1665,14 +1655,19 @@ class GameEngine:
         Returns:
             Puntos de Maestría (entero, puede ser negativo).
         """
-        if fue_colapso or recipe.esta_sobrefermentada(posicion, ampliacion):
+        if fue_colapso or recipe.esta_en_colapso(posicion, ampliacion):
             return recipe.penalizacion_colapso
 
         if recipe.esta_en_zona_optima(posicion, ampliacion):
             return recipe.puntos_optimos
 
-        # Zona baja: masa cruda
-        return recipe.puntos_baja
+        if recipe.esta_en_pre_fermento(posicion, ampliacion):
+            return recipe.puntos_pre_fermento
+
+        # Crecimiento: la masa todavia no es pan. La Accion F rechaza hornear aqui,
+        # asi que este retorno solo se alcanza por un colapso automatico imposible
+        # o por un llamador nuevo; que el caso por defecto pague CERO es deliberado.
+        return 0
 
     def _calcular_monedas_zona(
         self,
@@ -1694,13 +1689,17 @@ class GameEngine:
         Returns:
             Monedas base (antes del Bono de Sabor).
         """
-        if fue_colapso or recipe.esta_sobrefermentada(posicion, ampliacion):
-            return recipe.monedas_sobre
+        if fue_colapso or recipe.esta_en_colapso(posicion, ampliacion):
+            return recipe.monedas_colapso
 
         if recipe.esta_en_zona_optima(posicion, ampliacion):
             return recipe.monedas_optima
 
-        return recipe.monedas_baja
+        if recipe.esta_en_pre_fermento(posicion, ampliacion):
+            return recipe.monedas_pre_fermento
+
+        # Crecimiento: la masa no es pan, no hay venta. Ver _calcular_puntos_zona.
+        return 0
 
     def _calcular_datos_horneado(
         self,

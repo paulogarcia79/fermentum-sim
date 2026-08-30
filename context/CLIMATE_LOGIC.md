@@ -39,7 +39,7 @@ Durante la Fase III (Fermentación), todas las masas activas en las estaciones d
 
 ### Reglas de Ejecución del Algoritmo
 1. **Independencia del Cultivo:** El cálculo utiliza el valor del `dado_inoculo` guardado en la carta de la masa, NO el nivel de Vitalidad actual del frasco base del jugador.
-2. **Límite de Colapso:** Después de aplicar el `Avance_Final` a la posición actual de la masa, el sistema evalúa si la nueva posición es mayor o igual al límite inferior de la `zona_sobrefermentada` de esa receta.
+2. **Límite de Colapso:** Después de aplicar el `Avance_Final` a la posición actual de la masa, el sistema evalúa si la nueva posición es mayor o igual al límite inferior de la `zona_colapso` **efectiva del propietario** de esa masa (`Recipe.zonas_efectivas`: el Módulo Analítico la empuja una casilla más arriba).
 3. **Trigger de Emergencia:** Si entra en sobre-fermentación, se gatilla inmediatamente una acción automática de Horneado con 0 costo de PA, aplicando la penalización correspondiente.
 
 ---

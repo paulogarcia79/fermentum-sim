@@ -847,9 +847,9 @@ class ActionManager:
           · Zona óptima      → puntos_optimos + monedas_optima
                                (+ bono_sabor_pts y +2 Monedas si el cubo estaba
                                sellado). Acredita Datos de Investigación.
-          · Zona baja        → puntos_baja + monedas_baja (sin Datos).
+          · Pre-fermento     → puntos_pre_fermento + monedas_pre_fermento (sin Datos).
                                El bono de sabor SÍ aplica en esta zona.
-          · Sobrefermentada  → penalizacion_colapso + monedas_sobre (sin bono
+          · Colapso          → penalizacion_colapso + monedas_colapso (sin bono
                                ni Datos — venta de recuperación de coste).
 
         Nota: El PA se consume aquí antes de delegar para mantener la semántica
@@ -878,6 +878,21 @@ class ActionManager:
             raise RuleViolationError(
                 f"La estación {slot_index} de '{player.nombre}' está vacía. "
                 "No hay masa activa para hornear."
+            )
+
+        # Una masa en CRECIMIENTO todavía no es pan: no se puede hornear. Se mide
+        # contra las zonas EFECTIVAS del propietario (el Módulo Analítico ensancha la
+        # óptima), aunque el crecimiento en sí nunca se amplía — de modo que esta
+        # frontera no se mueve bajo los pies del jugador. Ver Recipe.zonas_efectivas.
+        slot = player.estaciones_fermentacion[slot_index]
+        ampliacion = self._engine.ampliacion_zona_optima(player)
+        if slot.recipe.esta_en_crecimiento(slot.posicion_track, ampliacion):
+            _, pre_fermento, _, _ = slot.recipe.zonas_efectivas(ampliacion)
+            raise RuleViolationError(
+                f"'{slot.recipe.nombre}' está en la zona de Crecimiento "
+                f"(posición {slot.posicion_track}): la masa todavía no es pan y no "
+                f"se puede hornear. Podrá hornearse a partir de la casilla "
+                f"{pre_fermento[0]}. Para abandonarla, usa el Simposio Técnico."
             )
 
         # Consumir PA antes de delegar (la delegación no consume PA)

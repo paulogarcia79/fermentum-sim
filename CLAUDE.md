@@ -184,7 +184,7 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   since a transaction is a market signal regardless of size. Tests:
   `tests/test_mercado_media_bolsa.py` walks all 30 price cells.
   Meanwhile Acción F now pays out Monedas per zone on top of the existing
-  points/Datos logic (`Recipe.monedas_baja/optima/sobre`, flat `+2` Monedas Bono de Sabor); setup
+  points/Datos logic (`Recipe.monedas_*` per zone, flat `+2` Monedas Bono de Sabor); setup
   (`bootstrap.create_game`) now deals from an 8-card `PATROCINIO_CATALOG` instead of a hardcoded
   4-slot `player_index` table, driving both Día 1 turn order (`GameEngine`'s new `orden_inicial`
   param) and starting resources; the lab-upgrade cap (Acción D) is now per-technology, not a
@@ -306,6 +306,50 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   persisted shapes changed at once). Tests: `tests/test_precio_recetas.py`,
   `tests/test_ampliacion_optima.py`.
 
+  **Four fermentation zones, and the position-0 hole they close.** The track went from three zones
+  to four: `zona_crecimiento` is new at the bottom, and the other three were renamed to the
+  rulebook's vocabulary — `zona_baja → zona_pre_fermento`, `zona_sobrefermentada → zona_colapso`,
+  with their payouts (`puntos_pre_fermento`, `monedas_colapso`, …). The rename follows `22d7d1d`'s
+  precedent and also settles the old `sobre`/`colapso` split, where one zone already had two names.
+
+  **The bug this closed is worth knowing.** A mass is created at `posicion_track = 0`, but every
+  card's low zone started at `1`, so position 0 belonged to no declared zone and fell through
+  `_calcular_puntos_zona`'s final `return recipe.puntos_baja`. Acción B and Acción F are separate
+  action spaces and a player has 2 PA, so you could **start a recipe and bake it the same day
+  having fermented nothing** — Panettone paid 8 PM + 13 Monedas for it. Crecimiento is now the
+  fallback, and it pays nothing; `tests/test_ampliacion_optima.py` pins the Panettone case by name.
+  The general lesson the code now encodes: `esta_en_crecimiento` is deliberately **the default
+  case, not a closed range**, so an unclassified position can only ever fall into the zone that
+  pays zero.
+
+  Three further things about the fourth zone:
+  - **You cannot bake in crecimiento at all.** `accion_F_hornear` raises and `disponibilidad.py`
+    greys the space out ("La masa aún está creciendo"). Blocking rather than paying zero matters
+    because a 0-point bake would still land in `archivo_horneado_exitoso`, whose fifth entry ends
+    the game for everyone — a leading player could otherwise slam the door with five raw bakes.
+    Simposio Técnico remains the way to abandon a mass, and pays 1 Dato for it.
+  - **Crecimiento has no payout fields.** You can never bake there, so `puntos_crecimiento` /
+    `monedas_crecimiento` would be 24 numbers nothing reads — the `req_tecnologico` shape again.
+    `TablaRendimiento.vue` renders that row as `—` with "no se hornea", which teaches the rule
+    better than three zeros would.
+  - **Crecimiento is never widened by the Módulo Analítico.** The widening still eats pre-fermento
+    from above and colapso from below, so the "can I bake yet?" line stays put even if a player
+    installs the Módulo mid-fermentation. `Recipe.__post_init__` gained a third validation for the
+    consequence: pre-fermento must be at least `ANCHO_MINIMO_PRE_FERMENTO` wide
+    (= `AMPLIACION_OPTIMA_MODULO + 1`, derived so it stays right if the Módulo ever widens by 2),
+    or the widening would collapse it into an inverted range. `AMPLIACION_OPTIMA_MODULO` therefore
+    **moved from `engine.py` to `models.py`** — `__post_init__` needs it and models cannot import
+    engine.
+
+  Zone boundaries are authored per card (half of the old low zone as the rule of thumb, with three
+  deliberate deviations: Pan de Molde shorter as the forgiving entry card, Panettone and
+  Pumpernickel longer as the most committing). Client side, `zonasReceta.ts` returns four ranges
+  and exposes `estaEnCrecimiento` mirroring the server predicate; the fourth band reuses
+  `PistaMedida`'s already-defined-but-unused `neutra` tone — its tone names stay generic because it
+  also draws Vitalidad, Acidez and flour prices. `VERSION_FORMATO` went to 11.
+  Tests: `tests/test_ampliacion_optima.py` (exhaustiveness over every position 0–20 on all 12
+  cards, at both amplifications).
+
   **Acción E (Pliegues) — the second Monedas sink, and the only 0-PA action that occupies an
   action space.** E used to cost 1 PA for a flat +1 track space, i.e. a whole turn for one space;
   nobody took it. It is now **0 PA, priced in Monedas**, lives in the Gratuitas group, and does
@@ -330,7 +374,7 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
     permanent immunity to contamination (-3 PM, Acción B locked) for pocket change.
 
   Overshoot is **legal on purpose**: buying 3 spaces can push a mass past `zona_optima` into
-  `zona_sobrefermentada`, which Fase III auto-bakes in collapse. That risk is the brake on the top
+  `zona_colapso`, which Fase III auto-bakes in collapse. That risk is the brake on the top
   rung, so `posicion_track` is never clamped here; `ModalE.vue` surfaces it with `PistaMedida`'s
   dashed projected bracket plus a warning instead of blocking the purchase. E emits no
   `GameEvent`, so being inside the undo window is safe (`engine.eventos` stays byte-identical
@@ -837,7 +881,7 @@ refill-only, no discard) → Phase II (round-robin, 2 PA per player, one action 
 visit until no player has PA or an unused free action — see the turn-economy rule above) → Phase
 III (every active `FermentationSlot` advances by
 `temperatura_actual/5 + dado_inoculo + modificador_incubadora`; overshoot into
-`zona_sobrefermentada` auto-bakes at 0 PA cost with a penalty; then all players lose 1 vitality,
+`zona_colapso` auto-bakes at 0 PA cost with a penalty; then all players lose 1 vitality,
 2 if "Aletargamiento Invernal" is active; then the market's oldest visible recipe is discarded —
 `Market.descartar_receta_mas_antigua`, emits `RECETA_DESCARTADA`; then this morning's announced
 trend is finally applied to the three flour price tracks —

@@ -122,7 +122,7 @@ def test_horneado_manual_emite_evento_no_colapso() -> None:
 
 def test_horneado_una_celda_bajo_optima_no_da_datos() -> None:
     """Frontera exacta que el track del frontend dibujaba mal: una masa en
-    ``zona_optima[0] - 1`` es zona baja para el motor (0 Datos, puntos_baja)."""
+    ``zona_optima[0] - 1`` es zona baja para el motor (0 Datos, puntos_pre_fermento)."""
     engine = setup_game(["Alba", "Bruno"])
     manager = ActionManager(engine)
     p1 = engine.players[0]
@@ -139,7 +139,7 @@ def test_horneado_una_celda_bajo_optima_no_da_datos() -> None:
 
     assert record.fue_colapso is False
     assert record.datos_obtenidos == 0
-    assert record.puntos_base == receta.puntos_baja
+    assert record.puntos_base == receta.puntos_pre_fermento
     assert p1.datos_investigacion == datos_antes
 
 
@@ -155,7 +155,7 @@ def test_colapso_estructural_emite_horneado_colapso_y_masa_avanzo() -> None:
     slot = manager.accion_B_iniciar_receta(p1, receta)
     # Colocar la masa justo debajo del limite de sobrefermentacion para que
     # cualquier avance positivo la colapse en la proxima Fase III.
-    slot.posicion_track = receta.zona_sobrefermentada[0] - 1
+    slot.posicion_track = receta.zona_colapso[0] - 1
     slot.dado_inoculo = 6  # avance maximo garantizado
 
     idx_antes = len(engine.eventos)

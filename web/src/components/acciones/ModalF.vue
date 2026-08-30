@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Hornear y Vender (GDD v0.0.2, antes "Hornear"). Vista previa de puntos y
 // Monedas: replica solo la lectura de zona (no una decision de reglas)
-// leyendo puntos_baja/monedas_baja/monedas_optima/monedas_sobre directamente
+// leyendo puntos_pre_fermento/monedas_pre_fermento/monedas_optima/monedas_colapso directamente
 // de la Recipe que ya viaja en el snapshot (a diferencia de los precios de
 // la Bolsa de Harinas en ModalC.vue, estos SI son campos reales de la
 // receta, no una tabla del motor que haya que duplicar). MONEDAS_BONO_SABOR
@@ -11,6 +11,7 @@
 import { computed, ref } from 'vue'
 import { despacharAccion, mostrarResultadoHorneado, store } from '../../store'
 import ModalShell from '../ModalShell.vue'
+import { estaEnCrecimiento } from '../../data/zonasReceta'
 
 const MONEDAS_BONO_SABOR = 2
 
@@ -32,9 +33,14 @@ const previa = computed(() => {
   if (!slot) return null
   const r = slot.recipe
   const pos = slot.posicion_track
-  if (pos >= r.zona_sobrefermentada[0]) {
+  // La masa que todavia crece no es pan: el servidor rechaza hornearla, asi que el
+  // modal lo dice antes de dejar enviar (mismo patron que ModalG con las Monedas).
+  if (estaEnCrecimiento(r, pos)) {
+    return { zona: 'Crecimiento', puntos: 0, monedas: 0, datos: 0, horneable: false }
+  }
+  if (pos >= r.zona_colapso[0]) {
     // Un colapso nunca aplica el Bono de Sabor, ni en puntos ni en Monedas.
-    return { zona: 'Sobrefermentada', puntos: r.penalizacion_colapso, monedas: r.monedas_sobre, datos: 0 }
+    return { zona: 'Colapso', puntos: r.penalizacion_colapso, monedas: r.monedas_colapso, datos: 0, horneable: true }
   }
   const bonoPuntos = slot.bono_sabor ? r.bono_sabor_pts : 0
   const bonoMonedas = slot.bono_sabor ? MONEDAS_BONO_SABOR : 0
@@ -43,9 +49,9 @@ const previa = computed(() => {
     // instalado (espejo de engine._calcular_datos_horneado / DATOS_BAKE_*).
     const centro = Math.floor((r.zona_optima[0] + r.zona_optima[1]) / 2)
     const bonoDatos = pos === centro && yo.value.tecnologias.modulo_analitico ? 1 : 0
-    return { zona: 'Óptima', puntos: r.puntos_optimos + bonoPuntos, monedas: r.monedas_optima + bonoMonedas, datos: 1 + bonoDatos }
+    return { zona: 'Óptima', puntos: r.puntos_optimos + bonoPuntos, monedas: r.monedas_optima + bonoMonedas, datos: 1 + bonoDatos, horneable: true }
   }
-  return { zona: 'Baja', puntos: r.puntos_baja + bonoPuntos, monedas: r.monedas_baja + bonoMonedas, datos: 0 }
+  return { zona: 'Pre-fermento', puntos: r.puntos_pre_fermento + bonoPuntos, monedas: r.monedas_pre_fermento + bonoMonedas, datos: 0, horneable: true }
 })
 
 async function confirmar() {
@@ -81,7 +87,11 @@ async function confirmar() {
       </select>
     </label>
 
-    <p v-if="previa" class="info-linea">
+    <p v-if="previa && !previa.horneable" class="info-linea aviso">
+      Zona {{ previa.zona }} — la masa todavía no es pan y no se puede hornear. Espera a que
+      llegue al Pre-fermento, o abandónala con el Simposio Técnico.
+    </p>
+    <p v-else-if="previa" class="info-linea">
       Zona {{ previa.zona }} — resultado estimado: <strong>{{ previa.puntos }} pts</strong>,
       <strong>{{ previa.monedas }} Monedas</strong><template v-if="previa.datos > 0"> ·
       <strong>+{{ previa.datos }} Datos</strong></template>
@@ -89,7 +99,19 @@ async function confirmar() {
 
     <template #acciones>
       <button class="secundario" @click="emit('cerrar')">Cancelar</button>
-      <button class="confirmar" :disabled="enviando || estacionesActivas.length === 0" @click="confirmar">Confirmar</button>
+      <button
+        class="confirmar"
+        :disabled="enviando || estacionesActivas.length === 0 || previa?.horneable === false"
+        @click="confirmar"
+      >
+        Confirmar
+      </button>
     </template>
   </ModalShell>
 </template>
+
+<style scoped>
+.aviso {
+  color: var(--riesgo);
+}
+</style>

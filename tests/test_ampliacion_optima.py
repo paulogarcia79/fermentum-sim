@@ -25,6 +25,7 @@ from __future__ import annotations
 import pytest
 
 from actions import ActionManager
+from exceptions import RuleViolationError
 from engine import (
     AMPLIACION_OPTIMA_MODULO,
     DATOS_BAKE_CENTRO_EXACTO_BONUS,
@@ -77,27 +78,32 @@ def _masa(player: Player, receta_id: str, posicion: int) -> FermentationSlot:
 
 @pytest.mark.parametrize("receta", list(RECIPE_CATALOG.values()), ids=lambda r: r.id)
 def test_ninguna_carta_degenera_al_ampliarse(receta: Recipe) -> None:
-    baja, optima, sobre = receta.zonas_efectivas(AMPLIACION_OPTIMA_MODULO)
-    for nombre, (inicio, fin) in (("baja", baja), ("optima", optima), ("sobre", sobre)):
+    crecimiento, pre_fermento, optima, colapso = receta.zonas_efectivas(AMPLIACION_OPTIMA_MODULO)
+    for nombre, (inicio, fin) in (
+        ("crecimiento", crecimiento), ("pre_fermento", pre_fermento),
+        ("optima", optima), ("colapso", colapso),
+    ):
         assert inicio <= fin, f"{receta.id}: zona {nombre} vacia"
         assert 1 <= inicio <= TRACK_MAX, f"{receta.id}: zona {nombre} fuera de track"
-    assert baja[1] + 1 == optima[0], f"{receta.id}: hueco entre baja y optima"
-    assert optima[1] + 1 == sobre[0], f"{receta.id}: hueco entre optima y sobre"
+    assert crecimiento[1] + 1 == pre_fermento[0], f"{receta.id}: hueco crecimiento/pre-fermento"
+    assert pre_fermento[1] + 1 == optima[0], f"{receta.id}: hueco pre-fermento/optima"
+    assert optima[1] + 1 == colapso[0], f"{receta.id}: hueco optima/colapso"
 
 
 @pytest.mark.parametrize("receta", list(RECIPE_CATALOG.values()), ids=lambda r: r.id)
 def test_ampliacion_cero_devuelve_las_zonas_impresas(receta: Recipe) -> None:
     assert receta.zonas_efectivas(0) == (
-        receta.zona_baja,
+        receta.zona_crecimiento,
+        receta.zona_pre_fermento,
         receta.zona_optima,
-        receta.zona_sobrefermentada,
+        receta.zona_colapso,
     )
 
 
 @pytest.mark.parametrize("receta", list(RECIPE_CATALOG.values()), ids=lambda r: r.id)
 def test_ampliar_no_mueve_el_centro_exacto(receta: Recipe) -> None:
     """(a - n + b + n) // 2 == (a + b) // 2, para cualquier n. Es un teorema."""
-    _, optima, _ = receta.zonas_efectivas(AMPLIACION_OPTIMA_MODULO)
+    _, _, optima, _ = receta.zonas_efectivas(AMPLIACION_OPTIMA_MODULO)
     centro_impreso = (receta.zona_optima[0] + receta.zona_optima[1]) // 2
     assert (optima[0] + optima[1]) // 2 == centro_impreso
     assert receta.es_centro_exacto(centro_impreso)
@@ -105,14 +111,15 @@ def test_ampliar_no_mueve_el_centro_exacto(receta: Recipe) -> None:
 
 def test_la_ampliacion_come_por_los_dos_lados() -> None:
     focaccia = RECIPE_CATALOG["focaccia"]
-    assert focaccia.zonas_efectivas(0) == ((1, 9), (10, 14), (15, 20))
-    assert focaccia.zonas_efectivas(1) == ((1, 8), (9, 15), (16, 20))
+    assert focaccia.zonas_efectivas(0) == ((1, 4), (5, 9), (10, 14), (15, 20))
+    # El crecimiento NO se toca: la frontera de "ya se puede hornear" sigue en 5.
+    assert focaccia.zonas_efectivas(1) == ((1, 4), (5, 8), (9, 15), (16, 20))
     # Una posicion que sin la mejora era zona baja, con ella es optima.
     assert not focaccia.esta_en_zona_optima(9)
     assert focaccia.esta_en_zona_optima(9, 1)
     # Y una que colapsaba, ya no.
-    assert focaccia.esta_sobrefermentada(15)
-    assert not focaccia.esta_sobrefermentada(15, 1)
+    assert focaccia.esta_en_colapso(15)
+    assert not focaccia.esta_en_colapso(15, 1)
 
 
 # ===========================================================================
@@ -167,15 +174,15 @@ def test_puntos_y_monedas_leen_la_zona_ampliada() -> None:
     assert registro.monedas_obtenidos == focaccia.monedas_optima
 
 
-def test_sin_el_modulo_esa_misma_posicion_es_zona_baja() -> None:
+def test_sin_el_modulo_esa_misma_posicion_es_pre_fermento() -> None:
     engine, _, player = _motor()
     focaccia = RECIPE_CATALOG["focaccia"]
     _masa(player, "focaccia", 9)
 
     registro = engine.resolver_horneado(player, 0)
 
-    assert registro.puntos_base == focaccia.puntos_baja
-    assert registro.monedas_obtenidos == focaccia.monedas_baja
+    assert registro.puntos_base == focaccia.puntos_pre_fermento
+    assert registro.monedas_obtenidos == focaccia.monedas_pre_fermento
 
 
 # ===========================================================================
@@ -256,4 +263,113 @@ def test_el_archivo_de_un_horneado_sin_modulo_no_lleva_ampliacion() -> None:
     registro = engine.resolver_horneado(player, 0)
 
     assert registro.ampliacion_aplicada == 0
-    assert registro.zona_resultado == "baja"
+    assert registro.zona_resultado == "pre_fermento"
+
+
+# ===========================================================================
+# 5. La zona de crecimiento: donde la masa todavia no es pan
+# ===========================================================================
+
+
+def test_la_posicion_0_no_pertenece_a_ninguna_zona_impresa() -> None:
+    """
+    Toda masa nace en la casilla 0 y ninguna carta imprime una zona que la incluya.
+    Ese hueco es el que hacia falta cerrar.
+    """
+    for receta in RECIPE_CATALOG.values():
+        assert receta.zona_crecimiento[0] == 1, f"{receta.id}: el crecimiento empieza en 1"
+
+
+@pytest.mark.parametrize("receta", list(RECIPE_CATALOG.values()), ids=lambda r: r.id)
+def test_la_posicion_0_es_crecimiento_y_no_paga(receta: Recipe) -> None:
+    """
+    REGRESION del agujero que este cambio cierra. Antes, la casilla 0 no caia en
+    ninguna zona y el `return` por defecto de _calcular_puntos_zona la pagaba como
+    zona baja: Panettone daba 8 Puntos de Maestria y 13 Monedas por empezar una
+    receta y hornearla el mismo dia, sin fermentar nada.
+    """
+    engine, _, _ = _motor()
+    assert receta.esta_en_crecimiento(0)
+    assert engine._calcular_puntos_zona(receta, 0, False) == 0
+    assert engine._calcular_monedas_zona(receta, 0, False) == 0
+    assert engine._calcular_datos_horneado(engine.players[0], receta, 0) == 0
+
+
+def test_panettone_ya_no_paga_8_puntos_por_no_fermentar() -> None:
+    """El caso concreto, escrito con sus numeros para que la regresion se lea."""
+    engine, _, _ = _motor()
+    panettone = RECIPE_CATALOG["panettone"]
+    assert panettone.puntos_pre_fermento == 8, "si esto cambia, actualiza el numero"
+    assert engine._calcular_puntos_zona(panettone, 0, False) == 0
+
+
+@pytest.mark.parametrize("receta", list(RECIPE_CATALOG.values()), ids=lambda r: r.id)
+@pytest.mark.parametrize("ampliacion", [0, AMPLIACION_OPTIMA_MODULO])
+def test_cada_posicion_cae_en_exactamente_una_zona(receta: Recipe, ampliacion: int) -> None:
+    """Exhaustividad y exclusividad sobre todo el track, incluida la casilla 0."""
+    for posicion in range(0, TRACK_MAX + 1):
+        pertenencias = [
+            receta.esta_en_crecimiento(posicion, ampliacion),
+            receta.esta_en_pre_fermento(posicion, ampliacion),
+            receta.esta_en_zona_optima(posicion, ampliacion),
+            receta.esta_en_colapso(posicion, ampliacion),
+        ]
+        assert sum(pertenencias) == 1, f"{receta.id} pos {posicion}: {pertenencias}"
+
+
+def test_accion_F_rechaza_una_masa_en_crecimiento() -> None:
+    engine, manager, player = _motor()
+    receta = RECIPE_CATALOG["focaccia"]
+    _masa(player, "focaccia", receta.zona_crecimiento[1])
+    player.puntos_accion = 2
+
+    with pytest.raises(RuleViolationError, match="Crecimiento"):
+        manager.accion_F_hornear(player, 0)
+
+    # Fail-fast: ni PA ni espacio ni la masa se tocan.
+    assert player.puntos_accion == 2
+    assert "F" not in player.acciones_pa_usadas_hoy
+    assert player.estaciones_fermentacion[0] is not None
+
+
+def test_accion_F_acepta_la_casilla_siguiente() -> None:
+    engine, manager, player = _motor()
+    receta = RECIPE_CATALOG["focaccia"]
+    _masa(player, "focaccia", receta.zona_pre_fermento[0])
+    player.puntos_accion = 2
+
+    registro = manager.accion_F_hornear(player, 0)
+    assert registro.zona_resultado == "pre_fermento"
+
+
+def test_el_crecimiento_nunca_se_amplia() -> None:
+    """
+    La frontera de "ya se puede hornear" no puede moverse bajo los pies del jugador
+    al instalar el Modulo Analitico a media fermentacion.
+    """
+    for receta in RECIPE_CATALOG.values():
+        sin_modulo, *_ = receta.zonas_efectivas(0)
+        con_modulo, *_ = receta.zonas_efectivas(AMPLIACION_OPTIMA_MODULO)
+        assert sin_modulo == con_modulo == receta.zona_crecimiento
+
+
+def test_un_pre_fermento_demasiado_estrecho_no_se_construye() -> None:
+    """
+    Se vaciaria al ampliarse la zona optima. La validacion vive en __post_init__,
+    asi que una carta asi aborta `import models` en vez de romper a mitad de partida.
+    """
+    from tests.test_recetas_grado import _receta_de_prueba
+
+    with pytest.raises(ValueError, match="pre-fermento"):
+        _receta_de_prueba(
+            zona_crecimiento=(1, 9),
+            zona_pre_fermento=(10, 10),  # una sola casilla
+            zona_optima=(11, 15),
+            zona_colapso=(16, 20),
+        )
+
+
+@pytest.mark.parametrize("receta", list(RECIPE_CATALOG.values()), ids=lambda r: r.id)
+def test_el_pre_fermento_sobrevive_al_modulo(receta: Recipe) -> None:
+    _, pre_fermento, _, _ = receta.zonas_efectivas(AMPLIACION_OPTIMA_MODULO)
+    assert pre_fermento[0] <= pre_fermento[1]

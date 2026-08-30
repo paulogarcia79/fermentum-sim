@@ -126,6 +126,30 @@ las únicas que pueden sostener una receta Avanzada.
 PCT_RECETA_TOTAL: int = 100
 """Porcentaje de harina que consume CUALQUIER receta, sea cual sea su grado."""
 
+AMPLIACION_OPTIMA_MODULO: int = 1
+"""
+Casillas que el Módulo Analítico añade a CADA lado de la zona óptima.
+
+Vive aquí y no en engine.py porque ``Recipe.__post_init__`` lo necesita para validar
+que el pre-fermento de una carta no se vacíe al ampliarse, y ``models`` no puede
+importar ``engine`` (la dependencia va en un solo sentido). Su sitio natural es junto
+a ``Recipe.zonas_efectivas``, donde ya vive toda la aritmética del ensanchado.
+
+Es un efecto EN VIVO, no sellado en la masa como ``modificador_incubadora``: se
+recalcula en cada resolución a partir de las tecnologías del propietario, así que
+instalar el Módulo salva una masa que ya está fermentando. Como la ampliación se come
+la zona de colapso por arriba, **también retrasa el umbral de colapso**.
+"""
+
+ANCHO_MINIMO_PRE_FERMENTO: int = AMPLIACION_OPTIMA_MODULO + 1
+"""
+Casillas mínimas que debe imprimir el pre-fermento de una carta.
+
+Se DERIVA de la ampliación en vez de ser un 2 escrito a mano: si el Módulo llegara a
+ensanchar 2 casillas, este mínimo sube solo. Sin él, una carta con un pre-fermento de
+una sola casilla lo veria desaparecer en un rango invertido al instalarse el Módulo.
+"""
+
 
 def _grado_desde_harinas(harinas: Tuple[Tuple[TipoHarina, int], ...]) -> Grado:
     """
@@ -196,15 +220,19 @@ class Recipe:
         acidez_diana: Conjunto de niveles de acidez que activan el Bono de Sabor.
         bono_sabor_pts: Puntos de Maestría del bono de acidez impresos en la carta
             (GDD v0.0.2, Módulo IV §2 — columna "Bono").
-        zona_baja: Rango [inicio, fin] del track donde la masa está cruda (pocos puntos).
+        zona_crecimiento: Rango [inicio, fin] donde la masa todavía crece y NO es pan:
+            no se puede hornear (Acción F la rechaza), así que no tiene pago asociado.
+            Es además el caso por defecto: ver ``esta_en_crecimiento``.
+        zona_pre_fermento: Rango [inicio, fin] donde la masa está cruda pero ya hornea,
+            con puntos y monedas reducidos.
         zona_optima: Rango [inicio, fin] objetivo (puntos máximos y posible Dato extra).
-        zona_sobrefermentada: Rango [inicio, fin] donde la masa colapsa automáticamente.
-        puntos_baja: Puntos de Maestría al hornear dentro de zona_baja.
+        zona_colapso: Rango [inicio, fin] donde la masa colapsa automáticamente.
+        puntos_pre_fermento: Puntos de Maestría al hornear dentro de zona_pre_fermento.
         puntos_optimos: Puntos de Maestría al hornear dentro de zona_optima.
         penalizacion_colapso: Puntos negativos aplicados en un horneado de emergencia.
-        monedas_baja: Monedas cobradas al hornear y vender en zona_baja.
+        monedas_pre_fermento: Monedas cobradas al hornear y vender en zona_pre_fermento.
         monedas_optima: Monedas cobradas al hornear y vender en zona_optima.
-        monedas_sobre: Monedas cobradas al hornear (automáticamente) en zona_sobrefermentada.
+        monedas_colapso: Monedas cobradas al hornear (automáticamente) en zona_colapso.
     """
 
     id: str
@@ -215,28 +243,38 @@ class Recipe:
     tokens_agua: int
     acidez_diana: Tuple[int, ...]
     bono_sabor_pts: int
-    zona_baja: Tuple[int, int]
+    zona_crecimiento: Tuple[int, int]
+    zona_pre_fermento: Tuple[int, int]
     zona_optima: Tuple[int, int]
-    zona_sobrefermentada: Tuple[int, int]
-    puntos_baja: int
+    zona_colapso: Tuple[int, int]
+    puntos_pre_fermento: int
     puntos_optimos: int
     penalizacion_colapso: int  # Valor negativo, ej. -2
-    monedas_baja: int
+    monedas_pre_fermento: int
     monedas_optima: int
-    monedas_sobre: int
+    monedas_colapso: int
 
     def __post_init__(self) -> None:
         """
-        Valida que el grado impreso coincida con las harinas impresas.
+        Valida el reparto de zonas y que el grado coincida con las harinas impresas.
 
         Sólo valida: no asigna nada, así que es compatible con frozen=True.
         Como ``RECIPE_CATALOG`` es una constante de nivel de módulo, una carta
         mal etiquetada revienta en ``import models`` — nunca a mitad de partida.
 
         Raises:
-            ValueError: Si el reparto de harinas es ilegal, o si ``grado`` no es
-                el que ese reparto implica.
+            ValueError: Si el pre-fermento es tan estrecho que el Módulo Analítico lo
+                vaciaría, si el reparto de harinas es ilegal, o si ``grado`` no es el
+                que ese reparto implica.
         """
+        ancho_pre_fermento = self.zona_pre_fermento[1] - self.zona_pre_fermento[0] + 1
+        if ancho_pre_fermento < ANCHO_MINIMO_PRE_FERMENTO:
+            raise ValueError(
+                f"Receta '{self.id}': el pre-fermento mide {ancho_pre_fermento} "
+                f"casilla(s) y se vaciaría al ampliarse la zona óptima "
+                f"(mínimo {ANCHO_MINIMO_PRE_FERMENTO}, ver ANCHO_MINIMO_PRE_FERMENTO)."
+            )
+
         esperado = _grado_desde_harinas(self.harinas)
         if self.grado is not esperado:
             impresas = " + ".join(f"{t.value} {p}%" for t, p in self.harinas)
@@ -266,14 +304,17 @@ class Recipe:
 
     def zonas_efectivas(
         self, ampliacion: int = 0
-    ) -> Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]:
+    ) -> Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int], Tuple[int, int]]:
         """
-        Las tres zonas del track tras aplicar una ampliación de la zona óptima.
+        Las CUATRO zonas del track tras aplicar una ampliación de la zona óptima.
 
         El Módulo Analítico ensancha la zona óptima ``ampliacion`` casillas por cada
-        lado (``engine.AMPLIACION_OPTIMA_MODULO``), a costa de la zona baja por abajo
-        y de la sobrefermentada por arriba — es decir, **también retrasa el umbral de
-        colapso**. Toda la aritmética del ensanchado vive AQUÍ y en ningún otro sitio.
+        lado (``AMPLIACION_OPTIMA_MODULO``), a costa del pre-fermento por abajo y del
+        colapso por arriba — es decir, **también retrasa el umbral de colapso**. Toda
+        la aritmética del ensanchado vive AQUÍ y en ningún otro sitio.
+
+        El **crecimiento nunca se amplía**: es lo que mantiene fija la frontera de "ya
+        se puede hornear" aunque el jugador compre el Módulo a media fermentación.
 
         La ampliación es un efecto EN VIVO del propietario de la masa, no un valor
         sellado en la carta: por eso es un argumento y no un campo. La carta impresa
@@ -283,30 +324,50 @@ class Recipe:
             ampliacion: Casillas que se añaden a cada lado de la zona óptima.
 
         Returns:
-            ``(zona_baja, zona_optima, zona_sobrefermentada)`` ya ampliadas.
+            ``(crecimiento, pre_fermento, optima, colapso)`` ya ampliadas.
         """
-        baja = (self.zona_baja[0], self.zona_baja[1] - ampliacion)
+        crecimiento = self.zona_crecimiento
+        pre_fermento = (self.zona_pre_fermento[0], self.zona_pre_fermento[1] - ampliacion)
         optima = (self.zona_optima[0] - ampliacion, self.zona_optima[1] + ampliacion)
-        sobre = (self.zona_sobrefermentada[0] + ampliacion, self.zona_sobrefermentada[1])
-        return baja, optima, sobre
+        colapso = (self.zona_colapso[0] + ampliacion, self.zona_colapso[1])
+        return crecimiento, pre_fermento, optima, colapso
 
-    def esta_en_zona_baja(self, posicion: int, ampliacion: int = 0) -> bool:
-        """Retorna True si la posición está dentro del rango de masa cruda."""
-        baja, _, _ = self.zonas_efectivas(ampliacion)
-        return baja[0] <= posicion <= baja[1]
+    def esta_en_crecimiento(self, posicion: int, ampliacion: int = 0) -> bool:
+        """
+        Retorna True si la masa todavía está creciendo y no es pan: no se puede
+        hornear (Acción F la rechaza).
+
+        Es el CAJÓN DE SASTRE a propósito, no un rango cerrado: cualquier posición que
+        no caiga en pre-fermento, óptima ni colapso cuenta como crecimiento —
+        incluida la 0, donde nace toda masa recién inoculada y que no pertenece a
+        ninguna zona impresa. Que el caso por defecto sea el que NO paga nada es
+        justamente lo que cierra el agujero que existía cuando el caso por defecto
+        era el pre-fermento, que sí paga.
+        """
+        _, pre_fermento, optima, colapso = self.zonas_efectivas(ampliacion)
+        return not (
+            pre_fermento[0] <= posicion <= pre_fermento[1]
+            or optima[0] <= posicion <= optima[1]
+            or posicion >= colapso[0]
+        )
+
+    def esta_en_pre_fermento(self, posicion: int, ampliacion: int = 0) -> bool:
+        """Retorna True si la masa está cruda pero ya hornea con puntos reducidos."""
+        _, pre_fermento, _, _ = self.zonas_efectivas(ampliacion)
+        return pre_fermento[0] <= posicion <= pre_fermento[1]
 
     def esta_en_zona_optima(self, posicion: int, ampliacion: int = 0) -> bool:
         """Retorna True si la posición está dentro del rango de horneado óptimo."""
-        _, optima, _ = self.zonas_efectivas(ampliacion)
+        _, _, optima, _ = self.zonas_efectivas(ampliacion)
         return optima[0] <= posicion <= optima[1]
 
-    def esta_sobrefermentada(self, posicion: int, ampliacion: int = 0) -> bool:
+    def esta_en_colapso(self, posicion: int, ampliacion: int = 0) -> bool:
         """
         Retorna True si la posición alcanzó el colapso estructural.
         Gatilla un horneado automático de emergencia en la Fase III.
         """
-        _, _, sobre = self.zonas_efectivas(ampliacion)
-        return posicion >= sobre[0]
+        _, _, _, colapso = self.zonas_efectivas(ampliacion)
+        return posicion >= colapso[0]
 
     def es_centro_exacto(self, posicion: int) -> bool:
         """
@@ -504,11 +565,14 @@ class HorneadoRecord:
         ``GameEngine._calcular_puntos_zona``.
         """
         amp = self.ampliacion_aplicada
-        if self.fue_colapso or self.recipe.esta_sobrefermentada(self.posicion_final, amp):
+        if self.fue_colapso or self.recipe.esta_en_colapso(self.posicion_final, amp):
             return "colapso"
         if self.recipe.esta_en_zona_optima(self.posicion_final, amp):
             return "optima"
-        return "baja"
+        # Nunca "crecimiento": la Acción F rechaza una masa que todavía crece, y el
+        # colapso automático solo dispara en la zona de colapso. Todo registro
+        # archivado nació en pre-fermento, óptima o colapso.
+        return "pre_fermento"
 
 
 @dataclass
@@ -1135,15 +1199,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         tokens_agua=12,
         acidez_diana=(3,),
         bono_sabor_pts=3,
-        zona_baja=(1, 10),
+        zona_crecimiento=(1, 5),
+        zona_pre_fermento=(6, 10),
         zona_optima=(11, 15),
-        zona_sobrefermentada=(16, 20),
-        puntos_baja=4,
+        zona_colapso=(16, 20),
+        puntos_pre_fermento=4,
         puntos_optimos=10,
         penalizacion_colapso=-2,
-        monedas_baja=13,
+        monedas_pre_fermento=13,
         monedas_optima=17,
-        monedas_sobre=11,
+        monedas_colapso=11,
     ),
     # La zona óptima más ancha del juego (6 espacios): la carta indulgente.
     "pan_de_molde": Recipe(
@@ -1155,15 +1220,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         tokens_agua=11,
         acidez_diana=(1, 2),
         bono_sabor_pts=2,
-        zona_baja=(1, 8),
+        zona_crecimiento=(1, 3),
+        zona_pre_fermento=(4, 8),
         zona_optima=(9, 14),
-        zona_sobrefermentada=(15, 20),
-        puntos_baja=3,
+        zona_colapso=(15, 20),
+        puntos_pre_fermento=3,
         puntos_optimos=9,
         penalizacion_colapso=-2,
-        monedas_baja=12,
+        monedas_pre_fermento=12,
         monedas_optima=16,
-        monedas_sobre=10,
+        monedas_colapso=10,
     ),
     "baguette": Recipe(
         id="baguette",
@@ -1174,15 +1240,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         tokens_agua=13,
         acidez_diana=(2,),
         bono_sabor_pts=3,
-        zona_baja=(1, 11),
+        zona_crecimiento=(1, 5),
+        zona_pre_fermento=(6, 11),
         zona_optima=(12, 15),
-        zona_sobrefermentada=(16, 20),
-        puntos_baja=5,
+        zona_colapso=(16, 20),
+        puntos_pre_fermento=5,
         puntos_optimos=11,
         penalizacion_colapso=-2,
-        monedas_baja=14,
+        monedas_pre_fermento=14,
         monedas_optima=18,
-        monedas_sobre=12,
+        monedas_colapso=12,
     ),
     "focaccia": Recipe(
         id="focaccia",
@@ -1193,15 +1260,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         tokens_agua=15,
         acidez_diana=(1, 2),
         bono_sabor_pts=2,
-        zona_baja=(1, 9),
+        zona_crecimiento=(1, 4),
+        zona_pre_fermento=(5, 9),
         zona_optima=(10, 14),
-        zona_sobrefermentada=(15, 20),
-        puntos_baja=3,
+        zona_colapso=(15, 20),
+        puntos_pre_fermento=3,
         puntos_optimos=12,
         penalizacion_colapso=-3,
-        monedas_baja=15,
+        monedas_pre_fermento=15,
         monedas_optima=19,
-        monedas_sobre=13,
+        monedas_colapso=13,
     ),
 
     # --- INTERMEDIAS: media bolsa de dos harinas distintas (13-16 puntos) ---
@@ -1215,15 +1283,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         tokens_agua=14,
         acidez_diana=(3, 4),
         bono_sabor_pts=4,
-        zona_baja=(1, 11),
+        zona_crecimiento=(1, 5),
+        zona_pre_fermento=(6, 11),
         zona_optima=(12, 16),
-        zona_sobrefermentada=(17, 20),
-        puntos_baja=5,
+        zona_colapso=(17, 20),
+        puntos_pre_fermento=5,
         puntos_optimos=13,
         penalizacion_colapso=-4,
-        monedas_baja=16,
+        monedas_pre_fermento=16,
         monedas_optima=20,
-        monedas_sobre=13,
+        monedas_colapso=13,
     ),
     "pizza_napolitana": Recipe(
         id="pizza_napolitana",
@@ -1234,15 +1303,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         tokens_agua=13,
         acidez_diana=(3,),
         bono_sabor_pts=4,
-        zona_baja=(1, 10),
+        zona_crecimiento=(1, 5),
+        zona_pre_fermento=(6, 10),
         zona_optima=(11, 14),
-        zona_sobrefermentada=(15, 20),
-        puntos_baja=4,
+        zona_colapso=(15, 20),
+        puntos_pre_fermento=4,
         puntos_optimos=14,
         penalizacion_colapso=-4,
-        monedas_baja=15,
+        monedas_pre_fermento=15,
         monedas_optima=21,
-        monedas_sobre=12,
+        monedas_colapso=12,
     ),
     "brioche": Recipe(
         id="brioche",
@@ -1253,15 +1323,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         tokens_agua=11,
         acidez_diana=(1,),
         bono_sabor_pts=5,
-        zona_baja=(1, 14),
+        zona_crecimiento=(1, 7),
+        zona_pre_fermento=(8, 14),
         zona_optima=(15, 17),
-        zona_sobrefermentada=(18, 20),
-        puntos_baja=5,
+        zona_colapso=(18, 20),
+        puntos_pre_fermento=5,
         puntos_optimos=16,
         penalizacion_colapso=-6,
-        monedas_baja=14,
+        monedas_pre_fermento=14,
         monedas_optima=21,
-        monedas_sobre=11,
+        monedas_colapso=11,
     ),
     # Ventana óptima de 2 espacios y el mayor Bono de Sabor del juego:
     # no es la carta de más puntos, sino la de más sabor.
@@ -1274,15 +1345,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         tokens_agua=10,
         acidez_diana=(1,),
         bono_sabor_pts=8,
-        zona_baja=(1, 16),
+        zona_crecimiento=(1, 10),
+        zona_pre_fermento=(11, 16),
         zona_optima=(17, 18),
-        zona_sobrefermentada=(19, 20),
-        puntos_baja=8,
+        zona_colapso=(19, 20),
+        puntos_pre_fermento=8,
         puntos_optimos=16,
         penalizacion_colapso=-8,
-        monedas_baja=13,
+        monedas_pre_fermento=13,
         monedas_optima=22,
-        monedas_sobre=10,
+        monedas_colapso=10,
     ),
 
     # --- AVANZADAS: una bolsa entera de harina especial (17-20 puntos) ---
@@ -1295,15 +1367,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         tokens_agua=14,
         acidez_diana=(4, 5),
         bono_sabor_pts=6,
-        zona_baja=(1, 12),
+        zona_crecimiento=(1, 6),
+        zona_pre_fermento=(7, 12),
         zona_optima=(13, 16),
-        zona_sobrefermentada=(17, 20),
-        puntos_baja=6,
+        zona_colapso=(17, 20),
+        puntos_pre_fermento=6,
         puntos_optimos=17,
         penalizacion_colapso=-5,
-        monedas_baja=20,
+        monedas_pre_fermento=20,
         monedas_optima=27,
-        monedas_sobre=17,
+        monedas_colapso=17,
     ),
     "pan_semillas": Recipe(
         id="pan_semillas",
@@ -1314,15 +1387,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         tokens_agua=16,
         acidez_diana=(3, 4),
         bono_sabor_pts=7,
-        zona_baja=(1, 13),
+        zona_crecimiento=(1, 6),
+        zona_pre_fermento=(7, 13),
         zona_optima=(14, 16),
-        zona_sobrefermentada=(17, 20),
-        puntos_baja=6,
+        zona_colapso=(17, 20),
+        puntos_pre_fermento=6,
         puntos_optimos=17,
         penalizacion_colapso=-5,
-        monedas_baja=19,
+        monedas_pre_fermento=19,
         monedas_optima=26,
-        monedas_sobre=16,
+        monedas_colapso=16,
     ),
     "pan_graham": Recipe(
         id="pan_graham",
@@ -1333,15 +1407,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         tokens_agua=16,
         acidez_diana=(4, 5),
         bono_sabor_pts=6,
-        zona_baja=(1, 13),
+        zona_crecimiento=(1, 6),
+        zona_pre_fermento=(7, 13),
         zona_optima=(14, 17),
-        zona_sobrefermentada=(18, 20),
-        puntos_baja=6,
+        zona_colapso=(18, 20),
+        puntos_pre_fermento=6,
         puntos_optimos=19,
         penalizacion_colapso=-6,
-        monedas_baja=18,
+        monedas_pre_fermento=18,
         monedas_optima=26,
-        monedas_sobre=15,
+        monedas_colapso=15,
     ),
     # El techo del catálogo: centeno puro, la acidez diana más alta y la
     # ventana óptima más estrecha (3 espacios) frente a un colapso de -8.
@@ -1354,15 +1429,16 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         tokens_agua=17,
         acidez_diana=(5, 6),
         bono_sabor_pts=8,
-        zona_baja=(1, 15),
+        zona_crecimiento=(1, 9),
+        zona_pre_fermento=(10, 15),
         zona_optima=(16, 18),
-        zona_sobrefermentada=(19, 20),
-        puntos_baja=8,
+        zona_colapso=(19, 20),
+        puntos_pre_fermento=8,
         puntos_optimos=20,
         penalizacion_colapso=-8,
-        monedas_baja=16,
+        monedas_pre_fermento=16,
         monedas_optima=28,
-        monedas_sobre=12,
+        monedas_colapso=12,
     ),
 }
 

@@ -13,14 +13,15 @@ Para la simulación, cada entidad de tipo `Receta` debe contener los siguientes 
 * `hidratacion_pct` (Integer): Porcentaje total de hidratación.
 * `tokens_agua` (Integer): Cantidad de **Tokens de Agua** del 5% requeridos. Se obtiene **redondeando hacia arriba**: `ceil(hidratacion_pct / 5)`. Ej.: 60% → 12 tokens exactos; 62% → 13 tokens (12,4 redondeado hacia arriba). Por eso `tokens_agua * 5` **no** reproduce siempre `hidratacion_pct` y la hidratación impresa debe leerse siempre de su propio campo, nunca deducirse del conteo de tokens.
 * `acidez_diana` (List[int]): Rango de niveles de Acidez que otorgan el Bono de Sabor al iniciar la receta.
-* `zona_baja` (Tuple[int, int]): Rango del track donde la masa está cruda (otorga pocos puntos, `puntos_baja`, y 0 Datos).
+* `zona_crecimiento` (Tuple[int, int]): Rango donde la masa **todavía no es pan**: la Acción F la rechaza, así que no tiene pago asociado. Es además el CASO POR DEFECTO — `Recipe.esta_en_crecimiento` no comprueba un rango cerrado sino "ninguna de las otras tres" —, de modo que la casilla 0, donde nace toda masa y que ninguna carta imprime, cae aquí en vez de quedarse sin zona.
+* `zona_pre_fermento` (Tuple[int, int]): Rango del track donde la masa está cruda pero ya hornea (otorga pocos puntos, `puntos_pre_fermento`, y 0 Datos).
 * `zona_optima` (Tuple[int, int]): Rango del track objetivo (otorga puntos máximos, Datos extra en el centro exacto).
-* `zona_sobrefermentada` (Tuple[int, int]): Rango del track donde la masa colapsa automáticamente.
-* **Las tres zonas impresas no son necesariamente las vigentes.** El Módulo Analítico ensancha la zona óptima una casilla por lado, a costa de la baja por abajo y de la sobrefermentada por arriba — es decir, **también retrasa el umbral de colapso**. `Recipe.zonas_efectivas(ampliacion)` es el único sitio donde vive esa aritmética; toda consulta de zona (`esta_en_zona_baja`, `esta_en_zona_optima`, `esta_sobrefermentada`) acepta el mismo parámetro. Es un efecto **en vivo** del propietario, no un valor sellado en la masa: instalar el Módulo salva una masa que ya está fermentando. `es_centro_exacto` **no** acepta ampliación porque ensanchar simétricamente no mueve el centro (`(a-n + b+n)//2 == (a+b)//2`).
-* `puntos_baja` (Integer): Puntos de Maestría otorgados si se hornea en la zona baja.
+* `zona_colapso` (Tuple[int, int]): Rango del track donde la masa colapsa automáticamente.
+* **Las cuatro zonas impresas no son necesariamente las vigentes.** El Módulo Analítico ensancha la zona óptima una casilla por lado, a costa del pre-fermento por abajo y del colapso por arriba — es decir, **también retrasa el umbral de colapso**. El **crecimiento nunca se amplía**, así que la frontera de "ya se puede hornear" no se mueve bajo los pies del jugador. `Recipe.zonas_efectivas(ampliacion)` es el único sitio donde vive esa aritmética; toda consulta de zona (`esta_en_crecimiento`, `esta_en_pre_fermento`, `esta_en_zona_optima`, `esta_en_colapso`) acepta el mismo parámetro. Un pre-fermento más estrecho que `ANCHO_MINIMO_PRE_FERMENTO` se vaciaría al ampliarse, y `__post_init__` lo rechaza. Es un efecto **en vivo** del propietario, no un valor sellado en la masa: instalar el Módulo salva una masa que ya está fermentando. `es_centro_exacto` **no** acepta ampliación porque ensanchar simétricamente no mueve el centro (`(a-n + b+n)//2 == (a+b)//2`).
+* `puntos_pre_fermento` (Integer): Puntos de Maestría otorgados si se hornea en el pre-fermento.
 * `puntos_optimos` (Integer): Puntos de Maestría otorgados si se hornea en la zona óptima.
 * `penalizacion_colapso` (Integer): Puntos de Maestría negativos aplicados en horneado de emergencia (o si se hornea manual en esa zona).
-* `monedas_baja` / `monedas_optima` / `monedas_sobre` (Integer): Monedas cobradas al Hornear y Vender (Acción F) según la zona de horneado.
+* `monedas_pre_fermento` / `monedas_optima` / `monedas_colapso` (Integer): Monedas cobradas al Hornear y Vender (Acción F) según la zona de horneado. El crecimiento no tiene campo: no se hornea ahí.
 * `bono_sabor_pts` (Integer): Puntos de Maestría del Bono de Sabor, otorgados junto con +2 Monedas si el Cubo de Acidez estaba sellado (y el horneado no fue un colapso).
 *(El campo `req_tecnologico` ya no existe: **ninguna receta está restringida por tecnología**. La regla es estructural — `Recipe` no tiene dónde escribir una puerta tecnológica —, así que no puede reintroducirse editando una carta. El freno de una receta cara es su precio de adquisición y su coste en insumos, no una mejora de laboratorio.)
 
@@ -32,20 +33,20 @@ Para la simulación, cada entidad de tipo `Receta` debe contener los siguientes 
 setup reparte una Básica distinta por jugador (hasta 4) — con tres, el jugador 4
 recibía una copia de la del jugador 1.
 
-| ID Receta | Grado | Coste (Monedas) | Harinas (siempre 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono) | Zona Baja | Zona Óptima | Zona Sobre | Puntos (Baja/Óptimo/Sobre) | Monedas (Baja/Óptima/Sobre) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Pan de Campo** | Básica | 1 | Blanca 100% | 12 (60%) | [3] (+3) | 1 - 10 | 11 - 15 | 16 - 20 | 4 / 10 / -2 | 13 / 17 / 11 |
-| **Pan de Molde** | Básica | 1 | Blanca 100% | 11 (55%) | [1, 2] (+2) | 1 - 8 | 9 - 14 | 15 - 20 | 3 / 9 / -2 | 12 / 16 / 10 |
-| **Baguette** | Básica | 1 | Blanca 100% | 13 (65%) | [2] (+3) | 1 - 11 | 12 - 15 | 16 - 20 | 5 / 11 / -2 | 14 / 18 / 12 |
-| **Focaccia** | Básica | 1 | Blanca 100% | 15 (75%) | [1, 2] (+2) | 1 - 9 | 10 - 14 | 15 - 20 | 3 / 12 / -3 | 15 / 19 / 13 |
-| **Miche** | Intermedia | 2 | Blanca 50% + Integral 50% | 14 (70%) | [3, 4] (+4) | 1 - 11 | 12 - 16 | 17 - 20 | 5 / 13 / -4 | 16 / 20 / 13 |
-| **Pizza Napolitana** | Intermedia | 2 | Blanca 50% + Integral 50% | 13 (62%) | [3] (+4) | 1 - 10 | 11 - 14 | 15 - 20 | 4 / 14 / -4 | 15 / 21 / 12 |
-| **Brioche** | Intermedia | 2 | Blanca 50% + Centeno 50% | 11 (52%) | [1] (+5) | 1 - 14 | 15 - 17 | 18 - 20 | 5 / 16 / -6 | 14 / 21 / 11 |
-| **Panettone** | Intermedia | 2 | Blanca 50% + Centeno 50% | 10 (47%) | [1] (+8) | 1 - 16 | 17 - 18 | 19 - 20 | 8 / 16 / -8 | 13 / 22 / 10 |
-| **Hogaza Centeno** | Avanzada | 3 | Centeno 100% | 14 (67%) | [4, 5] (+6) | 1 - 12 | 13 - 16 | 17 - 20 | 6 / 17 / -5 | 20 / 27 / 17 |
-| **Pan Semillas** | Avanzada | 3 | Integral 100% | 16 (78%) | [3, 4] (+7) | 1 - 13 | 14 - 16 | 17 - 20 | 6 / 17 / -5 | 19 / 26 / 16 |
-| **Pan Graham** | Avanzada | 3 | Integral 100% | 16 (80%) | [4, 5] (+6) | 1 - 13 | 14 - 17 | 18 - 20 | 6 / 19 / -6 | 18 / 26 / 15 |
-| **Pumpernickel** | Avanzada | 3 | Centeno 100% | 17 (85%) | [5, 6] (+8) | 1 - 15 | 16 - 18 | 19 - 20 | 8 / 20 / -8 | 16 / 28 / 12 |
+| ID Receta | Grado | Coste (Monedas) | Harinas (siempre 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono) | Crecimiento | Pre-fermento | Óptima | Colapso | Puntos (Pre-f./Óptimo/Colapso) | Monedas (Pre-f./Óptima/Colapso) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **Pan de Campo** | Básica | 1 | Blanca 100% | 12 (60%) | [3] (+3) | 1 - 5 | 6 - 10 | 11 - 15 | 16 - 20 | 4 / 10 / -2 | 13 / 17 / 11 |
+| **Pan de Molde** | Básica | 1 | Blanca 100% | 11 (55%) | [1, 2] (+2) | 1 - 3 | 4 - 8 | 9 - 14 | 15 - 20 | 3 / 9 / -2 | 12 / 16 / 10 |
+| **Baguette** | Básica | 1 | Blanca 100% | 13 (65%) | [2] (+3) | 1 - 5 | 6 - 11 | 12 - 15 | 16 - 20 | 5 / 11 / -2 | 14 / 18 / 12 |
+| **Focaccia** | Básica | 1 | Blanca 100% | 15 (75%) | [1, 2] (+2) | 1 - 4 | 5 - 9 | 10 - 14 | 15 - 20 | 3 / 12 / -3 | 15 / 19 / 13 |
+| **Miche** | Intermedia | 2 | Blanca 50% + Integral 50% | 14 (70%) | [3, 4] (+4) | 1 - 5 | 6 - 11 | 12 - 16 | 17 - 20 | 5 / 13 / -4 | 16 / 20 / 13 |
+| **Pizza Napolitana** | Intermedia | 2 | Blanca 50% + Integral 50% | 13 (62%) | [3] (+4) | 1 - 5 | 6 - 10 | 11 - 14 | 15 - 20 | 4 / 14 / -4 | 15 / 21 / 12 |
+| **Brioche** | Intermedia | 2 | Blanca 50% + Centeno 50% | 11 (52%) | [1] (+5) | 1 - 7 | 8 - 14 | 15 - 17 | 18 - 20 | 5 / 16 / -6 | 14 / 21 / 11 |
+| **Panettone** | Intermedia | 2 | Blanca 50% + Centeno 50% | 10 (47%) | [1] (+8) | 1 - 10 | 11 - 16 | 17 - 18 | 19 - 20 | 8 / 16 / -8 | 13 / 22 / 10 |
+| **Hogaza Centeno** | Avanzada | 3 | Centeno 100% | 14 (67%) | [4, 5] (+6) | 1 - 6 | 7 - 12 | 13 - 16 | 17 - 20 | 6 / 17 / -5 | 20 / 27 / 17 |
+| **Pan Semillas** | Avanzada | 3 | Integral 100% | 16 (78%) | [3, 4] (+7) | 1 - 6 | 7 - 13 | 14 - 16 | 17 - 20 | 6 / 17 / -5 | 19 / 26 / 16 |
+| **Pan Graham** | Avanzada | 3 | Integral 100% | 16 (80%) | [4, 5] (+6) | 1 - 6 | 7 - 13 | 14 - 17 | 18 - 20 | 6 / 19 / -6 | 18 / 26 / 15 |
+| **Pumpernickel** | Avanzada | 3 | Centeno 100% | 17 (85%) | [5, 6] (+8) | 1 - 9 | 10 - 15 | 16 - 18 | 19 - 20 | 8 / 20 / -8 | 16 / 28 / 12 |
 
 ---
 
