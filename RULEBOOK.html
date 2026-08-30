@@ -1,3 +1,22 @@
+<!--
+  MANTENIMIENTO — leer antes de editar.
+
+  Este fichero tiene un GEMELO: RULEBOOK.md, la misma reglamentación en texto plano.
+  NO hay ningún script que genere uno a partir del otro: se mantienen a mano en
+  paralelo, así que editar solo uno deja el trabajo a medias.
+
+  Todo cambio de regla debe tocar, en el MISMO commit, los cuatro sitios:
+    1. el código (models.py / engine.py / actions.py / ...)
+    2. context/*.md          — la especificación de implementación
+    3. RULEBOOK.md           — el gemelo
+    4. RULEBOOK.html         — este fichero
+
+  Ojo con las tablas: al añadir una columna hay que tocarla en el <thead> Y en todas
+  las filas del <tbody>. Ya se olvidó dos veces en silencio (ver CLAUDE.md, "Every
+  rules change MUST update the rulebooks"). Ningún test lee estos ficheros.
+
+  Fermentum_ GDDv0.0.2.pdf es LEGADO y NO es autoritativo. No es fuente de verdad.
+-->
 <title>Fermentum</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

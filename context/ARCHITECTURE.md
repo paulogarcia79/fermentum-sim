@@ -20,3 +20,35 @@
 * `engine.py`: Lógica de turnos, bucle de fases y validación de reglas.
 * `actions.py`: Funciones o métodos de resolución para cada acción del Módulo III.
 * `main.py`: Punto de entrada y CLI (Command Line Interface).
+## 5. Documentación de Reglas (obligatorio en todo cambio de reglas)
+
+Cambiar una regla del juego **no termina en el código**. Hay dos superficies documentales y las
+dos son normativas:
+
+* `context/*.md` — la **especificación**, para quien implementa.
+* `RULEBOOK.md` **y** `RULEBOOK.html` (raíz del repo) — el **reglamento de jugador**, en español.
+  Son las dos mitades de un mismo documento y **se mantienen a mano en paralelo: no hay ningún
+  script que genere uno a partir del otro**, así que tocar solo uno deja el trabajo a medias.
+
+**Un commit que cambia una regla y no toca los cuatro sitios está incompleto.** Cuenta como regla
+cualquier cosa que un jugador notaría en la mesa: un paso de fase, el coste o efecto de una
+acción, un valor de preparación, un término de puntuación, un criterio de desempate, los números
+impresos de una carta, o una capacidad que desaparece. Un refactor o una tubería de servidor/web
+no cuentan.
+
+Está escrito aquí porque ya falló dos veces en silencio: el commit de «Variedad de Recetas» añadió
+un séptimo término de puntuación y un criterio de desempate nuevo sin tocar el reglamento, y el de
+«Ingresos de Panadería» repitió el olvido. Ningún test lee esos ficheros, y que `context/*.md` esté
+al día hace que el hueco sea invisible desde el código.
+
+Al hacerlo, no basta con las tablas: las reglas viejas sobreviven en la prosa (las fuentes de una
+divisa, el resumen de fases, una referencia cruzada a una acción que ya no hace eso). Y conviene
+**verificar en vez de mirar**: comparar celda a celda las 12 filas de recetas contra
+`RECIPE_CATALOG` en los dos ficheros, buscar por texto la redacción de la regla superada, y en el
+HTML comprobar el anidamiento de etiquetas y que cada tabla cuadre `<th>` con `<td>` (añadir una
+columna en la cabecera y olvidarla en las filas es el fallo típico).
+
+`Fermentum_ GDDv0.0.2.pdf` (raíz del repo) es **legado y NO es autoritativo**: es el documento de
+diseño histórico del que salió la revisión GDD v0.0.2, es un binario que nadie puede editar y ya
+contradice al código en varios puntos. Nunca se toma como fuente de verdad ni se "corrige" el
+código para que encaje con él.

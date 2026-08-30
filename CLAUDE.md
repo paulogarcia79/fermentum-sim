@@ -16,7 +16,9 @@ framework. `pytest`+`httpx` are dev-only. `web/` (Vue 3 + TypeScript + Vite, see
 is a fully separate npm project with its own dependencies — nothing in the Python side depends on
 it or on Node being installed.
 
-The full game rules live in `context/*.md` and are the source of truth for behavior:
+The game's rules are written down in **two** places, and both are normative — see
+"Every rules change MUST update the rulebooks" below before changing any of them.
+`context/*.md` is the implementation spec and the source of truth for behavior:
 
 - `context/ARCHITECTURE.md` — coding standards the code must follow (see below)
 - `context/CORE_MECHANICS.md` — the Day/Phase loop, fermentation math, endgame/scoring
@@ -27,6 +29,43 @@ The full game rules live in `context/*.md` and are the source of truth for behav
 
 When implementing or changing game logic, check the relevant `context/*.md` file first — it
 defines the exact numbers, thresholds, and edge cases the code must match.
+
+### Every rules change MUST update the rulebooks, in the same commit
+
+There are **two** documentation surfaces, and they serve different readers:
+
+- `context/*.md` — the **spec**, written for whoever implements the code.
+- **`RULEBOOK.md` + `RULEBOOK.html`** — the **player-facing reglamento**, in Spanish. These are
+  the two halves of one document, **hand-maintained in parallel with no generator script**, so a
+  change to one is only half the job. `RULEBOOK.html` is a standalone styled page (its own CSS,
+  fonts and table markup); `RULEBOOK.md` is the plain-text twin.
+
+**A commit that changes a rule and does not touch all four files is incomplete.** "Rule" here
+means anything a player at the table would notice: a phase step, an action's cost or effect, a
+setup value, a scoring term, a tiebreaker, a card's printed numbers, or a capability being
+removed. Pure refactors and server/web plumbing do not count.
+
+This is written down because it has already gone wrong twice, silently. `3ff8fc9` (Variedad de
+Recetas) added a **7th scoring term and a new first tiebreaker** and never touched the rulebooks,
+so for two commits the reglamento told players there were 6 terms and that Vitalidad broke ties.
+The Ingresos de Panadería commit repeated it. Nothing caught either one — no test reads these
+files, and `context/*.md` being correct makes the gap invisible from the code side.
+
+Things that are easy to miss when doing this, learned the hard way:
+- **Prose, not just tables.** Old rules survive in sentences long after the numbers are fixed —
+  a currency's list of sources, the one-line phase summary in §4, a cross-reference telling
+  players to use an action that no longer does that thing.
+- **Section renumbering.** Inserting a `### 9.4` means the old 9.4 and 9.5 must shift, and the
+  `.html` may not even have the same subsections as the `.md`.
+- **Verify, don't eyeball.** Diff the 12 recipe rows cell-by-cell against `RECIPE_CATALOG` in
+  *both* files, grep for the superseded rule's old wording, and for the HTML check tag nesting
+  plus every table's `<th>`-vs-`<td>` column count (adding a table column is easy to do in the
+  header and forget in the rows).
+
+`Fermentum_ GDDv0.0.2.pdf` in the repo root is **legacy and NOT authoritative**. It is the
+historical design doc the GDD v0.0.2 overhaul came from, it is a binary nobody can edit, and it
+already disagrees with the code on many points. Never treat it as the source of truth, and never
+"fix" the code to match it. `context/*.md` is the spec; `RULEBOOK.md`/`.html` is the reglamento.
 
 ## Commands
 
