@@ -45,8 +45,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 9
+VERSION_FORMATO = 10
 """
+Bumped a 10: dos formas persistidas cambian a la vez -- `Recipe` PIERDE
+`req_tecnologico` (ninguna receta esta ya restringida por tecnologia) y
+`HorneadoRecord` GANA `ampliacion_aplicada` (la ampliacion de zona optima del Modulo
+Analitico vigente al hornear, sellada para que `zona_resultado` no reetiquete despues
+un horneado optimo como "baja"). Un pickle viejo trae objetos con la forma anterior.
+
 Bumped a 9: `Recipe` cambió de forma -- `harina_base: TipoHarina` pasó a
 `harinas: Tuple[Tuple[TipoHarina, int], ...]` (recetas de una o dos harinas,
 grados Básica/Intermedia/Avanzada) y el catálogo se re-escaló a 12 cartas. Un

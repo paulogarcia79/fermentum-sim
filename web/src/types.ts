@@ -35,7 +35,11 @@ export interface Recipe {
   monedas_baja: number
   monedas_optima: number
   monedas_sobre: number
-  req_tecnologico: TecnologiaID | null
+  // Zonas [baja, optima, sobre] ya ampliadas por el Modulo Analitico del jugador
+  // que posee la carta. Solo lo inyecta server/views.py en las recetas que alguien
+  // POSEE (carpeta, estaciones, archivos); las del mercado llegan sin el campo y se
+  // leen con sus zonas impresas. Ver web/src/data/zonasReceta.ts.
+  zonas_efectivas?: [[number, number], [number, number], [number, number]]
 }
 
 export interface FermentationSlot {

@@ -23,7 +23,12 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from engine import GameEngine, PRECIO_PLIEGUES, PRECIO_PLIEGUES_VITALIDAD
+from engine import (
+    GameEngine,
+    PRECIO_PLIEGUES,
+    PRECIO_PLIEGUES_VITALIDAD,
+    PRECIO_RECETA,
+)
 from models import Player
 
 
@@ -42,6 +47,14 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     hay_estacion_activa = len(player.masas_activas) > 0
     hay_estacion_libre = player.indice_estacion_disponible is not None
     hay_receta_visible = any(r is not None for r in engine.market.recetas_visibles)
+    # Precio de la receta visible MÁS BARATA, no el mínimo global: las Básicas viven
+    # al fondo del mazo (son la reserva, no la oferta), así que un mercado sin
+    # ninguna Básica a la vista es el estado normal en los primeros días —
+    # justo cuando el jugador está más pobre.
+    precio_receta_minimo = min(
+        (PRECIO_RECETA[r.grado] for r in engine.market.recetas_visibles if r is not None),
+        default=0,
+    )
     usados = player.acciones_pa_usadas_hoy
 
     resultados: List[Dict[str, Any]] = []
@@ -104,12 +117,21 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         if "F" in usados
         else ("Sin PA" if not tiene_pa else "Sin masas activas"),
     )
+    if "G" in usados:
+        motivo_g = "Ya usaste este espacio hoy"
+    elif not tiene_pa:
+        motivo_g = "Sin PA"
+    elif not hay_receta_visible:
+        motivo_g = "No hay recetas visibles en el mercado"
+    else:
+        motivo_g = "Sin Monedas para ninguna receta visible"
     agregar(
         "G",
-        "G" not in usados and tiene_pa and hay_receta_visible,
-        "Ya usaste este espacio hoy"
-        if "G" in usados
-        else ("Sin PA" if not tiene_pa else "No hay recetas visibles en el mercado"),
+        "G" not in usados
+        and tiene_pa
+        and hay_receta_visible
+        and player.monedas >= precio_receta_minimo,
+        motivo_g,
     )
     agregar(
         "pedido_urgencia",

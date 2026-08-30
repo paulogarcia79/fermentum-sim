@@ -48,11 +48,13 @@ from engine import (
     PRECIO_AGUA,
     PRECIO_PLIEGUES,
     PRECIO_PLIEGUES_VITALIDAD,
+    PRECIO_RECETA,
 )
 from exceptions import (
     CarpetaFullError,
     EspacioAccionYaUsadoError,
     InvalidActionError,
+    MarketSlotEmptyError,
     MissingResourceError,
     NotEnoughActionPointsError,
     RuleViolationError,
@@ -75,7 +77,7 @@ from models import (
 COSTOS_TECNOLOGIA: Dict[TecnologiaID, int] = {
     TecnologiaID.INCUBADORA: 3,
     TecnologiaID.CAMARA_B: 4,
-    TecnologiaID.MODULO_ANALITICO: 3,
+    TecnologiaID.MODULO_ANALITICO: 4,
     TecnologiaID.CRIOPRESERVACION: 2,
 }
 """
@@ -379,7 +381,6 @@ class ActionManager:
           · player.dados_inoculo >= 1 (hay dados disponibles para sellar).
           · Debe existir una estación de fermentación libre.
             (Estación 03 solo con Cámara B activa.)
-          · La mejora declarada en ``receta.req_tecnologico`` debe estar instalada.
           · modificador_incubadora ≠ 0 solo si Incubadora está instalada.
 
         Efectos sobre el estado:
@@ -399,8 +400,9 @@ class ActionManager:
 
         Raises:
             NotEnoughActionPointsError: PA insuficientes.
-            RuleViolationError: Receta no en carpeta, vitalidad=0,
-                requisito tecnológico sin instalar, o sin estación disponible.
+            RuleViolationError: Receta no en carpeta, vitalidad=0, o sin
+                estación de fermentación disponible. Ninguna receta está restringida
+                por tecnología: el freno es el coste en insumos.
             StationBlockedError: Todas las estaciones están ocupadas o
                 la única libre (03) requiere Cámara B.
             MissingResourceError: Harina, agua o dados de inóculo insuficientes.
@@ -422,18 +424,6 @@ class ActionManager:
             raise RuleViolationError(
                 f"La receta '{receta.nombre}' no está en la Carpeta de "
                 f"Proyectos de '{player.nombre}'. Investígala primero (Acción G)."
-            )
-
-        # El requisito tecnológico lo declara CADA carta (``req_tecnologico``), no
-        # su grado: desde que el grado se deriva de las harinas impresas, atarlo a
-        # Grado.AVANZADA significaría que cualquier carta de harina especial queda
-        # bloqueada por el Módulo Analítico, se quiera o no.
-        if receta.req_tecnologico is not None and not player.tecnologias.esta_activa(
-            receta.req_tecnologico
-        ):
-            raise RuleViolationError(
-                f"La receta '{receta.nombre}' requiere "
-                f"{receta.req_tecnologico.nombre_legible}. Instálala primero (Acción D)."
             )
 
         indice_estacion: Optional[int] = player.indice_estacion_disponible
@@ -676,7 +666,8 @@ class ActionManager:
         Costos por tecnología:
           · Incubadora:       3 Datos  → ajuste ±5°C local en Fase III.
           · Cámara B:         4 Datos  → desbloquea Estación 03 y mejora Acción E.
-          · Módulo Analítico: 3 Datos  → +1 Dato al hornear en centro exacto
+          · Módulo Analítico: 4 Datos  → ensancha la zona óptima ±1 casilla (y
+            retrasa el colapso) y sube los Datos del horneado a 2 (3 en centro exacto)
                                          y habilita recetas Avanzadas (Acción B).
           · Criopreservación: 2 Datos  → ignora el desgaste metabólico de
                                          Fase III (Estasis Biológica).
@@ -906,7 +897,9 @@ class ActionManager:
         """
         Acción G: Investigar Protocolo (ACTIONS_REGISTRY.md §2G).
 
-        Costo:   1 PA.
+        Costo:   1 PA + ``PRECIO_RECETA[receta.grado]`` Monedas (Básica 1,
+                 Intermedia 2, Avanzada 3). El precio es aditivo: el PA y el
+                 espacio de acción siguen siendo la escasez real.
         Efecto:  Toma una carta de receta del mercado central y la coloca en
                  estado inactivo («boca arriba») en la Carpeta de Proyectos.
                  El slot del mercado queda vacío hasta el próximo Protocolo
@@ -925,6 +918,7 @@ class ActionManager:
 
         Raises:
             NotEnoughActionPointsError: PA insuficientes.
+            MissingResourceError: Monedas insuficientes para esa receta.
             CarpetaFullError: Carpeta llena y sin especificar descarte, o
                 ``indice_descartar`` fuera de rango.
             InvalidActionError: ``indice_mercado`` fuera de rango.
@@ -957,11 +951,24 @@ class ActionManager:
                     f"(índices 0-{len(player.carpeta_proyectos) - 1})."
                 )
 
+        # Validar el precio ANTES de tomar la carta. `tomar_receta` la RETIRA del
+        # mercado, así que cobrar después significaría que un jugador sin Monedas
+        # destruye una carta al fallar: fail-fast obliga a mirar sin tocar primero.
+        en_slot: Optional[Recipe] = self._engine.market.recetas_visibles[indice_mercado]
+        if en_slot is None:
+            raise MarketSlotEmptyError(
+                f"El slot {indice_mercado} del mercado está vacío. "
+                "Se repone en el Protocolo de Refresco del día siguiente."
+            )
+        precio: int = PRECIO_RECETA[en_slot.grado]
+        self._require_monedas(player, precio)
+
         # Tomar receta del mercado (puede lanzar MarketSlotEmptyError)
         receta: Recipe = self._engine.market.tomar_receta(indice_mercado)
 
         # Aplicar efectos
         player.consumir_punto_accion("G")
+        player.monedas -= precio
 
         if carpeta_llena and indice_descartar is not None:
             descartada: Recipe = player.carpeta_proyectos.pop(indice_descartar)

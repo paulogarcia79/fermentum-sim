@@ -16,12 +16,13 @@ Para la simulación, cada entidad de tipo `Receta` debe contener los siguientes 
 * `zona_baja` (Tuple[int, int]): Rango del track donde la masa está cruda (otorga pocos puntos, `puntos_baja`, y 0 Datos).
 * `zona_optima` (Tuple[int, int]): Rango del track objetivo (otorga puntos máximos, Datos extra en el centro exacto).
 * `zona_sobrefermentada` (Tuple[int, int]): Rango del track donde la masa colapsa automáticamente.
+* **Las tres zonas impresas no son necesariamente las vigentes.** El Módulo Analítico ensancha la zona óptima una casilla por lado, a costa de la baja por abajo y de la sobrefermentada por arriba — es decir, **también retrasa el umbral de colapso**. `Recipe.zonas_efectivas(ampliacion)` es el único sitio donde vive esa aritmética; toda consulta de zona (`esta_en_zona_baja`, `esta_en_zona_optima`, `esta_sobrefermentada`) acepta el mismo parámetro. Es un efecto **en vivo** del propietario, no un valor sellado en la masa: instalar el Módulo salva una masa que ya está fermentando. `es_centro_exacto` **no** acepta ampliación porque ensanchar simétricamente no mueve el centro (`(a-n + b+n)//2 == (a+b)//2`).
 * `puntos_baja` (Integer): Puntos de Maestría otorgados si se hornea en la zona baja.
 * `puntos_optimos` (Integer): Puntos de Maestría otorgados si se hornea en la zona óptima.
 * `penalizacion_colapso` (Integer): Puntos de Maestría negativos aplicados en horneado de emergencia (o si se hornea manual en esa zona).
 * `monedas_baja` / `monedas_optima` / `monedas_sobre` (Integer): Monedas cobradas al Hornear y Vender (Acción F) según la zona de horneado.
 * `bono_sabor_pts` (Integer): Puntos de Maestría del Bono de Sabor, otorgados junto con +2 Monedas si el Cubo de Acidez estaba sellado (y el horneado no fue un colapso).
-* `req_tecnologico` (String / None): Mejora de laboratorio estrictamente necesaria para iniciar la receta. **Es la única puerta tecnológica**: el grado ya no implica ninguna (una carta de harina especial sin `req_tecnologico` es jugable desde el Día 1).
+*(El campo `req_tecnologico` ya no existe: **ninguna receta está restringida por tecnología**. La regla es estructural — `Recipe` no tiene dónde escribir una puerta tecnológica —, así que no puede reintroducirse editando una carta. El freno de una receta cara es su precio de adquisición y su coste en insumos, no una mejora de laboratorio.)
 
 ---
 
@@ -31,27 +32,28 @@ Para la simulación, cada entidad de tipo `Receta` debe contener los siguientes 
 setup reparte una Básica distinta por jugador (hasta 4) — con tres, el jugador 4
 recibía una copia de la del jugador 1.
 
-| ID Receta | Grado | Harinas (siempre 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono) | Zona Baja | Zona Óptima | Zona Sobre | Puntos (Baja/Óptimo/Sobre) | Monedas (Baja/Óptima/Sobre) | Req. Tecnológico |
+| ID Receta | Grado | Coste (Monedas) | Harinas (siempre 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono) | Zona Baja | Zona Óptima | Zona Sobre | Puntos (Baja/Óptimo/Sobre) | Monedas (Baja/Óptima/Sobre) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Pan de Campo** | Básica | Blanca 100% | 12 (60%) | [3] (+3) | 1 - 10 | 11 - 15 | 16 - 20 | 4 / 10 / -2 | 13 / 17 / 11 | Ninguno |
-| **Pan de Molde** | Básica | Blanca 100% | 11 (55%) | [1, 2] (+2) | 1 - 8 | 9 - 14 | 15 - 20 | 3 / 9 / -2 | 12 / 16 / 10 | Ninguno |
-| **Baguette** | Básica | Blanca 100% | 13 (65%) | [2] (+3) | 1 - 11 | 12 - 15 | 16 - 20 | 5 / 11 / -2 | 14 / 18 / 12 | Ninguno |
-| **Focaccia** | Básica | Blanca 100% | 15 (75%) | [1, 2] (+2) | 1 - 9 | 10 - 14 | 15 - 20 | 3 / 12 / -3 | 15 / 19 / 13 | Ninguno |
-| **Miche** | Intermedia | Blanca 50% + Integral 50% | 14 (70%) | [3, 4] (+4) | 1 - 11 | 12 - 16 | 17 - 20 | 5 / 13 / -4 | 16 / 20 / 13 | Ninguno |
-| **Pizza Napolitana** | Intermedia | Blanca 50% + Integral 50% | 13 (62%) | [3] (+4) | 1 - 10 | 11 - 14 | 15 - 20 | 4 / 14 / -4 | 15 / 21 / 12 | Módulo Analítico |
-| **Brioche** | Intermedia | Blanca 50% + Centeno 50% | 11 (52%) | [1] (+5) | 1 - 14 | 15 - 17 | 18 - 20 | 5 / 16 / -6 | 14 / 21 / 11 | Módulo Analítico |
-| **Panettone** | Intermedia | Blanca 50% + Centeno 50% | 10 (47%) | [1] (+8) | 1 - 16 | 17 - 18 | 19 - 20 | 8 / 16 / -8 | 13 / 22 / 10 | Módulo Analítico |
-| **Hogaza Centeno** | Avanzada | Centeno 100% | 14 (67%) | [4, 5] (+6) | 1 - 12 | 13 - 16 | 17 - 20 | 6 / 17 / -5 | 20 / 27 / 17 | Módulo Analítico |
-| **Pan Semillas** | Avanzada | Integral 100% | 16 (78%) | [3, 4] (+7) | 1 - 13 | 14 - 16 | 17 - 20 | 6 / 17 / -5 | 19 / 26 / 16 | Módulo Analítico |
-| **Pan Graham** | Avanzada | Integral 100% | 16 (80%) | [4, 5] (+6) | 1 - 13 | 14 - 17 | 18 - 20 | 6 / 19 / -6 | 18 / 26 / 15 | Módulo Analítico |
-| **Pumpernickel** | Avanzada | Centeno 100% | 17 (85%) | [5, 6] (+8) | 1 - 15 | 16 - 18 | 19 - 20 | 8 / 20 / -8 | 16 / 28 / 12 | Módulo Analítico |
+| **Pan de Campo** | Básica | 1 | Blanca 100% | 12 (60%) | [3] (+3) | 1 - 10 | 11 - 15 | 16 - 20 | 4 / 10 / -2 | 13 / 17 / 11 |
+| **Pan de Molde** | Básica | 1 | Blanca 100% | 11 (55%) | [1, 2] (+2) | 1 - 8 | 9 - 14 | 15 - 20 | 3 / 9 / -2 | 12 / 16 / 10 |
+| **Baguette** | Básica | 1 | Blanca 100% | 13 (65%) | [2] (+3) | 1 - 11 | 12 - 15 | 16 - 20 | 5 / 11 / -2 | 14 / 18 / 12 |
+| **Focaccia** | Básica | 1 | Blanca 100% | 15 (75%) | [1, 2] (+2) | 1 - 9 | 10 - 14 | 15 - 20 | 3 / 12 / -3 | 15 / 19 / 13 |
+| **Miche** | Intermedia | 2 | Blanca 50% + Integral 50% | 14 (70%) | [3, 4] (+4) | 1 - 11 | 12 - 16 | 17 - 20 | 5 / 13 / -4 | 16 / 20 / 13 |
+| **Pizza Napolitana** | Intermedia | 2 | Blanca 50% + Integral 50% | 13 (62%) | [3] (+4) | 1 - 10 | 11 - 14 | 15 - 20 | 4 / 14 / -4 | 15 / 21 / 12 |
+| **Brioche** | Intermedia | 2 | Blanca 50% + Centeno 50% | 11 (52%) | [1] (+5) | 1 - 14 | 15 - 17 | 18 - 20 | 5 / 16 / -6 | 14 / 21 / 11 |
+| **Panettone** | Intermedia | 2 | Blanca 50% + Centeno 50% | 10 (47%) | [1] (+8) | 1 - 16 | 17 - 18 | 19 - 20 | 8 / 16 / -8 | 13 / 22 / 10 |
+| **Hogaza Centeno** | Avanzada | 3 | Centeno 100% | 14 (67%) | [4, 5] (+6) | 1 - 12 | 13 - 16 | 17 - 20 | 6 / 17 / -5 | 20 / 27 / 17 |
+| **Pan Semillas** | Avanzada | 3 | Integral 100% | 16 (78%) | [3, 4] (+7) | 1 - 13 | 14 - 16 | 17 - 20 | 6 / 17 / -5 | 19 / 26 / 16 |
+| **Pan Graham** | Avanzada | 3 | Integral 100% | 16 (80%) | [4, 5] (+6) | 1 - 13 | 14 - 17 | 18 - 20 | 6 / 19 / -6 | 18 / 26 / 15 |
+| **Pumpernickel** | Avanzada | 3 | Centeno 100% | 17 (85%) | [5, 6] (+8) | 1 - 15 | 16 - 18 | 19 - 20 | 8 / 20 / -8 | 16 / 28 / 12 |
 
 ---
 
 ## 3. Reglas de Validación para la Simulación
-* **Inicio Condicional:** Un agente no puede ejecutar la acción "Iniciar Receta" si no posee en su reserva **todas** las harinas que la carta imprime (`requisito_harina`, 100% en total: una bolsa entera de un tipo, o media bolsa de cada uno de dos tipos) y la cantidad exacta de `tokens_agua`. Si la carta declara un `req_tecnologico`, esa mejora debe estar instalada — se comprueba contra el campo de la carta, **no** contra su grado.
+* **Inicio Condicional:** Un agente no puede ejecutar la acción "Iniciar Receta" si no posee en su reserva **todas** las harinas que la carta imprime (`requisito_harina`, 100% en total: una bolsa entera de un tipo, o media bolsa de cada uno de dos tipos) y la cantidad exacta de `tokens_agua`. **Ninguna comprobación tecnológica**: no existe receta que exija una mejora de laboratorio.
 * **Sello de Acidez:** Al iniciar la receta, el agente compara el nivel de Acidez actual de su cultivo base con la lista `acidez_diana`. Si el valor actual está dentro de la lista, la receta se marca internamente con un booleano `bono_sabor = True`. Si no, `bono_sabor = False`.
-* **Gatillo de Colapso:** Durante la Fase III, si la posición de la masa entra en el rango definido por `zona_sobrefermentada`, el agente invoca automáticamente la función de horneado aplicando la `penalizacion_colapso`.
+* **Gatillo de Colapso:** Durante la Fase III, si la posición de la masa entra en el rango sobrefermentado **efectivo de su propietario** (`zonas_efectivas`, ver §1), el agente invoca automáticamente la función de horneado aplicando la `penalizacion_colapso`. Leerlo contra la zona impresa en vez de la efectiva es el error que haría colapsar una masa pese a tener el Módulo Analítico instalado.
+* **Adquisición (Acción G):** Tomar una receta del mercado cuesta 1 PA **más Monedas según su grado** (`engine.PRECIO_RECETA`: Básica 1, Intermedia 2, Avanzada 3). El precio se valida **antes** de retirar la carta del mercado: `Market.tomar_receta` la quita, así que cobrar después significaría que un jugador sin Monedas destruye una carta al fallar.
 
 ---
 

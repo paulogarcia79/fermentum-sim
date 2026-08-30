@@ -52,6 +52,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Dict
 
 from disponibilidad import acciones_disponibles
+from models import Recipe
 from serialization import snapshot
 
 if TYPE_CHECKING:
@@ -105,6 +106,29 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
         datos_jugador["color"] = asiento.color
         datos_jugador["vitalidad_prevista"] = engine.vitalidad_prevista(jugador)
         datos_jugador["en_riesgo_colapso"] = engine.riesgo_colapso(jugador)
+        # Zonas del track ya ampliadas por el Módulo Analítico, receta por receta,
+        # SOLO en las recetas que este jugador posee. Las del mercado conservan las
+        # zonas impresas: no son de nadie todavía.
+        #
+        # Se calculan aquí por la misma razón que `vitalidad_prevista`: el umbral de
+        # colapso es la regla que el jugador lee para medir su riesgo, y duplicar esa
+        # aritmética en TypeScript es exactamente el punto de deriva que este módulo
+        # existe para evitar. El cliente solo dibuja lo que recibe.
+        ampliacion = engine.ampliacion_zona_optima(jugador)
+        for clave, recetas in (
+            ("carpeta_proyectos", jugador.carpeta_proyectos),
+            ("estaciones_fermentacion", jugador.estaciones_fermentacion),
+            ("archivo_horneado_exitoso", jugador.archivo_horneado_exitoso),
+            ("archivo_colapsos", jugador.archivo_colapsos),
+        ):
+            for datos_item, item in zip(datos_jugador[clave], recetas):
+                if item is None:
+                    continue
+                # carpeta_proyectos es List[Recipe]; las estaciones y los archivos
+                # envuelven la receta, así que hay que bajar un nivel.
+                receta = item if isinstance(item, Recipe) else item.recipe
+                destino = datos_item if isinstance(item, Recipe) else datos_item["recipe"]
+                destino["zonas_efectivas"] = receta.zonas_efectivas(ampliacion)
         # Los HorneadoRecord del archivo llevan dos @property que asdict no
         # incluye y que el cliente no debe recalcular (la zona en particular
         # es lógica de reglas): se inyectan aquí, registro por registro.

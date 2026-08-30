@@ -16,8 +16,8 @@ porque cada una es un sitio donde el diseno se puede deshacer en silencio:
   3. Las bandas de puntos por grado no se solapan (9-12 / 13-16 / 17-20). Sin
      este test, "Intermedia" vuelve a ser decoracion en cuanto alguien anada
      una carta.
-  4. La Accion B cobra TODAS las harinas impresas, y el requisito tecnologico
-     lo declara la carta (`req_tecnologico`), no su grado.
+  4. La Accion B cobra TODAS las harinas impresas. Ninguna receta esta
+     restringida por tecnologia: `Recipe` ya no tiene donde escribirlo.
 """
 from __future__ import annotations
 
@@ -130,7 +130,6 @@ def _receta_de_prueba(**overrides) -> Recipe:
         monedas_baja=13,
         monedas_optima=17,
         monedas_sobre=11,
-        req_tecnologico=None,
     )
     campos.update(overrides)
     return Recipe(**campos)
@@ -210,13 +209,16 @@ def test_requisito_harina_usa_las_mismas_claves_que_la_reserva_del_jugador() -> 
         assert set(receta.requisito_harina) <= claves_reserva
 
 
-def test_hay_una_intermedia_sin_requisito_tecnologico() -> None:
+def test_ninguna_receta_esta_restringida_por_tecnologia() -> None:
     """
-    El escalon medio necesita una entrada que no exija pasar antes por la
-    Accion D; si todas las Intermedias estan bloqueadas, el grado se saltea
-    en vez de escalarse.
+    La regla es estructural, no una convencion: `Recipe` ya no tiene donde
+    escribir una puerta tecnologica, asi que ninguna carta puede tenerla.
     """
-    assert any(r.req_tecnologico is None for r in get_recetas_intermedias())
+    assert not hasattr(Recipe, "__annotations__") or (
+        "req_tecnologico" not in Recipe.__annotations__
+    )
+    for receta in RECIPE_CATALOG.values():
+        assert not hasattr(receta, "req_tecnologico")
 
 
 def test_el_mercado_puede_repartir_los_tres_grados() -> None:
@@ -297,7 +299,7 @@ def test_la_receta_inicial_siempre_es_basica() -> None:
 
 
 # ===========================================================================
-# 4. La Accion B cobra las harinas impresas y respeta req_tecnologico
+# 4. La Accion B cobra las harinas impresas
 # ===========================================================================
 
 
@@ -320,15 +322,11 @@ def _preparar(receta: Recipe) -> Tuple[GameEngine, ActionManager, Player]:
     player.reserva_agua = receta.tokens_agua + 5
     for tipo, pct in receta.requisito_harina.items():
         player.reserva_harina[tipo] = pct
-    if receta.req_tecnologico is not None:
-        player.tecnologias.activar(receta.req_tecnologico)
     return engine, manager, player
 
 
 def test_accion_B_cobra_media_bolsa_de_cada_tipo_en_una_intermedia() -> None:
-    receta = next(
-        r for r in get_recetas_intermedias() if r.req_tecnologico is None
-    )
+    receta = get_recetas_intermedias()[0]
     _, manager, player = _preparar(receta)
 
     manager.accion_B_iniciar_receta(player, receta)
@@ -339,7 +337,7 @@ def test_accion_B_cobra_media_bolsa_de_cada_tipo_en_una_intermedia() -> None:
 
 
 def test_accion_B_rechaza_una_intermedia_con_una_sola_de_las_dos_mitades() -> None:
-    receta = next(r for r in get_recetas_intermedias() if r.req_tecnologico is None)
+    receta = get_recetas_intermedias()[0]
     _, manager, player = _preparar(receta)
     faltante = list(receta.requisito_harina)[1]
     player.reserva_harina[faltante] = 0
@@ -355,7 +353,7 @@ def test_accion_B_rechaza_una_intermedia_con_una_sola_de_las_dos_mitades() -> No
 
 def test_accion_B_nombra_las_dos_harinas_que_faltan_no_solo_la_primera() -> None:
     """Con una Intermedia, saber que falta 'una' harina no dice cual comprar."""
-    receta = next(r for r in get_recetas_intermedias() if r.req_tecnologico is None)
+    receta = get_recetas_intermedias()[0]
     _, manager, player = _preparar(receta)
     for tipo in receta.requisito_harina:
         player.reserva_harina[tipo] = 0
@@ -367,42 +365,5 @@ def test_accion_B_nombra_las_dos_harinas_que_faltan_no_solo_la_primera() -> None
         assert tipo in str(excinfo.value)
 
 
-def test_el_grado_ya_no_es_la_puerta_tecnologica() -> None:
-    """
-    Una Avanzada sin `req_tecnologico` seria jugable sin Modulo Analitico: la
-    puerta la declara la carta, no su reparto de harinas. Se comprueba sobre una
-    carta sintetica porque hoy las cuatro Avanzadas del catalogo si lo exigen.
-    """
-    receta = _receta_de_prueba(
-        id="avanzada_sin_puerta",
-        grado=Grado.AVANZADA,
-        harinas=((TipoHarina.CENTENO, 100),),
-        puntos_optimos=17,
-        req_tecnologico=None,
-    )
-    _, manager, player = _preparar(receta)
-    assert not player.tecnologias.modulo_analitico
-
-    slot = manager.accion_B_iniciar_receta(player, receta)
-    assert slot.recipe is receta
 
 
-def test_accion_B_rechaza_la_carta_si_falta_la_mejora_que_declara() -> None:
-    receta = next(r for r in RECIPE_CATALOG.values() if r.req_tecnologico is not None)
-    _, manager, player = _preparar(receta)
-    player.tecnologias = Technologies()  # sin ninguna mejora
-
-    with pytest.raises(RuleViolationError, match=receta.req_tecnologico.nombre_legible):
-        manager.accion_B_iniciar_receta(player, receta)
-
-
-def test_accion_B_acepta_la_carta_con_la_mejora_instalada() -> None:
-    receta = next(
-        r
-        for r in RECIPE_CATALOG.values()
-        if r.req_tecnologico is TecnologiaID.MODULO_ANALITICO
-    )
-    _, manager, player = _preparar(receta)
-
-    slot = manager.accion_B_iniciar_receta(player, receta)
-    assert slot.recipe is receta

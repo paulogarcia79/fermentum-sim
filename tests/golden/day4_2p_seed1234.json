@@ -9,8 +9,8 @@
       "datos_investigacion": 0,
       "monedas": 1,
       "reserva_harina": {
-        "Blanca": 70,
-        "Centeno": 90,
+        "Blanca": 0,
+        "Centeno": 60,
         "Integral": 0
       },
       "accion_alimentar_usada": true,
@@ -61,8 +61,7 @@
           "penalizacion_colapso": -2,
           "monedas_baja": 14,
           "monedas_optima": 18,
-          "monedas_sobre": 12,
-          "req_tecnologico": null
+          "monedas_sobre": 12
         },
         {
           "id": "pizza_napolitana",
@@ -101,8 +100,7 @@
           "penalizacion_colapso": -4,
           "monedas_baja": 15,
           "monedas_optima": 21,
-          "monedas_sobre": 12,
-          "req_tecnologico": "modulo_analitico"
+          "monedas_sobre": 12
         },
         {
           "id": "pan_semillas",
@@ -138,8 +136,7 @@
           "penalizacion_colapso": -5,
           "monedas_baja": 19,
           "monedas_optima": 26,
-          "monedas_sobre": 16,
-          "req_tecnologico": "modulo_analitico"
+          "monedas_sobre": 16
         }
       ],
       "archivo_horneado_exitoso": [],
@@ -155,7 +152,7 @@
       "en_estado_contaminacion": false,
       "puntos_accion": 0,
       "datos_investigacion": 0,
-      "monedas": 4,
+      "monedas": 0,
       "reserva_harina": {
         "Blanca": 70,
         "Centeno": 90,
@@ -209,8 +206,7 @@
           "penalizacion_colapso": -2,
           "monedas_baja": 13,
           "monedas_optima": 17,
-          "monedas_sobre": 11,
-          "req_tecnologico": null
+          "monedas_sobre": 11
         },
         {
           "id": "pizza_napolitana",
@@ -249,8 +245,7 @@
           "penalizacion_colapso": -4,
           "monedas_baja": 15,
           "monedas_optima": 21,
-          "monedas_sobre": 12,
-          "req_tecnologico": "modulo_analitico"
+          "monedas_sobre": 12
         },
         {
           "id": "brioche",
@@ -289,8 +284,7 @@
           "penalizacion_colapso": -6,
           "monedas_baja": 14,
           "monedas_optima": 21,
-          "monedas_sobre": 11,
-          "req_tecnologico": "modulo_analitico"
+          "monedas_sobre": 11
         }
       ],
       "archivo_horneado_exitoso": [],
@@ -596,8 +590,7 @@
         "penalizacion_colapso": -6,
         "monedas_baja": 14,
         "monedas_optima": 21,
-        "monedas_sobre": 11,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 11
       },
       {
         "id": "pizza_napolitana",
@@ -636,8 +629,7 @@
         "penalizacion_colapso": -4,
         "monedas_baja": 15,
         "monedas_optima": 21,
-        "monedas_sobre": 12,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 12
       },
       {
         "id": "pan_graham",
@@ -673,8 +665,7 @@
         "penalizacion_colapso": -6,
         "monedas_baja": 18,
         "monedas_optima": 26,
-        "monedas_sobre": 15,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 15
       },
       null
     ],
@@ -717,8 +708,7 @@
         "penalizacion_colapso": -4,
         "monedas_baja": 16,
         "monedas_optima": 20,
-        "monedas_sobre": 13,
-        "req_tecnologico": null
+        "monedas_sobre": 13
       },
       {
         "id": "hogaza_centeno",
@@ -754,8 +744,7 @@
         "penalizacion_colapso": -5,
         "monedas_baja": 20,
         "monedas_optima": 27,
-        "monedas_sobre": 17,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 17
       },
       {
         "id": "miche",
@@ -795,8 +784,7 @@
         "penalizacion_colapso": -4,
         "monedas_baja": 16,
         "monedas_optima": 20,
-        "monedas_sobre": 13,
-        "req_tecnologico": null
+        "monedas_sobre": 13
       },
       {
         "id": "miche",
@@ -836,8 +824,7 @@
         "penalizacion_colapso": -4,
         "monedas_baja": 16,
         "monedas_optima": 20,
-        "monedas_sobre": 13,
-        "req_tecnologico": null
+        "monedas_sobre": 13
       },
       {
         "id": "panettone",
@@ -876,8 +863,7 @@
         "penalizacion_colapso": -8,
         "monedas_baja": 13,
         "monedas_optima": 22,
-        "monedas_sobre": 10,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 10
       },
       {
         "id": "brioche",
@@ -916,8 +902,7 @@
         "penalizacion_colapso": -6,
         "monedas_baja": 14,
         "monedas_optima": 21,
-        "monedas_sobre": 11,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 11
       },
       {
         "id": "panettone",
@@ -956,8 +941,7 @@
         "penalizacion_colapso": -8,
         "monedas_baja": 13,
         "monedas_optima": 22,
-        "monedas_sobre": 10,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 10
       },
       {
         "id": "pan_semillas",
@@ -993,8 +977,7 @@
         "penalizacion_colapso": -5,
         "monedas_baja": 19,
         "monedas_optima": 26,
-        "monedas_sobre": 16,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 16
       },
       {
         "id": "pumpernickel",
@@ -1030,8 +1013,7 @@
         "penalizacion_colapso": -8,
         "monedas_baja": 16,
         "monedas_optima": 28,
-        "monedas_sobre": 12,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 12
       },
       {
         "id": "focaccia",
@@ -1067,8 +1049,7 @@
         "penalizacion_colapso": -3,
         "monedas_baja": 15,
         "monedas_optima": 19,
-        "monedas_sobre": 13,
-        "req_tecnologico": null
+        "monedas_sobre": 13
       },
       {
         "id": "focaccia",
@@ -1104,8 +1085,7 @@
         "penalizacion_colapso": -3,
         "monedas_baja": 15,
         "monedas_optima": 19,
-        "monedas_sobre": 13,
-        "req_tecnologico": null
+        "monedas_sobre": 13
       },
       {
         "id": "pan_de_molde",
@@ -1141,8 +1121,7 @@
         "penalizacion_colapso": -2,
         "monedas_baja": 12,
         "monedas_optima": 16,
-        "monedas_sobre": 10,
-        "req_tecnologico": null
+        "monedas_sobre": 10
       },
       {
         "id": "pan_de_campo",
@@ -1177,8 +1156,7 @@
         "penalizacion_colapso": -2,
         "monedas_baja": 13,
         "monedas_optima": 17,
-        "monedas_sobre": 11,
-        "req_tecnologico": null
+        "monedas_sobre": 11
       },
       {
         "id": "focaccia",
@@ -1214,8 +1192,7 @@
         "penalizacion_colapso": -3,
         "monedas_baja": 15,
         "monedas_optima": 19,
-        "monedas_sobre": 13,
-        "req_tecnologico": null
+        "monedas_sobre": 13
       },
       {
         "id": "pan_de_molde",
@@ -1251,8 +1228,7 @@
         "penalizacion_colapso": -2,
         "monedas_baja": 12,
         "monedas_optima": 16,
-        "monedas_sobre": 10,
-        "req_tecnologico": null
+        "monedas_sobre": 10
       },
       {
         "id": "baguette",
@@ -1287,8 +1263,7 @@
         "penalizacion_colapso": -2,
         "monedas_baja": 14,
         "monedas_optima": 18,
-        "monedas_sobre": 12,
-        "req_tecnologico": null
+        "monedas_sobre": 12
       },
       {
         "id": "pan_de_campo",
@@ -1323,8 +1298,7 @@
         "penalizacion_colapso": -2,
         "monedas_baja": 13,
         "monedas_optima": 17,
-        "monedas_sobre": 11,
-        "req_tecnologico": null
+        "monedas_sobre": 11
       },
       {
         "id": "focaccia",
@@ -1360,8 +1334,7 @@
         "penalizacion_colapso": -3,
         "monedas_baja": 15,
         "monedas_optima": 19,
-        "monedas_sobre": 13,
-        "req_tecnologico": null
+        "monedas_sobre": 13
       },
       {
         "id": "pan_de_campo",
@@ -1396,8 +1369,7 @@
         "penalizacion_colapso": -2,
         "monedas_baja": 13,
         "monedas_optima": 17,
-        "monedas_sobre": 11,
-        "req_tecnologico": null
+        "monedas_sobre": 11
       },
       {
         "id": "baguette",
@@ -1432,8 +1404,7 @@
         "penalizacion_colapso": -2,
         "monedas_baja": 14,
         "monedas_optima": 18,
-        "monedas_sobre": 12,
-        "req_tecnologico": null
+        "monedas_sobre": 12
       },
       {
         "id": "baguette",
@@ -1468,8 +1439,7 @@
         "penalizacion_colapso": -2,
         "monedas_baja": 14,
         "monedas_optima": 18,
-        "monedas_sobre": 12,
-        "req_tecnologico": null
+        "monedas_sobre": 12
       },
       {
         "id": "pan_de_molde",
@@ -1505,8 +1475,7 @@
         "penalizacion_colapso": -2,
         "monedas_baja": 12,
         "monedas_optima": 16,
-        "monedas_sobre": 10,
-        "req_tecnologico": null
+        "monedas_sobre": 10
       },
       {
         "id": "pan_de_molde",
@@ -1542,8 +1511,7 @@
         "penalizacion_colapso": -2,
         "monedas_baja": 12,
         "monedas_optima": 16,
-        "monedas_sobre": 10,
-        "req_tecnologico": null
+        "monedas_sobre": 10
       }
     ],
     "descarte_recetas": [
@@ -1581,8 +1549,7 @@
         "penalizacion_colapso": -8,
         "monedas_baja": 16,
         "monedas_optima": 28,
-        "monedas_sobre": 12,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 12
       },
       {
         "id": "panettone",
@@ -1621,8 +1588,7 @@
         "penalizacion_colapso": -8,
         "monedas_baja": 13,
         "monedas_optima": 22,
-        "monedas_sobre": 10,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 10
       },
       {
         "id": "pan_graham",
@@ -1658,8 +1624,7 @@
         "penalizacion_colapso": -6,
         "monedas_baja": 18,
         "monedas_optima": 26,
-        "monedas_sobre": 15,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 15
       },
       {
         "id": "hogaza_centeno",
@@ -1695,8 +1660,7 @@
         "penalizacion_colapso": -5,
         "monedas_baja": 20,
         "monedas_optima": 27,
-        "monedas_sobre": 17,
-        "req_tecnologico": "modulo_analitico"
+        "monedas_sobre": 17
       }
     ],
     "posiciones_harina": {

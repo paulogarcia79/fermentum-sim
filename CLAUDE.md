@@ -211,12 +211,12 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
     `archivo_horneado_exitoso[].recipe`), so injecting it in `views.py` is not one line.
     Validating in `__post_init__` buys the same "cannot lie" guarantee for free, and because
     `RECIPE_CATALOG` is a module-level constant a mislabelled card fails at `import models`.
-  - **The tech gate left `grado`.** Acción B used to read `grado == AVANZADA and not
-    modulo_analitico`; with the grade derived, that would have auto-gated *any* future special-
-    flour card. It now reads the per-card `req_tecnologico` (a field that already existed, already
-    shipped to the client, and was read by nothing) via the existing
-    `Technologies.esta_activa(TecnologiaID)`. Miche is deliberately the one ungated Intermedia, so
-    the middle rung has an entry that doesn't require Acción D first.
+  - **The tech gate left `grado`** — and then left the game entirely. Acción B used to read
+    `grado == AVANZADA and not modulo_analitico`; with the grade derived, that would have
+    auto-gated *any* future special-flour card, so it moved to the per-card `req_tecnologico`.
+    One commit later that field was **deleted** and no recipe is technology-gated at all — see
+    "Recipes cost Monedas" below. The history is worth knowing: `req_tecnologico` was dead weight,
+    then briefly load-bearing, then gone.
 
   `requisito_harina` is a derived `Dict[str, int]` keyed exactly like `Player.reserva_harina`, so
   `ActionManager._require_harinas` (which replaced `_require_harina_tipo`) and Acción B's spend are
@@ -254,6 +254,57 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   `bootstrap.create_game` then removes **one copy** per player of the Básica it dealt (`list.remove`,
   equality on a frozen dataclass) — one copy, not the protocol, or a 4-player game would empty the
   reserve stratum. Tests: `tests/test_recetas_grado.py`.
+
+  **Recipes cost Monedas, and nothing gates them.** Acción G was the only free thing in the game
+  (1 PA and no resource), so the recipe market was a queue rather than an economy; meanwhile 7 of
+  the 12 cards declared `req_tecnologico`, putting the interesting half of the catalogue behind an
+  unrelated purchase. Those two traded places. `engine.PRECIO_RECETA = {Básica: 1, Intermedia: 2,
+  Avanzada: 3}` is charged by Acción G **additively** on top of its 1 PA — indexed by grade, like
+  `PRECIO_PLIEGUES` and `COPIAS_POR_GRADO`, so no new `Recipe` field and no way for the price to
+  disagree with the card. `req_tecnologico` is **deleted from `Recipe`**, not emptied: the rule is
+  structural, with nowhere to write a tech gate on a recipe. Tech gates elsewhere (Estación 03 ←
+  Cámara B, the Incubadora modifier, Cámara B's Pliegues variants, Criopreservación) are untouched.
+
+  **The ordering in `accion_G_investigar_protocolo` is load-bearing**: `Market.tomar_receta`
+  *removes* the card, so the price is read by peeking `recetas_visibles[i]` and validated
+  **before** taking. Charging afterwards would mean every attempt by a broke player destroys a
+  market card for everyone — a fail-fast violation that leaves no trace. `disponibilidad.py`'s
+  `"G"` clause greys the space out against the cheapest **visible** recipe, not the global minimum:
+  Básicas sit at the bottom of the deck, so an all-Intermedia/Avanzada market is the normal early
+  state, exactly when a player is poorest.
+
+  **The Módulo Analítico had to be rebuilt**, because deleting the gate deleted its job. Its only
+  other effect was `DATOS_BAKE_CENTRO_EXACTO_BONUS`, and the arithmetic made it a trap: with a
+  handful of bakes in a game it needed ~3 perfectly-centred ones just to refund 3 Datos, while
+  Criopreservación cost 2 for outright decay immunity. It now does three things and costs **4**
+  (joint top with Cámara B): `AMPLIACION_OPTIMA_MODULO` widens the Zona Óptima by one square on
+  each side, `DATOS_BAKE_MODULO_BONUS` pays 2 Datos on any óptima bake, and the centre bonus
+  stacks to 3. Three things about the widening are easy to get wrong:
+  - **It moves the collapse threshold.** The widening eats the sobrefermentada band from below, so
+    `_avanzar_masas_jugador`'s auto-collapse check must pass the amplification. Forgetting it there
+    is the one failure that makes the upgrade useless exactly where it matters, and every other
+    zone call site would still look right. All four (`_calcular_puntos_zona`,
+    `_calcular_monedas_zona`, `_calcular_datos_horneado`, the collapse trigger) read one helper,
+    `GameEngine.ampliacion_zona_optima`.
+  - **It is live, not sealed.** Unlike `modificador_incubadora`, it is recomputed from the owner's
+    technologies at resolution time, so installing the Módulo rescues a mass already fermenting.
+    Zones therefore became **per-player**, and `Recipe.zonas_efectivas(ampliacion)` is the only
+    place the arithmetic lives. `es_centro_exacto` deliberately takes **no** amplification: a
+    symmetric widening cannot move the centre, since `(a-n + b+n)//2 == (a+b)//2`.
+  - **`HorneadoRecord` had to seal it anyway.** `zona_resultado` is a `@property` recomputed from
+    the recipe's zones, so without the new `ampliacion_aplicada` field a Módulo bake that scored as
+    óptima would be archived as "baja" forever. The record already seals every other outcome; this
+    joins them.
+
+  Client side, `server/views.py` injects `zonas_efectivas` onto the recipes a player **owns**
+  (carpeta, stations, both archives) — market cards keep their printed zones, since nobody owns
+  them — and `web/src/data/zonasReceta.ts` is a thin accessor with a printed-zone fallback. The
+  collapse threshold is a rule the player reads to judge risk, so it is computed server-side for
+  the same reason as `vitalidad_prevista`. `web/src/data/preciosReceta.ts` mirrors `PRECIO_RECETA`
+  for `ModalG`'s labels and its disabled Confirmar, following the `preciosHarina.ts` precedent —
+  a price change on the server needs that file edited too. `VERSION_FORMATO` went to 10 (two
+  persisted shapes changed at once). Tests: `tests/test_precio_recetas.py`,
+  `tests/test_ampliacion_optima.py`.
 
   **Acción E (Pliegues) — the second Monedas sink, and the only 0-PA action that occupies an
   action space.** E used to cost 1 PA for a flat +1 track space, i.e. a whole turn for one space;

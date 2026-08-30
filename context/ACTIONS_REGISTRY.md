@@ -16,7 +16,7 @@
 * **Costo:** 1 PA + **10 Tokens de Harina — 10 (100%) en total, una bolsa entera** + los **Tokens de Agua** exactos que la receta imprima (ver RECIPE_DATABASE.md; cada token = 5% de hidratación).
     * El reparto de esa bolsa lo dicta el **grado** de la receta, que a su vez lo dicta lo que la carta imprime (RECIPE_DATABASE.md §4): **Básica** = 10 Tokens de Blanca; **Intermedia** = 5 Tokens — 5 (50%), media bolsa — de cada una de dos harinas distintas; **Avanzada** = 10 Tokens de una harina especial (Centeno o Integral).
     * Se exigen **todas** las harinas impresas: con una Intermedia, tener una de las dos mitades no basta y el rechazo nombra las dos.
-* **Requisito tecnológico:** El que la carta declare en `req_tecnologico`, si declara alguno. **Lo declara la carta, no su grado** — una carta de harina especial sin requisito es jugable desde el Día 1, y una Intermedia puede exigir el Módulo Analítico.
+* **Requisito tecnológico:** Ninguno. **Ninguna receta está restringida por tecnología** — una Avanzada de centeno puro es iniciable desde el Día 1 si se paga. El freno es el precio de adquisición (Acción G) más el coste en insumos, no una mejora de laboratorio.
 * **Límite:** 1 vez por día (por espacio de acción — ver §1).
 * **Memoria Biológica:** Se sella el Dado de Inóculo (con la Vitalidad actual) y el Cubo de Laboratorio (con la Acidez actual) en la carta de receta.
 * **Condición:** El Cubo de Acidez solo se sella si la acidez del cultivo base se encuentra dentro del rango con bonificación de sabor exigido por la receta.
@@ -52,7 +52,7 @@
 * **Costo:** 1 PA + Datos de Investigación.
     * *Incubadora:* 3 Datos. Permite ajustar temperatura local en +/- 5°C.
     * *Cámara B:* 4 Datos. Desbloquea Estación 03 y mejora la acción de Pliegue.
-    * *Módulo Analítico:* 3 Datos. Genera +1 Dato extra al hornear en centro exacto y habilita recetas avanzadas.
+    * *Módulo Analítico:* 4 Datos. **Ensancha la zona óptima 1 casilla por cada lado** — a costa de la zona baja por abajo y de la sobrefermentada por arriba, así que también **retrasa el umbral de colapso** — y sube los Datos del horneado: 2 en cualquier punto de la zona óptima, 3 en el centro exacto. Es un efecto **en vivo**, no sellado en la masa como el modificador de la Incubadora: instalarlo salva una masa que ya está fermentando. Ensanchar simétricamente **no mueve el centro exacto**, así que la precisión sigue costando lo mismo.
     * *Criopreservación:* 2 Datos. Efecto Pasivo "Estasis Biológica" — durante la Fase III, el cultivo base ignora el desgaste metabólico normal (no resta Vitalidad).
 * **Límites:** Cada mejora individual solo puede adquirirse UNA vez por partida, pero un jugador puede llegar a instalar varias mejoras distintas a lo largo de la partida (no hay tope global de "una mejora total"). Además, el espacio D en sí solo puede visitarse 1 vez por día (§1): instalar CUALQUIER mejora agota el espacio para el resto del día, así que dos mejoras distintas nunca pueden instalarse el mismo día — como muy pronto, la segunda espera al día siguiente.
 * **Reglas:** El beneficio se activa inmediatamente y se marca con un Cubo de Laboratorio en la Zona 4.
@@ -62,13 +62,14 @@
 * **Límite:** 1 vez por día (por espacio de acción — ver §1). No aplica al colapso automático de Fase III (sobrefermentación), que no pasa por este espacio ni consume PA.
 * **Efecto:** El jugador obtiene Puntos de Maestría según la zona en la que se encuentre el marcador. Al hornear, además cobra ingresos en Monedas, y si está en Zona Óptima también recibe Datos de Investigación.
 * **Resolución por zona:**
-    * *Zona Óptima:* Ingreso completo en Monedas (`monedas_optima`) + Puntos de Maestría íntegros (`puntos_optimos`) + Datos de Investigación.
+    * *Zona Óptima:* Ingreso completo en Monedas (`monedas_optima`) + Puntos de Maestría íntegros (`puntos_optimos`) + Datos de Investigación (1; **2 con Módulo Analítico**, y **3** si además es el centro exacto). Las zonas se leen ya ensanchadas por el Módulo del jugador: una posición que sin la mejora sería zona baja puede pagar como óptima con ella.
     * *Zona Baja:* Venta con margen reducido en Monedas (`monedas_baja`) + Puntos de Maestría reducidos (`puntos_baja`), sin Datos.
     * *Zona Sobre-fermentada (colapso, Fase III):* Recuperación del coste base en Monedas (`monedas_sobre`) + Puntos de Maestría negativos (`penalizacion_colapso`), sin Datos.
 * **Bono de Sabor:** si la carta conserva el Cubo de Acidez sellado (y el horneado no fue un colapso), se suma el bono de Puntos de Maestría impreso en la carta (`bono_sabor_pts`) **y** +2 Monedas adicionales al ingreso de la venta.
 
 ### G. Investigar Protocolo
-* **Costo:** 1 PA.
+* **Costo:** 1 PA + **Monedas según el grado de la receta** (`engine.PRECIO_RECETA`: Básica 1, Intermedia 2, Avanzada 3). El precio es **aditivo** sobre el PA: el punto de acción y el espacio siguen siendo la escasez real. El precio se indexa por grado, que a su vez lo derivan las harinas impresas, así que no puede contradecir a la carta.
+* **Orden de validación (fail-fast):** las Monedas se comprueban **antes** de retirar la carta del mercado. `Market.tomar_receta` la quita de la mesa, de modo que cobrar después haría que cada intento de un jugador sin dinero destruyera una carta para todos.
 * **Límites:** Máximo 3 recetas inactivas (si está llena, debe descartar una previa); además, 1 vez por día (por espacio de acción — ver §1).
 * **Efecto:** Selecciona 1 Carta de Receta del Mercado Central y la coloca boca arriba en la "Carpeta de Proyectos" (estado inactivo).
 * **Mercado:** El espacio central queda vacío hasta que el "Protocolo de Refresco" del inicio del día siguiente reabastezca el Mercado Central a 4 recetas.

@@ -711,7 +711,8 @@
           <li><strong>Intermedia:</strong> 5 tokens — 5&nbsp;(50%), media bolsa, de <strong>cada una</strong> de las dos harinas que imprima.</li>
           <li><strong>Avanzada:</strong> 10 tokens — 10&nbsp;(100%) de la harina <strong>especial</strong> que imprima (Centeno o Integral).</li>
         </ul>
-        <p>Hay que tener <strong>todas</strong> las harinas impresas: con una Intermedia, disponer de una de las dos mitades no basta. Si la carta imprime además una <strong>tecnología requerida</strong>, esa mejora debe estar instalada — lo exige la carta concreta, no su grado: una Intermedia puede pedir el Módulo Analítico y una carta de harina especial puede no pedir nada.</p>
+        <p>Hay que tener <strong>todas</strong> las harinas impresas: con una Intermedia, disponer de una de las dos mitades no basta.</p>
+        <p><strong>Ninguna receta exige tecnología.</strong> Una Avanzada de centeno puro puede iniciarse el primer día si se paga: lo que la hace difícil es su precio de adquisición y su bolsa entera de harina cara, no una mejora de laboratorio que haya que comprar antes.</p>
         <p>Al iniciar la masa se sella su <strong>Memoria Biológica</strong>: el Dado de Inóculo guarda la Vitalidad actual (determina la velocidad de fermentación durante toda la vida de esa masa), y el Cubo de Laboratorio guarda la Acidez actual — solo si cae dentro del rango de Acidez Diana de la carta. Si el cubo queda sellado, la masa obtendrá el Bono de Sabor al hornearse con éxito.</p>
         <p class="wrap" style="font-size:0.9rem;color:var(--ink-muted);">Requiere una estación de fermentación libre (la tercera solo con Cámara B) y al menos 1 Dado de Inóculo disponible.</p>
 
@@ -778,7 +779,7 @@
         <div class="callout"><strong>Bono de Sabor.</strong> Si la carta conserva el Cubo de Acidez sellado desde el inicio de la receta (y el horneado no fue un colapso), se suman los puntos de sabor impresos en la carta <strong>y</strong> +2 <span class="chip monedas" style="display:inline-flex">Monedas</span> adicionales. Nunca se aplica en un colapso.</div>
 
         <h3 class="sub">G · Investigar Protocolo</h3>
-        <p><strong>Costo:</strong> 1 PA. <strong>Límites:</strong> máximo 3 cartas en la Carpeta de Proyectos (si está llena, hay que descartar una antes de investigar otra); además, 1 vez por día (por espacio de acción). Toma una carta de receta de cualquiera de las 4 estaciones del Mercado Central y la coloca inactiva en la Carpeta de Proyectos propia. El espacio del mercado queda vacío hasta el Protocolo de Refresco del día siguiente.</p>
+        <p><strong>Costo:</strong> 1 PA + <strong>Monedas según el grado de la carta</strong> — Básica <strong>1</strong>, Intermedia <strong>2</strong>, Avanzada <strong>3</strong>. El precio es <em>aditivo</em>: el Punto de Acción y el espacio siguen siendo el límite real, y las Monedas hacen del mercado una economía en lugar de una cola. <strong>Límites:</strong> máximo 3 cartas en la Carpeta de Proyectos (si está llena, hay que descartar una antes de investigar otra); además, 1 vez por día (por espacio de acción). Toma una carta de receta de cualquiera de las 4 estaciones del Mercado Central y la coloca inactiva en la Carpeta de Proyectos propia. El espacio del mercado queda vacío hasta el Protocolo de Refresco del día siguiente.</p>
 
         <h3 class="sub">Simposio Técnico</h3>
         <p><strong>Costo:</strong> 1 PA. <strong>Límite:</strong> 1 vez por día (por espacio de acción), sin importar el origen. Descarta una carta de la Carpeta de Proyectos o de una estación activa (perdiendo esa masa sin puntuación ni penalización, recuperando el Dado de Inóculo) a cambio de +1 Dato de Investigación inmediato.</p>
@@ -825,7 +826,8 @@
         </div>
         <p><strong>Harina especial</strong> = Centeno o Integral. La Blanca es el producto común y la pista más barata de las tres; es precisamente lo que impide que una Básica sea una Avanzada.</p>
         <p>Solo existen esas dos formas de pago —una bolsa entera, o dos medias— y no es una restricción arbitraria: la Bolsa de Harinas únicamente vende bolsa entera y media bolsa (ver <a href="#s7">Acción C</a>), nunca tokens sueltos. Por eso una Intermedia no sale más cara por el peso de la harina, sino por la <strong>liquidez</strong>: obliga a tener dos pistas surtidas a la vez, y cada media bolsa se compra redondeando hacia arriba.</p>
-        <p>La <strong>tecnología requerida</strong> la declara cada carta por separado. No la implica el grado: Miche es una Intermedia que no pide nada, y una futura carta de harina especial podría no pedir nada tampoco.</p>
+        <p>Las zonas de la tabla son las <strong>impresas</strong>. Con el <strong>Módulo Analítico</strong> instalado, tu Zona Óptima corre una casilla en cada dirección y el umbral de colapso se retrasa con ella (ver <a href="#s9">Colapso Estructural</a> y <a href="#s10">Tecnologías</a>).</p>
+        <p><strong>Ninguna carta exige tecnología.</strong> El grado dice qué harina cuesta y cuántos puntos paga, nada más. Adquirir la carta cuesta Monedas según su grado (Básica 1, Intermedia 2, Avanzada 3 — ver <a href="#s7">Acción G</a>), y el resto del freno es la harina que hay que reunir.</p>
 
         <h3 class="sub">Puntuación por grado</h3>
         <p>Los Puntos de Maestría de la Zona Óptima están escalonados por grado y <strong>no se solapan</strong>: Básica <strong>9 – 12</strong>, Intermedia <strong>13 – 16</strong>, Avanzada <strong>17 – 20</strong>.</p>
@@ -839,27 +841,28 @@
           <table>
             <thead>
               <tr>
-                <th>Receta</th><th>Grado</th><th>Harina<br><span style="font-weight:400">siempre 10 (100%) en total</span></th><th>Agua<br><span style="font-weight:400">tokens (hidratación)</span></th><th>Acidez diana (bono)</th>
+                <th>Receta</th><th>Grado</th><th>Coste<br><span style="font-weight:400">Monedas</span></th><th>Harina<br><span style="font-weight:400">siempre 10 (100%) en total</span></th><th>Agua<br><span style="font-weight:400">tokens (hidratación)</span></th><th>Acidez diana (bono)</th>
                 <th>Zona baja</th><th>Zona óptima</th><th>Zona sobre</th>
-                <th>Puntos B/O/S</th><th>Monedas B/O/S</th><th>Requiere</th>
+                <th>Puntos B/O/S</th><th>Monedas B/O/S</th>
               </tr>
             </thead>
             <tbody>
-<tr><td class="name">Pan de Campo</td><td>Básica</td><td class="wrap">Blanca 100%</td><td>12 (60%)</td><td>Nivel 3 (+3)</td><td class="z-baja">1–10</td><td class="z-optima">11–15</td><td class="z-sobre">16–20</td><td>4 / 10 / −2</td><td>13 / 17 / 11</td><td class="wrap">—</td></tr>
-              <tr><td class="name">Pan de Molde</td><td>Básica</td><td class="wrap">Blanca 100%</td><td>11 (55%)</td><td>Nivel 1–2 (+2)</td><td class="z-baja">1–8</td><td class="z-optima">9–14</td><td class="z-sobre">15–20</td><td>3 / 9 / −2</td><td>12 / 16 / 10</td><td class="wrap">—</td></tr>
-              <tr><td class="name">Baguette</td><td>Básica</td><td class="wrap">Blanca 100%</td><td>13 (65%)</td><td>Nivel 2 (+3)</td><td class="z-baja">1–11</td><td class="z-optima">12–15</td><td class="z-sobre">16–20</td><td>5 / 11 / −2</td><td>14 / 18 / 12</td><td class="wrap">—</td></tr>
-              <tr><td class="name">Focaccia</td><td>Básica</td><td class="wrap">Blanca 100%</td><td>15 (75%)</td><td>Nivel 1–2 (+2)</td><td class="z-baja">1–9</td><td class="z-optima">10–14</td><td class="z-sobre">15–20</td><td>3 / 12 / −3</td><td>15 / 19 / 13</td><td class="wrap">—</td></tr>
-              <tr><td class="name">Miche</td><td>Intermedia</td><td class="wrap">Blanca 50% + Integral 50%</td><td>14 (70%)</td><td>Nivel 3–4 (+4)</td><td class="z-baja">1–11</td><td class="z-optima">12–16</td><td class="z-sobre">17–20</td><td>5 / 13 / −4</td><td>16 / 20 / 13</td><td class="wrap">—</td></tr>
-              <tr><td class="name">Pizza Napolitana</td><td>Intermedia</td><td class="wrap">Blanca 50% + Integral 50%</td><td>13 (62%)</td><td>Nivel 3 (+4)</td><td class="z-baja">1–10</td><td class="z-optima">11–14</td><td class="z-sobre">15–20</td><td>4 / 14 / −4</td><td>15 / 21 / 12</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Brioche</td><td>Intermedia</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>11 (52%)</td><td>Nivel 1 (+5)</td><td class="z-baja">1–14</td><td class="z-optima">15–17</td><td class="z-sobre">18–20</td><td>5 / 16 / −6</td><td>14 / 21 / 11</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Panettone</td><td>Intermedia</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>10 (47%)</td><td>Nivel 1 (+8)</td><td class="z-baja">1–16</td><td class="z-optima">17–18</td><td class="z-sobre">19–20</td><td>8 / 16 / −8</td><td>13 / 22 / 10</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Hogaza Centeno</td><td>Avanzada</td><td class="wrap">Centeno 100%</td><td>14 (67%)</td><td>Nivel 4–5 (+6)</td><td class="z-baja">1–12</td><td class="z-optima">13–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>20 / 27 / 17</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Pan Semillas</td><td>Avanzada</td><td class="wrap">Integral 100%</td><td>16 (78%)</td><td>Nivel 3–4 (+7)</td><td class="z-baja">1–13</td><td class="z-optima">14–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>19 / 26 / 16</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Pan Graham</td><td>Avanzada</td><td class="wrap">Integral 100%</td><td>16 (80%)</td><td>Nivel 4–5 (+6)</td><td class="z-baja">1–13</td><td class="z-optima">14–17</td><td class="z-sobre">18–20</td><td>6 / 19 / −6</td><td>18 / 26 / 15</td><td class="wrap">Módulo Analítico</td></tr>
-              <tr><td class="name">Pumpernickel</td><td>Avanzada</td><td class="wrap">Centeno 100%</td><td>17 (85%)</td><td>Nivel 5–6 (+8)</td><td class="z-baja">1–15</td><td class="z-optima">16–18</td><td class="z-sobre">19–20</td><td>8 / 20 / −8</td><td>16 / 28 / 12</td><td class="wrap">Módulo Analítico</td></tr>
+<tr><td class="name">Pan de Campo</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>12 (60%)</td><td>Nivel 3 (+3)</td><td class="z-baja">1–10</td><td class="z-optima">11–15</td><td class="z-sobre">16–20</td><td>4 / 10 / −2</td><td>13 / 17 / 11</td></tr>
+              <tr><td class="name">Pan de Molde</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>11 (55%)</td><td>Nivel 1–2 (+2)</td><td class="z-baja">1–8</td><td class="z-optima">9–14</td><td class="z-sobre">15–20</td><td>3 / 9 / −2</td><td>12 / 16 / 10</td></tr>
+              <tr><td class="name">Baguette</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>13 (65%)</td><td>Nivel 2 (+3)</td><td class="z-baja">1–11</td><td class="z-optima">12–15</td><td class="z-sobre">16–20</td><td>5 / 11 / −2</td><td>14 / 18 / 12</td></tr>
+              <tr><td class="name">Focaccia</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>15 (75%)</td><td>Nivel 1–2 (+2)</td><td class="z-baja">1–9</td><td class="z-optima">10–14</td><td class="z-sobre">15–20</td><td>3 / 12 / −3</td><td>15 / 19 / 13</td></tr>
+              <tr><td class="name">Miche</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Integral 50%</td><td>14 (70%)</td><td>Nivel 3–4 (+4)</td><td class="z-baja">1–11</td><td class="z-optima">12–16</td><td class="z-sobre">17–20</td><td>5 / 13 / −4</td><td>16 / 20 / 13</td></tr>
+              <tr><td class="name">Pizza Napolitana</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Integral 50%</td><td>13 (62%)</td><td>Nivel 3 (+4)</td><td class="z-baja">1–10</td><td class="z-optima">11–14</td><td class="z-sobre">15–20</td><td>4 / 14 / −4</td><td>15 / 21 / 12</td></tr>
+              <tr><td class="name">Brioche</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>11 (52%)</td><td>Nivel 1 (+5)</td><td class="z-baja">1–14</td><td class="z-optima">15–17</td><td class="z-sobre">18–20</td><td>5 / 16 / −6</td><td>14 / 21 / 11</td></tr>
+              <tr><td class="name">Panettone</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>10 (47%)</td><td>Nivel 1 (+8)</td><td class="z-baja">1–16</td><td class="z-optima">17–18</td><td class="z-sobre">19–20</td><td>8 / 16 / −8</td><td>13 / 22 / 10</td></tr>
+              <tr><td class="name">Hogaza Centeno</td><td>Avanzada</td><td>3</td><td class="wrap">Centeno 100%</td><td>14 (67%)</td><td>Nivel 4–5 (+6)</td><td class="z-baja">1–12</td><td class="z-optima">13–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>20 / 27 / 17</td></tr>
+              <tr><td class="name">Pan Semillas</td><td>Avanzada</td><td>3</td><td class="wrap">Integral 100%</td><td>16 (78%)</td><td>Nivel 3–4 (+7)</td><td class="z-baja">1–13</td><td class="z-optima">14–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>19 / 26 / 16</td></tr>
+              <tr><td class="name">Pan Graham</td><td>Avanzada</td><td>3</td><td class="wrap">Integral 100%</td><td>16 (80%)</td><td>Nivel 4–5 (+6)</td><td class="z-baja">1–13</td><td class="z-optima">14–17</td><td class="z-sobre">18–20</td><td>6 / 19 / −6</td><td>18 / 26 / 15</td></tr>
+              <tr><td class="name">Pumpernickel</td><td>Avanzada</td><td>3</td><td class="wrap">Centeno 100%</td><td>17 (85%)</td><td>Nivel 5–6 (+8)</td><td class="z-baja">1–15</td><td class="z-optima">16–18</td><td class="z-sobre">19–20</td><td>8 / 20 / −8</td><td>16 / 28 / 12</td></tr>
             </tbody>
           </table>
         </div>
+        <p class="wrap" style="font-size:0.86rem;color:var(--ink-muted);max-width:68ch;">La columna <strong>Coste</strong> es lo que cuesta llevarse la carta del Mercado Central con la <a href="#s7">Acción G</a>; va impresa en la carta. No confundir con la harina y el agua, que son lo que cuesta <strong>iniciarla</strong> después con la Acción B.</p>
         <p class="wrap" style="font-size:0.86rem;color:var(--ink-muted);max-width:68ch;">El número entre paréntesis junto a la Acidez Diana es el bono de Puntos de Maestría del Bono de Sabor (ver <a href="#s7">Acción F</a>); el Bono de Sabor también otorga siempre +2 Monedas adicionales, sin importar la receta.</p>
       </section>
 
@@ -879,6 +882,7 @@
 
         <h3 class="sub">9.2 · Colapso Estructural (sobre-fermentación)</h3>
         <p>Si la posición de una masa entra en su Zona Sobre-fermentada tras el Avance Final, colapsa de inmediato: se hornea automáticamente con costo 0 PA, aplicando la penalización de puntos y el ingreso de recuperación de coste de esa zona. El Dado de Inóculo se recupera y la estación queda libre para el día siguiente. Un colapso nunca otorga el Bono de Sabor.</p>
+        <p><strong>Las zonas que cuentan son las tuyas, no las impresas.</strong> Con el <strong>Módulo Analítico</strong> instalado, tu Zona Óptima corre una casilla en cada dirección, así que el umbral de colapso está una casilla más arriba de lo que dice la carta. Es un efecto <strong>vivo</strong>: instalarlo hoy salva esta noche una masa que ya estaba fermentando, sin que hiciera falta tenerlo al iniciarla. Ensanchar no mueve el centro exacto — la zona perdona más, pero clavar el centro cuesta lo mismo.</p>
 
         <h3 class="sub">9.3 · Desgaste Metabólico</h3>
         <div class="table-wrap">
@@ -904,7 +908,7 @@
             <tbody>
               <tr><td class="name">Incubadora</td><td><span class="chip datos">3 Datos</span></td><td class="wrap">Ajusta la temperatura local ±5 °C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima.</td></tr>
               <tr><td class="name">Cámara B</td><td><span class="chip datos">4 Datos</span></td><td class="wrap">Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas.</td></tr>
-              <tr><td class="name">Módulo Analítico</td><td><span class="chip datos">3 Datos</span></td><td class="wrap">+1 Dato extra al hornear exactamente en el centro de la Zona Óptima, y habilita el inicio de toda receta que lo declare como tecnología requerida (hoy, todas las Avanzadas y tres de las cuatro Intermedias).</td></tr>
+              <tr><td class="name">Módulo Analítico</td><td><span class="chip datos">4 Datos</span></td><td class="wrap"><strong>Ensancha la Zona Óptima 1 casilla por cada lado</strong> — se come una casilla de la Zona Baja por abajo y una de la Sobre-fermentada por arriba, así que <strong>también retrasa el colapso</strong>. Además sube el rendimiento del horneado: <strong>2 Datos</strong> en cualquier punto de la Zona Óptima y <strong>3</strong> en el centro exacto.</td></tr>
               <tr><td class="name">Criopreservación</td><td><span class="chip datos">2 Datos</span></td><td class="wrap">Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III.</td></tr>
             </tbody>
           </table>

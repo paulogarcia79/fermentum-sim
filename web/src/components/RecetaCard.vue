@@ -12,13 +12,16 @@
 // receta ya iniciada) la Escala de Acidez muestra el Registro de pH real en
 // vez de solo la diana objetivo.
 import { computed, ref } from 'vue'
-import type { Grado, Recipe, TecnologiaID } from '../types'
+import type { Grado, Recipe } from '../types'
 import IconoPan from './IconoPan.vue'
 import IconoHarina from './IconoHarina.vue'
+import IconoMonedas from './IconoMonedas.vue'
 import IconoAgua from './IconoAgua.vue'
 import { PCT_POR_TOKEN_HARINA, fmtTokensHarina, tokensHarina } from '../data/unidades'
 import EscalaAcidez from './EscalaAcidez.vue'
 import TablaRendimiento from './TablaRendimiento.vue'
+import { PRECIO_RECETA } from '../data/preciosReceta'
+import { tieneZonaAmpliada, zonasDe } from '../data/zonasReceta'
 import PistaMedida, { type BandaPista } from './PistaMedida.vue'
 
 // Que imprime cada grado. El grado no se elige: lo deriva models.py del reparto
@@ -28,13 +31,6 @@ const REGLA_GRADO: Record<Grado, string> = {
   'Básica': 'una bolsa entera de Blanca',
   'Intermedia': 'media bolsa de dos harinas distintas',
   'Avanzada': 'una bolsa entera de harina especial',
-}
-
-const NOMBRE_TECNOLOGIA: Record<TecnologiaID, string> = {
-  incubadora: 'Incubadora',
-  camara_b: 'Cámara B',
-  modulo_analitico: 'Módulo Analítico',
-  criopreservacion: 'Criopreservación',
 }
 
 const props = defineProps<{
@@ -49,12 +45,15 @@ const TRACK_MAX = 20
 // Mismas bandas que dibuja EstacionCard.vue, en unidades del track: la carta
 // de la receta y la masa que la esta fermentando se leen como el mismo
 // instrumento (ver PistaMedida.vue).
+const zonas = computed(() => zonasDe(props.receta))
+const ampliada = computed(() => tieneZonaAmpliada(props.receta))
+
 const bandas = computed<BandaPista[]>(() => {
-  const r = props.receta
+  const z = zonas.value
   return [
-    { desde: r.zona_baja[0] - 1, hasta: r.zona_baja[1], tono: 'baja' },
-    { desde: r.zona_optima[0] - 1, hasta: r.zona_optima[1], tono: 'optima' },
-    { desde: r.zona_sobrefermentada[0] - 1, hasta: TRACK_MAX, tono: 'sobre' },
+    { desde: z.baja[0] - 1, hasta: z.baja[1], tono: 'baja' },
+    { desde: z.optima[0] - 1, hasta: z.optima[1], tono: 'optima' },
+    { desde: z.sobre[0] - 1, hasta: TRACK_MAX, tono: 'sobre' },
   ]
 })
 
@@ -68,6 +67,16 @@ const textoHarinas = computed(() =>
   props.receta.harinas
     .map(([tipo, pct]) => `${fmtTokensHarina(pct)} de Harina ${tipo} (${pct}%)`)
     .join(' + '),
+)
+
+// Precio de adquisicion IMPRESO en la carta, como la esquina de coste de una carta
+// fisica: se muestra siempre, tambien en las que ya son tuyas. Es deliberadamente
+// distinto de `.requisitos` / "Formula Base", que son el coste de INICIAR la receta
+// (harina y agua): otro momento, otra moneda, y nunca se pagan a la vez. De ahi que
+// viva en la cabecera y no en la fila de insumos.
+const precioAdquisicion = computed(() => PRECIO_RECETA[props.receta.grado])
+const tituloPrecio = computed(
+  () => `Adquirir esta receta cuesta ${precioAdquisicion.value} Monedas (Acción G)`,
 )
 
 const centroExacto = computed(() =>
@@ -86,6 +95,9 @@ const detalleAbierto = ref(false)
           <span class="nombre">{{ receta.nombre }}</span>
           <span class="grado" :class="`grado-${receta.grado.toLowerCase()}`">{{ receta.grado }}</span>
         </div>
+        <span class="precio-carta" :title="tituloPrecio">
+          <span class="ico-xs"><IconoMonedas /></span><span class="dato">{{ precioAdquisicion }}</span>
+        </span>
         <button
           type="button"
           class="boton-info"
@@ -125,32 +137,36 @@ const detalleAbierto = ref(false)
       <div class="tooltip" role="tooltip">
         <p>
           Requiere: {{ textoHarinas }} +
-          {{ receta.tokens_agua }} tokens de Agua ({{ receta.hidratacion_pct }}% hidratación)<template
-            v-if="receta.req_tecnologico"
-          >
-            · Requiere {{ receta.req_tecnologico }}</template
-          >
+          {{ receta.tokens_agua }} tokens de Agua ({{ receta.hidratacion_pct }}% hidratación)
         </p>
         <p>Bono de sabor: Acidez ∈ {{ receta.acidez_diana.join(', ') }} al iniciar → +{{ receta.bono_sabor_pts }} pts</p>
         <p>
-          Zona Óptima {{ receta.zona_optima[0] }}–{{ receta.zona_optima[1] }}: +1 Dato (centro exacto
-          {{ centroExacto }}: +1 extra con Módulo Analítico)
+          Zona Óptima {{ zonas.optima[0] }}–{{ zonas.optima[1] }}: +1 Dato (+1 más con Módulo
+          Analítico, y +1 más en el centro exacto {{ centroExacto }})
         </p>
-        <p>Sobrefermentada desde {{ receta.zona_sobrefermentada[0] }}: colapso automático.</p>
+        <p>
+          Sobrefermentada desde {{ zonas.sobre[0] }}: colapso automático.<template v-if="ampliada">
+            Zona ensanchada por tu Módulo Analítico.</template
+          >
+        </p>
       </div>
     </template>
 
     <template v-else>
       <div class="cabecera-completa">
         <h4 class="titulo-completo">Receta de Protocolo: <strong>{{ receta.nombre }}</strong></h4>
-        <span class="harinas-cabecera">
-          <span v-for="[tipo] in receta.harinas" :key="tipo" class="ico-s"><IconoHarina :tipo="tipo" /></span>
+        <span class="esquina-carta">
+          <span class="precio-carta" :title="tituloPrecio">
+            <span class="ico-xs"><IconoMonedas /></span><span class="dato">{{ precioAdquisicion }}</span>
+          </span>
+          <span class="harinas-cabecera">
+            <span v-for="[tipo] in receta.harinas" :key="tipo" class="ico-s"><IconoHarina :tipo="tipo" /></span>
+          </span>
         </span>
       </div>
       <p class="grado-linea">
         Grado: <span class="grado" :class="`grado-${receta.grado.toLowerCase()}`">{{ receta.grado }}</span>
-        <span class="unidad-secundaria"> · {{ REGLA_GRADO[receta.grado] }}</span
-        ><span v-if="receta.req_tecnologico"> · requiere {{ NOMBRE_TECNOLOGIA[receta.req_tecnologico] }}</span>
+        <span class="unidad-secundaria"> · {{ REGLA_GRADO[receta.grado] }}</span>
       </p>
 
       <div class="formula-base">
@@ -382,6 +398,27 @@ const detalleAbierto = ref(false)
   display: inline-flex;
   gap: var(--e1);
   flex: 0 0 auto;
+}
+
+/* Esquina de coste: el precio de adquisicion, separado de la fila de insumos
+   (que es el coste de INICIAR). Sin acento propio -- el sistema reserva --cobre
+   y --verdin para "lo tuyo" y "estado de mercado", y esto no es ninguno de los
+   dos: es un dato impreso en la carta. */
+.esquina-carta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--e2);
+  flex: 0 0 auto;
+}
+
+.precio-carta {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
+  white-space: nowrap;
 }
 
 .boton-info {

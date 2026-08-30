@@ -10,6 +10,7 @@ import type { FermentationSlot } from '../types'
 import { store } from '../store'
 import RecetaCard from './RecetaCard.vue'
 import DetalleRecetaModal from './DetalleRecetaModal.vue'
+import { zonasDe } from '../data/zonasReceta'
 import PistaMedida, { type BandaPista } from './PistaMedida.vue'
 
 const props = defineProps<{
@@ -24,13 +25,18 @@ const TRACK_MAX = 20
 // Las bandas van en unidades del track (1-20), no en %: PistaMedida hace la
 // conversion. Se restan 0.5 casillas en los bordes por lo mismo que el
 // marcador se centra en su celda (ver abajo).
+// Zonas ya ampliadas por el Modulo Analitico del propietario (zonasDe): esta es
+// la superficie donde de verdad importa, porque es la que muestra el umbral de
+// colapso contra el que el jugador decide si hornear esta noche.
+const zonas = computed(() => (props.slot ? zonasDe(props.slot.recipe) : null))
+
 const bandas = computed<BandaPista[]>(() => {
-  const r = props.slot?.recipe
-  if (!r) return []
+  const z = zonas.value
+  if (!z) return []
   return [
-    { desde: r.zona_baja[0] - 1, hasta: r.zona_baja[1], tono: 'baja' },
-    { desde: r.zona_optima[0] - 1, hasta: r.zona_optima[1], tono: 'optima' },
-    { desde: r.zona_sobrefermentada[0] - 1, hasta: TRACK_MAX, tono: 'sobre' },
+    { desde: z.baja[0] - 1, hasta: z.baja[1], tono: 'baja' },
+    { desde: z.optima[0] - 1, hasta: z.optima[1], tono: 'optima' },
+    { desde: z.sobre[0] - 1, hasta: TRACK_MAX, tono: 'sobre' },
   ]
 })
 
@@ -48,10 +54,10 @@ const posicionFantasma = computed(() => {
 })
 
 const tonoProyectado = computed<'riesgo' | 'vital' | 'cobre' | null>(() => {
-  if (!props.slot || posicionFantasma.value === null) return null
-  const r = props.slot.recipe
-  if (posicionFantasma.value >= r.zona_sobrefermentada[0]) return 'riesgo'
-  if (posicionFantasma.value >= r.zona_optima[0] && posicionFantasma.value <= r.zona_optima[1]) return 'vital'
+  const z = zonas.value
+  if (!props.slot || posicionFantasma.value === null || !z) return null
+  if (posicionFantasma.value >= z.sobre[0]) return 'riesgo'
+  if (posicionFantasma.value >= z.optima[0] && posicionFantasma.value <= z.optima[1]) return 'vital'
   return 'cobre'
 })
 

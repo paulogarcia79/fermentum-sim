@@ -29,7 +29,13 @@ from typing import List, Optional, Tuple
 
 from actions import COSTOS_TECNOLOGIA, ActionManager
 from bootstrap import create_game
-from engine import PRECIO_AGUA, PRECIO_PLIEGUES, PRECIO_PLIEGUES_VITALIDAD, GameEngine
+from engine import (
+    PRECIO_AGUA,
+    PRECIO_PLIEGUES,
+    PRECIO_PLIEGUES_VITALIDAD,
+    PRECIO_RECETA,
+    GameEngine,
+)
 from events import EventoTipo, GameEvent
 from exceptions import FermentumError
 from models import (
@@ -136,11 +142,9 @@ def _fmt_harinas(receta: Recipe) -> str:
     return " + ".join(f"{tipo.value} {pct}%" for tipo, pct in receta.harinas)
 
 
-def _fmt_requisito_tecnologico(receta: Recipe) -> str:
-    """Sufijo " [req: X]" si la carta exige una mejora, cadena vacía si no."""
-    if receta.req_tecnologico is None:
-        return ""
-    return f" [req: {_NOMBRE_TECNOLOGIA[receta.req_tecnologico]}]"
+def _fmt_precio_receta(receta: Recipe) -> str:
+    """Coste en Monedas de adquirir la carta con la Acción G, por su grado."""
+    return f"{PRECIO_RECETA[receta.grado]}M"
 
 
 def _render_slot(idx: int, slot: Optional[FermentationSlot]) -> str:
@@ -240,12 +244,12 @@ def mostrar_mercado(engine: GameEngine) -> None:
             print(_c(_C.DIM, f"    [{i}] — vacía —"))
         else:
             grado_c = _COLOR_GRADO[receta.grado]
-            req = _c(_C.DIM, _fmt_requisito_tecnologico(receta))
+            precio = _c(_C.YELLOW, f" Coste:{_fmt_precio_receta(receta)}")
             print(f"    [{i}] {_c(grado_c, receta.nombre):<28} "
                   f"Grado:{receta.grado.value[0]} "
                   f"Harina:{_fmt_harinas(receta):<26} "
                   f"Opt:[{receta.zona_optima[0]}-{receta.zona_optima[1]}] "
-                  f"Pts:{receta.puntos_optimos}{req}")
+                  f"Pts:{receta.puntos_optimos}{precio}")
 
     # Bolsa de Harinas (Acción C: Visitar el Mercado)
     print("  Bolsa de Harinas (Compra / Venta en Monedas):")
@@ -403,9 +407,9 @@ def _params_accion_B(player: Player, engine: GameEngine) -> Optional[dict]:
 
     print("  Recetas en carpeta:")
     for i, r in enumerate(player.carpeta_proyectos):
-        print(f"    [{i}] {r.nombre}  {r.grado.value}  Harina:{_fmt_harinas(r)}  "
-              f"Agua:{r.tokens_agua}  Óptima:[{r.zona_optima[0]}-{r.zona_optima[1]}]"
-              f"{_fmt_requisito_tecnologico(r)}")
+        print(f"    [{i}] {r.nombre}  {r.grado.value}  Coste:{_fmt_precio_receta(r)}  "
+              f"Harina:{_fmt_harinas(r)}  Agua:{r.tokens_agua}  "
+              f"Óptima:[{r.zona_optima[0]}-{r.zona_optima[1]}]")
 
     idx = _pedir_int("Índice de receta a iniciar", 0, len(player.carpeta_proyectos) - 1)
     if idx is None:

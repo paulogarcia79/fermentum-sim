@@ -270,9 +270,11 @@ Entre cuántos tipos se reparte esa bolsa lo dice el **grado** de la receta (ver
 | **Avanzada** | 10 tokens — 10 (100%) de la harina **especial** que imprima (Centeno o Integral) |
 
 Hay que tener **todas** las harinas impresas: con una Intermedia, disponer de una de las dos
-mitades no basta. Si la carta imprime además una **tecnología requerida**, esa mejora debe estar
-instalada — lo exige la carta concreta, no su grado: una Intermedia puede pedir el Módulo
-Analítico y una carta de harina especial puede no pedir nada.
+mitades no basta.
+
+**Ninguna receta exige tecnología.** Una Avanzada de centeno puro puede iniciarse el primer día si
+se paga: lo que la hace difícil es su precio de adquisición y su bolsa entera de harina cara, no
+una mejora de laboratorio que haya que comprar antes.
 
 Al iniciar la masa, se sella su **Memoria Biológica**: el Dado de Inóculo guarda la Vitalidad
 actual del cultivo base (determina la velocidad de fermentación de esa masa específica durante
@@ -360,7 +362,10 @@ encuentre el marcador:
 
 #### G. Investigar Protocolo
 
-**Costo:** 1 PA. **Límites:** máximo 3 cartas en la Carpeta de Proyectos (si está llena, hay que
+**Costo:** 1 PA + **Monedas según el grado de la carta** — Básica **1**, Intermedia **2**,
+Avanzada **3**. El precio es *aditivo*: el Punto de Acción y el espacio siguen siendo el límite
+real, y las Monedas hacen del mercado una economía en lugar de una cola.
+**Límites:** máximo 3 cartas en la Carpeta de Proyectos (si está llena, hay que
 descartar una antes de investigar la nueva); además, 1 vez por día (por espacio de acción).
 Selecciona una carta de receta de cualquiera de las 4 estaciones visibles del Mercado Central y la
 coloca boca arriba, en estado inactivo, en la Carpeta de Proyectos propia. El espacio del mercado
@@ -458,9 +463,13 @@ arbitraria: la Bolsa de Harinas únicamente vende bolsa entera y media bolsa
 más cara por el peso de la harina, sino por la **liquidez**: obliga a tener dos pistas surtidas a
 la vez, y cada media bolsa se compra redondeando hacia arriba.
 
-La **tecnología requerida** la declara cada carta por separado. No la implica el grado: Miche es
-una Intermedia que no pide nada, y una futura carta de harina especial podría no pedir nada
-tampoco.
+Las zonas de la tabla son las **impresas**. Con el **Módulo Analítico** instalado, tu Zona Óptima
+corre una casilla en cada dirección y el umbral de colapso se retrasa con ella (ver
+[Colapso Estructural](#9-fase-iii-fermentación) y [Tecnologías](#10-tecnologías-de-laboratorio)).
+
+**Ninguna carta exige tecnología.** El grado dice qué harina cuesta y cuántos puntos paga, nada
+más. Adquirir la carta cuesta Monedas según su grado (Básica 1, Intermedia 2, Avanzada 3 — ver
+[Acción G](#7-catálogo-de-acciones)), y el resto del freno es la harina que hay que reunir.
 
 ### Puntuación por grado
 
@@ -479,20 +488,24 @@ solo 3 casillas de zona óptima y un colapso de −8). El Bono de Sabor va por l
 es Intermedia y aun así tiene el mayor bono del juego (+8) — no es la carta de más puntos, es la
 de más sabor.
 
-| Receta | Grado | Harina (siempre 10 tokens / 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono de Sabor) | Zona Baja | Zona Óptima | Zona Sobre-fermentada | Puntos (Baja / Óptima / Sobre) | Monedas (Baja / Óptima / Sobre) | Requiere |
-|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
-| Pan de Campo | Básica | Blanca 100% | 12 (60%) | Nivel 3 (+3) | 1–10 | 11–15 | 16–20 | 4 / 10 / −2 | 13 / 17 / 11 | — |
-| Pan de Molde | Básica | Blanca 100% | 11 (55%) | Nivel 1–2 (+2) | 1–8 | 9–14 | 15–20 | 3 / 9 / −2 | 12 / 16 / 10 | — |
-| Baguette | Básica | Blanca 100% | 13 (65%) | Nivel 2 (+3) | 1–11 | 12–15 | 16–20 | 5 / 11 / −2 | 14 / 18 / 12 | — |
-| Focaccia | Básica | Blanca 100% | 15 (75%) | Nivel 1–2 (+2) | 1–9 | 10–14 | 15–20 | 3 / 12 / −3 | 15 / 19 / 13 | — |
-| Miche | Intermedia | Blanca 50% + Integral 50% | 14 (70%) | Nivel 3–4 (+4) | 1–11 | 12–16 | 17–20 | 5 / 13 / −4 | 16 / 20 / 13 | — |
-| Pizza Napolitana | Intermedia | Blanca 50% + Integral 50% | 13 (62%) | Nivel 3 (+4) | 1–10 | 11–14 | 15–20 | 4 / 14 / −4 | 15 / 21 / 12 | Módulo Analítico |
-| Brioche | Intermedia | Blanca 50% + Centeno 50% | 11 (52%) | Nivel 1 (+5) | 1–14 | 15–17 | 18–20 | 5 / 16 / −6 | 14 / 21 / 11 | Módulo Analítico |
-| Panettone | Intermedia | Blanca 50% + Centeno 50% | 10 (47%) | Nivel 1 (+8) | 1–16 | 17–18 | 19–20 | 8 / 16 / −8 | 13 / 22 / 10 | Módulo Analítico |
-| Hogaza Centeno | Avanzada | Centeno 100% | 14 (67%) | Nivel 4–5 (+6) | 1–12 | 13–16 | 17–20 | 6 / 17 / −5 | 20 / 27 / 17 | Módulo Analítico |
-| Pan Semillas | Avanzada | Integral 100% | 16 (78%) | Nivel 3–4 (+7) | 1–13 | 14–16 | 17–20 | 6 / 17 / −5 | 19 / 26 / 16 | Módulo Analítico |
-| Pan Graham | Avanzada | Integral 100% | 16 (80%) | Nivel 4–5 (+6) | 1–13 | 14–17 | 18–20 | 6 / 19 / −6 | 18 / 26 / 15 | Módulo Analítico |
-| Pumpernickel | Avanzada | Centeno 100% | 17 (85%) | Nivel 5–6 (+8) | 1–15 | 16–18 | 19–20 | 8 / 20 / −8 | 16 / 28 / 12 | Módulo Analítico |
+| Receta | Grado | Coste (Monedas) | Harina (siempre 10 tokens / 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono de Sabor) | Zona Baja | Zona Óptima | Zona Sobre-fermentada | Puntos (Baja / Óptima / Sobre) | Monedas (Baja / Óptima / Sobre) |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| Pan de Campo | Básica | 1 | Blanca 100% | 12 (60%) | Nivel 3 (+3) | 1–10 | 11–15 | 16–20 | 4 / 10 / −2 | 13 / 17 / 11 |
+| Pan de Molde | Básica | 1 | Blanca 100% | 11 (55%) | Nivel 1–2 (+2) | 1–8 | 9–14 | 15–20 | 3 / 9 / −2 | 12 / 16 / 10 |
+| Baguette | Básica | 1 | Blanca 100% | 13 (65%) | Nivel 2 (+3) | 1–11 | 12–15 | 16–20 | 5 / 11 / −2 | 14 / 18 / 12 |
+| Focaccia | Básica | 1 | Blanca 100% | 15 (75%) | Nivel 1–2 (+2) | 1–9 | 10–14 | 15–20 | 3 / 12 / −3 | 15 / 19 / 13 |
+| Miche | Intermedia | 2 | Blanca 50% + Integral 50% | 14 (70%) | Nivel 3–4 (+4) | 1–11 | 12–16 | 17–20 | 5 / 13 / −4 | 16 / 20 / 13 |
+| Pizza Napolitana | Intermedia | 2 | Blanca 50% + Integral 50% | 13 (62%) | Nivel 3 (+4) | 1–10 | 11–14 | 15–20 | 4 / 14 / −4 | 15 / 21 / 12 |
+| Brioche | Intermedia | 2 | Blanca 50% + Centeno 50% | 11 (52%) | Nivel 1 (+5) | 1–14 | 15–17 | 18–20 | 5 / 16 / −6 | 14 / 21 / 11 |
+| Panettone | Intermedia | 2 | Blanca 50% + Centeno 50% | 10 (47%) | Nivel 1 (+8) | 1–16 | 17–18 | 19–20 | 8 / 16 / −8 | 13 / 22 / 10 |
+| Hogaza Centeno | Avanzada | 3 | Centeno 100% | 14 (67%) | Nivel 4–5 (+6) | 1–12 | 13–16 | 17–20 | 6 / 17 / −5 | 20 / 27 / 17 |
+| Pan Semillas | Avanzada | 3 | Integral 100% | 16 (78%) | Nivel 3–4 (+7) | 1–13 | 14–16 | 17–20 | 6 / 17 / −5 | 19 / 26 / 16 |
+| Pan Graham | Avanzada | 3 | Integral 100% | 16 (80%) | Nivel 4–5 (+6) | 1–13 | 14–17 | 18–20 | 6 / 19 / −6 | 18 / 26 / 15 |
+| Pumpernickel | Avanzada | 3 | Centeno 100% | 17 (85%) | Nivel 5–6 (+8) | 1–15 | 16–18 | 19–20 | 8 / 20 / −8 | 16 / 28 / 12 |
+
+*La columna **Coste** es lo que cuesta llevarse la carta del Mercado Central con la
+[Acción G](#7-catálogo-de-acciones); va impresa en la carta. No confundir con la harina y el agua,
+que son lo que cuesta **iniciarla** después con la Acción B.*
 
 *El número entre paréntesis junto a la Acidez Diana es el bono de Puntos de Maestría del Bono de
 Sabor (ver [Acción F](#7-catálogo-de-acciones)); el Bono de Sabor también otorga siempre +2
@@ -531,6 +544,13 @@ puntos y el ingreso de Monedas de recuperación de coste de esa zona (ver [Catá
 Recetas](#8-catálogo-de-recetas)). El Dado de Inóculo se recupera y la estación de fermentación
 queda libre para el día siguiente. Un colapso nunca otorga el Bono de Sabor, aunque el Cubo de
 Acidez estuviera sellado.
+
+**Las zonas que cuentan son las tuyas, no las impresas.** Si tienes el **Módulo Analítico**
+instalado, tu Zona Óptima corre una casilla más en cada dirección, de modo que el umbral de
+colapso está una casilla más arriba que lo que dice la carta. Es un efecto **vivo**: instalar el
+Módulo hoy salva esta noche una masa que ya estaba fermentando, y no hace falta que estuviera
+instalado al iniciarla. Ensanchar no mueve el centro exacto — la zona perdona más, pero clavar el
+centro cuesta lo mismo.
 
 ### 9.3 Desgaste Metabólico
 
@@ -581,7 +601,7 @@ una solo puede instalarse una vez, pero un jugador puede llegar a tener varias d
 |:---|:---:|:---|
 | **Incubadora** | 3 Datos | Permite ajustar la temperatura local ±5°C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima. |
 | **Cámara B** | 4 Datos | Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas. |
-| **Módulo Analítico** | 3 Datos | Otorga +1 Dato de Investigación extra al hornear exactamente en el centro de la Zona Óptima, y habilita el inicio de toda receta que lo declare como tecnología requerida (hoy, todas las Avanzadas y tres de las cuatro Intermedias). |
+| **Módulo Analítico** | 4 Datos | **Ensancha la Zona Óptima 1 casilla por cada lado** — se come una casilla de la Zona Baja por abajo y una de la Sobre-fermentada por arriba, así que **también retrasa el colapso**. Además sube el rendimiento del horneado: **2 Datos** en cualquier punto de la Zona Óptima y **3** en el centro exacto. |
 | **Criopreservación** | 2 Datos | Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III. |
 
 ---

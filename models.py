@@ -205,8 +205,6 @@ class Recipe:
         monedas_baja: Monedas cobradas al hornear y vender en zona_baja.
         monedas_optima: Monedas cobradas al hornear y vender en zona_optima.
         monedas_sobre: Monedas cobradas al hornear (automáticamente) en zona_sobrefermentada.
-        req_tecnologico: Mejora de laboratorio necesaria para iniciar la receta
-            si es Avanzada (None para las Básicas).
     """
 
     id: str
@@ -226,7 +224,6 @@ class Recipe:
     monedas_baja: int
     monedas_optima: int
     monedas_sobre: int
-    req_tecnologico: Optional[TecnologiaID]
 
     def __post_init__(self) -> None:
         """
@@ -267,25 +264,59 @@ class Recipe:
     # Métodos de consulta de zona (sin efectos secundarios)
     # ------------------------------------------------------------------
 
-    def esta_en_zona_baja(self, posicion: int) -> bool:
+    def zonas_efectivas(
+        self, ampliacion: int = 0
+    ) -> Tuple[Tuple[int, int], Tuple[int, int], Tuple[int, int]]:
+        """
+        Las tres zonas del track tras aplicar una ampliación de la zona óptima.
+
+        El Módulo Analítico ensancha la zona óptima ``ampliacion`` casillas por cada
+        lado (``engine.AMPLIACION_OPTIMA_MODULO``), a costa de la zona baja por abajo
+        y de la sobrefermentada por arriba — es decir, **también retrasa el umbral de
+        colapso**. Toda la aritmética del ensanchado vive AQUÍ y en ningún otro sitio.
+
+        La ampliación es un efecto EN VIVO del propietario de la masa, no un valor
+        sellado en la carta: por eso es un argumento y no un campo. La carta impresa
+        (``ampliacion=0``) sigue siendo lo que se ve en el mercado.
+
+        Args:
+            ampliacion: Casillas que se añaden a cada lado de la zona óptima.
+
+        Returns:
+            ``(zona_baja, zona_optima, zona_sobrefermentada)`` ya ampliadas.
+        """
+        baja = (self.zona_baja[0], self.zona_baja[1] - ampliacion)
+        optima = (self.zona_optima[0] - ampliacion, self.zona_optima[1] + ampliacion)
+        sobre = (self.zona_sobrefermentada[0] + ampliacion, self.zona_sobrefermentada[1])
+        return baja, optima, sobre
+
+    def esta_en_zona_baja(self, posicion: int, ampliacion: int = 0) -> bool:
         """Retorna True si la posición está dentro del rango de masa cruda."""
-        return self.zona_baja[0] <= posicion <= self.zona_baja[1]
+        baja, _, _ = self.zonas_efectivas(ampliacion)
+        return baja[0] <= posicion <= baja[1]
 
-    def esta_en_zona_optima(self, posicion: int) -> bool:
+    def esta_en_zona_optima(self, posicion: int, ampliacion: int = 0) -> bool:
         """Retorna True si la posición está dentro del rango de horneado óptimo."""
-        return self.zona_optima[0] <= posicion <= self.zona_optima[1]
+        _, optima, _ = self.zonas_efectivas(ampliacion)
+        return optima[0] <= posicion <= optima[1]
 
-    def esta_sobrefermentada(self, posicion: int) -> bool:
+    def esta_sobrefermentada(self, posicion: int, ampliacion: int = 0) -> bool:
         """
         Retorna True si la posición alcanzó el colapso estructural.
         Gatilla un horneado automático de emergencia en la Fase III.
         """
-        return posicion >= self.zona_sobrefermentada[0]
+        _, _, sobre = self.zonas_efectivas(ampliacion)
+        return posicion >= sobre[0]
 
     def es_centro_exacto(self, posicion: int) -> bool:
         """
         Retorna True si la posición es el punto central exacto de la zona óptima.
-        El centro exacto activa el bono del Módulo Analítico (+1 Dato de Investigación).
+        El centro exacto otorga un Dato extra con el Módulo Analítico instalado.
+
+        NO acepta ``ampliacion`` a propósito: ensanchar simétricamente no mueve el
+        centro, porque ``(a - n + b + n) // 2 == (a + b) // 2`` para cualquier n. Una
+        zona más ancha perdona más, pero acertar el centro exacto sigue siendo
+        igual de difícil — la precisión sigue siendo una destreza real.
         """
         inicio, fin = self.zona_optima
         return posicion == (inicio + fin) // 2
@@ -431,6 +462,11 @@ class HorneadoRecord:
             0 si fue colapso o si la posición no es zona óptima.
         monedas_obtenidos: Monedas recibidas al hornear y vender (Acción F), ya
             incluyendo el Bono de Sabor de +2 Monedas si aplica (GDD v0.0.2 Módulo III §F).
+        ampliacion_aplicada: Casillas de ampliación de la zona óptima vigentes para el
+            propietario en el momento del horneado (Módulo Analítico). Se SELLA aquí
+            porque ``zona_resultado`` se deriva de las zonas: sin este campo, un
+            horneado que puntuó como óptimo gracias al Módulo se archivaría para
+            siempre como "baja" al releerlo contra las zonas impresas.
     """
 
     recipe: Recipe
@@ -440,6 +476,7 @@ class HorneadoRecord:
     fue_colapso: bool
     datos_obtenidos: int = 0
     monedas_obtenidos: int = 0
+    ampliacion_aplicada: int = 0
 
     @property
     def puntos_totales(self) -> int:
@@ -466,9 +503,10 @@ class HorneadoRecord:
         resuelve en "colapso", replicando la lógica de puntuación de
         ``GameEngine._calcular_puntos_zona``.
         """
-        if self.fue_colapso or self.recipe.esta_sobrefermentada(self.posicion_final):
+        amp = self.ampliacion_aplicada
+        if self.fue_colapso or self.recipe.esta_sobrefermentada(self.posicion_final, amp):
             return "colapso"
-        if self.recipe.esta_en_zona_optima(self.posicion_final):
+        if self.recipe.esta_en_zona_optima(self.posicion_final, amp):
             return "optima"
         return "baja"
 
@@ -1106,7 +1144,6 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_baja=13,
         monedas_optima=17,
         monedas_sobre=11,
-        req_tecnologico=None,
     ),
     # La zona óptima más ancha del juego (6 espacios): la carta indulgente.
     "pan_de_molde": Recipe(
@@ -1127,7 +1164,6 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_baja=12,
         monedas_optima=16,
         monedas_sobre=10,
-        req_tecnologico=None,
     ),
     "baguette": Recipe(
         id="baguette",
@@ -1147,7 +1183,6 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_baja=14,
         monedas_optima=18,
         monedas_sobre=12,
-        req_tecnologico=None,
     ),
     "focaccia": Recipe(
         id="focaccia",
@@ -1167,7 +1202,6 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_baja=15,
         monedas_optima=19,
         monedas_sobre=13,
-        req_tecnologico=None,
     ),
 
     # --- INTERMEDIAS: media bolsa de dos harinas distintas (13-16 puntos) ---
@@ -1190,7 +1224,6 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_baja=16,
         monedas_optima=20,
         monedas_sobre=13,
-        req_tecnologico=None,
     ),
     "pizza_napolitana": Recipe(
         id="pizza_napolitana",
@@ -1210,7 +1243,6 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_baja=15,
         monedas_optima=21,
         monedas_sobre=12,
-        req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
     "brioche": Recipe(
         id="brioche",
@@ -1230,7 +1262,6 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_baja=14,
         monedas_optima=21,
         monedas_sobre=11,
-        req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
     # Ventana óptima de 2 espacios y el mayor Bono de Sabor del juego:
     # no es la carta de más puntos, sino la de más sabor.
@@ -1252,7 +1283,6 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_baja=13,
         monedas_optima=22,
         monedas_sobre=10,
-        req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
 
     # --- AVANZADAS: una bolsa entera de harina especial (17-20 puntos) ---
@@ -1274,7 +1304,6 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_baja=20,
         monedas_optima=27,
         monedas_sobre=17,
-        req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
     "pan_semillas": Recipe(
         id="pan_semillas",
@@ -1294,7 +1323,6 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_baja=19,
         monedas_optima=26,
         monedas_sobre=16,
-        req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
     "pan_graham": Recipe(
         id="pan_graham",
@@ -1314,7 +1342,6 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_baja=18,
         monedas_optima=26,
         monedas_sobre=15,
-        req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
     # El techo del catálogo: centeno puro, la acidez diana más alta y la
     # ventana óptima más estrecha (3 espacios) frente a un colapso de -8.
@@ -1336,7 +1363,6 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         monedas_baja=16,
         monedas_optima=28,
         monedas_sobre=12,
-        req_tecnologico=TecnologiaID.MODULO_ANALITICO,
     ),
 }
 

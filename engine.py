@@ -25,7 +25,8 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Dict, List, Optional, Set, Tuple
+from types import MappingProxyType
+from typing import Callable, Dict, List, Mapping, Optional, Set, Tuple
 
 from events import EventoTipo, EventSink, GameEvent
 from exceptions import (
@@ -41,6 +42,7 @@ from models import (
     EfectoClimatico,
     Environment,
     FermentationSlot,
+    Grado,
     HorneadoRecord,
     Player,
     Recipe,
@@ -67,8 +69,46 @@ DATOS_BAKE_ZONA_OPTIMA: int = 1
 
 DATOS_BAKE_CENTRO_EXACTO_BONUS: int = 1
 """
-Datos extra al hornear en el centro exacto de la zona óptima con Módulo Analítico
-activo (ACTIONS_REGISTRY.md §2D: «Genera +1 Dato extra al hornear en centro exacto»).
+Datos extra al hornear en el CENTRO EXACTO de la zona óptima con Módulo Analítico
+activo. Se suma encima de ``DATOS_BAKE_MODULO_BONUS``, de modo que con el Módulo un
+horneado paga 2 Datos en la zona óptima y 3 en el centro exacto (ACTIONS_REGISTRY.md §2D).
+"""
+
+DATOS_BAKE_MODULO_BONUS: int = 1
+"""
+Datos extra al hornear en CUALQUIER punto de la zona óptima con Módulo Analítico.
+
+El Módulo era una compra trampa cuando su único efecto era el bono de centro exacto:
+había que clavar el centro unas tres veces sólo para amortizar su precio. Ahora paga
+en toda la zona, que es lo que convierte al Módulo en el motor de investigación de la
+partida (y lo que justifica su precio de 4 Datos en ``actions.COSTOS_TECNOLOGIA``).
+"""
+
+AMPLIACION_OPTIMA_MODULO: int = 1
+"""
+Casillas que el Módulo Analítico añade a CADA lado de la zona óptima.
+
+Es un efecto EN VIVO, no sellado en la masa como ``modificador_incubadora``: se
+recalcula en cada resolución a partir de las tecnologías del propietario, así que
+instalar el Módulo salva una masa que ya está fermentando. Como la ampliación se come
+la zona sobrefermentada por arriba, **también retrasa el umbral de colapso** — ver
+``Recipe.zonas_efectivas``, donde vive toda la aritmética.
+"""
+
+PRECIO_RECETA: Mapping[Grado, int] = MappingProxyType({
+    Grado.BASICA: 1,
+    Grado.INTERMEDIA: 2,
+    Grado.AVANZADA: 3,
+})
+"""
+Coste en Monedas de adquirir una receta del mercado (Acción G), por grado.
+
+Las recetas eran lo único gratis del juego: el mercado era una cola, no una economía.
+El precio se indexa por GRADO y no por carta, igual que ``COPIAS_POR_GRADO`` y
+``PRECIO_PLIEGUES``: el grado ya lo derivan las harinas impresas, así que el precio no
+puede contradecir a la carta ni hace falta un campo nuevo en ``Recipe``.
+
+Es aditivo sobre el 1 PA de la Acción G, que sigue siendo la escasez real.
 """
 
 # --- Bono de Sabor en Monedas (Hornear y Vender) ---
@@ -1343,8 +1383,24 @@ class GameEngine:
             )
 
             # Evaluar gatillo de Colapso Estructural (CLIMATE_LOGIC.md §3 regla 2).
-            if slot.recipe.esta_sobrefermentada(slot.posicion_track):
+            # Contra la zona AMPLIADA del propietario: con Módulo Analítico el umbral
+            # de colapso está una casilla más arriba, así que una masa que colapsaría
+            # sin la mejora sobrevive con ella.
+            if slot.recipe.esta_sobrefermentada(
+                slot.posicion_track, self.ampliacion_zona_optima(player)
+            ):
                 self.resolver_horneado(player, idx, fue_colapso=True)
+
+    def ampliacion_zona_optima(self, player: Player) -> int:
+        """
+        Casillas de ampliación de la zona óptima vigentes AHORA para ``player``.
+
+        Fuente única: todo cálculo por zona (puntos, monedas, datos y el gatillo de
+        colapso de la Fase III) pasa por aquí, de modo que la ampliación no pueda
+        aplicarse en unos sitios y en otros no — que es exactamente cómo se colaría
+        una masa que colapsa pese a tener el Módulo instalado.
+        """
+        return AMPLIACION_OPTIMA_MODULO if player.tecnologias.modulo_analitico else 0
 
     def _delta_desgaste(self, player: Player) -> int:
         """
@@ -1485,7 +1541,10 @@ class GameEngine:
         posicion: int = slot.posicion_track
 
         # --- Cálculo de puntos, datos y monedas ---
-        puntos_base: int = self._calcular_puntos_zona(recipe, posicion, fue_colapso)
+        ampliacion: int = self.ampliacion_zona_optima(player)
+        puntos_base: int = self._calcular_puntos_zona(
+            recipe, posicion, fue_colapso, ampliacion
+        )
         datos_obtenidos: int = (
             0
             if fue_colapso
@@ -1495,7 +1554,9 @@ class GameEngine:
         # El bono de sabor no aplica en un colapso (fermentación fallida).
         bono_sabor_aplicado: bool = slot.bono_sabor and not fue_colapso
 
-        monedas_base: int = self._calcular_monedas_zona(recipe, posicion, fue_colapso)
+        monedas_base: int = self._calcular_monedas_zona(
+            recipe, posicion, fue_colapso, ampliacion
+        )
         monedas_obtenidos: int = monedas_base + (
             MONEDAS_BONO_SABOR if bono_sabor_aplicado else 0
         )
@@ -1509,6 +1570,7 @@ class GameEngine:
             fue_colapso=fue_colapso,
             datos_obtenidos=datos_obtenidos,
             monedas_obtenidos=monedas_obtenidos,
+            ampliacion_aplicada=ampliacion,
         )
 
         # --- Actualizar estado del jugador ---
@@ -1573,6 +1635,7 @@ class GameEngine:
         recipe: Recipe,
         posicion: int,
         fue_colapso: bool,
+        ampliacion: int = 0,
     ) -> int:
         """
         Calcula los Puntos de Maestría según la zona del track de fermentación.
@@ -1596,14 +1659,16 @@ class GameEngine:
             recipe: Receta de la masa que se está horneando.
             posicion: Posición actual en el track de fermentación.
             fue_colapso: True si es un horneado forzado por sobrefermentación.
+            ampliacion: Casillas de ampliación de la zona óptima del propietario
+                (``ampliacion_zona_optima``). Las zonas se leen ya ampliadas.
 
         Returns:
             Puntos de Maestría (entero, puede ser negativo).
         """
-        if fue_colapso or recipe.esta_sobrefermentada(posicion):
+        if fue_colapso or recipe.esta_sobrefermentada(posicion, ampliacion):
             return recipe.penalizacion_colapso
 
-        if recipe.esta_en_zona_optima(posicion):
+        if recipe.esta_en_zona_optima(posicion, ampliacion):
             return recipe.puntos_optimos
 
         # Zona baja: masa cruda
@@ -1614,6 +1679,7 @@ class GameEngine:
         recipe: Recipe,
         posicion: int,
         fue_colapso: bool,
+        ampliacion: int = 0,
     ) -> int:
         """
         Calcula las Monedas obtenidas al hornear y vender, según la zona del
@@ -1628,10 +1694,10 @@ class GameEngine:
         Returns:
             Monedas base (antes del Bono de Sabor).
         """
-        if fue_colapso or recipe.esta_sobrefermentada(posicion):
+        if fue_colapso or recipe.esta_sobrefermentada(posicion, ampliacion):
             return recipe.monedas_sobre
 
-        if recipe.esta_en_zona_optima(posicion):
+        if recipe.esta_en_zona_optima(posicion, ampliacion):
             return recipe.monedas_optima
 
         return recipe.monedas_baja
@@ -1647,9 +1713,14 @@ class GameEngine:
 
         Reglas (ACTIONS_REGISTRY.md §2F y §2D):
           · Zona baja o sobrefermentada: 0 datos.
+          · Zona baja o sobrefermentada: 0 datos.
           · Zona óptima: ``DATOS_BAKE_ZONA_OPTIMA`` (1 dato).
-          · Centro exacto + Módulo Analítico activo:
-            +``DATOS_BAKE_CENTRO_EXACTO_BONUS`` datos adicionales.
+          · Con Módulo Analítico: +``DATOS_BAKE_MODULO_BONUS`` en CUALQUIER punto de
+            la zona óptima, y +``DATOS_BAKE_CENTRO_EXACTO_BONUS`` más si además es el
+            centro exacto. Es decir 1 / 2 / 3 datos.
+
+        Las zonas se leen ya ampliadas por el Módulo, así que una posición que sin la
+        mejora sería zona baja puede pagar datos con ella instalada.
 
         Args:
             player: Jugador que hornea (se verifica si tiene Módulo Analítico).
@@ -1657,16 +1728,20 @@ class GameEngine:
             posicion: Posición actual en el track.
 
         Returns:
-            Datos de Investigación otorgados (0, 1 o 2).
+            Datos de Investigación otorgados (0, 1, 2 o 3).
         """
-        if not recipe.esta_en_zona_optima(posicion):
+        ampliacion: int = self.ampliacion_zona_optima(player)
+        if not recipe.esta_en_zona_optima(posicion, ampliacion):
             return 0
 
         datos: int = DATOS_BAKE_ZONA_OPTIMA
 
-        # Bono por hornear en el centro exacto con Módulo Analítico instalado.
-        if recipe.es_centro_exacto(posicion) and player.tecnologias.modulo_analitico:
-            datos += DATOS_BAKE_CENTRO_EXACTO_BONUS
+        if player.tecnologias.modulo_analitico:
+            datos += DATOS_BAKE_MODULO_BONUS
+            # El centro exacto no se mueve al ampliar la zona (ver es_centro_exacto),
+            # así que sigue siendo la misma casilla que imprime la carta.
+            if recipe.es_centro_exacto(posicion):
+                datos += DATOS_BAKE_CENTRO_EXACTO_BONUS
 
         return datos
 

@@ -122,14 +122,20 @@ p1.puntos_accion = 2
 p1.acciones_pa_usadas_hoy = []
 xraises(StationBlockedError, "B estaciones llenas", lambda: manager.accion_B_iniciar_receta(p1, receta_b))
 
+# Una Avanzada se inicia SIN ninguna tecnologia instalada: el freno son los
+# insumos, no una mejora de laboratorio.
 p1.carpeta_proyectos = [receta_av]
 p1.estaciones_fermentacion = [None, None, None]
 p1.puntos_accion = 2
 p1.acciones_pa_usadas_hoy = []
-xraises(RuleViolationError, "B sin la mejora que exige req_tecnologico", lambda: manager.accion_B_iniciar_receta(p1, receta_av))
+p1.dados_inoculo = 3
+p1.tecnologias.modulo_analitico = False
+stock_harinas(p1, receta_av)
+p1.reserva_agua = receta_av.tokens_agua + 5
+manager.accion_B_iniciar_receta(p1, receta_av)
+check("B avanzada sin ninguna tecnologia", lambda: None if p1.estaciones_fermentacion[0] is not None else (_ for _ in ()).throw(AssertionError()))
 
 # Receta Intermedia: cobra media bolsa de CADA uno de sus dos tipos.
-p1.tecnologias.modulo_analitico = True
 p1.carpeta_proyectos = [receta_int]
 p1.estaciones_fermentacion = [None, None, None]
 p1.puntos_accion = 2
@@ -148,7 +154,6 @@ p1.acciones_pa_usadas_hoy = []
 stock_harinas(p1, receta_int)
 p1.reserva_harina[list(receta_int.requisito_harina)[1]] = 0
 xraises(MissingResourceError, "B intermedia con solo una harina", lambda: manager.accion_B_iniciar_receta(p1, receta_int))
-p1.tecnologias.modulo_analitico = False
 
 p1.vitalidad = 0
 p1.en_estado_contaminacion = True
