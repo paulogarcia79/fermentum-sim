@@ -923,21 +923,27 @@ def _mostrar_ranking_final(engine: GameEngine) -> None:
     """Imprime la tabla de puntuación final y declara el ganador."""
     _header("RESULTADOS FINALES — FIN DE PARTIDA")
 
+    # calcular_ranking_final devuelve (posicion_1based, player) -- NO los puntos.
+    # Los Puntos de Maestria se leen del propio jugador.
     ranking = engine.calcular_ranking_final()
 
     print(f"  {'Pos':<4} {'Investigador':<20} {'PM Total':>9} {'Vitalidad':>9} {'Datos':>6}")
     print(f"  {'─'*55}")
 
     medallas = ["🥇", "🥈", "🥉"]
-    for pos_0, (puntos, player) in enumerate(ranking):
+    for pos_0, (posicion, player) in enumerate(ranking):
         medalla = medallas[pos_0] if pos_0 < 3 else "   "
         color = _C.YELLOW if pos_0 == 0 else (_C.WHITE if pos_0 == 1 else "")
-        fila = f"  {pos_0+1:<4} {player.nombre:<20} {puntos:>9} {player.vitalidad:>9} {player.datos_investigacion:>6}"
+        fila = (f"  {posicion:<4} {player.nombre:<20} "
+                f"{player.puntos_maestria_final:>9} {player.vitalidad:>9} "
+                f"{player.datos_investigacion:>6}")
         print(f"{medalla} {_c(color, fila)}")
 
     print()
-    ganador_pts, ganador = ranking[0]
-    print(_c(_C.BOLD + _C.YELLOW, f"  ★ Ganador: {ganador.nombre} con {ganador_pts} Puntos de Maestría\n"))
+    _, ganador = ranking[0]
+    print(_c(_C.BOLD + _C.YELLOW,
+             f"  ★ Ganador: {ganador.nombre} con "
+             f"{ganador.puntos_maestria_final} Puntos de Maestría\n"))
 
     # Desglose de cada jugador
     _subheader("Desglose de puntuación")
