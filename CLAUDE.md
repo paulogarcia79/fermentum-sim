@@ -294,6 +294,11 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
     IBM Plex Mono for **every number that sits on a scale**, via the global `.dato` class. Loaded
     from Google Fonts in `web/index.html`. Seven sizes, `--t-micro` … `--t-display`. The global
     `.eyebrow` class replaced five differently-valued copies of the same section-label idea.
+  - **Native chrome**: `:root` sets `color-scheme: dark` plus `scrollbar-width`/`scrollbar-color`
+    (thumb `--borde-fuerte`, transparent track so the bar sits on whatever surface is under it).
+    Both inherit, so all eight scrolling containers are covered from one place — no component
+    styles its own scrollbar, and `::-webkit-scrollbar` is deliberately unused (Chrome ignores it
+    once the standard properties apply).
   - **Space/radius**: `--e1`…`--e6` and `--r-control`/`--r-carta`/`--r-zona`. Icon boxes are
     `.ico-xs/-s/-m/-l` (the eight `Icono*.vue` already declare `width:100%`, so consumers only
     pick a box). Two breakpoints, **720px** and **1100px**.

@@ -131,6 +131,21 @@ const enPartida = computed(() => store.sesion !== null && store.estado !== null)
   --color-frio: var(--frio);
 }
 
+/* Todo el chrome nativo (barras de scroll, controles de formulario, el popup
+   de un <select>) hereda el tema de la pagina desde aqui. Sin esto el navegador
+   asume claro y cada region que desborda dibuja una barra blanca sobre la mesa.
+   Se hereda, asi que cubre los ocho contenedores con scroll (las regiones de
+   GameView, el Registro y los modales altos) sin tocar ninguno. Ningun
+   componente debe estilar su propia barra. */
+:root {
+  color-scheme: dark;
+  scrollbar-width: thin;
+  /* Canal transparente a proposito: la barra se apoya en la superficie que
+     tenga debajo (--zona en una region, --carta en un modal) en vez de pintar
+     una franja de un color fijo sobre las dos. */
+  scrollbar-color: var(--borde-fuerte) transparent;
+}
+
 * {
   box-sizing: border-box;
 }
