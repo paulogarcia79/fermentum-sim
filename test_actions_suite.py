@@ -7,7 +7,7 @@ para las 11 acciones implementadas en ActionManager.
 import sys
 
 from models import (
-    Player, FermentationSlot, TecnologiaID, TipoHarina,
+    Player, FermentationSlot, HorneadoRecord, TecnologiaID, TipoHarina,
     Grado, RECIPE_CATALOG, Environment,
 )
 from engine import GameEngine, Market
@@ -381,33 +381,50 @@ xraises(InvalidActionError, "G indice mercado invalido", lambda: manager.accion_
 
 # ========================================================================
 print("--- Simposio Tecnico ---")
-p1.carpeta_proyectos = list(RECIPE_CATALOG.values())[:2]
-receta_descartada_carpeta = p1.carpeta_proyectos[0]
+# El Simposio ya no descarta de carpeta ni de estacion: se paga sacrificando un
+# horneado exitoso del archivo, y paga Datos segun el grado de la carta (1/2/3).
+p1.acciones_pa_usadas_hoy = []
+p1.puntos_accion = 1
+p1.archivo_horneado_exitoso = []
+xraises(RuleViolationError, "Simposio archivo vacio", lambda: manager.accion_simposio_tecnico(p1, 0))
+
+receta_basica = next(r for r in RECIPE_CATALOG.values() if r.grado == Grado.BASICA)
+receta_avanzada = next(r for r in RECIPE_CATALOG.values() if r.grado == Grado.AVANZADA)
+
+def _record(recipe):
+    return HorneadoRecord(
+        recipe=recipe,
+        posicion_final=recipe.zona_optima[0],
+        puntos_base=recipe.puntos_optimos,
+        bono_sabor_aplicado=False,
+        fue_colapso=False,
+        datos_obtenidos=1,
+        monedas_obtenidos=recipe.monedas_optima,
+        ampliacion_aplicada=0,
+    )
+
+p1.archivo_horneado_exitoso = [_record(receta_basica), _record(receta_avanzada)]
+p1.acciones_pa_usadas_hoy = []
 p1.puntos_accion = 2
 datos_s = p1.datos_investigacion
 
-manager.accion_simposio_tecnico(p1, "carpeta", 0)
-check("Simposio carpeta: +1 dato", lambda: None if p1.datos_investigacion == datos_s + 1 else (_ for _ in ()).throw(AssertionError()))
-check("Simposio carpeta: size=1", lambda: None if len(p1.carpeta_proyectos) == 1 else (_ for _ in ()).throw(AssertionError()))
-check("Simposio carpeta: va al descarte del mercado", lambda: None if receta_descartada_carpeta in market.descarte_recetas else (_ for _ in ()).throw(AssertionError()))
+manager.accion_simposio_tecnico(p1, 0)
+check("Simposio Basica: +1 dato", lambda: None if p1.datos_investigacion == datos_s + 1 else (_ for _ in ()).throw(AssertionError(f"datos={p1.datos_investigacion}")))
+check("Simposio: registro fuera del archivo", lambda: None if len(p1.archivo_horneado_exitoso) == 1 else (_ for _ in ()).throw(AssertionError()))
+check("Simposio: carta va al descarte del mercado", lambda: None if receta_basica in market.descarte_recetas else (_ for _ in ()).throw(AssertionError()))
 
-fslot = FermentationSlot(recipe=receta_b, dado_inoculo=2, posicion_track=3, bono_sabor=False, modificador_incubadora=0)
-p1.estaciones_fermentacion = [fslot, None, None]
+p1.acciones_pa_usadas_hoy = []
 p1.puntos_accion = 2
-p1.acciones_pa_usadas_hoy = []
-p1.dados_inoculo = 1
 datos_s2 = p1.datos_investigacion
+manager.accion_simposio_tecnico(p1, 0)
+check("Simposio Avanzada: +3 datos", lambda: None if p1.datos_investigacion == datos_s2 + 3 else (_ for _ in ()).throw(AssertionError(f"datos={p1.datos_investigacion}")))
+check("Simposio: archivo vaciado", lambda: None if not p1.archivo_horneado_exitoso else (_ for _ in ()).throw(AssertionError()))
 
-manager.accion_simposio_tecnico(p1, "estacion", 0)
-check("Simposio estacion: +1 dato", lambda: None if p1.datos_investigacion == datos_s2 + 1 else (_ for _ in ()).throw(AssertionError()))
-check("Simposio estacion: slot liberado", lambda: None if p1.estaciones_fermentacion[0] is None else (_ for _ in ()).throw(AssertionError()))
-check("Simposio estacion: dado recuperado (1->2)", lambda: None if p1.dados_inoculo == 2 else (_ for _ in ()).throw(AssertionError(f"dados={p1.dados_inoculo}")))
-check("Simposio estacion: receta va al descarte del mercado", lambda: None if receta_b in market.descarte_recetas else (_ for _ in ()).throw(AssertionError()))
-
-p1.puntos_accion = 1
-xraises(InvalidActionError, "Simposio origen invalido", lambda: manager.accion_simposio_tecnico(p1, "horno", 0))
 p1.acciones_pa_usadas_hoy = []
-xraises(RuleViolationError, "Simposio estacion vacia", lambda: manager.accion_simposio_tecnico(p1, "estacion", 0))
+p1.puntos_accion = 1
+p1.archivo_horneado_exitoso = [_record(receta_basica)]
+xraises(InvalidActionError, "Simposio indice fuera de rango", lambda: manager.accion_simposio_tecnico(p1, 5))
+p1.archivo_horneado_exitoso = []
 
 # ========================================================================
 print("--- Horas Extras ---")
@@ -438,7 +455,7 @@ manager.accion_H_recultivo_manual(p1)
 check("H: vitalidad=1", lambda: None if p1.vitalidad == 1 else (_ for _ in ()).throw(AssertionError()))
 check("H: acidez=1", lambda: None if p1.acidez == 1 else (_ for _ in ()).throw(AssertionError()))
 check("H: contaminacion limpia", lambda: None if not p1.en_estado_contaminacion else (_ for _ in ()).throw(AssertionError()))
-check("H: harina consumida (-50%)", lambda: None if sum(p1.reserva_harina.values()) == 0 else (_ for _ in ()).throw(AssertionError()))
+check("H: harina consumida (-30%)", lambda: None if sum(p1.reserva_harina.values()) == 20 else (_ for _ in ()).throw(AssertionError(f"quedan {sum(p1.reserva_harina.values())}")))
 check("H: agua NO consumida (sin costo de agua en GDD v0.0.2)", lambda: None if p1.reserva_agua == 5 else (_ for _ in ()).throw(AssertionError()))
 
 p1.puntos_accion = 1

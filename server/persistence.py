@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 11
+VERSION_FORMATO = 12
 """
 Bumped a 11: `Recipe` cambia de forma otra vez -- la pista de fermentacion pasa de
 tres zonas a CUATRO (`zona_crecimiento` nueva, y `zona_baja`/`zona_sobrefermentada`

@@ -29,10 +29,12 @@ from typing import List, Optional, Tuple
 from actions import COSTOS_TECNOLOGIA, ActionManager
 from bootstrap import create_game
 from engine import (
+    DATOS_SIMPOSIO,
     PRECIO_AGUA,
     PRECIO_PLIEGUES,
     PRECIO_PLIEGUES_VITALIDAD,
     PRECIO_RECETA,
+    PRECIO_RENTA,
     GameEngine,
 )
 from events import EventoTipo, GameEvent
@@ -336,7 +338,7 @@ _MENU_ACCIONES = """
   │  E  Pliegues               (avanzar masa)           [1PA]       │
   │  F  Hornear y Vender       (finalizar masa)         [1PA]       │
   │  G  Investigar Protocolo   (tomar receta mercado)   [1PA]       │
-  │  S  Simposio Técnico       (descartar → +1 Dato)    [1PA]       │
+  │  S  Simposio Técnico       (sacrifica un horneado)  [1PA]       │
   │  H  Re-cultivo Manual      (emergencia, contamin.)  [1PA]       │
   │  I  Inóculo Emergencia     (emergencia, contamin.)  [1PA]       │
   ├─── AUXILIARES (GRATUITAS) ─────────────────────────────────────┤
@@ -611,32 +613,35 @@ def _params_accion_G(player: Player, engine: GameEngine) -> Optional[dict]:
 
 
 def _params_accion_S(player: Player) -> Optional[dict]:
-    origen = _pedir_opcion("Origen del descarte: [c]arpeta / [e]stación", ["c", "e"])
-    if origen is None:
+    if not player.archivo_horneado_exitoso:
+        _warn("No tienes horneados exitosos que sacrificar.")
         return None
-    if origen == "c":
-        if not player.carpeta_proyectos:
-            _warn("Carpeta vacía.")
-            return None
-        print("  Recetas en carpeta:")
-        for i, r in enumerate(player.carpeta_proyectos):
-            print(f"    [{i}] {r.nombre}")
-        idx = _pedir_int("Índice a descartar", 0, len(player.carpeta_proyectos) - 1)
-        if idx is None:
-            return None
-        return {"origen": "carpeta", "indice": idx}
-    else:
-        masas = player.masas_activas
-        if not masas:
-            _warn("No hay masas activas.")
-            return None
-        print("  Masas activas:")
-        for i, slot in masas:
-            print(f"    [{i}] {slot.recipe.nombre}")
-        idx = _pedir_int("Índice de estación a descartar", 0, 2)
-        if idx is None:
-            return None
-        return {"origen": "estacion", "indice": idx}
+    print("  Archivo de Horneados Exitosos (sacrificar uno):")
+    for i, record in enumerate(player.archivo_horneado_exitoso):
+        renta = PRECIO_RENTA[record.recipe.grado]
+        datos = DATOS_SIMPOSIO[record.recipe.grado]
+        print(
+            f"    [{i}] {record.recipe.nombre} ({record.recipe.grado.value}) "
+            f"-> +{datos} Datos | pierdes {record.puntos_totales} PM "
+            f"y {renta} Monedas/día"
+        )
+    distintas_antes = player.recetas_distintas_horneadas
+    idx = _pedir_int("Índice a sacrificar", 0, len(player.archivo_horneado_exitoso) - 1)
+    if idx is None:
+        return None
+    # Aviso explícito si además se pierde un escalón de «Variedad de Recetas»:
+    # el salto es de hasta -5 PM y no se deduce del listado de arriba.
+    restantes = {
+        r.recipe.id
+        for i, r in enumerate(player.archivo_horneado_exitoso)
+        if i != idx
+    }
+    if len(restantes) < distintas_antes:
+        _warn(
+            f"Bajas de {distintas_antes} a {len(restantes)} recetas distintas: "
+            "también pierdes un escalón de Variedad de Recetas."
+        )
+    return {"indice": idx}
 
 
 # ===========================================================================
@@ -771,8 +776,8 @@ def _despachar_accion(
         params = _params_accion_S(player)
         if not params:
             return False
-        manager.accion_simposio_tecnico(player, **params)
-        _ok("+1 Dato de Investigación obtenido del Simposio Técnico.")
+        datos = manager.accion_simposio_tecnico(player, **params)
+        _ok(f"+{datos} Datos de Investigación obtenidos del Simposio Técnico.")
         return True
 
     elif opcion == "H":
@@ -887,6 +892,18 @@ def _reporte_fermentacion(
 
         if any(ev.tipo == EventoTipo.CONTAMINACION for ev in eventos_jugador):
             _warn(f"  ¡{player.nombre} entró en estado de Contaminación!")
+
+        # Ingresos de Panadería (renta del archivo de horneados)
+        renta = next(
+            (ev for ev in eventos_jugador if ev.tipo == EventoTipo.RENTA_PANADERIA),
+            None,
+        )
+        if renta is not None:
+            monedas_str = _c(_C.GREEN, f"+{renta.datos['monedas_recibidas']}")
+            detalle = ", ".join(
+                f"{d['receta_nombre']} +{d['monedas']}" for d in renta.datos["desglose"]
+            )
+            print(f"    Ingresos de panadería: {monedas_str} Monedas  ({detalle})")
 
         # Masas activas restantes
         masas = player.masas_activas

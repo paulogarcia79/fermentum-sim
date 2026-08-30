@@ -54,21 +54,25 @@ Ambos tipos de token cuentan **1:1** en la penalización por desperdicio del fin
 ## 2. Preparación Inicial del Jugador (Cartas de Patrocinio)
 Al iniciar la simulación (Día 1), el setup baraja el mazo de 8 Cartas de Patrocinio (GDD v0.0.2, Módulo I §6.4 / Anexo B) y reparte 1 carta a cada jugador sentado (1 a 4 jugadores), reveladas simultáneamente. El jugador con el número de Iniciativa más bajo en su carta recibe el token de Investigador Jefe y actúa primero en el Día 1; los demás se ordenan ascendentemente según su número.
 
-* **Reglas base para todos:** `vitalidad` = 1, `acidez` = 1, `dados_inoculo` = 3, `puntos_accion` = 0, `datos_investigacion` = 0, se entrega 1 Receta "Básica" aleatoria, y `tecnologias_activas` inician en `False`.
-* **Asignación según Carta de Patrocinio** (`reserva_harina`, `reserva_agua` y `monedas` provienen íntegramente de la carta repartida a ese jugador; tras el despliegue de insumos las cartas vuelven a la caja):
+* **Reglas base para todos:** `vitalidad` = **2** (`models.VITALIDAD_INICIAL`), `acidez` = 1, `dados_inoculo` = 3, `puntos_accion` = 0, se entrega 1 Receta "Básica" aleatoria, y `tecnologias_activas` inician en `False`. `datos_investigacion` **ya no es 0 para todos**: lo fija la Carta de Patrocinio (ver tabla abajo).
 
-  | Iniciativa | Harina — Tokens (%) | Agua — Tokens (%) | Monedas Iniciales |
-  |---|---|---|---|
-  | 1 | 10 (100%) Blanca | 2 (10%) | 9 |
-  | 2 | 10 (100%) Blanca | 6 (30%) | 8 |
-  | 3 | 10 (100%) Blanca | 12 (60%) | 6 |
-  | 4 | 10 (100%) Integral | 6 (30%) | 8 |
-  | 5 | 10 (100%) Integral | 12 (60%) | 6 |
-  | 6 | 10 (100%) Centeno | 6 (30%) | 8 |
-  | 7 | 10 (100%) Centeno | 12 (60%) | 6 |
-  | 8 | 20 (200%) Blanca | 20 (100%) | 4 |
+  La Vitalidad inicial es 2 y no 1 por una razón concreta: el desgaste de la Fase III resta -1 y la Acción A repone +1 una vez al día, así que un jugador que alimenta a diario **orbita en su valor inicial**. Partiendo de 1, la carta «Aletargamiento Invernal» (-2, dos copias en un mazo de 30) lo dejaba en 0 → contaminación inevitable, sin jugada posible que la evitara: no era una decisión mal tomada, era el barajado. Partiendo de 2 la misma carta lo deja en 1, y la contaminación vuelve a castigar lo que debe castigar, que es descuidar el mantenimiento. Ver CLIMATE_LOGIC.md.
+* **Asignación según Carta de Patrocinio** (`reserva_harina`, `reserva_agua`, `monedas` y `datos_investigacion` provienen íntegramente de la carta repartida a ese jugador; tras el despliegue de insumos las cartas vuelven a la caja):
+
+  | Iniciativa | Harina — Tokens (%) | Agua — Tokens (%) | Monedas Iniciales | Datos Iniciales |
+  |---|---|---|---|---|
+  | 1 | 10 (100%) Blanca | 2 (10%) | 9 | 0 |
+  | 2 | 10 (100%) Blanca | 6 (30%) | 8 | 0 |
+  | 3 | 10 (100%) Blanca | 12 (60%) | 6 | 1 |
+  | 4 | 10 (100%) Integral | 6 (30%) | 8 | 0 |
+  | 5 | 10 (100%) Integral | 12 (60%) | 6 | 1 |
+  | 6 | 10 (100%) Centeno | 6 (30%) | 8 | 0 |
+  | 7 | 10 (100%) Centeno | 12 (60%) | 6 | 1 |
+  | 8 | 20 (200%) Blanca | 20 (100%) | 4 | 2 |
 
   Los jugadores que reciben números de Iniciativa altos (actúan más tarde en la primera ronda) son compensados con un capital de insumos de mayor valor para equilibrar la ventaja temporal del Investigador Jefe.
+
+  Los **Datos Iniciales** van en sentido inverso a las Monedas de la carta (el patrocinador tacaño compensa con conocimiento). Existen porque el Simposio Técnico dejó de ser una fuente barata de Datos: ahora exige sacrificar un horneado del Archivo (ver ACTIONS_REGISTRY.md §Simposio), así que sin ellos no habría ningún Dato en la mesa hasta el primer horneado en Zona Óptima — y con ello ni Horas Extras, ni Pedido de Urgencia, ni mejoras de laboratorio, ni Protocolo I.
 
 ---
 

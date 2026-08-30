@@ -33,20 +33,20 @@ Para la simulación, cada entidad de tipo `Receta` debe contener los siguientes 
 setup reparte una Básica distinta por jugador (hasta 4) — con tres, el jugador 4
 recibía una copia de la del jugador 1.
 
-| ID Receta | Grado | Coste (Monedas) | Harinas (siempre 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono) | Crecimiento | Pre-fermento | Óptima | Colapso | Puntos (Pre-f./Óptimo/Colapso) | Monedas (Pre-f./Óptima/Colapso) |
+| ID Receta | Grado | Coste (Monedas) | Harinas (siempre 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono) | Crecimiento | Pre-fermento | Óptima | Colapso | Puntos (Pre-f./Óptimo/Colapso) | Monedas al hornear (Pre-f./Óptima/Colapso) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Pan de Campo** | Básica | 1 | Blanca 100% | 12 (60%) | [3] (+3) | 1 - 5 | 6 - 10 | 11 - 15 | 16 - 20 | 4 / 10 / -2 | 13 / 17 / 11 |
-| **Pan de Molde** | Básica | 1 | Blanca 100% | 11 (55%) | [1, 2] (+2) | 1 - 3 | 4 - 8 | 9 - 14 | 15 - 20 | 3 / 9 / -2 | 12 / 16 / 10 |
-| **Baguette** | Básica | 1 | Blanca 100% | 13 (65%) | [2] (+3) | 1 - 5 | 6 - 11 | 12 - 15 | 16 - 20 | 5 / 11 / -2 | 14 / 18 / 12 |
-| **Focaccia** | Básica | 1 | Blanca 100% | 15 (75%) | [1, 2] (+2) | 1 - 4 | 5 - 9 | 10 - 14 | 15 - 20 | 3 / 12 / -3 | 15 / 19 / 13 |
-| **Miche** | Intermedia | 2 | Blanca 50% + Integral 50% | 14 (70%) | [3, 4] (+4) | 1 - 5 | 6 - 11 | 12 - 16 | 17 - 20 | 5 / 13 / -4 | 16 / 20 / 13 |
-| **Pizza Napolitana** | Intermedia | 2 | Blanca 50% + Integral 50% | 13 (62%) | [3] (+4) | 1 - 5 | 6 - 10 | 11 - 14 | 15 - 20 | 4 / 14 / -4 | 15 / 21 / 12 |
-| **Brioche** | Intermedia | 2 | Blanca 50% + Centeno 50% | 11 (52%) | [1] (+5) | 1 - 7 | 8 - 14 | 15 - 17 | 18 - 20 | 5 / 16 / -6 | 14 / 21 / 11 |
-| **Panettone** | Intermedia | 2 | Blanca 50% + Centeno 50% | 10 (47%) | [1] (+8) | 1 - 10 | 11 - 16 | 17 - 18 | 19 - 20 | 8 / 16 / -8 | 13 / 22 / 10 |
-| **Hogaza Centeno** | Avanzada | 3 | Centeno 100% | 14 (67%) | [4, 5] (+6) | 1 - 6 | 7 - 12 | 13 - 16 | 17 - 20 | 6 / 17 / -5 | 20 / 27 / 17 |
-| **Pan Semillas** | Avanzada | 3 | Integral 100% | 16 (78%) | [3, 4] (+7) | 1 - 6 | 7 - 13 | 14 - 16 | 17 - 20 | 6 / 17 / -5 | 19 / 26 / 16 |
-| **Pan Graham** | Avanzada | 3 | Integral 100% | 16 (80%) | [4, 5] (+6) | 1 - 6 | 7 - 13 | 14 - 17 | 18 - 20 | 6 / 19 / -6 | 18 / 26 / 15 |
-| **Pumpernickel** | Avanzada | 3 | Centeno 100% | 17 (85%) | [5, 6] (+8) | 1 - 9 | 10 - 15 | 16 - 18 | 19 - 20 | 8 / 20 / -8 | 16 / 28 / 12 |
+| **Pan de Campo** | Básica | 1 | Blanca 100% | 12 (60%) | [3] (+3) | 1 - 5 | 6 - 10 | 11 - 15 | 16 - 20 | 4 / 10 / -2 | 10 / 14 / 8 |
+| **Pan de Molde** | Básica | 1 | Blanca 100% | 11 (55%) | [1, 2] (+2) | 1 - 3 | 4 - 8 | 9 - 14 | 15 - 20 | 3 / 9 / -2 | 9 / 13 / 7 |
+| **Baguette** | Básica | 1 | Blanca 100% | 13 (65%) | [2] (+3) | 1 - 5 | 6 - 11 | 12 - 15 | 16 - 20 | 5 / 11 / -2 | 11 / 15 / 9 |
+| **Focaccia** | Básica | 1 | Blanca 100% | 15 (75%) | [1, 2] (+2) | 1 - 4 | 5 - 9 | 10 - 14 | 15 - 20 | 3 / 12 / -3 | 12 / 16 / 10 |
+| **Miche** | Intermedia | 2 | Blanca 50% + Integral 50% | 14 (70%) | [3, 4] (+4) | 1 - 5 | 6 - 11 | 12 - 16 | 17 - 20 | 5 / 13 / -4 | 10 / 14 / 7 |
+| **Pizza Napolitana** | Intermedia | 2 | Blanca 50% + Integral 50% | 13 (62%) | [3] (+4) | 1 - 5 | 6 - 10 | 11 - 14 | 15 - 20 | 4 / 14 / -4 | 9 / 15 / 6 |
+| **Brioche** | Intermedia | 2 | Blanca 50% + Centeno 50% | 11 (52%) | [1] (+5) | 1 - 7 | 8 - 14 | 15 - 17 | 18 - 20 | 5 / 16 / -6 | 8 / 15 / 5 |
+| **Panettone** | Intermedia | 2 | Blanca 50% + Centeno 50% | 10 (47%) | [1] (+8) | 1 - 10 | 11 - 16 | 17 - 18 | 19 - 20 | 8 / 16 / -8 | 7 / 16 / 4 |
+| **Hogaza Centeno** | Avanzada | 3 | Centeno 100% | 14 (67%) | [4, 5] (+6) | 1 - 6 | 7 - 12 | 13 - 16 | 17 - 20 | 6 / 17 / -5 | 11 / 18 / 8 |
+| **Pan Semillas** | Avanzada | 3 | Integral 100% | 16 (78%) | [3, 4] (+7) | 1 - 6 | 7 - 13 | 14 - 16 | 17 - 20 | 6 / 17 / -5 | 10 / 17 / 7 |
+| **Pan Graham** | Avanzada | 3 | Integral 100% | 16 (80%) | [4, 5] (+6) | 1 - 6 | 7 - 13 | 14 - 17 | 18 - 20 | 6 / 19 / -6 | 9 / 17 / 6 |
+| **Pumpernickel** | Avanzada | 3 | Centeno 100% | 17 (85%) | [5, 6] (+8) | 1 - 9 | 10 - 15 | 16 - 18 | 19 - 20 | 8 / 20 / -8 | 7 / 19 / 3 |
 
 ---
 
@@ -54,6 +54,39 @@ recibía una copia de la del jugador 1.
 * **Inicio Condicional:** Un agente no puede ejecutar la acción "Iniciar Receta" si no posee en su reserva **todas** las harinas que la carta imprime (`requisito_harina`, 100% en total: una bolsa entera de un tipo, o media bolsa de cada uno de dos tipos) y la cantidad exacta de `tokens_agua`. **Ninguna comprobación tecnológica**: no existe receta que exija una mejora de laboratorio.
 * **Sello de Acidez:** Al iniciar la receta, el agente compara el nivel de Acidez actual de su cultivo base con la lista `acidez_diana`. Si el valor actual está dentro de la lista, la receta se marca internamente con un booleano `bono_sabor = True`. Si no, `bono_sabor = False`.
 * **Gatillo de Colapso:** Durante la Fase III, si la posición de la masa entra en el rango sobrefermentado **efectivo de su propietario** (`zonas_efectivas`, ver §1), el agente invoca automáticamente la función de horneado aplicando la `penalizacion_colapso`. Leerlo contra la zona impresa en vez de la efectiva es el error que haría colapsar una masa pese a tener el Módulo Analítico instalado.
+### Renta: los pagos de la tabla son el pago ÚNICO, no todo lo que rinde la carta
+
+Un horneado exitoso sigue rindiendo **cada noche** mientras permanezca en el Archivo
+(CORE_MECHANICS.md §Fase III, `engine.PRECIO_RENTA`):
+
+| Grado | Renta por Fase III |
+|---|---|
+| Básica | 1 Moneda |
+| Intermedia | 2 Monedas |
+| Avanzada | 3 Monedas |
+
+Los números de Monedas de la tabla de arriba **ya están recortados** en `renta × 3`
+respecto a los originales (Básica -3, Intermedia -6, Avanzada -9), sobre las **tres**
+zonas. Dos cosas se siguen de ahí y conviene no reabrirlas por descuido:
+
+* **El recorte es uniforme dentro de cada carta**, así que el orden interno
+  Óptima > Pre-fermento > Colapso se conserva en las 12. Recortar sólo la Óptima
+  invertía Miche y Hogaza Centeno (la venta cruda pagaría más que clavar el punto);
+  no tocar el Colapso lo invertía al revés en las 12 (fallar pagaría más que vender
+  pronto). Sólo el recorte a las tres zonas deja la tabla coherente.
+* **El 3 es un horizonte de amortización común**, no un número suelto: cualquier
+  horneado recupera su pago antiguo al tercer día, sea del grado que sea, de modo que
+  la presión por hornear pronto es idéntica para todas las cartas y elegir receta sigue
+  siendo una cuestión de puntos y harina, no de velocidad de retorno. Está fijado en
+  `tests/test_renta_panaderia.py::test_amortizacion_al_tercer_dia` para los tres grados.
+
+Efecto secundario aceptado: **la escalera de grados se invierte en el pago único**
+(Panettone paga 7 en Pre-fermento frente a los 9 de Pan de Molde), porque el grado alto
+cede más al flujo. Se restaura en valor total al tercer día, que es justamente el
+principio elegido.
+
+Un **colapso no rinde renta**: va a `archivo_colapsos`, y provocarlo es gratis.
+
 * **Adquisición (Acción G):** Tomar una receta del mercado cuesta 1 PA **más Monedas según su grado** (`engine.PRECIO_RECETA`: Básica 1, Intermedia 2, Avanzada 3). El precio se valida **antes** de retirar la carta del mercado: `Market.tomar_receta` la quita, así que cobrar después significaría que un jugador sin Monedas destruye una carta al fallar.
 
 ---
@@ -91,7 +124,7 @@ en el marcador y no solo en la lista de la compra:
 
 Las **Monedas y el ancho de las zonas NO están bandeados**: siguen siendo el eje que
 distingue, dentro de un mismo grado, una carta de puntos baratos de una carta caja
-fuerte (compárense Hogaza Centeno, 17 pts / 27 Monedas, y Pumpernickel, 20 / 28 con una
+fuerte (compárense Hogaza Centeno, 17 pts / 18 Monedas, y Pumpernickel, 20 / 19 con una
 ventana óptima de 3 espacios y un colapso de -8). Igual que el Bono de Sabor: Panettone
 es Intermedia y aun así tiene el mayor bono del juego (+8) — no es la carta de más
 puntos, es la de más sabor.

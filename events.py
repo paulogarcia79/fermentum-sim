@@ -41,6 +41,8 @@ class EventoTipo(str, Enum):
     MASA_AVANZO = "masa_avanzo"
     HORNEADO = "horneado"
     DESGASTE = "desgaste"
+    # Ingresos de Panadería: cada horneado del archivo paga Monedas cada noche.
+    RENTA_PANADERIA = "renta_panaderia"
     CONTAMINACION = "contaminacion"
     FIN_DE_PARTIDA = "fin_de_partida"
 

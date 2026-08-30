@@ -61,7 +61,7 @@
 * **Costo:** 1 PA.
 * **Límite:** 1 vez por día (por espacio de acción — ver §1). No aplica al colapso automático de Fase III (sobrefermentación), que no pasa por este espacio ni consume PA.
 * **Efecto:** El jugador obtiene Puntos de Maestría según la zona en la que se encuentre el marcador. Al hornear, además cobra ingresos en Monedas, y si está en Zona Óptima también recibe Datos de Investigación.
-* **Prohibición:** una masa en **Crecimiento** no se puede hornear — todavía no es pan. `ActionManager.accion_F_hornear` lanza `RuleViolationError` y `disponibilidad.py` apaga el espacio con el motivo "La masa aún está creciendo". Se comprueba contra las zonas **efectivas** del jugador, aunque el crecimiento nunca se amplía, de modo que esa frontera no se mueve al instalar el Módulo Analítico. Para abandonar una masa que aún crece está el Simposio Técnico (1 Dato). Esto es lo que cierra el agujero de iniciar una receta y hornearla el mismo día desde la casilla 0, que pagaba como zona baja.
+* **Prohibición:** una masa en **Crecimiento** no se puede hornear — todavía no es pan. `ActionManager.accion_F_hornear` lanza `RuleViolationError` y `disponibilidad.py` apaga el espacio con el motivo "La masa aún está creciendo". Se comprueba contra las zonas **efectivas** del jugador, aunque el crecimiento nunca se amplía, de modo que esa frontera no se mueve al instalar el Módulo Analítico. **No hay forma de abandonar una masa**: iniciar una receta es un compromiso irreversible, y una masa que no se quiere fermentará hasta hornearse o colapsar (el Simposio Técnico ya no descarta de una estación). No queda nunca atascada — la Fase III la hace avanzar todas las noches — así que lo que se pierde es la posibilidad de esquivar `penalizacion_colapso`, no el uso de la estación. Esto es lo que cierra el agujero de iniciar una receta y hornearla el mismo día desde la casilla 0, que pagaba como zona baja.
 * **Resolución por zona:**
     * *Crecimiento:* no se hornea (ver arriba). Sin puntos, sin Monedas, sin Datos.
     * *Zona Óptima:* Ingreso completo en Monedas (`monedas_optima`) + Puntos de Maestría íntegros (`puntos_optimos`) + Datos de Investigación (1; **2 con Módulo Analítico**, y **3** si además es el centro exacto). Las zonas se leen ya ensanchadas por el Módulo del jugador: una posición que sin la mejora sería zona baja puede pagar como óptima con ella.
@@ -77,9 +77,17 @@
 * **Mercado:** El espacio central queda vacío hasta que el "Protocolo de Refresco" del inicio del día siguiente reabastezca el Mercado Central a 4 recetas.
 
 ### Simposio Técnico (Generación de Datos)
-* **Costo:** 1 PA.
-* **Límite:** 1 vez por día (por espacio de acción — ver §1), sin importar si se descarta desde la carpeta o desde una estación.
-* **Efecto:** Descartar una Carta de Receta de la carpeta de proyectos o de la estación de fermentación para ganar 1 Dato de Investigación inmediatamente.
+* **Costo:** 1 PA + **un horneado exitoso del Archivo**. El PA es aditivo sobre el sacrificio, igual que el precio en Monedas de la Acción G lo es sobre su PA: el punto de acción sigue siendo la escasez real, y la acción termina el turno como cualquier otra Principal.
+* **Límite:** 1 vez por día (por espacio de acción — ver §1).
+* **Efecto:** Retira un registro de `archivo_horneado_exitoso` y otorga Datos de Investigación **según el grado de la carta**: **Básica 1, Intermedia 2, Avanzada 3** (`engine.DATOS_SIMPOSIO`). La carta física vuelve al descarte de recetas y puede reaparecer al rebarajar.
+* **Es la única forma de sacar un registro del Archivo**, y por tanto la única forma de perder la renta de Ingresos de Panadería (ver CORE_MECHANICS.md §Fase III). Sacrificar un horneado cuesta a la vez:
+    * sus Puntos de Maestría base (9-20 según la carta),
+    * su renta diaria para el resto de la partida,
+    * un escalón entero de «Variedad de Recetas» si era el único de su tipo (hasta -5 PM),
+    * y un paso del contador X/5 que dispara el fin de partida.
+* **Nada de esto necesita código que lo coordine:** `puntos_horneados`, `puntos_variedad` y `recetas_distintas_horneadas` se derivan todos de esa misma lista.
+* **No es una jugada eficiente y no pretende serlo.** Ningún rendimiento en Datos compensa ese precio: es una **palanca de emergencia** — quemar un éxito pasado para salvar el presente — y en la práctica se sacrifica siempre la carta más barata que se tenga. Consecuencia emergente que se documenta y no se corrige: un jugador en 4/5 puede sacrificar un horneado para bajar a 3/5 y retrasar el final. Es carísimo, así que es legítimo. Lo que no puede es revertir un final ya disparado.
+* **Ya NO descarta de la carpeta ni de una estación.** Descartar de la carpeta lo cubre la propia Acción G (parámetro `indice_descartar` cuando la carpeta está llena). Abandonar una masa **ya no es posible en absoluto**: ver §F.
 
 ---
 
@@ -116,5 +124,5 @@
 
 ### Protocolos de Emergencia (Rescate de Cultivo)
 *Solo pueden ejecutarse si la Vitalidad del cultivo base llega a 0, momento en el cual el jugador recibe una penalización de -3 Puntos de Maestría.*
-* **H. Re-cultivo Manual:** Costo 1 PA + **5 Tokens de Harina — 5 (50%)** (de cualquier tipo). Sin costo de Agua. Retira contaminación y sitúa Vitalidad y Acidez en Nivel 1. Límite: 1 vez por día (por espacio de acción — ver §1), además de requerir contaminación activa.
+* **H. Re-cultivo Manual:** Costo 1 PA + **3 Tokens de Harina — 3 (30%)** (de cualquier tipo). Bajó de 50% a 30% al endurecerse el juego alrededor de la contaminación: los Datos ahora sólo salen de hornear bien o de sacrificar un horneado, así que un jugador contaminado temprano puede no tener ninguno para el Protocolo I, y H es la vía comprable y tiene que seguir siéndolo. A 30% cabe en la bolsa inicial de Patrocinio incluso tras varias Acciones A, de modo que rescatarse nunca obliga a gastar antes una visita entera en el mercado. Sigue siendo el peor de los dos rescates (Nivel 1 frente al Nivel 2 del Protocolo I). Sin costo de Agua. Retira contaminación y sitúa Vitalidad y Acidez en Nivel 1. Límite: 1 vez por día (por espacio de acción — ver §1), además de requerir contaminación activa.
 * **I. Inóculo de Emergencia:** Costo 1 PA + 1 Dato de Investigación. Retira contaminación y sitúa Vitalidad y Acidez en Nivel 2. Límite: 1 vez por día (por espacio de acción — ver §1), además de requerir contaminación activa.

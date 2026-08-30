@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from actions import HARINA_RECULTIVO_MANUAL
 from engine import (
     GameEngine,
     PRECIO_PLIEGUES,
@@ -154,15 +155,19 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     )
     agregar(
         "simposio",
-        "simposio" not in usados and tiene_pa and (bool(player.carpeta_proyectos) or hay_estacion_activa),
+        "simposio" not in usados and tiene_pa and bool(player.archivo_horneado_exitoso),
         "Ya usaste este espacio hoy"
         if "simposio" in usados
-        else ("Sin PA" if not tiene_pa else "Carpeta y estaciones vacías"),
+        else (
+            "Sin PA"
+            if not tiene_pa
+            else "Sin horneados exitosos que sacrificar"
+        ),
     )
     agregar(
         "H",
-        "H" not in usados and contaminado and tiene_pa and harina_total >= 50,
-        _motivo_emergencia(contaminado, tiene_pa, harina_total >= 50, "H" in usados),
+        "H" not in usados and contaminado and tiene_pa and harina_total >= HARINA_RECULTIVO_MANUAL,
+        _motivo_emergencia(contaminado, tiene_pa, harina_total >= HARINA_RECULTIVO_MANUAL, "H" in usados),
     )
     agregar(
         "I",

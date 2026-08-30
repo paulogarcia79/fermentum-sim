@@ -45,6 +45,7 @@ from engine import (
     AGUA_TOKENS_POR_LOTE,
     CANTIDAD_BOLSA_PCT,
     CANTIDAD_MEDIA_BOLSA_PCT,
+    DATOS_SIMPOSIO,
     PRECIO_AGUA,
     PRECIO_PLIEGUES,
     PRECIO_PLIEGUES_VITALIDAD,
@@ -108,6 +109,21 @@ un tamaño de bolsa sería una invitación a que los tres dejasen de coincidir.
 # ===========================================================================
 # SECCIÓN 2: ACTION MANAGER
 # ===========================================================================
+
+
+HARINA_RECULTIVO_MANUAL: int = 30
+"""
+Porcentaje de harina (cualquier tipo) que cuesta el Protocolo H: Re-cultivo Manual.
+
+Bajó de 50 a 30 al endurecerse el resto del juego alrededor de la contaminación. El
+Protocolo I cuesta 1 Dato, y los Datos ahora sólo salen de hornear bien o de sacrificar
+un horneado en el Simposio, así que un jugador contaminado temprano puede no tener
+ninguno; H es la vía comprable y tiene que seguir siéndolo. A 30% queda dentro de la
+bolsa inicial de Patrocinio incluso después de varias Acciones A, de modo que rescatarse
+nunca obliga a gastar antes una visita entera en el mercado.
+
+Sigue siendo el rescate peor de los dos (Vitalidad/Acidez a 1, frente a 2 del Protocolo I).
+"""
 
 
 class ActionManager:
@@ -892,7 +908,8 @@ class ActionManager:
                 f"'{slot.recipe.nombre}' está en la zona de Crecimiento "
                 f"(posición {slot.posicion_track}): la masa todavía no es pan y no "
                 f"se puede hornear. Podrá hornearse a partir de la casilla "
-                f"{pre_fermento[0]}. Para abandonarla, usa el Simposio Técnico."
+                f"{pre_fermento[0]}. Iniciar una receta es un compromiso: no hay forma de "
+                "abandonar una masa, así que fermentará hasta hornearse o colapsar."
             )
 
         # Consumir PA antes de delegar (la delegación no consume PA)
@@ -994,68 +1011,64 @@ class ActionManager:
     def accion_simposio_tecnico(
         self,
         player: Player,
-        origen: str,
         indice: int,
-    ) -> None:
+    ) -> int:
         """
         Simposio Técnico — Generación de Datos (ACTIONS_REGISTRY.md §2 «Simposio»).
 
-        Costo:   1 PA.
-        Efecto:  Descarta una carta de receta de la carpeta de proyectos o
-                 de una estación de fermentación activa para obtener
-                 +1 Dato de Investigación inmediatamente.
+        Costo:   1 PA + **un horneado exitoso del archivo**.
+        Efecto:  Retira un ``HorneadoRecord`` de ``archivo_horneado_exitoso`` y
+                 acredita ``DATOS_SIMPOSIO[grado]`` Datos de Investigación
+                 (Básica 1, Intermedia 2, Avanzada 3).
 
-        Cuando se descarta desde una estación:
-          · La masa en fermentación se pierde sin puntos ni penalización.
-            (Distinto al horneado de emergencia, que sí aplica penalización.)
-          · El dado de inóculo se recupera (dados_inoculo += 1, máx 3).
+        Es la acción más destructiva del juego y la ÚNICA que saca un registro del
+        archivo de horneados. Como ``puntos_horneados``, ``puntos_variedad`` y
+        ``recetas_distintas_horneadas`` son ``@property`` sobre esa misma lista,
+        sacrificar un registro le quita automáticamente:
+          · sus Puntos de Maestría base (9-20 según la carta),
+          · su renta diaria (``engine.PRECIO_RENTA``) para el resto de la partida,
+          · posiblemente un escalón entero de «Variedad de Recetas» (hasta -5 PM),
+          · y un paso del contador X/5 que dispara el fin de partida.
+
+        Ningún rendimiento en Datos hace esto *eficiente*: es una palanca de
+        emergencia, no una jugada de motor. Un jugador en 4/5 puede además usarla
+        para bajar a 3/5 y retrasar el final — carísimo, pero legítimo.
+
+        La carta física vuelve a ``market.descarte_recetas`` y puede reaparecer al
+        rebarajar, igual que hacía el Simposio cuando descartaba de la carpeta.
 
         Args:
             player: Jugador que ejecuta el simposio.
-            origen: ``"carpeta"`` para descartar de carpeta_proyectos;
-                    ``"estacion"`` para descartar una masa activa.
-            indice: Índice en la lista correspondiente.
+            indice: Índice en ``player.archivo_horneado_exitoso``.
+
+        Returns:
+            Datos de Investigación acreditados.
 
         Raises:
-            InvalidActionError: ``origen`` inválido o ``indice`` fuera de rango.
             NotEnoughActionPointsError: PA insuficientes.
-            RuleViolationError: La estación indicada está vacía.
+            RuleViolationError: El archivo de horneados exitosos está vacío.
+            InvalidActionError: ``indice`` fuera de rango.
         """
-        if origen not in ("carpeta", "estacion"):
-            raise InvalidActionError(
-                f"origen debe ser 'carpeta' o 'estacion'. Recibido: '{origen}'"
-            )
-
         self._require_pa(player, 1)
         self._require_espacio_disponible(player, "simposio")
 
-        if origen == "carpeta":
-            if not (0 <= indice < len(player.carpeta_proyectos)):
-                raise InvalidActionError(
-                    f"Índice {indice} fuera de rango para carpeta_proyectos "
-                    f"(tamaño actual: {len(player.carpeta_proyectos)})."
-                )
-            player.consumir_punto_accion("simposio")
-            descartada: Recipe = player.carpeta_proyectos.pop(indice)
-            self._engine.market.descarte_recetas.append(descartada)
-            player.datos_investigacion += 1
+        if not player.archivo_horneado_exitoso:
+            raise RuleViolationError(
+                f"'{player.nombre}' no tiene horneados exitosos que sacrificar en el "
+                "Simposio Técnico. Hay que hornear bien algo antes de poder publicarlo."
+            )
+        if not (0 <= indice < len(player.archivo_horneado_exitoso)):
+            raise InvalidActionError(
+                f"Índice {indice} fuera de rango para archivo_horneado_exitoso "
+                f"(tamaño actual: {len(player.archivo_horneado_exitoso)})."
+            )
 
-        else:  # "estacion"
-            if not (0 <= indice <= 2):
-                raise InvalidActionError(
-                    f"Índice de estación debe ser 0, 1 o 2. Recibido: {indice}"
-                )
-            slot = player.estaciones_fermentacion[indice]
-            if slot is None:
-                raise RuleViolationError(
-                    f"La estación {indice} de '{player.nombre}' está vacía. "
-                    "No hay masa activa que descartar en el Simposio Técnico."
-                )
-            player.consumir_punto_accion("simposio")
-            self._engine.market.descarte_recetas.append(slot.recipe)
-            player.estaciones_fermentacion[indice] = None
-            player.dados_inoculo = min(3, player.dados_inoculo + 1)
-            player.datos_investigacion += 1
+        player.consumir_punto_accion("simposio")
+        record = player.archivo_horneado_exitoso.pop(indice)
+        datos: int = DATOS_SIMPOSIO[record.recipe.grado]
+        player.datos_investigacion += datos
+        self._engine.market.descarte_recetas.append(record.recipe)
+        return datos
 
     # ==================================================================
     # ACCIONES AUXILIARES
@@ -1155,7 +1168,7 @@ class ActionManager:
         Precondición: ``player.en_estado_contaminacion == True``
             (Vitalidad llegó a 0 en algún punto del juego).
 
-        Costo:   1 PA + 50% Harina (cualquier tipo). Sin costo de agua
+        Costo:   1 PA + 30% Harina (cualquier tipo). Sin costo de agua
                  (GDD v0.0.2, Módulo III §3H).
         Efecto:  · Retira el estado de Contaminación.
                  · Establece Vitalidad = 1 y Acidez = 1 directamente
@@ -1178,13 +1191,13 @@ class ActionManager:
         self._require_contaminado(player, "Protocolo H (Re-cultivo Manual)")
         self._require_pa(player, 1)
         self._require_espacio_disponible(player, "H")
-        self._require_cualquier_harina(player, 50)
+        self._require_cualquier_harina(player, HARINA_RECULTIVO_MANUAL)
 
         # Aplicar
         player.consumir_punto_accion("H")
 
-        # Consumir 50% de harina (deduce de los tipos con mayor reserva primero)
-        harina_a_consumir = 50
+        # Consumir la harina del re-cultivo (de los tipos con mayor reserva primero)
+        harina_a_consumir = HARINA_RECULTIVO_MANUAL
         for tipo in ("Blanca", "Centeno", "Integral"):
             if harina_a_consumir <= 0:
                 break

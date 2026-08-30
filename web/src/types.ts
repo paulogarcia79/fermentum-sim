@@ -134,6 +134,12 @@ export interface Player {
    * por primera vez (episodio de contaminacion NUEVO: -3 Puntos de Maestria).
    * Un jugador ya contaminado devuelve false. Ver engine.riesgo_colapso. */
   en_riesgo_colapso: boolean
+  /** Monedas que este jugador cobrara esta noche por «Ingresos de Panaderia»:
+   * la suma de engine.PRECIO_RENTA sobre su archivo de horneados exitosos.
+   * Lo calcula el servidor (server/views.py) por el mismo criterio que
+   * vitalidad_prevista: la tasa por grado es una regla del motor y duplicarla
+   * aqui seria un punto de deriva. Los colapsos no rinden nada. */
+  renta_diaria: number
 }
 
 export interface ClimateCard {

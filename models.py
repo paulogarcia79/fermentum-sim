@@ -126,6 +126,19 @@ las únicas que pueden sostener una receta Avanzada.
 PCT_RECETA_TOTAL: int = 100
 """Porcentaje de harina que consume CUALQUIER receta, sea cual sea su grado."""
 
+VITALIDAD_INICIAL: int = 2
+"""
+Vitalidad del cultivo base de todo jugador al empezar la partida (PLAYER_STATE.md §2).
+
+Es 2 y no 1 por una razón concreta: el desgaste metabólico de la Fase III resta -1 y
+la Acción A repone +1 una vez al día, de modo que un jugador que alimenta a diario
+ORBITA en su valor inicial. Partiendo de 1, la carta «Aletargamiento Invernal» (-2, dos
+copias en un mazo de 30) lo dejaba en 0 -> contaminación inevitable, sin jugada posible
+que la evitara: no era una decisión mal tomada, era el barajado. Partiendo de 2 la misma
+carta lo deja en 1, y la contaminación vuelve a castigar lo que debe castigar, que es
+descuidar el mantenimiento. Ver CLIMATE_LOGIC.md.
+"""
+
 AMPLIACION_OPTIMA_MODULO: int = 1
 """
 Casillas que el Módulo Analítico añade a CADA lado de la zona óptima.
@@ -432,6 +445,12 @@ class PatrocinioCard:
             200 = 2 bolsas).
         agua_tokens: Tokens de agua otorgados (cada uno = 5% de hidratación).
         monedas: Monedas otorgadas.
+        datos: Datos de Investigación otorgados. Se reparten de forma inversa a
+            las Monedas de la carta (la que menos dinero da, más investigación),
+            de modo que el patrocinador tacaño compense con conocimiento. Sin
+            ellos el juego se queda sin fuente de Datos hasta el primer horneado
+            en Óptima, porque el Simposio Técnico ahora exige sacrificar un
+            horneado del archivo (ver ACTIONS_REGISTRY.md §Simposio).
     """
 
     iniciativa: int
@@ -439,6 +458,7 @@ class PatrocinioCard:
     harina_pct: int
     agua_tokens: int
     monedas: int
+    datos: int
 
 
 # ===========================================================================
@@ -792,7 +812,7 @@ class Player:
         Crea e inicializa un jugador con el estado exacto descrito en PLAYER_STATE.md §2.
 
         Valores simétricos fijados en el Día 1 para todos los jugadores:
-          · vitalidad = 1, acidez = 1
+          · vitalidad = 2 (VITALIDAD_INICIAL), acidez = 1
           · dados_inoculo = 3, puntos_accion = 0
           · carpeta_proyectos = [receta_inicial]
           · todas las tecnologías inactivas
@@ -850,7 +870,7 @@ class Player:
         for tipo, cantidad in (harina_inicial or {}).items():
             reserva_harina[tipo] = reserva_harina.get(tipo, 0) + cantidad
 
-        self.vitalidad = 1
+        self.vitalidad = VITALIDAD_INICIAL
         self.acidez = 1
         self.datos_investigacion = datos_iniciales
         self.monedas = monedas_iniciales
@@ -1258,9 +1278,9 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         puntos_pre_fermento=4,
         puntos_optimos=10,
         penalizacion_colapso=-2,
-        monedas_pre_fermento=13,
-        monedas_optima=17,
-        monedas_colapso=11,
+        monedas_pre_fermento=10,
+        monedas_optima=14,
+        monedas_colapso=8,
     ),
     # La zona óptima más ancha del juego (6 espacios): la carta indulgente.
     "pan_de_molde": Recipe(
@@ -1279,9 +1299,9 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         puntos_pre_fermento=3,
         puntos_optimos=9,
         penalizacion_colapso=-2,
-        monedas_pre_fermento=12,
-        monedas_optima=16,
-        monedas_colapso=10,
+        monedas_pre_fermento=9,
+        monedas_optima=13,
+        monedas_colapso=7,
     ),
     "baguette": Recipe(
         id="baguette",
@@ -1299,9 +1319,9 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         puntos_pre_fermento=5,
         puntos_optimos=11,
         penalizacion_colapso=-2,
-        monedas_pre_fermento=14,
-        monedas_optima=18,
-        monedas_colapso=12,
+        monedas_pre_fermento=11,
+        monedas_optima=15,
+        monedas_colapso=9,
     ),
     "focaccia": Recipe(
         id="focaccia",
@@ -1319,9 +1339,9 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         puntos_pre_fermento=3,
         puntos_optimos=12,
         penalizacion_colapso=-3,
-        monedas_pre_fermento=15,
-        monedas_optima=19,
-        monedas_colapso=13,
+        monedas_pre_fermento=12,
+        monedas_optima=16,
+        monedas_colapso=10,
     ),
 
     # --- INTERMEDIAS: media bolsa de dos harinas distintas (13-16 puntos) ---
@@ -1342,9 +1362,9 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         puntos_pre_fermento=5,
         puntos_optimos=13,
         penalizacion_colapso=-4,
-        monedas_pre_fermento=16,
-        monedas_optima=20,
-        monedas_colapso=13,
+        monedas_pre_fermento=10,
+        monedas_optima=14,
+        monedas_colapso=7,
     ),
     "pizza_napolitana": Recipe(
         id="pizza_napolitana",
@@ -1362,9 +1382,9 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         puntos_pre_fermento=4,
         puntos_optimos=14,
         penalizacion_colapso=-4,
-        monedas_pre_fermento=15,
-        monedas_optima=21,
-        monedas_colapso=12,
+        monedas_pre_fermento=9,
+        monedas_optima=15,
+        monedas_colapso=6,
     ),
     "brioche": Recipe(
         id="brioche",
@@ -1382,9 +1402,9 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         puntos_pre_fermento=5,
         puntos_optimos=16,
         penalizacion_colapso=-6,
-        monedas_pre_fermento=14,
-        monedas_optima=21,
-        monedas_colapso=11,
+        monedas_pre_fermento=8,
+        monedas_optima=15,
+        monedas_colapso=5,
     ),
     # Ventana óptima de 2 espacios y el mayor Bono de Sabor del juego:
     # no es la carta de más puntos, sino la de más sabor.
@@ -1404,9 +1424,9 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         puntos_pre_fermento=8,
         puntos_optimos=16,
         penalizacion_colapso=-8,
-        monedas_pre_fermento=13,
-        monedas_optima=22,
-        monedas_colapso=10,
+        monedas_pre_fermento=7,
+        monedas_optima=16,
+        monedas_colapso=4,
     ),
 
     # --- AVANZADAS: una bolsa entera de harina especial (17-20 puntos) ---
@@ -1426,9 +1446,9 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         puntos_pre_fermento=6,
         puntos_optimos=17,
         penalizacion_colapso=-5,
-        monedas_pre_fermento=20,
-        monedas_optima=27,
-        monedas_colapso=17,
+        monedas_pre_fermento=11,
+        monedas_optima=18,
+        monedas_colapso=8,
     ),
     "pan_semillas": Recipe(
         id="pan_semillas",
@@ -1446,9 +1466,9 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         puntos_pre_fermento=6,
         puntos_optimos=17,
         penalizacion_colapso=-5,
-        monedas_pre_fermento=19,
-        monedas_optima=26,
-        monedas_colapso=16,
+        monedas_pre_fermento=10,
+        monedas_optima=17,
+        monedas_colapso=7,
     ),
     "pan_graham": Recipe(
         id="pan_graham",
@@ -1466,9 +1486,9 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         puntos_pre_fermento=6,
         puntos_optimos=19,
         penalizacion_colapso=-6,
-        monedas_pre_fermento=18,
-        monedas_optima=26,
-        monedas_colapso=15,
+        monedas_pre_fermento=9,
+        monedas_optima=17,
+        monedas_colapso=6,
     ),
     # El techo del catálogo: centeno puro, la acidez diana más alta y la
     # ventana óptima más estrecha (3 espacios) frente a un colapso de -8.
@@ -1488,9 +1508,9 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         puntos_pre_fermento=8,
         puntos_optimos=20,
         penalizacion_colapso=-8,
-        monedas_pre_fermento=16,
-        monedas_optima=28,
-        monedas_colapso=12,
+        monedas_pre_fermento=7,
+        monedas_optima=19,
+        monedas_colapso=3,
     ),
 }
 
@@ -1605,14 +1625,14 @@ Catálogo maestro del mazo de Clima. Solo lectura en tiempo de ejecución.
 # ===========================================================================
 
 PATROCINIO_CATALOG: Tuple[PatrocinioCard, ...] = (
-    PatrocinioCard(iniciativa=1, tipo_harina=TipoHarina.BLANCA, harina_pct=100, agua_tokens=2, monedas=9),
-    PatrocinioCard(iniciativa=2, tipo_harina=TipoHarina.BLANCA, harina_pct=100, agua_tokens=6, monedas=8),
-    PatrocinioCard(iniciativa=3, tipo_harina=TipoHarina.BLANCA, harina_pct=100, agua_tokens=12, monedas=6),
-    PatrocinioCard(iniciativa=4, tipo_harina=TipoHarina.INTEGRAL, harina_pct=100, agua_tokens=6, monedas=8),
-    PatrocinioCard(iniciativa=5, tipo_harina=TipoHarina.INTEGRAL, harina_pct=100, agua_tokens=12, monedas=6),
-    PatrocinioCard(iniciativa=6, tipo_harina=TipoHarina.CENTENO, harina_pct=100, agua_tokens=6, monedas=8),
-    PatrocinioCard(iniciativa=7, tipo_harina=TipoHarina.CENTENO, harina_pct=100, agua_tokens=12, monedas=6),
-    PatrocinioCard(iniciativa=8, tipo_harina=TipoHarina.BLANCA, harina_pct=200, agua_tokens=20, monedas=4),
+    PatrocinioCard(iniciativa=1, tipo_harina=TipoHarina.BLANCA, harina_pct=100, agua_tokens=2, monedas=9, datos=0),
+    PatrocinioCard(iniciativa=2, tipo_harina=TipoHarina.BLANCA, harina_pct=100, agua_tokens=6, monedas=8, datos=0),
+    PatrocinioCard(iniciativa=3, tipo_harina=TipoHarina.BLANCA, harina_pct=100, agua_tokens=12, monedas=6, datos=1),
+    PatrocinioCard(iniciativa=4, tipo_harina=TipoHarina.INTEGRAL, harina_pct=100, agua_tokens=6, monedas=8, datos=0),
+    PatrocinioCard(iniciativa=5, tipo_harina=TipoHarina.INTEGRAL, harina_pct=100, agua_tokens=12, monedas=6, datos=1),
+    PatrocinioCard(iniciativa=6, tipo_harina=TipoHarina.CENTENO, harina_pct=100, agua_tokens=6, monedas=8, datos=0),
+    PatrocinioCard(iniciativa=7, tipo_harina=TipoHarina.CENTENO, harina_pct=100, agua_tokens=12, monedas=6, datos=1),
+    PatrocinioCard(iniciativa=8, tipo_harina=TipoHarina.BLANCA, harina_pct=200, agua_tokens=20, monedas=4, datos=2),
 )
 """
 Mazo maestro de 8 Cartas de Patrocinio (GDD v0.0.2, Anexo B). `bootstrap.create_game()`

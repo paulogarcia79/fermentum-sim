@@ -215,6 +215,13 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
             · <span class="dato">{{ variedad.distintas }}</span> tipos
             <span class="dato">+{{ variedad.puntos }}</span> PM
           </span>
+          <span
+            v-if="yo.renta_diaria > 0"
+            class="renta"
+            title="Ingresos de Panadería: Monedas que cobrarás esta noche en la Fase III, una vez por cada horneado exitoso del archivo (Básica 1, Intermedia 2, Avanzada 3). Un colapso no rinde nada, y sacrificar un horneado en el Simposio corta su parte."
+          >
+            · <span class="dato">+{{ yo.renta_diaria }}</span> Monedas/noche
+          </span>
         </h3>
         <ul class="archivo-lista">
           <li
@@ -344,6 +351,13 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
   color: var(--cobre);
   text-transform: none;
   letter-spacing: normal;
+}
+
+.renta {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--verdin);
 }
 
 .zona-archivo {

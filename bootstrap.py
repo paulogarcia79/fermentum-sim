@@ -44,7 +44,8 @@ def create_game(nombres: List[str], event_sink: Optional[EventSink] = None) -> G
       4. Barajar el mazo de 8 Cartas de Patrocinio y repartir 1 por jugador
          sentado (GDD v0.0.2, Módulo I §6.4 / Anexo B) — determina el orden
          de turno del Día 1 (por Iniciativa ascendente) y los recursos
-         iniciales (harina, agua, monedas) de cada jugador.
+         iniciales (harina, agua, monedas y Datos de Investigación) de cada
+         jugador.
       5. Crear los jugadores con ``Player.crear_dia_1()``, ya con sus
          recursos de Patrocinio.
       6. Instanciar ``GameEngine`` con inyección de dependencias, pasando el
@@ -101,7 +102,7 @@ def create_game(nombres: List[str], event_sink: Optional[EventSink] = None) -> G
                 harina_inicial={carta.tipo_harina.value: carta.harina_pct},
                 agua_inicial=carta.agua_tokens,
                 monedas_iniciales=carta.monedas,
-                datos_iniciales=0,
+                datos_iniciales=carta.datos,
             )
         )
 

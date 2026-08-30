@@ -49,3 +49,8 @@ Tras procesar el avance de todas las masas, el entorno aplica el consumo de ener
 * **Desgaste Estándar:** La Vitalidad del cultivo base se reduce en `-1`.
 * **Modificador Aletargamiento:** Si el evento climático vigente es "Aletargamiento Invernal", la reducción de Vitalidad es `-2`.
 * **Límite Suelo:** La Vitalidad nunca puede descender por debajo de `0`. (Si llega a 0, el jugador queda penalizado y requiere Protocolos de Emergencia).
+
+### El Aletargamiento ya no es una contaminación inevitable
+Como la Acción A repone `+1` Vitalidad una vez al día y el desgaste estándar resta `-1`, un jugador que alimenta a diario **orbita en su Vitalidad inicial**. Con la Vitalidad inicial de 1 que tenía el juego, la secuencia era: alimentar → 2, Aletargamiento `-2` → **0**. Contaminación garantizada, se jugara como se jugara, y las dos copias de la carta en el mazo de 30 hacían que le tocara a alguien casi todas las partidas. No era una decisión mal tomada; era el barajado.
+
+Con la Vitalidad inicial en 2 (`models.VITALIDAD_INICIAL`, ver PLAYER_STATE.md §2) la misma secuencia acaba en 1 y el jugador sobrevive. La carta sigue doliendo — cuesta una Acción A y deja al jugador al borde — pero la contaminación vuelve a castigar lo que debe castigar: **descuidar el mantenimiento**, no tener mala suerte. Un jugador que se salta la alimentación un solo día bajo Aletargamiento sigue contaminándose.

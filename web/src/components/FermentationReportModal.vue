@@ -52,6 +52,12 @@ function porJugador(idx: number, tipos: string[]): GameEventView[] {
               ☣ ¡Entró en estado de Contaminación!
             </li>
 
+            <li v-for="(ev, i) in porJugador(idx, ['renta_panaderia'])" :key="'r' + i" class="renta">
+              🥖 Ingresos de panadería: +{{ ev.datos.monedas_recibidas }} Monedas
+              ({{ (ev.datos.desglose as { receta_nombre: string; monedas: number }[])
+                    .map((d) => `${d.receta_nombre} +${d.monedas}`).join(', ') }})
+            </li>
+
             <li v-for="(ev, i) in porJugador(idx, ['masa_avanzo'])" :key="'m' + i">
               Est-{{ (ev.datos.estacion_idx as number) + 1 }}: '{{ ev.datos.receta_nombre }}' pos
               {{ ev.datos.posicion_antes }} → {{ ev.datos.posicion_despues }} (avanzó +{{ ev.datos.avance }})
@@ -117,6 +123,10 @@ function porJugador(idx: number, tipos: string[]): GameEventView[] {
 
 .lista .exito {
   color: var(--vital);
+}
+
+.renta {
+  color: var(--verdin);
 }
 
 .fin-partida {

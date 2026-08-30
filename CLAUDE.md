@@ -415,6 +415,70 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   added the two terms `CORE_MECHANICS.md` §3 had never documented — it listed 5 while the code
   applied 6, silently omitting the contamination penalty — so the doc list now matches
   `desglose_maestria` key for key. Tests: `tests/test_variedad_recetas.py`.
+
+  **Ingresos de Panadería — the archive became an income stream, and the Simposio became its
+  only exit.** Baking paid once (`monedas_optima`, 16–28, the biggest cash event in the game) and
+  the recipe never produced again: `archivo_horneado_exitoso` fed scoring and the endgame trigger
+  but not the economy. Now every successful bake pays `engine.PRECIO_RENTA[grado]` (Básica 1 /
+  Intermedia 2 / Avanzada 3) **every Fase III**, which turns the moment of baking into an
+  investment decision instead of a pure scoring act. Five things carry the weight:
+  - **It is not new money, and that is the whole design.** The 36 zone payouts were cut by
+    `renta × 3` so the total is preserved and only the *timing* changes. The 3 is an
+    **amortisation horizon common to every grade** — any bake recovers its old payout on the 3rd
+    día regardless of card — so the temporal pressure is identical everywhere and choosing a
+    recipe stays a question of points and flour, not payback speed. That horizon is **not a
+    runtime constant**: it is the derivation the catalog numbers were authored with, documented in
+    `PRECIO_RENTA`'s docstring. `tests/test_renta_panaderia.py::test_amortizacion_al_tercer_dia`
+    pins it for all three grades, which is what stops a future rebalance breaking it silently.
+  - **The cut had to hit all three zones, and the two alternatives are both broken.** Cutting only
+    `monedas_optima` inverts Miche and Hogaza Centeno (a raw Pre-fermento sale would outpay a
+    perfectly-timed bake); cutting Óptima+Pre-fermento but sparing `monedas_colapso` inverts all 12
+    the other way (failing would outpay selling early). Only the uniform per-card shift keeps every
+    card's internal order. Accepted side effect, documented rather than fixed: the **grade ladder
+    inverts in the lump** (Panettone pays 7 in Pre-fermento vs Pan de Molde's 9) because the high
+    grade cedes more to the stream — it is restored in *total* value by día 3, which is the point.
+  - **Derive, never cache.** `GameEngine._cobrar_renta_panaderia` sums the live archive. There is
+    no `Player.renta_diaria` field and no rate sealed into `HorneadoRecord`, and that is exactly
+    what makes "if the record leaves the archive, its income leaves with it" true for free — the
+    Simposio `pop()`s a record and the next night simply pays less, with no code coordinating it.
+    A cached field would be precisely the bug this shape avoids; `test_se_deriva_del_archivo_vivo`
+    is the guardrail. It also means a bake made in Fase II **collects that same night**, so no
+    per-record bake date is needed. Colapsos pay nothing (`archivo_colapsos`): provoking one is
+    free, so paying it would hand out the stream without baking anything well — the same incentive
+    argument that already governs Variedad de Recetas.
+  - **The Simposio Técnico is now the only way out of the archive.** It no longer discards from the
+    carpeta or a station; it costs 1 PA **plus a successful bake**, and pays `DATOS_SIMPOSIO[grado]`
+    (1/2/3). That is a **separate constant from `PRECIO_RENTA` despite identical values** —
+    sharing one table would couple two unrelated rules so that rebalancing the rent silently moved
+    what the Simposio pays. Sacrificing a record costs its base points, its rent, a Variedad tier
+    and a step of the X/5 trigger all at once, and none of that needs coordinating code because
+    `puntos_horneados` / `puntos_variedad` / `recetas_distintas_horneadas` are all `@property` over
+    that one list. No Datos yield makes this *efficient*: it is an emergency lever, and in practice
+    you always burn your cheapest bake. Emergent consequence documented, not fixed: a player at 4/5
+    can sacrifice one to drop to 3/5 and delay the endgame — ruinously expensive, hence legitimate;
+    a trigger already fired never reverts (`_partida_terminada` is latched).
+  - **Two pre-existing bugs this change forced into the open.** Dropping the station origin removed
+    the only way to abandon a mass, so starting a recipe is now an irreversible commitment (nothing
+    ever gets stuck — Fase III advances every mass nightly — you just can no longer dodge
+    `penalizacion_colapso`); `accion_F_hornear`'s Crecimiento message used to point at the Simposio
+    and had to be rewritten. And with the cheap Datos source gone, **`vitalidad` had to start at 2**
+    (`models.VITALIDAD_INICIAL`): Acción A repays +1/day against a -1 decay, so a player who feeds
+    daily *orbits their starting value*, and from 1 the «Aletargamiento Invernal» card (-2, two
+    copies in 30) forced contamination no matter how well you played — the shuffle, not a decision.
+    From 2 it lands on 1. `PatrocinioCard` also gained a `datos` field (0–2, inverse to its
+    Monedas) so the board is not Dato-less until the first Óptima bake, and Acción H dropped from
+    50% to 30% flour so the buyable rescue stays reachable — note the units: `reserva_harina` is in
+    **percent** (100 = one bag = 10 tokens), so the old 50 was half a bag, not five.
+
+  `server/views.py` ships `renta_diaria` from its existing per-player loop (server-side for the
+  same reason as `vitalidad_prevista`); `web/src/data/datosSimposio.ts` mirrors `DATOS_SIMPOSIO`
+  for `ModalSimposio.vue`'s labels following the `preciosReceta.ts` precedent — the **rent is not
+  mirrored**, it arrives precomputed. `ModalSimposio.vue` was rewritten to show what each sacrifice
+  *costs* (points, rent, the X/5 step, and the Variedad tier — the last derived client-side since
+  it is only lost when the record is the last copy of its recipe). `VERSION_FORMATO` went to 12
+  (`PatrocinioCard` changed shape and old pickles hold the pre-cut economy). The golden snapshot
+  was regenerated; its diff is exactly 36×3 payouts + 2 vitalidades + 1 starting Dato, nothing
+  else. Tests: `tests/test_renta_panaderia.py`.
 - **`main.py`** — CLI only: rendering (`mostrar_estado_jugador`, `mostrar_mercado`, colored
   output helpers), prompting (`_pedir_int`, `_pedir_opcion`, `_params_accion_*`), and the
   `main()` entrypoint / `setup_game()`. Contains no rules logic — it calls into `engine`/

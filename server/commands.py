@@ -175,9 +175,10 @@ def _despachar(
         )
 
     if accion == "simposio":
+        # `indice` indexa ahora `archivo_horneado_exitoso`: el Simposio se paga
+        # sacrificando un horneado exitoso, no descartando de carpeta/estación.
         return manager.accion_simposio_tecnico(
             player,
-            origen=params.get("origen", ""),
             indice=_requerir_int(params, "indice"),
         )
 

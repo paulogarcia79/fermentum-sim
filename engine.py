@@ -26,7 +26,7 @@ import random
 from dataclasses import dataclass, field
 from enum import Enum
 from types import MappingProxyType
-from typing import Callable, Dict, List, Mapping, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple
 
 from events import EventoTipo, EventSink, GameEvent
 from exceptions import (
@@ -99,6 +99,57 @@ El precio se indexa por GRADO y no por carta, igual que ``COPIAS_POR_GRADO`` y
 puede contradecir a la carta ni hace falta un campo nuevo en ``Recipe``.
 
 Es aditivo sobre el 1 PA de la Acción G, que sigue siendo la escasez real.
+"""
+
+PRECIO_RENTA: Mapping[Grado, int] = MappingProxyType({
+    Grado.BASICA: 1,
+    Grado.INTERMEDIA: 2,
+    Grado.AVANZADA: 3,
+})
+"""
+Monedas que paga CADA horneado exitoso del archivo en CADA Fase III.
+
+Una receta horneada con éxito deja de ser historial y pasa a ser una fuente de
+ingresos: la panadería acumula clientela. Eso convierte el momento de hornear en una
+decisión de inversión — hornear pronto rinde más que hornear tarde — en vez de un acto
+puramente de puntuación.
+
+**No es dinero nuevo.** Los pagos por zona de las 12 cartas se recortaron en
+``PRECIO_RENTA[grado] * 3`` (Básica -3, Intermedia -6, Avanzada -9) sobre las tres
+zonas, de modo que el total se conserva y lo que cambia es CUÁNDO se cobra. El 3 es un
+**horizonte de amortización común a todos los grados**: cualquier horneado recupera su
+pago antiguo al tercer día, así que la presión temporal es idéntica sea cual sea la
+carta y elegir receta sigue siendo una cuestión de puntos y harina, no de velocidad de
+retorno. Ese 3 no es una constante de runtime: es la derivación con la que se autoraron
+los números de ``RECIPE_CATALOG``, y vive aquí documentado y no en el código.
+
+Se indexa por GRADO, como ``PRECIO_RECETA`` / ``COPIAS_POR_GRADO`` / ``PRECIO_PLIEGUES``:
+el grado lo derivan las harinas impresas, así que la renta no puede contradecir a la
+carta ni hace falta un campo nuevo en ``Recipe``.
+
+Sólo paga ``archivo_horneado_exitoso``. Un colapso va a ``archivo_colapsos`` y no cobra
+nada: provocar un colapso es gratis (iniciar una masa y dejar que la Fase III la hornee
+sola), así que pagarlo sería regalar la renta sin hornear bien nada — el mismo argumento
+de incentivos que ya rige «Variedad de Recetas».
+"""
+
+DATOS_SIMPOSIO: Mapping[Grado, int] = MappingProxyType({
+    Grado.BASICA: 1,
+    Grado.INTERMEDIA: 2,
+    Grado.AVANZADA: 3,
+})
+"""
+Datos de Investigación que entrega el Simposio Técnico por el horneado sacrificado.
+
+Es **deliberadamente una constante distinta de ``PRECIO_RENTA``** aunque hoy tengan los
+mismos valores: compartir una sola tabla acoplaría dos reglas sin relación entre sí, y
+reequilibrar la renta movería en silencio lo que paga el Simposio.
+
+Es tacaña a propósito. Sacrificar un horneado cuesta sus puntos base (9-20 PM), su renta
+para el resto de la partida y puede bajar un escalón de «Variedad de Recetas», así que
+ningún rendimiento en Datos lo hace *eficiente*. Su papel es ser una **palanca de
+emergencia** — quemar un éxito pasado para salvar el presente — y no una jugada de
+motor. En la práctica se sacrifica siempre la carta más barata que se tenga.
 """
 
 # --- Bono de Sabor en Monedas (Hornear y Vender) ---
@@ -1301,6 +1352,13 @@ class GameEngine:
              jugador en -1 (o -2 con «Aletargamiento Invernal» activo).
              La Vitalidad nunca cae por debajo de 0; si llega a 0, el jugador entra
              en estado de Contaminación (gestionado por ``Player.ajustar_vitalidad``).
+          4. **Ingresos de Panadería**: cada horneado exitoso del archivo paga
+             ``PRECIO_RENTA[grado]`` Monedas a su dueño (ver ``_cobrar_renta_panaderia``).
+
+        El orden de 3 y 4 no es indiferente aunque hoy sean independientes: la renta se
+        cobra DESPUÉS del desgaste para que el informe nocturno cuente la noche en el
+        mismo orden en que ocurre, y para que cualquier regla futura que ligue ingresos
+        a la salud del cultivo lea una Vitalidad ya actualizada.
         """
         # Paso 1 + 2: Avance de masas y detección/resolución de colapsos.
         #             Se itera sobre todos los jugadores de forma secuencial.
@@ -1311,6 +1369,61 @@ class GameEngine:
 
         # Paso 3: Desgaste metabólico al final de la Fase III (CLIMATE_LOGIC.md §4).
         self._aplicar_desgaste_metabolico()
+
+        # Paso 4: Ingresos de Panadería — el archivo de horneados rinde Monedas.
+        for player in self._players:
+            self._cobrar_renta_panaderia(player)
+
+    def _cobrar_renta_panaderia(self, player: Player) -> int:
+        """
+        Paga a ``player`` la renta de su archivo de horneados (CORE_MECHANICS.md §2).
+
+        Cada registro de ``archivo_horneado_exitoso`` rinde ``PRECIO_RENTA[grado]``
+        Monedas, todas las noches, mientras siga en el archivo.
+
+        **Se deriva del archivo vivo, nunca se cachea.** No hay ``Player.renta_diaria``
+        ni un campo de renta sellado en ``HorneadoRecord``, y por eso la regla «si el
+        registro sale del archivo, su ingreso desaparece» se cumple sola: el Simposio
+        Técnico saca un horneado con un ``pop()`` y la noche siguiente ya cobra de menos,
+        sin ningún código que lo coordine. Cachear la renta sería exactamente el bug que
+        esta forma evita.
+
+        Un horneado hecho en la Fase II de HOY ya está en el archivo cuando corre esta
+        Fase III, así que cobra esa misma noche — por eso tampoco hace falta saber en qué
+        día se horneó cada registro.
+
+        Args:
+            player: Jugador que cobra.
+
+        Returns:
+            Monedas acreditadas (0 si el archivo está vacío).
+        """
+        if not player.archivo_horneado_exitoso:
+            return 0
+
+        desglose: List[Dict[str, Any]] = []
+        total: int = 0
+        for record in player.archivo_horneado_exitoso:
+            monedas: int = PRECIO_RENTA[record.recipe.grado]
+            total += monedas
+            desglose.append({
+                "receta_id": record.recipe.id,
+                "receta_nombre": record.recipe.nombre,
+                "grado": record.recipe.grado.value,
+                "monedas": monedas,
+            })
+
+        player.monedas += total
+        self._emit(
+            EventoTipo.RENTA_PANADERIA,
+            jugador_idx=self._players.index(player),
+            datos={"monedas_recibidas": total, "desglose": desglose},
+            mensaje=(
+                f"Ingresos de panadería: {player.nombre} cobra {total} Monedas de "
+                f"{len(desglose)} horneado(s) en su archivo."
+            ),
+        )
+        return total
 
     def _avanzar_masas_jugador(self, player: Player) -> None:
         """

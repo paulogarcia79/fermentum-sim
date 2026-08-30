@@ -84,11 +84,15 @@ def test_partida_completa_de_2_jugadores_por_http() -> None:
     assert estado["players"][1]["color"] == "azul"
     # Prediccion de colapso: calculada en el servidor porque la formula del
     # desgaste es una regla de CLIMATE_LOGIC.md y no debe duplicarse en el
-    # cliente. El Dia 1 todos parten con Vitalidad 1, asi que el desgaste
-    # estandar (-1) los deja a todos en riesgo.
+    # cliente. El Dia 1 todos parten con Vitalidad 2 (models.VITALIDAD_INICIAL),
+    # asi que el desgaste estandar (-1) los deja en 1 y NADIE esta en riesgo:
+    # esa es justamente la razon de ser del 2 — que «Aletargamiento Invernal»
+    # deje de ser una contaminacion inevitable jueguen como jueguen.
     for datos_jugador in estado["players"]:
-        assert datos_jugador["vitalidad_prevista"] == 0
-        assert datos_jugador["en_riesgo_colapso"] is True
+        assert datos_jugador["vitalidad_prevista"] == 1
+        assert datos_jugador["en_riesgo_colapso"] is False
+        # Nadie ha horneado todavia, asi que no hay renta de panaderia.
+        assert datos_jugador["renta_diaria"] == 0
         # Marcador en vivo de horneados: presente desde el Dia 1 (en cero).
         assert datos_jugador["puntos_horneados"] == 0
 

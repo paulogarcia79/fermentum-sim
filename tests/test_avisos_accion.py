@@ -28,6 +28,7 @@ from typing import Any, Dict, List, Tuple
 from starlette.testclient import TestClient
 
 from events import EventoTipo, GameEvent
+from models import HorneadoRecord
 from server.app import _formatear_sse, _formatear_sse_aviso, crear_app
 from server.sessions import AvisoAccion
 
@@ -68,6 +69,34 @@ def _token_del_jugador_en_turno(cliente: TestClient, room_id: str, tokens: Dict[
     r = cliente.get(f"/games/{room_id}/state", headers={"X-Player-Token": tokens["Alba"]})
     idx = r.json()["jugador_en_turno_idx"]
     return tokens["Alba"] if idx == 0 else tokens["Bruno"]
+
+
+def _indice_del_jugador_en_turno(cliente: TestClient, room_id: str, tokens: Dict[str, str]) -> int:
+    r = cliente.get(f"/games/{room_id}/state", headers={"X-Player-Token": tokens["Alba"]})
+    return int(r.json()["jugador_en_turno_idx"])
+
+
+def _sembrar_horneado(sesion: Any, jugador_idx: int) -> None:
+    """Mete un horneado exitoso en el archivo del jugador indicado.
+
+    El Simposio Técnico exige sacrificar uno y el Día 1 nadie tiene ninguno.
+    Se toca el engine vivo directamente porque lo que este módulo prueba es el
+    canal de avisos, no cómo se llega a tener un horneado.
+    """
+    jugador = sesion.engine.players[jugador_idx]
+    receta = jugador.carpeta_proyectos[0]
+    jugador.archivo_horneado_exitoso.append(
+        HorneadoRecord(
+            recipe=receta,
+            posicion_final=receta.zona_optima[0],
+            puntos_base=receta.puntos_optimos,
+            bono_sabor_aplicado=False,
+            fue_colapso=False,
+            datos_obtenidos=1,
+            monedas_obtenidos=receta.monedas_optima,
+            ampliacion_aplicada=0,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -114,12 +143,15 @@ def test_accion_valida_difunde_un_aviso() -> None:
     sesion.suscriptores.append(cola)
     token = _token_del_jugador_en_turno(cliente, room_id, tokens)
 
-    # Simposio Técnico: descarta una receta de la carpeta por 1 Dato. Es la
-    # accion con menos precondiciones de recursos del Día 1.
+    # Simposio Técnico: sacrifica un horneado exitoso del archivo por Datos.
+    # El Día 1 nadie ha horneado todavia, asi que se siembra un registro en el
+    # engine vivo — sigue siendo la accion con menos precondiciones de recursos.
+    _sembrar_horneado(sesion, _indice_del_jugador_en_turno(cliente, room_id, tokens))
+
     r = cliente.post(
         f"/games/{room_id}/actions",
         headers={"X-Player-Token": token},
-        json={"accion": "simposio", "params": {"origen": "carpeta", "indice": 0}},
+        json={"accion": "simposio", "params": {"indice": 0}},
     )
     assert r.status_code == 200, r.text
     assert cola.acciones() == ["simposio"]
@@ -133,11 +165,11 @@ def test_accion_rechazada_no_difunde_nada() -> None:
     cola = _ColaFalsa()
     sesion.suscriptores.append(cola)
 
-    # Índice de carpeta inexistente -> InvalidActionError antes de tocar nada.
+    # Índice de archivo inexistente -> el Simposio revienta antes de tocar nada.
     r = cliente.post(
         f"/games/{room_id}/actions",
         headers={"X-Player-Token": token},
-        json={"accion": "simposio", "params": {"origen": "carpeta", "indice": 99}},
+        json={"accion": "simposio", "params": {"indice": 99}},
     )
     assert r.status_code >= 400
     assert cola.acciones() == []

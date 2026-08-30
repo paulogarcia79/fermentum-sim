@@ -57,6 +57,7 @@ from typing import TYPE_CHECKING, Any, Dict
 
 from disponibilidad import acciones_disponibles
 from models import Recipe
+from engine import PRECIO_RENTA
 from serialization import snapshot
 
 if TYPE_CHECKING:
@@ -117,6 +118,14 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
         # reimplementarse en TypeScript.
         datos_jugador["total_tokens_recursos"] = jugador.total_tokens_recursos
         datos_jugador["color"] = asiento.color
+        # Ingresos de Panadería que este jugador cobrará esta noche. Se calcula
+        # en el servidor por el mismo criterio que el resto: la tasa por grado
+        # (`engine.PRECIO_RENTA`) es una regla del motor y duplicarla en
+        # TypeScript sería un punto de deriva. Es información pública — el
+        # archivo de horneados ya lo es.
+        datos_jugador["renta_diaria"] = sum(
+            PRECIO_RENTA[r.recipe.grado] for r in jugador.archivo_horneado_exitoso
+        )
         datos_jugador["vitalidad_prevista"] = engine.vitalidad_prevista(jugador)
         datos_jugador["en_riesgo_colapso"] = engine.riesgo_colapso(jugador)
         # Zonas del track ya ampliadas por el Módulo Analítico, receta por receta,
