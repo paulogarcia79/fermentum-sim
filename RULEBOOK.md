@@ -221,18 +221,21 @@ Cada jugador dispone de **2 Puntos de Acción (PA)** por Día de Laboratorio.
   por usar.
 - **Registro:** al ejecutar una acción de costo, el jugador desplaza un Cubo de Laboratorio a su
   Checklist de Protocolo para marcar el gasto del punto.
-- **Acciones que no terminan el turno:** Alimentar el Cultivo, Horas Extras y Pedido de Urgencia
-  son gratuitas (0 PA) y **no** cierran la visita del jugador — un jugador que ya gastó sus 2 PA en
-  otras acciones sigue recibiendo visitas mientras le quede alguna de estas tres acciones
-  gratuitas sin usar ese día. Cualquier acción de costo en PA, o un **Pasar** explícito, sí cierra
+- **Acciones que no terminan el turno:** Alimentar el Cultivo, Técnica (Pliegues), Horas Extras y
+  Pedido de Urgencia son gratuitas en PA y **no** cierran la visita del jugador — un jugador que ya
+  gastó sus 2 PA en otras acciones sigue recibiendo visitas mientras le quede alguna de estas
+  cuatro acciones sin usar ese día (en el caso de Pliegues, mientras conserve el espacio E libre y
+  Monedas suficientes para pagarlo). Cualquier acción de costo en PA, o un **Pasar** explícito, sí cierra
   la visita; **Pasar** además renuncia de inmediato a cualquier acción gratuita pendiente por el
   resto del día.
-- **Un espacio de acción, una visita por día:** cada espacio de acción con costo de PA (B a G,
-  Simposio Técnico, H, I) solo puede visitarse **una vez por Día de Laboratorio, por jugador** —
-  el investigador marca el espacio con su color en cuanto lo visita, bloqueándolo para él (no para
-  el resto de jugadores) hasta el día siguiente. Con 2-3 PA (Horas Extras incluida) esto significa
-  como máximo un uso de cada espacio distinto por día, nunca el mismo espacio dos veces. Pedido de
-  Urgencia queda exento (no cuesta PA — ver su entrada en el Catálogo de Acciones).
+- **Un espacio de acción, una visita por día:** cada espacio de acción (B a G, Simposio Técnico,
+  H, I y también **E**, que no cuesta PA pero sí ocupa espacio) solo puede visitarse **una vez por
+  Día de Laboratorio, por jugador** — el investigador marca el espacio con su color en cuanto lo
+  visita, bloqueándolo para él (no para el resto de jugadores) hasta el día siguiente. Con 2-3 PA
+  (Horas Extras incluida) esto significa como máximo un uso de cada espacio distinto por día, nunca
+  el mismo espacio dos veces. El tope es una propiedad **del espacio**, no del coste. Alimentar el
+  Cultivo y Horas Extras se limitan con su propio marcador de "ya usada", y Pedido de Urgencia no
+  tiene límite alguno (ver sus entradas en el Catálogo de Acciones).
 - **Sin escasez de insumos:** a diferencia de las recetas del mercado (que sí ocupan un espacio
   limitado), la harina y el agua ya no se agotan por turno — son un precio compartido (Bolsa de
   Harinas) y una tabla de precio por temperatura (Suministro Hídrico Global) que cualquier jugador
@@ -315,13 +318,6 @@ en total". **Límite adicional:** el espacio D en sí solo puede visitarse 1 vez
 CUALQUIER mejora agota el espacio para el resto del día, así que dos mejoras distintas nunca pueden
 instalarse el mismo día; como muy pronto, la segunda espera al día siguiente.
 
-#### E. Técnica (Pliegues)
-
-**Costo:** 1 PA. Avanza el marcador de una masa en fermentación 1 casilla adicional. Con la
-tecnología Cámara B instalada, el jugador puede optar en su lugar por recuperar +1 de Vitalidad en
-su cultivo base, o por afectar a dos masas simultáneamente (+1 casilla a cada una). **Límite:** 1
-vez por día (por espacio de acción) — cualquiera de las variantes agota el espacio.
-
 #### F. Hornear y Vender (Finalización de Protocolo)
 
 **Costo:** 1 PA. **Límite:** 1 vez por día (por espacio de acción) — no aplica al colapso
@@ -364,6 +360,25 @@ recuperando el Dado de Inóculo) a cambio de +1 Dato de Investigación inmediato
 cualquier tipo) por +1 Vitalidad, y/o **2 tokens de agua — 2 (10%)** por +1 Acidez (máximo Nivel 6
 en ambos) — uno, otro, o ambos en la misma acción. Ojo con el agua: son **2** tokens, no 1, porque
 el token de agua es del 5%.
+
+#### E. Técnica (Pliegues)
+
+**Costo:** Monedas, no PA. Se compran entre 1 y 3 espacios de avance del marcador de Inóculo y se
+reparten entre las masas activas: **1 espacio = 1 Moneda, 2 = 3 Monedas, 3 = 6 Monedas**. El precio
+es creciente al margen a propósito — comprar más nunca sale más barato por espacio. El precio
+depende del **total** comprado, no de cuántas masas se afecten. **No termina el turno:** se puede
+encadenar con otra acción en la misma visita. **Límite:** 1 vez por Día de Laboratorio — es la
+única acción de 0 PA que ocupa un espacio de acción, y se limita por ese espacio y no por su
+precio (las Monedas son renovables, así que el coste por sí solo no bastaría como freno).
+
+Con la tecnología **Cámara B** instalada, el jugador **no compra más espacios**, sino que puede
+repartirlos entre **dos masas distintas** en lugar de concentrarlos en una. La Cámara B desbloquea
+además una variante alternativa: recuperar **+1 de Vitalidad** en el cultivo base por **6 Monedas**,
+sin comprar ningún espacio de avance.
+
+**Riesgo:** el avance no tiene tope. Comprar 3 espacios puede empujar una masa más allá de su zona
+óptima hasta la zona sobrefermentada, que la Fase III hornea automáticamente en colapso y con
+penalización. Ese riesgo es el contrapeso del escalón caro: el juego avisa, pero no lo impide.
 
 #### Horas Extras
 
@@ -498,7 +513,7 @@ una solo puede instalarse una vez, pero un jugador puede llegar a tener varias d
 | Tecnología | Costo | Efecto |
 |:---|:---:|:---|
 | **Incubadora** | 3 Datos | Permite ajustar la temperatura local ±5°C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima. |
-| **Cámara B** | 4 Datos | Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): recuperar +1 Vitalidad, o afectar dos masas a la vez. |
+| **Cámara B** | 4 Datos | Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas. |
 | **Módulo Analítico** | 3 Datos | Otorga +1 Dato de Investigación extra al hornear exactamente en el centro de la Zona Óptima, y habilita el inicio de recetas de grado Avanzada. |
 | **Criopreservación** | 2 Datos | Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III. |
 

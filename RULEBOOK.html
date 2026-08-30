@@ -691,8 +691,8 @@
         <ul class="rules-list">
           <li><strong>Turno intercalado:</strong> empezando por el Investigador Jefe, cada jugador ejecuta una sola acción por visita y el turno pasa al siguiente. Se repite hasta que nadie tenga PA ni una acción gratuita pendiente.</li>
           <li><strong>Registro:</strong> al ejecutar una acción de costo, se desplaza un Cubo de Laboratorio al Checklist de Protocolo.</li>
-          <li><strong>Acciones que no terminan el turno:</strong> Alimentar el Cultivo, Horas Extras y Pedido de Urgencia son gratuitas (0 PA) y no cierran la visita — un jugador sin PA sigue recibiendo visitas mientras le quede alguna sin usar ese día. Cualquier acción de costo en PA, o un <strong>Pasar</strong> explícito, sí cierra la visita; Pasar además renuncia de inmediato a cualquier acción gratuita pendiente.</li>
-          <li><strong>Un espacio, una visita por día:</strong> cada espacio de acción con costo de PA (B a G, Simposio Técnico, H, I) solo puede visitarse una vez por Día de Laboratorio, por jugador — el investigador marca el espacio con su color al visitarlo, bloqueándolo para él (no para el resto) hasta el día siguiente. Pedido de Urgencia queda exento (no cuesta PA).</li>
+          <li><strong>Acciones que no terminan el turno:</strong> Alimentar el Cultivo, Técnica (Pliegues), Horas Extras y Pedido de Urgencia son gratuitas en PA y no cierran la visita — un jugador sin PA sigue recibiendo visitas mientras le quede alguna sin usar ese día (en el caso de Pliegues, mientras conserve el espacio E libre y Monedas para pagarlo). Cualquier acción de costo en PA, o un <strong>Pasar</strong> explícito, sí cierra la visita; Pasar además renuncia de inmediato a cualquier acción gratuita pendiente.</li>
+          <li><strong>Un espacio, una visita por día:</strong> cada espacio de acción (B a G, Simposio Técnico, H, I y también <strong>E</strong>, que no cuesta PA pero sí ocupa espacio) solo puede visitarse una vez por Día de Laboratorio, por jugador — el investigador marca el espacio con su color al visitarlo, bloqueándolo para él (no para el resto) hasta el día siguiente. El tope es una propiedad del espacio, no del coste. Alimentar el Cultivo y Horas Extras se limitan con su propio marcador de «ya usada», y Pedido de Urgencia no tiene límite alguno.</li>
           <li><strong>Sin escasez de insumos:</strong> a diferencia de las recetas del mercado, harina y agua ya no se agotan por turno — son un precio compartido que cualquier jugador puede usar sin quitarle el cupo a los demás.</li>
         </ul>
       </section>
@@ -746,9 +746,6 @@
         <h3 class="sub">D · Implementar Mejora de Laboratorio</h3>
         <p><strong>Costo:</strong> 1 PA + Datos de Investigación, según la mejora — ver <a href="#s10">Tecnologías de Laboratorio</a>. El beneficio se activa de inmediato. Cada mejora individual solo puede instalarse <strong>una vez</strong> por partida, pero un jugador puede llegar a instalar varias mejoras distintas — no existe un tope global de «una sola mejora en total». <strong>Límite adicional:</strong> el espacio D en sí solo puede visitarse 1 vez por día — instalar cualquier mejora agota el espacio para el resto del día, así que dos mejoras distintas nunca pueden instalarse el mismo día.</p>
 
-        <h3 class="sub">E · Técnica (Pliegues)</h3>
-        <p><strong>Costo:</strong> 1 PA. Avanza el marcador de una masa 1 casilla adicional. Con Cámara B instalada, el jugador puede optar en su lugar por recuperar +1 de Vitalidad, o por afectar a dos masas simultáneamente. <strong>Límite:</strong> 1 vez por día (por espacio de acción) — cualquiera de las variantes agota el espacio.</p>
-
         <h3 class="sub">F · Hornear y Vender <em class="aside">(Finalización de Protocolo)</em></h3>
         <p><strong>Costo:</strong> 1 PA. <strong>Límite:</strong> 1 vez por día (por espacio de acción) — no aplica al colapso automático de Fase III. Finaliza el protocolo de una masa y la vende de inmediato: se obtienen Puntos de Maestría, Monedas y (en Zona Óptima) Datos de Investigación, según la zona del track donde se encuentre el marcador.</p>
 
@@ -782,6 +779,11 @@
 
         <h3 class="sub">A · Alimentar el Cultivo <em class="aside">(Mantenimiento)</em></h3>
         <p><strong>Límite:</strong> una vez por día. Gastar <strong>1 token de harina — 1&nbsp;(10%)</strong> (cualquier tipo) por +1 Vitalidad, y/o <strong>2 tokens de agua — 2&nbsp;(10%)</strong> por +1 Acidez (máximo Nivel 6 en ambos) — uno, otro, o ambos en la misma acción. Ojo con el agua: son <strong>2</strong> tokens, no 1, porque el token de agua es del 5&nbsp;%.</p>
+
+        <h3 class="sub">E · Técnica (Pliegues)</h3>
+        <p><strong>Costo:</strong> Monedas, no PA. Se compran entre 1 y 3 espacios de avance del marcador de Inóculo y se reparten entre las masas activas: <strong>1 espacio = 1 Moneda, 2 = 3 Monedas, 3 = 6 Monedas</strong>. El precio es creciente al margen a propósito — comprar más nunca sale más barato por espacio — y depende del <strong>total</strong> comprado, no de cuántas masas se afecten. <strong>No termina el turno:</strong> se puede encadenar con otra acción en la misma visita. <strong>Límite:</strong> 1 vez por Día de Laboratorio — es la única acción de 0 PA que ocupa un espacio de acción, y se limita por ese espacio y no por su precio, porque las Monedas son un recurso renovable.</p>
+        <p>Con <strong>Cámara B</strong> instalada el jugador no compra más espacios, sino que puede repartirlos entre <strong>dos masas distintas</strong> en lugar de concentrarlos en una. La mejora desbloquea además una variante alternativa: recuperar <strong>+1 de Vitalidad</strong> en el cultivo base por <strong>6 Monedas</strong>, sin comprar ningún espacio de avance.</p>
+        <p><strong>Riesgo:</strong> el avance no tiene tope. Comprar 3 espacios puede empujar una masa más allá de su zona óptima hasta la zona sobre-fermentada, que la Fase III hornea automáticamente en colapso y con penalización. Ese riesgo es el contrapeso del escalón caro: el juego avisa, pero no lo impide.</p>
 
         <h3 class="sub">Horas Extras</h3>
         <p><strong>Costo:</strong> 1 Dato de Investigación. Otorga +1 PA de inmediato para usar ese mismo día. Solo una vez por Día de Laboratorio.</p>
@@ -869,7 +871,7 @@
             <thead><tr><th>Tecnología</th><th>Costo</th><th>Efecto</th></tr></thead>
             <tbody>
               <tr><td class="name">Incubadora</td><td><span class="chip datos">3 Datos</span></td><td class="wrap">Ajusta la temperatura local ±5 °C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima.</td></tr>
-              <tr><td class="name">Cámara B</td><td><span class="chip datos">4 Datos</span></td><td class="wrap">Desbloquea la tercera estación de fermentación y mejora la Acción E: recuperar +1 Vitalidad, o afectar dos masas a la vez.</td></tr>
+              <tr><td class="name">Cámara B</td><td><span class="chip datos">4 Datos</span></td><td class="wrap">Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas.</td></tr>
               <tr><td class="name">Módulo Analítico</td><td><span class="chip datos">3 Datos</span></td><td class="wrap">+1 Dato extra al hornear exactamente en el centro de la Zona Óptima, y habilita el inicio de recetas Avanzadas.</td></tr>
               <tr><td class="name">Criopreservación</td><td><span class="chip datos">2 Datos</span></td><td class="wrap">Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III.</td></tr>
             </tbody>

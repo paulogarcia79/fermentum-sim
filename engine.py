@@ -125,6 +125,23 @@ mazo de clima (0, ±5, ±10).
 AGUA_TOKENS_POR_LOTE: Dict[int, int] = {10: 2, 30: 6, 60: 12, 100: 20}
 """Tokens de agua (5% c/u) recibidos por cada tamaño de lote comprado."""
 
+# --- Técnica de Pliegues (Acción E) ---
+PRECIO_PLIEGUES: Dict[int, int] = {1: 1, 2: 3, 3: 6}
+"""
+Escalera de precios (en Monedas) de la Acción E: espacios totales comprados ->
+coste. Es deliberadamente creciente al margen (1, 2 y 3 Monedas por el 1º, 2º y
+3er espacio) para que la versión fuerte sea una inversión real al cambio de
+5 Monedas = 1 Punto de Maestría del recuento final (CORE_MECHANICS.md §3.5).
+"""
+
+PRECIO_PLIEGUES_VITALIDAD: int = 6
+"""
+Coste (en Monedas) de la variante 'recuperar_vitalidad' de la Acción E, que
+requiere Cámara B. Se fija al nivel del escalón más caro de PRECIO_PLIEGUES
+porque el desgaste metabólico es de -1 Vitalidad por día: a un precio bajo,
+comprarla a diario equivaldría a inmunidad permanente a la Contaminación.
+"""
+
 # ===========================================================================
 # SECCIÓN 2: MODELOS AUXILIARES DEL MERCADO CENTRAL
 # ===========================================================================
@@ -1055,9 +1072,11 @@ class GameEngine:
         Un jugador que ejecutó ``pasar_turno`` este día nunca vuelve a ser
         elegible (cede el resto del día, incluidas sus acciones gratuitas
         pendientes). En caso contrario, es elegible si tiene PA disponibles,
-        si aún no ha usado Acción A u Horas Extras hoy, o si aún puede pagar
+        si aún no ha usado Acción A u Horas Extras hoy, si aún puede pagar
         un Pedido de Urgencia (0 PA, sin límite por ronda, sin flag de "ya
-        usado" — se autolimita por Datos de Investigación disponibles).
+        usado" — se autolimita por Datos de Investigación disponibles), o si
+        aún le queda el espacio de Pliegues sin usar y puede pagar al menos su
+        escalón más barato (0 PA, se paga en Monedas — ver PRECIO_PLIEGUES).
         """
         if indice in self._turno_pasado:
             return False
@@ -1067,6 +1086,10 @@ class GameEngine:
             or not player.accion_alimentar_usada
             or not player.horas_extras_usadas
             or player.datos_investigacion >= 1
+            or (
+                "E" not in player.acciones_pa_usadas_hoy
+                and player.monedas >= min(PRECIO_PLIEGUES.values())
+            )
         )
 
     def _avanzar_a_siguiente_elegible(self, desde: int, incluir_actual: bool) -> None:

@@ -255,26 +255,45 @@ check("D: Criopreservación (3ra mejora distinta, otro día)", lambda: None if p
 # ========================================================================
 print("--- E: Pliegues ---")
 p1.estaciones_fermentacion = [slot, None, None]
-p1.puntos_accion = 3
+p1.acciones_pa_usadas_hoy = []
+p1.puntos_accion = 0  # E ya no cuesta PA: se paga en Monedas
+p1.monedas = 20
 pos0 = slot.posicion_track
 
-manager.accion_E_tecnica_pliegues(p1, slot_index=0)
-check("E avanzar: +1 posicion", lambda: None if slot.posicion_track == pos0 + 1 else (_ for _ in ()).throw(AssertionError()))
+manager.accion_E_tecnica_pliegues(p1, reparto={0: 1})
+check("E avanzar 1: +1 posicion", lambda: None if slot.posicion_track == pos0 + 1 else (_ for _ in ()).throw(AssertionError()))
+check("E avanzar 1: cuesta 1 Moneda", lambda: None if p1.monedas == 19 else (_ for _ in ()).throw(AssertionError()))
+check("E avanzar: no consume PA", lambda: None if p1.puntos_accion == 0 else (_ for _ in ()).throw(AssertionError()))
+check("E ocupa el espacio del dia", lambda: None if "E" in p1.acciones_pa_usadas_hoy else (_ for _ in ()).throw(AssertionError()))
+xraises(EspacioAccionYaUsadoError, "E dos veces el mismo dia", lambda: manager.accion_E_tecnica_pliegues(p1, reparto={0: 1}))
+
+p1.acciones_pa_usadas_hoy = []
+pos1 = slot.posicion_track
+manager.accion_E_tecnica_pliegues(p1, reparto={0: 3})
+check("E avanzar 3: +3 posiciones", lambda: None if slot.posicion_track == pos1 + 3 else (_ for _ in ()).throw(AssertionError()))
+check("E avanzar 3: cuesta 6 Monedas", lambda: None if p1.monedas == 13 else (_ for _ in ()).throw(AssertionError()))
 
 p1.tecnologias.camara_b = True
-p1.puntos_accion = 2
 p1.acciones_pa_usadas_hoy = []
 v_e = p1.vitalidad
-manager.accion_E_tecnica_pliegues(p1, slot_index=0, opcion_camara_b="recuperar_vitalidad")
+manager.accion_E_tecnica_pliegues(p1, opcion="recuperar_vitalidad")
 check("E recuperar_vit: vitalidad incrementada", lambda: None if p1.vitalidad >= v_e else (_ for _ in ()).throw(AssertionError()))
+check("E recuperar_vit: cuesta 6 Monedas", lambda: None if p1.monedas == 7 else (_ for _ in ()).throw(AssertionError()))
 
 p1.tecnologias.camara_b = False
-p1.puntos_accion = 1
-xraises(RuleViolationError, "E recuperar_vit sin CamaraB", lambda: manager.accion_E_tecnica_pliegues(p1, slot_index=0, opcion_camara_b="recuperar_vitalidad"))
-xraises(InvalidActionError, "E opcion invalida", lambda: manager.accion_E_tecnica_pliegues(p1, slot_index=0, opcion_camara_b="volar"))
-
 p1.acciones_pa_usadas_hoy = []
-xraises(RuleViolationError, "E slot vacio", lambda: manager.accion_E_tecnica_pliegues(p1, slot_index=1))
+xraises(RuleViolationError, "E recuperar_vit sin CamaraB", lambda: manager.accion_E_tecnica_pliegues(p1, opcion="recuperar_vitalidad"))
+xraises(RuleViolationError, "E reparto en 2 masas sin CamaraB", lambda: manager.accion_E_tecnica_pliegues(p1, reparto={0: 1, 1: 1}))
+xraises(InvalidActionError, "E opcion invalida", lambda: manager.accion_E_tecnica_pliegues(p1, opcion="volar"))
+xraises(InvalidActionError, "E sin reparto", lambda: manager.accion_E_tecnica_pliegues(p1))
+xraises(InvalidActionError, "E total fuera de la escalera", lambda: manager.accion_E_tecnica_pliegues(p1, reparto={0: 4}))
+xraises(RuleViolationError, "E slot vacio", lambda: manager.accion_E_tecnica_pliegues(p1, reparto={1: 1}))
+
+monedas_antes_e = p1.monedas
+p1.monedas = 0
+xraises(MissingResourceError, "E sin Monedas", lambda: manager.accion_E_tecnica_pliegues(p1, reparto={0: 1}))
+check("E rechazada no ocupa el espacio", lambda: None if "E" not in p1.acciones_pa_usadas_hoy else (_ for _ in ()).throw(AssertionError()))
+p1.monedas = monedas_antes_e
 
 # ========================================================================
 print("--- F: Hornear ---")

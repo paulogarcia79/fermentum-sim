@@ -59,7 +59,6 @@ export const SONIDOS_ACCION: Record<IdSonido, Sonido> = {
   B: principal(392), // Sol4
   C: principal(440), // La4
   D: principal(494), // Si4
-  E: principal(523), // Do5
   G: principal(587), // Re5
   simposio: principal(659), // Mi5
 
@@ -76,6 +75,7 @@ export const SONIDOS_ACCION: Record<IdSonido, Sonido> = {
 
   // --- Gratuitas (0 PA) ---------------------------------------------------
   A: gratuita(1046.5), // Do6
+  E: gratuita(1567.98), // Sol6 -- E salio de Principales: se paga en Monedas
   horas_extras: gratuita(1244.5), // Re#6
   pedido_urgencia: gratuita(1396.9), // Fa6
 

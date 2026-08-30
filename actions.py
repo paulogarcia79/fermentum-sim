@@ -46,6 +46,8 @@ from engine import (
     CANTIDAD_BOLSA_PCT,
     CANTIDAD_MEDIA_BOLSA_PCT,
     PRECIO_AGUA,
+    PRECIO_PLIEGUES,
+    PRECIO_PLIEGUES_VITALIDAD,
 )
 from exceptions import (
     CarpetaFullError,
@@ -700,105 +702,125 @@ class ActionManager:
     def accion_E_tecnica_pliegues(
         self,
         player: Player,
-        slot_index: int,
-        opcion_camara_b: str = "avanzar",
-        slot_index_2: Optional[int] = None,
+        opcion: str = "avanzar",
+        reparto: Optional[Dict[int, int]] = None,
     ) -> None:
         """
-        Acción E: Técnica / Pliegues (ACTIONS_REGISTRY.md §2E).
+        Acción E: Técnica / Pliegues (ACTIONS_REGISTRY.md §3E).
 
-        Costo base: 1 PA.
-        Efecto base: Avanza +1 casilla el marcador de inóculo de la masa en
-            ``slot_index`` (simula el pliegue manual que acelera la fermentación).
+        Costo: 0 PA + Monedas. NO termina el turno del jugador (acción gratuita
+        encadenable), pero SÍ ocupa su espacio de acción "E" una vez por día,
+        compartido por todas sus variantes.
 
-        Sinergia con Cámara B (``opcion_camara_b``):
-          · ``"avanzar"`` (default): comportamiento base; disponible siempre.
-          · ``"recuperar_vitalidad"``: en lugar de avanzar una masa,
-            el jugador recupera +1 Vitalidad en su cultivo base.
-            El parámetro ``slot_index`` es ignorado en esta opción.
-          · ``"doble_masa"``: avanza +1 casilla en ``slot_index`` Y +1 casilla
-            en ``slot_index_2`` simultáneamente. Requiere dos masas activas.
+        Dos variantes, seleccionadas por ``opcion``:
 
-        Las opciones de sinergia requieren Cámara B instalada.
+          · ``"avanzar"`` (default): compra entre 1 y 3 espacios de avance de
+            fermentación y los reparte entre sus masas activas según ``reparto``
+            (un mapa ``slot_index -> espacios``). El precio depende del TOTAL
+            comprado, no del número de masas: ver ``PRECIO_PLIEGUES``
+            (1 espacio = 1 Moneda, 2 = 3, 3 = 6 — creciente al margen).
+            Sin Cámara B el reparto debe recaer sobre una sola masa; la mejora
+            no cambia cuántos espacios puedes comprar, sino que permite
+            repartirlos entre dos masas distintas.
+          · ``"recuperar_vitalidad"``: +1 Vitalidad en el cultivo base por un
+            precio fijo (``PRECIO_PLIEGUES_VITALIDAD``). Requiere Cámara B e
+            ignora ``reparto``.
+
+        El avance NO se limita por arriba: comprar 3 espacios puede empujar una
+        masa más allá de su zona óptima hasta la zona sobrefermentada, que la
+        Fase III hornea automáticamente con penalización. Ese riesgo es el
+        freno deliberado del escalón más caro (ver el módulo `disponibilidad`
+        y `PistaMedida` en el cliente, que muestran la posición proyectada).
 
         Args:
             player: Jugador que ejecuta la técnica.
-            slot_index: Índice de la estación a afectar (0, 1 o 2).
-            opcion_camara_b: "avanzar" | "recuperar_vitalidad" | "doble_masa".
-            slot_index_2: Índice de la segunda estación (solo "doble_masa").
+            opcion: "avanzar" | "recuperar_vitalidad".
+            reparto: Mapa ``{slot_index: espacios}`` para "avanzar". La suma de
+                espacios debe estar en PRECIO_PLIEGUES (1-3).
 
         Raises:
-            NotEnoughActionPointsError: PA insuficientes.
-            InvalidActionError: ``opcion_camara_b`` inválido.
-            RuleViolationError: Opciones de Cámara B sin la tecnología, estación
-                vacía, o slot_index_2 inválido / coincidente.
+            InvalidActionError: ``opcion`` inválida, o ``reparto`` ausente /
+                malformado / con un total fuera de la escalera de precios.
+            MissingResourceError: Monedas insuficientes.
+            EspacioAccionYaUsadoError: El espacio "E" ya se usó hoy.
+            RuleViolationError: Variante o reparto que requieren Cámara B sin
+                la tecnología instalada, o estación vacía / índice fuera de [0, 2].
         """
-        opciones_validas = {"avanzar", "recuperar_vitalidad", "doble_masa"}
-        if opcion_camara_b not in opciones_validas:
+        opciones_validas = {"avanzar", "recuperar_vitalidad"}
+        if opcion not in opciones_validas:
             raise InvalidActionError(
-                f"opcion_camara_b debe ser uno de {opciones_validas}. "
-                f"Recibido: '{opcion_camara_b}'"
+                f"opcion debe ser una de {opciones_validas}. Recibido: '{opcion}'"
             )
 
-        if opcion_camara_b != "avanzar" and not player.tecnologias.camara_b:
-            raise RuleViolationError(
-                f"La opción '{opcion_camara_b}' de la Acción E requiere "
-                "la tecnología Cámara B instalada."
-            )
+        # --- Rama: recuperar vitalidad (no usa reparto) ---
+        if opcion == "recuperar_vitalidad":
+            if not player.tecnologias.camara_b:
+                raise RuleViolationError(
+                    "La opción 'recuperar_vitalidad' de la Acción E requiere "
+                    "la tecnología Cámara B instalada."
+                )
+            self._require_monedas(player, PRECIO_PLIEGUES_VITALIDAD)
+            self._require_espacio_disponible(player, "E")
 
-        self._require_pa(player, 1)
-        self._require_espacio_disponible(player, "E")
-
-        # --- Rama: recuperar vitalidad (no usa slot_index) ---
-        if opcion_camara_b == "recuperar_vitalidad":
-            player.consumir_punto_accion("E")
+            player.monedas -= PRECIO_PLIEGUES_VITALIDAD
+            player.ocupar_espacio_accion("E")
             player.ajustar_vitalidad(+1)
             return
 
-        # --- Validar slot_index principal (usado por "avanzar" y "doble_masa") ---
-        if not (0 <= slot_index <= 2):
-            raise RuleViolationError(
-                f"slot_index debe estar en [0, 2]. Recibido: {slot_index}"
+        # --- Rama: avanzar (reparto de espacios comprados) ---
+        if not reparto:
+            raise InvalidActionError(
+                "La opción 'avanzar' de la Acción E requiere 'reparto': un mapa "
+                "{slot_index: espacios} indicando dónde aplicar los pliegues."
             )
-        slot = player.estaciones_fermentacion[slot_index]
-        if slot is None:
-            raise RuleViolationError(
-                f"La estación {slot_index} de '{player.nombre}' está vacía. "
-                "No hay masa activa que plegar."
+        if any(not isinstance(n, int) or n < 1 for n in reparto.values()):
+            raise InvalidActionError(
+                f"Cada valor de 'reparto' debe ser un entero >= 1. Recibido: {reparto}"
             )
 
-        # --- Rama: doble masa ---
-        if opcion_camara_b == "doble_masa":
-            if slot_index_2 is None:
-                raise RuleViolationError(
-                    "La opción 'doble_masa' requiere especificar slot_index_2 "
-                    "(la segunda estación a afectar)."
-                )
-            if not (0 <= slot_index_2 <= 2):
-                raise RuleViolationError(
-                    f"slot_index_2 debe estar en [0, 2]. Recibido: {slot_index_2}"
-                )
-            if slot_index_2 == slot_index:
-                raise RuleViolationError(
-                    f"slot_index_2 ({slot_index_2}) debe ser distinto a "
-                    f"slot_index ({slot_index}). Cada masa se plega una vez."
-                )
-            slot_2 = player.estaciones_fermentacion[slot_index_2]
-            if slot_2 is None:
-                raise RuleViolationError(
-                    f"La estación {slot_index_2} de '{player.nombre}' está vacía. "
-                    "La opción 'doble_masa' requiere dos masas activas."
-                )
+        total: int = sum(reparto.values())
+        if total not in PRECIO_PLIEGUES:
+            raise InvalidActionError(
+                f"El total de espacios a plegar debe estar entre "
+                f"{min(PRECIO_PLIEGUES)} y {max(PRECIO_PLIEGUES)}. Recibido: {total}"
+            )
+        precio: int = PRECIO_PLIEGUES[total]
 
-            # Aplicar doble pliegue
-            player.consumir_punto_accion("E")
-            slot.posicion_track += 1
-            slot_2.posicion_track += 1
+        if len(reparto) > 1 and not player.tecnologias.camara_b:
+            raise RuleViolationError(
+                "Repartir los pliegues entre varias masas requiere la "
+                "tecnología Cámara B instalada."
+            )
+        if len(reparto) > 2:
+            raise RuleViolationError(
+                f"La Cámara B permite repartir los pliegues entre 2 masas como "
+                f"máximo. Recibido: {len(reparto)}."
+            )
 
-        else:
-            # --- Rama base: avanzar una masa ---
-            player.consumir_punto_accion("E")
-            slot.posicion_track += 1
+        self._require_monedas(player, precio)
+        self._require_espacio_disponible(player, "E")
+
+        # Validar todos los slots ANTES de mutar ninguno (fail-fast).
+        pliegues: List[Tuple[FermentationSlot, int]] = []
+        for slot_index, espacios in reparto.items():
+            if not (0 <= slot_index <= 2):
+                raise RuleViolationError(
+                    f"slot_index debe estar en [0, 2]. Recibido: {slot_index}"
+                )
+            slot = player.estaciones_fermentacion[slot_index]
+            if slot is None:
+                raise RuleViolationError(
+                    f"La estación {slot_index} de '{player.nombre}' está vacía. "
+                    "No hay masa activa que plegar."
+                )
+            pliegues.append((slot, espacios))
+
+        # Aplicar. Sin tope superior: el sobrepliegue hacia la zona
+        # sobrefermentada es legal y es el riesgo que equilibra la escalera.
+        player.monedas -= precio
+        player.ocupar_espacio_accion("E")
+        for slot, espacios in pliegues:
+            slot.posicion_track += espacios
 
     def accion_F_hornear(
         self,

@@ -362,7 +362,8 @@ class Technologies:
         incubadora: Permite ajuste local de temperatura ±5°C en la Fase III
             para una masa específica (modificador_incubadora = ±1).
         camara_b: Desbloquea la Estación 03 (índice 2) y mejora la Acción E (Pliegues):
-            recupera +1 Vitalidad o afecta dos masas simultáneamente.
+            permite repartir los espacios comprados entre dos masas (no aumenta
+            cuántos se compran) y habilita la variante de recuperar +1 Vitalidad.
         modulo_analitico: Genera +1 Dato al hornear en centro exacto y
             habilita el inicio de recetas de grado Avanzado.
         criopreservacion: Efecto pasivo "Estasis Biológica" — durante la Fase III,
@@ -678,6 +679,18 @@ class Player:
         self.puntos_accion = 2
         self.horas_extras_usadas = False
 
+    def ocupar_espacio_accion(self, espacio_accion_id: str) -> None:
+        """
+        Registra `espacio_accion_id` en acciones_pa_usadas_hoy, bloqueando ese
+        espacio para el resto del día, SIN gastar PA.
+
+        Existe separado de `consumir_punto_accion` porque la Acción E (Pliegues)
+        se paga en Monedas y no en PA, pero conserva la regla "un espacio, una
+        visita por día" (ACTIONS_REGISTRY.md §1). Precondición: el llamador debe
+        verificar que espacio_accion_id no esté ya en la lista ANTES de llamar.
+        """
+        self.acciones_pa_usadas_hoy.append(espacio_accion_id)
+
     def consumir_punto_accion(self, espacio_accion_id: str) -> None:
         """
         Decrementa 1 PA del jugador y registra `espacio_accion_id` en
@@ -686,7 +699,7 @@ class Player:
         espacio_accion_id no esté ya en acciones_pa_usadas_hoy ANTES de llamar.
         """
         self.puntos_accion -= 1
-        self.acciones_pa_usadas_hoy.append(espacio_accion_id)
+        self.ocupar_espacio_accion(espacio_accion_id)
 
     def otorgar_punto_accion_extra(self) -> None:
         """

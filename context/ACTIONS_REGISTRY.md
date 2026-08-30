@@ -5,7 +5,7 @@
 * Cada jugador dispone de 2 Puntos de Acción (PA) por Día de Laboratorio.
 * Al ejecutar una acción, el jugador debe desplazar un Cubo de Laboratorio a su "Checklist de Protocolo" (Zona 5 del tablero) para indicar el consumo del punto.
 * Algunas acciones requieren el gasto adicional de tokens (Harina/Agua) o Datos de Investigación. **Un Token de Harina = 10%; un Token de Agua = 5% de hidratación** — ver PLAYER_STATE.md §"Unidades de Insumo (Tokens)" para la notación `N (P%)` usada en todo este registro.
-* **Un espacio de acción, una visita por día:** cada espacio de acción con costo de PA (B a G, Simposio Técnico, H, I) solo puede visitarse UNA vez por Día de Laboratorio, por jugador — un peón de investigador marca el espacio con su color en cuanto lo visita, bloqueándolo para él (no para el resto de jugadores) hasta el día siguiente. Con 2-3 PA (Horas Extras incluida) esto significa: como máximo un uso de cada espacio distinto por día, nunca el mismo espacio dos veces. Pedido de Urgencia queda exento (ver su entrada en §3): no cuesta PA y se autolimita por Datos de Investigación.
+* **Un espacio de acción, una visita por día:** cada espacio de acción (B a G, Simposio Técnico, H, I y también E, que no cuesta PA pero sí ocupa espacio) solo puede visitarse UNA vez por Día de Laboratorio, por jugador — un peón de investigador marca el espacio con su color en cuanto lo visita, bloqueándolo para él (no para el resto de jugadores) hasta el día siguiente. Con 2-3 PA (Horas Extras incluida) esto significa: como máximo un uso de cada espacio distinto por día, nunca el mismo espacio dos veces. El tope es una propiedad **del espacio**, no del coste: la Acción E lo conserva aunque se pague en Monedas. Las excepciones son Acción A y Horas Extras (que se limitan con su propio marcador de "ya usada", no con un espacio) y Pedido de Urgencia, sin límite alguno: se autolimita por Datos de Investigación.
 
 ---
 
@@ -54,12 +54,6 @@
 * **Límites:** Cada mejora individual solo puede adquirirse UNA vez por partida, pero un jugador puede llegar a instalar varias mejoras distintas a lo largo de la partida (no hay tope global de "una mejora total"). Además, el espacio D en sí solo puede visitarse 1 vez por día (§1): instalar CUALQUIER mejora agota el espacio para el resto del día, así que dos mejoras distintas nunca pueden instalarse el mismo día — como muy pronto, la segunda espera al día siguiente.
 * **Reglas:** El beneficio se activa inmediatamente y se marca con un Cubo de Laboratorio en la Zona 4.
 
-### E. Técnica (Pliegues)
-* **Costo:** 1 PA.
-* **Límite:** 1 vez por día (por espacio de acción — ver §1) — incluye todas sus variantes (avanzar, recuperar vitalidad, doble masa): usar cualquiera de ellas agota el espacio E para el resto del día.
-* **Efecto:** Avanza el marcador de Inóculo de una masa 1 casilla.
-* **Sinergia:** Con la mejora Cámara B, el jugador puede optar por recuperar +1 de Vitalidad en su cultivo base o afectar a dos masas simultáneamente.
-
 ### F. Hornear y Vender (Finalización de Protocolo)
 * **Costo:** 1 PA.
 * **Límite:** 1 vez por día (por espacio de acción — ver §1). No aplica al colapso automático de Fase III (sobrefermentación), que no pasa por este espacio ni consume PA.
@@ -91,6 +85,14 @@
 * **Efecto Modular:** * Restar **1 Token de Harina — 1 (10%)** (de cualquier tipo) = +1 Vitalidad (Máx 6).
     * Restar **2 Tokens de Agua — 2 (10%)** = +1 Acidez (Máx 6). Ojo: son 2 tokens, no 1, porque el token de agua es del 5%.
     * (Se puede hacer uno, otro, o ambos en la misma acción).
+
+### E. Técnica (Pliegues)
+* **Costo:** Monedas, según la cantidad de avance que se compre — **1 espacio = 1 Moneda, 2 espacios = 3 Monedas, 3 espacios = 6 Monedas**. El precio es creciente al margen a propósito: comprar más nunca es un descuento por volumen. La variante de Vitalidad (ver Sinergia) cuesta **6 Monedas** fijas.
+* **Tipo:** Acción Gratuita (0 PA). No termina el turno del jugador: se puede encadenar con otra acción en la misma visita.
+* **Límite:** 1 vez por día (por espacio de acción — ver §1) — incluye todas sus variantes: usar cualquiera de ellas agota el espacio E para el resto del día. Es la única acción de 0 PA que ocupa un espacio de acción; se autolimita por el espacio, no por su coste (las Monedas son un recurso renovable, así que el precio por sí solo no bastaría).
+* **Efecto:** Compra entre 1 y 3 espacios de avance del marcador de Inóculo y los reparte entre las masas activas del jugador. El precio depende del TOTAL comprado, no del número de masas afectadas.
+* **Sinergia:** La mejora Cámara B **no aumenta cuántos espacios se pueden comprar**, sino que permite repartirlos entre **dos masas distintas** en lugar de concentrarlos en una sola. Además desbloquea una variante alternativa: recuperar **+1 de Vitalidad** en el cultivo base por 6 Monedas, en cuyo caso no se compra ningún espacio de avance.
+* **Riesgo (deliberado):** el avance **no tiene tope**. Comprar 3 espacios puede empujar una masa más allá de su zona óptima hasta la zona sobrefermentada, que la Fase III hornea automáticamente en colapso y con penalización. Ese riesgo es el freno del escalón caro; el sistema avisa pero no lo impide.
 
 ### Horas Extras
 * **Costo:** 1 Token de Datos de Investigación.

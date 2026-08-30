@@ -8,8 +8,8 @@ correspondiente a ``ActionManager``, y cierra la visita del jugador con
 
 Este módulo es el único lugar del proyecto donde vive la tabla
 "¿qué acciones terminan el turno?" que la Milestone 1 dejó pendiente para
-la capa de comandos (Acción A y Horas Extras NO terminan el turno; el resto
-sí). Un "Pasar" explícito no pasa por aquí — ``server/app.py`` lo despacha
+la capa de comandos (Acciones A y E, Horas Extras y Pedido de Urgencia NO
+terminan el turno; el resto sí). Un "Pasar" explícito no pasa por aquí — ``server/app.py`` lo despacha
 directamente a ``GameEngine.pasar_turno()``, que ya cierra la visita él mismo.
 
 Deliberadamente NO reimplementa ninguna validación de reglas: cada método de
@@ -22,7 +22,7 @@ Urgencia) — y deja que ``ActionManager`` decida si la acción es válida.
 """
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from actions import ActionManager
 from engine import GameEngine
@@ -30,14 +30,16 @@ from exceptions import InvalidActionError
 from models import Player, TecnologiaID, TipoHarina
 
 # Acciones que terminan la visita del jugador al completarse con éxito.
-# Ver Milestone 1 (engine.py): Acción A, Horas Extras y Pedido de Urgencia son
-# gratuitas (0 PA) y NO terminan el turno por sí mismas; todas las demás sí.
+# Ver Milestone 1 (engine.py): Acciones A y E, Horas Extras y Pedido de Urgencia
+# son gratuitas (0 PA) y NO terminan el turno por sí mismas; todas las demás sí.
+# La Acción E es gratuita en PA pero se paga en Monedas, y aun así conserva la
+# regla "un espacio, una visita por día" (ACTIONS_REGISTRY.md §1).
 ACCIONES_QUE_TERMINAN_TURNO: Dict[str, bool] = {
     "A": False,
     "B": True,
     "C": True,
     "D": True,
-    "E": True,
+    "E": False,
     "F": True,
     "G": True,
     "simposio": True,
@@ -158,9 +160,8 @@ def _despachar(
     if accion == "E":
         return manager.accion_E_tecnica_pliegues(
             player,
-            slot_index=_requerir_int(params, "slot_index"),
-            opcion_camara_b=params.get("opcion_camara_b", "avanzar"),
-            slot_index_2=params.get("slot_index_2"),
+            opcion=params.get("opcion", "avanzar"),
+            reparto=_reparto_pliegues(params.get("reparto")),
         )
 
     if accion == "F":
@@ -207,6 +208,39 @@ def _requerir_int(params: Dict[str, Any], clave: str) -> int:
     if not isinstance(valor, int) or isinstance(valor, bool):
         raise InvalidActionError(f"'{clave}' debe ser un entero. Recibido: {valor!r}.")
     return valor
+
+
+def _reparto_pliegues(valor: Any) -> Optional[Dict[int, int]]:
+    """
+    Normaliza el 'reparto' de la Acción E a ``{slot_index: espacios}`` con
+    claves ``int``.
+
+    JSON solo admite claves de tipo string, así que el cliente envía
+    ``{"0": 2}`` y aquí se convierte a ``{0: 2}``, que es lo que
+    ``ActionManager`` espera. Los rangos y el total los valida la acción;
+    esto solo resuelve lo que el transporte no puede transmitir.
+    """
+    if valor is None:
+        return None
+    if not isinstance(valor, dict):
+        raise InvalidActionError(
+            f"'reparto' debe ser un objeto {{slot_index: espacios}}. Recibido: {valor!r}."
+        )
+    reparto: Dict[int, int] = {}
+    for clave, espacios in valor.items():
+        try:
+            slot_index = int(clave)
+        except (TypeError, ValueError):
+            raise InvalidActionError(
+                f"Las claves de 'reparto' deben ser índices de estación enteros. "
+                f"Recibido: {clave!r}."
+            )
+        if not isinstance(espacios, int) or isinstance(espacios, bool):
+            raise InvalidActionError(
+                f"Los valores de 'reparto' deben ser enteros. Recibido: {espacios!r}."
+            )
+        reparto[slot_index] = espacios
+    return reparto
 
 
 def _resolver_tipo_harina(valor: Any) -> TipoHarina:

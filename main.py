@@ -29,7 +29,7 @@ from typing import List, Optional, Tuple
 
 from actions import COSTOS_TECNOLOGIA, ActionManager
 from bootstrap import create_game
-from engine import PRECIO_AGUA, GameEngine
+from engine import PRECIO_AGUA, PRECIO_PLIEGUES, PRECIO_PLIEGUES_VITALIDAD, GameEngine
 from events import EventoTipo, GameEvent
 from exceptions import FermentumError
 from models import (
@@ -488,38 +488,64 @@ def _params_accion_E(player: Player) -> Optional[dict]:
         _warn("No hay masas activas para plegar.")
         return None
 
-    # Mostrar opción de Cámara B si está activa
     opcion = "avanzar"
     if player.tecnologias.camara_b:
         op = _pedir_opcion(
-            "Opción Cámara B: [a]vanzar / [v]italidad / [d]oble masa",
-            ["a", "v", "d"]
+            f"Opción Cámara B: [a]vanzar / [v]italidad "
+            f"({PRECIO_PLIEGUES_VITALIDAD} Monedas)",
+            ["a", "v"],
         )
         if op is None:
             return None
-        opcion = {"a": "avanzar", "v": "recuperar_vitalidad", "d": "doble_masa"}[op]
+        opcion = {"a": "avanzar", "v": "recuperar_vitalidad"}[op]
 
     if opcion == "recuperar_vitalidad":
-        return {"slot_index": 0, "opcion_camara_b": "recuperar_vitalidad"}
+        return {"opcion": "recuperar_vitalidad"}
 
     if not masas:
         _warn("No hay masas activas para plegar.")
         return None
 
+    escalera = ", ".join(
+        f"{n} espacio{'s' if n > 1 else ''} = {precio} Monedas"
+        for n, precio in sorted(PRECIO_PLIEGUES.items())
+    )
+    print(f"  Precio de los pliegues: {escalera}")
+    print(f"  Monedas disponibles: {player.monedas}")
     print("  Masas activas:")
     for idx, slot in masas:
         print(f"    [{idx}] {slot.recipe.nombre} — pos {slot.posicion_track}")
-    slot_idx = _pedir_int("Índice de estación a plegar", 0, 2)
-    if slot_idx is None:
-        return None
 
-    if opcion == "doble_masa":
-        slot_idx_2 = _pedir_int("Índice de segunda estación a plegar", 0, 2)
-        if slot_idx_2 is None:
+    # Con Cámara B los espacios comprados pueden repartirse entre dos masas;
+    # sin ella, todos van a la misma.
+    max_masas = 2 if player.tecnologias.camara_b else 1
+    reparto: dict = {}
+    restantes = max(PRECIO_PLIEGUES)
+    for n in range(max_masas):
+        if restantes <= 0:
+            break
+        etiqueta = "estación" if n == 0 else "segunda estación (0 para omitir)"
+        slot_idx = _pedir_int(f"Índice de {etiqueta}", 0, 2)
+        if slot_idx is None:
             return None
-        return {"slot_index": slot_idx, "opcion_camara_b": "doble_masa", "slot_index_2": slot_idx_2}
+        if slot_idx in reparto:
+            _warn("Esa estación ya recibió pliegues en este reparto.")
+            return None
+        espacios = _pedir_int(
+            f"Espacios a plegar en la estación {slot_idx}", 0 if n else 1, restantes
+        )
+        if espacios is None:
+            return None
+        if espacios == 0:
+            break
+        reparto[slot_idx] = espacios
+        restantes -= espacios
 
-    return {"slot_index": slot_idx}
+    if not reparto:
+        return None
+    total = sum(reparto.values())
+    print(f"  Total: {total} espacio(s) — {PRECIO_PLIEGUES[total]} Monedas")
+    return {"opcion": "avanzar", "reparto": reparto}
 
 
 def _params_accion_F(player: Player) -> Optional[dict]:

@@ -35,7 +35,7 @@ function estado(id: IdAccion) {
 /** Espacios de acción gratuitos (0 PA) que igual solo se pueden visitar una
  * vez por día -- se marcan visualmente distinto (aro hueco) de los espacios
  * con costo de PA (punto sólido), ver .marcador-jugador.gratis más abajo. */
-const ESPACIOS_GRATIS_UNA_VEZ_POR_DIA: IdAccion[] = ['A', 'horas_extras']
+const ESPACIOS_GRATIS_UNA_VEZ_POR_DIA: IdAccion[] = ['A', 'E', 'horas_extras']
 
 /** Jugadores que ya visitaron el espacio de acción `id` hoy -- recorre a
  * TODOS los jugadores (no solo el propio, a diferencia de `disponibilidad`)

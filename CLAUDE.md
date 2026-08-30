@@ -150,11 +150,13 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
     `resolver_fase_III()`. See `Fase` enum and `GameEngine.turno_nonce`.
 
   **Turn-economy rule (deliberate, diverges from `ACTIONS_REGISTRY.md`'s literal CLI-original
-  behavior)**: Acción A (Alimentar) and Horas Extras do **not** end a player's turn/visit by
-  themselves — only a PA-costing action or an explicit `pasar_turno()` does. A player who has
+  behavior)**: Acción A (Alimentar), Acción E (Pliegues), Horas Extras and Pedido de Urgencia do
+  **not** end a player's turn/visit by themselves — only a PA-costing action or an explicit
+  `pasar_turno()` does. A player who has
   spent both PA elsewhere stays eligible for further visits solely to use an unused free action
-  (`GameEngine.jugador_activo`'s eligibility check: `puntos_accion > 0 or not
-  accion_alimentar_usada or not horas_extras_usadas`). An explicit pass is a full forfeiture of
+  (`GameEngine._jugador_elegible`: `puntos_accion > 0 or not
+  accion_alimentar_usada or not horas_extras_usadas or datos_investigacion >= 1 or ("E" not in
+  acciones_pa_usadas_hoy and monedas >= min(PRECIO_PLIEGUES.values()))`). An explicit pass is a full forfeiture of
   the rest of the day, including unused free actions — anything that ends a player's turn **must**
   call `engine.pasar_turno(player)`, never assign `player.puntos_accion = 0` directly, or that
   player will be revisited forever (see `main.py`'s `"P"` branch and `tests/_bot.py`'s fallback for
@@ -189,6 +191,40 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   single "one upgrade per game" total, with a 4th tech (Criopreservación) added; and endgame
   scoring gained a "Conversión de riqueza" term. Recipe zone/point/Monedas values were rebalanced
   across the board — see `context/RECIPE_DATABASE.md`.
+
+  **Acción E (Pliegues) — the second Monedas sink, and the only 0-PA action that occupies an
+  action space.** E used to cost 1 PA for a flat +1 track space, i.e. a whole turn for one space;
+  nobody took it. It is now **0 PA, priced in Monedas**, lives in the Gratuitas group, and does
+  **not** end the visit (`ACCIONES_QUE_TERMINAN_TURNO["E"] = False`). Three pieces make that
+  sound rather than merely generous:
+  - **An escalating ladder, not a flat price** — `engine.PRECIO_PLIEGUES = {1: 1, 2: 3, 3: 6}`
+    buys 1-3 total track spaces (marginal cost 1, 2, 3, so volume is never a discount). The wire
+    param is a single `reparto: {slot_index: espacios}` map and the price is
+    `PRECIO_PLIEGUES[sum(reparto.values())]`, so validate / price / apply all read one number —
+    the same reason `OPERACIONES_HARINA` exists for the Bolsa.
+  - **The once-per-day action space survives the loss of the PA cost.** This is the load-bearing
+    part: Monedas are *renewable* (Acción C sells flour for cash every day), so "the price limits
+    it" is false — without the space cap a rich player would be handed visits until their purse
+    emptied. `Player.consumir_punto_accion` was split so `ocupar_espacio_accion(id)` can mark the
+    space without spending PA, and `_jugador_elegible` gained a matching clause. No new persisted
+    field, hence **no `VERSION_FORMATO` bump** — that was the deciding argument against a
+    dedicated `tecnica_pliegues_usada` flag.
+  - **Cámara B distributes, it does not multiply.** It no longer unlocks a separate `doble_masa`
+    option; it lets the purchased spaces land on two masses instead of one. Its
+    `recuperar_vitalidad` variant is a flat `PRECIO_PLIEGUES_VITALIDAD = 6`, priced at the top
+    rung deliberately: metabolic decay is -1 Vitalidad/day, so a cheap daily +1 would buy
+    permanent immunity to contamination (-3 PM, Acción B locked) for pocket change.
+
+  Overshoot is **legal on purpose**: buying 3 spaces can push a mass past `zona_optima` into
+  `zona_sobrefermentada`, which Fase III auto-bakes in collapse. That risk is the brake on the top
+  rung, so `posicion_track` is never clamped here; `ModalE.vue` surfaces it with `PistaMedida`'s
+  dashed projected bracket plus a warning instead of blocking the purchase. E emits no
+  `GameEvent`, so being inside the undo window is safe (`engine.eventos` stays byte-identical
+  across an undo — the invariant `AvisoAccion` exists to protect). `disponibilidad.py`'s E clause
+  was rewritten for Monedas and, in the same edit, fixed a pre-existing bug that greyed E out with
+  zero masses even though `recuperar_vitalidad` is legal with none. Prices are mirrored for the
+  modal in `web/src/data/preciosPliegues.ts`, following the `preciosHarina.ts` precedent. Tests:
+  `tests/test_pliegues_monedas.py`.
 - **`main.py`** — CLI only: rendering (`mostrar_estado_jugador`, `mostrar_mercado`, colored
   output helpers), prompting (`_pedir_int`, `_pedir_opcion`, `_params_accion_*`), and the
   `main()` entrypoint / `setup_game()`. Contains no rules logic — it calls into `engine`/

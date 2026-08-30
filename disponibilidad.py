@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from engine import GameEngine
+from engine import GameEngine, PRECIO_PLIEGUES, PRECIO_PLIEGUES_VITALIDAD
 from models import Player
 
 
@@ -77,12 +77,25 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         "D" not in usados and tiene_pa,
         "Ya usaste este espacio hoy" if "D" in usados else "Sin PA",
     )
+    # Acción E (Pliegues) se paga en Monedas, no en PA: no consulta `tiene_pa`.
+    # Con Cámara B la variante 'recuperar_vitalidad' es legal SIN masas activas,
+    # así que ese caso también habilita el espacio.
+    puede_plegar_masa = hay_estacion_activa and player.monedas >= min(
+        PRECIO_PLIEGUES.values()
+    )
+    puede_recuperar_vitalidad = (
+        player.tecnologias.camara_b and player.monedas >= PRECIO_PLIEGUES_VITALIDAD
+    )
+    if "E" in usados:
+        motivo_e = "Ya usaste este espacio hoy"
+    elif not hay_estacion_activa and not player.tecnologias.camara_b:
+        motivo_e = "Sin masas activas"
+    else:
+        motivo_e = "Sin Monedas"
     agregar(
         "E",
-        "E" not in usados and tiene_pa and hay_estacion_activa,
-        "Ya usaste este espacio hoy"
-        if "E" in usados
-        else ("Sin PA" if not tiene_pa else "Sin masas activas"),
+        "E" not in usados and (puede_plegar_masa or puede_recuperar_vitalidad),
+        motivo_e,
     )
     agregar(
         "F",
