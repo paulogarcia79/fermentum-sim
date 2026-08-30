@@ -48,8 +48,12 @@ removed. Pure refactors and server/web plumbing do not count.
 This is written down because it has already gone wrong twice, silently. `3ff8fc9` (Variedad de
 Recetas) added a **7th scoring term and a new first tiebreaker** and never touched the rulebooks,
 so for two commits the reglamento told players there were 6 terms and that Vitalidad broke ties.
-The Ingresos de Panadería commit repeated it. Nothing caught either one — no test reads these
-files, and `context/*.md` being correct makes the gap invisible from the code side.
+The Ingresos de Panadería commit repeated it. Nothing caught either one, because no test read
+these files and `context/*.md` being correct made the gap invisible from the code side.
+
+**`tests/test_reglamento_al_dia.py` now enforces the mechanical half of this** — every number in
+the rulebooks that can be derived from the code, plus `.md`-vs-`.html` agreement. It cannot judge
+prose, so the reasoning, the examples and the cross-references are still on you.
 
 Things that are easy to miss when doing this, learned the hard way:
 - **Prose, not just tables.** Old rules survive in sentences long after the numbers are fixed —
@@ -126,6 +130,27 @@ any frontend" proof, kept as a permanent regression test rather than a throwaway
 `tests/test_disponibilidad.py` covers `disponibilidad.acciones_disponibles` — Day-1 defaults,
 0-PA disabling costed actions but not free ones, emergency-protocol availability by resource, and
 already-used actions reporting disabled.
+
+`tests/test_reglamento_al_dia.py` is the guardrail for the rule below ("Every rules change MUST
+update the rulebooks"): it parses `RULEBOOK.md` and `RULEBOOK.html` into normalized tables and
+diffs them against the code — all 12 recipes cell by cell (grade, acquisition cost, water,
+**all four zones**, points, coins), the 8 Patrocinio cards including the Datos column, the three
+price tables, the climate/trend/recipe decks, technology costs, the rent table, the count and
+order of scoring terms vs `Player.desglose_maestria`, and scalars like `VITALIDAD_INICIAL` and
+`HARINA_RECULTIVO_MANUAL`. It also asserts the two files **agree with each other** (they are
+hand-maintained in parallel, so drift between them is as likely as drift from the code) and that
+the HTML is well-formed with every table's `<th>` count matching its `<td>` counts.
+Three deliberate design points: it extracts whole *tables* rather than loose rows, because grade
+names like "Básica" head rows in four different tables and matching on first-cell alone is
+ambiguous by construction; it tolerates connector words in climate-card names (the code says
+"Fallo Refrigeración", the rulebooks "Fallo **de** Refrigeración") because that is a display
+string, not a rule, and this suite checks rules; and `FRASES_PROHIBIDAS` is a short curated list
+of wordings for rules that **no longer exist**, not a style review — prose is where a superseded
+rule survives after the tables are fixed, which is exactly how this drifted twice. When a
+deliberate rules change makes it fail, the fix is to update all four surfaces, never to loosen the
+assertion. Verified by mutation: changing a payout in `models.py`, updating only the `.md`, adding
+a scoring term, changing Acción H's cost, and adding an HTML column header without the matching
+cells are each caught.
 
 `tests/test_sse.py` covers the SSE push mechanism (Milestone 5, `GET /games/{id}/events/stream`):
 error paths (missing token, room not found, game not started) via a plain non-streaming `.get()`,

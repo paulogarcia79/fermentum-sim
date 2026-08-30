@@ -41,6 +41,12 @@ un séptimo término de puntuación y un criterio de desempate nuevo sin tocar e
 «Ingresos de Panadería» repitió el olvido. Ningún test lee esos ficheros, y que `context/*.md` esté
 al día hace que el hueco sea invisible desde el código.
 
+`tests/test_reglamento_al_dia.py` verifica automaticamente la mitad mecanica: todo numero de los
+reglamentos que se pueda derivar del codigo, y que RULEBOOK.md y RULEBOOK.html coincidan entre si.
+No puede juzgar la prosa, asi que el razonamiento y las referencias cruzadas siguen siendo
+responsabilidad de quien edita. Si ese test falla tras un cambio de reglas deliberado, la
+respuesta es actualizar los cuatro sitios, nunca relajar la asercion.
+
 Al hacerlo, no basta con las tablas: las reglas viejas sobreviven en la prosa (las fuentes de una
 divisa, el resumen de fases, una referencia cruzada a una acción que ya no hace eso). Y conviene
 **verificar en vez de mirar**: comparar celda a celda las 12 filas de recetas contra
