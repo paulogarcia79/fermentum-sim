@@ -14,13 +14,16 @@ import PistaPrecioHarina from '../PistaPrecioHarina.vue'
 import TablaPrecioAgua from '../TablaPrecioAgua.vue'
 import {
   AGUA_TOKENS_POR_LOTE,
+  CANTIDAD_BOLSA_PCT,
+  CANTIDAD_MEDIA_BOLSA_PCT,
   LOTES_AGUA_VALIDOS,
   PRECIO_AGUA,
   precioCompraHarina,
   precioVentaHarina,
+  type CantidadHarina,
   type LoteAguaPct,
 } from '../../data/preciosHarina'
-import { fmtAgua, fmtHarina, fmtTokensHarina } from '../../data/unidades'
+import { fmtAgua, fmtHarina } from '../../data/unidades'
 import type { TipoHarina } from '../../types'
 
 const emit = defineEmits<{ cerrar: [] }>()
@@ -31,11 +34,50 @@ const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
 const mercado = computed(() => store.estado!.market)
 const temperatura = computed(() => store.estado!.environment.temperatura_actual)
 
-const operacionHarina = reactive<Record<TipoHarina, '' | 'comprar' | 'vender'>>({
+type IdOperacion = 'comprar' | 'comprar_media' | 'vender' | 'vender_media'
+
+interface OperacionHarina {
+  id: IdOperacion
+  etiqueta: string
+  direccion: 'comprar' | 'vender'
+  cantidad: CantidadHarina
+}
+
+// Espejo de actions.py:OPERACIONES_HARINA, y por el mismo motivo que alli: la
+// cantidad de cada operacion se escribe UNA vez y la leen el precio, el
+// disabled del <option> y el saldo proyectado. Las cuatro opciones se muestran
+// siempre juntas a proposito -- asi se ve de un vistazo que media bolsa nunca
+// sale a mejor precio por token que una entera.
+const OPERACIONES_HARINA: OperacionHarina[] = [
+  { id: 'comprar', etiqueta: 'Comprar bolsa', direccion: 'comprar', cantidad: CANTIDAD_BOLSA_PCT },
+  {
+    id: 'comprar_media',
+    etiqueta: 'Comprar media',
+    direccion: 'comprar',
+    cantidad: CANTIDAD_MEDIA_BOLSA_PCT,
+  },
+  { id: 'vender', etiqueta: 'Vender bolsa', direccion: 'vender', cantidad: CANTIDAD_BOLSA_PCT },
+  {
+    id: 'vender_media',
+    etiqueta: 'Vender media',
+    direccion: 'vender',
+    cantidad: CANTIDAD_MEDIA_BOLSA_PCT,
+  },
+]
+
+const operacionHarina = reactive<Record<TipoHarina, '' | IdOperacion>>({
   Blanca: '',
   Integral: '',
   Centeno: '',
 })
+
+/** Monedas que aporta (+) o cuesta (−) una operacion en la posicion actual. */
+function deltaMonedas(tipo: TipoHarina, op: OperacionHarina): number {
+  const posicion = mercado.value.posiciones_harina[tipo]
+  return op.direccion === 'comprar'
+    ? -precioCompraHarina(tipo, posicion, op.cantidad)
+    : precioVentaHarina(tipo, posicion, op.cantidad)
+}
 const operacionAgua = ref<'' | 'comprar'>('')
 const loteAgua = ref<LoteAguaPct>(10)
 
@@ -64,10 +106,8 @@ const transacciones = computed(() => {
 const saldoProyectado = computed(() => {
   let monedas = yo.value.monedas
   for (const tipo of TIPOS_HARINA) {
-    const op = operacionHarina[tipo]
-    const posicion = mercado.value.posiciones_harina[tipo]
-    if (op === 'comprar') monedas -= precioCompraHarina(tipo, posicion)
-    else if (op === 'vender') monedas += precioVentaHarina(tipo, posicion)
+    const elegida = OPERACIONES_HARINA.find((o) => o.id === operacionHarina[tipo])
+    if (elegida) monedas += deltaMonedas(tipo, elegida)
   }
   if (operacionAgua.value === 'comprar') monedas -= precioAgua(loteAgua.value)
   return monedas
@@ -96,13 +136,15 @@ async function confirmar() {
       <p class="info-linea">En reserva: {{ fmtHarina(yo.reserva_harina[tipo]) }}</p>
       <select v-model="operacionHarina[tipo]">
         <option value="">— sin transacción —</option>
-        <option value="comprar">
-          Comprar +{{ fmtTokensHarina(100) }} (100%) — {{ precioCompraHarina(tipo, mercado.posiciones_harina[tipo]) }}
-          Monedas
-        </option>
-        <option value="vender" :disabled="yo.reserva_harina[tipo] < 100">
-          Vender −{{ fmtTokensHarina(100) }} (100%) — {{ precioVentaHarina(tipo, mercado.posiciones_harina[tipo]) }}
-          Monedas
+        <option
+          v-for="op in OPERACIONES_HARINA"
+          :key="op.id"
+          :value="op.id"
+          :disabled="op.direccion === 'vender' && yo.reserva_harina[tipo] < op.cantidad"
+        >
+          {{ op.etiqueta }}
+          {{ op.direccion === 'comprar' ? '+' : '−' }}{{ fmtHarina(op.cantidad) }} —
+          {{ deltaMonedas(tipo, op) >= 0 ? '+' : '−' }}{{ Math.abs(deltaMonedas(tipo, op)) }} Monedas
         </option>
       </select>
     </div>

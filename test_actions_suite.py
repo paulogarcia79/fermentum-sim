@@ -157,6 +157,40 @@ agua_antes = p1.reserva_agua
 manager.accion_C_visitar_mercado(p1, transacciones=[{"tipo_recurso": "agua", "operacion": "comprar", "lote_pct": 10}])
 check("C comprar agua: tokens recibidos", lambda: None if p1.reserva_agua > agua_antes else (_ for _ in ()).throw(AssertionError()))
 
+# --- Media bolsa (5 tokens / 50%): compra al alza, venta a la baja ---
+p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
+p1.monedas = 50
+p1.reserva_harina["Integral"] = 100
+market.posiciones_harina[TipoHarina.INTEGRAL] = 2  # compra 5 / venta 3
+monedas_antes3 = p1.monedas
+manager.accion_C_visitar_mercado(p1, transacciones=[{"tipo_recurso": "Integral", "operacion": "comprar_media"}])
+check("C comprar_media: +50 Integral", lambda: None if p1.reserva_harina["Integral"] == 150 else (_ for _ in ()).throw(AssertionError(p1.reserva_harina["Integral"])))
+check("C comprar_media: paga ceil(5/2)=3", lambda: None if p1.monedas == monedas_antes3 - 3 else (_ for _ in ()).throw(AssertionError(p1.monedas)))
+check("C comprar_media: visor +1 igual que bolsa entera", lambda: None if market.posiciones_harina[TipoHarina.INTEGRAL] == 3 else (_ for _ in ()).throw(AssertionError()))
+
+p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
+market.posiciones_harina[TipoHarina.INTEGRAL] = 2  # venta 3
+monedas_antes4 = p1.monedas
+manager.accion_C_visitar_mercado(p1, transacciones=[{"tipo_recurso": "Integral", "operacion": "vender_media"}])
+check("C vender_media: -50 Integral", lambda: None if p1.reserva_harina["Integral"] == 100 else (_ for _ in ()).throw(AssertionError(p1.reserva_harina["Integral"])))
+check("C vender_media: cobra floor(3/2)=1", lambda: None if p1.monedas == monedas_antes4 + 1 else (_ for _ in ()).throw(AssertionError(p1.monedas)))
+check("C vender_media: visor -1", lambda: None if market.posiciones_harina[TipoHarina.INTEGRAL] == 1 else (_ for _ in ()).throw(AssertionError()))
+
+p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
+xraises(InvalidActionError, "C operacion desconocida", lambda: manager.accion_C_visitar_mercado(
+    p1, transacciones=[{"tipo_recurso": "Blanca", "operacion": "comprar_cuarto"}]
+))
+
+p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
+p1.reserva_harina["Centeno"] = 0
+xraises(MissingResourceError, "C vender_media sin harina", lambda: manager.accion_C_visitar_mercado(
+    p1, transacciones=[{"tipo_recurso": "Centeno", "operacion": "vender_media"}]
+))
+
 p1.puntos_accion = 2
 p1.acciones_pa_usadas_hoy = []
 xraises(InvalidActionError, "C exclusividad: mismo recurso dos veces", lambda: manager.accion_C_visitar_mercado(

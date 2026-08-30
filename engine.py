@@ -31,6 +31,7 @@ from events import EventoTipo, EventSink, GameEvent
 from exceptions import (
     GameAlreadyOverError,
     InsufficientPlayersError,
+    InvalidActionError,
     MarketSlotEmptyError,
     PhaseViolationError,
 )
@@ -100,6 +101,12 @@ PRECIOS_HARINA: Dict[TipoHarina, Dict[str, Tuple[int, int, int, int, int]]] = {
 Tabla de precios (en Monedas) de la Bolsa de Harinas, indexada por posición del
 visor (1-5, GDD v0.0.2 Módulo III §C). ``precios["compra"][posicion - 1]``.
 """
+
+CANTIDAD_BOLSA_PCT: int = 100
+"""Bolsa entera de harina: 10 tokens del 10% (la unidad en la que opera el mercado)."""
+
+CANTIDAD_MEDIA_BOLSA_PCT: int = 50
+"""Media bolsa: 5 tokens. Compra redondeando hacia arriba, venta hacia abajo."""
 
 PRECIO_AGUA: Dict[int, Dict[int, int]] = {
     30: {10: 3, 30: 6, 60: 10, 100: 14},
@@ -321,15 +328,50 @@ class Market:
     # Bolsa de Harinas (Acción C: Visitar el Mercado)
     # ------------------------------------------------------------------
 
-    def precio_compra_harina(self, tipo: TipoHarina) -> int:
-        """Costo en Monedas de comprar 1 token (100%) de ``tipo`` en su posición actual."""
-        posicion = self.posiciones_harina[tipo]
-        return PRECIOS_HARINA[tipo]["compra"][posicion - 1]
+    @staticmethod
+    def _validar_cantidad(cantidad_pct: int) -> None:
+        if cantidad_pct not in (CANTIDAD_BOLSA_PCT, CANTIDAD_MEDIA_BOLSA_PCT):
+            raise InvalidActionError(
+                f"cantidad_pct inválida: {cantidad_pct!r}. El mercado opera en "
+                f"bolsa entera ({CANTIDAD_BOLSA_PCT}%) o media "
+                f"({CANTIDAD_MEDIA_BOLSA_PCT}%)."
+            )
 
-    def precio_venta_harina(self, tipo: TipoHarina) -> int:
-        """Monedas recibidas al vender 1 token (100%) de ``tipo`` en su posición actual."""
+    def precio_compra_harina(
+        self, tipo: TipoHarina, cantidad_pct: int = CANTIDAD_BOLSA_PCT
+    ) -> int:
+        """
+        Costo en Monedas de comprar una bolsa de ``tipo`` en su posición actual.
+
+        Media bolsa cuesta la MITAD REDONDEADA HACIA ARRIBA del precio visible
+        (GDD v0.0.2 Módulo III §C). El redondeo no es un detalle: es lo que
+        impide que media bolsa sea un arbitraje — con precios impares sale peor
+        por token que la bolsa entera, así que es liquidez, no descuento.
+        """
+        self._validar_cantidad(cantidad_pct)
         posicion = self.posiciones_harina[tipo]
-        return PRECIOS_HARINA[tipo]["venta"][posicion - 1]
+        entero = PRECIOS_HARINA[tipo]["compra"][posicion - 1]
+        if cantidad_pct == CANTIDAD_BOLSA_PCT:
+            return entero
+        return (entero + 1) // 2
+
+    def precio_venta_harina(
+        self, tipo: TipoHarina, cantidad_pct: int = CANTIDAD_BOLSA_PCT
+    ) -> int:
+        """
+        Monedas recibidas al vender una bolsa de ``tipo`` en su posición actual.
+
+        Media bolsa cobra la mitad REDONDEADA HACIA ABAJO (misma razón que en
+        la compra, en el otro sentido). Puede dar 0 Monedas —Blanca en posición
+        1— y eso es legal: el jugador entrega media bolsa a cambio de mover el
+        visor hacia abajo, y lo ve antes de confirmar.
+        """
+        self._validar_cantidad(cantidad_pct)
+        posicion = self.posiciones_harina[tipo]
+        entero = PRECIOS_HARINA[tipo]["venta"][posicion - 1]
+        if cantidad_pct == CANTIDAD_BOLSA_PCT:
+            return entero
+        return entero // 2
 
     def mover_visor_harina(self, tipo: TipoHarina, hacia_caro: bool) -> None:
         """

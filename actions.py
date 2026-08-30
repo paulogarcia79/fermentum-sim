@@ -34,14 +34,19 @@ Patrón de uso::
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     # Evita importación circular en tiempo de ejecución.
     # GameEngine solo se usa como anotación de tipo en __init__.
     from engine import GameEngine
 
-from engine import AGUA_TOKENS_POR_LOTE, PRECIO_AGUA
+from engine import (
+    AGUA_TOKENS_POR_LOTE,
+    CANTIDAD_BOLSA_PCT,
+    CANTIDAD_MEDIA_BOLSA_PCT,
+    PRECIO_AGUA,
+)
 from exceptions import (
     CarpetaFullError,
     EspacioAccionYaUsadoError,
@@ -82,6 +87,19 @@ TIPOS_HARINA_VALIDOS: Dict[str, TipoHarina] = {t.value: t for t in TipoHarina}
 
 LOTES_AGUA_VALIDOS = (10, 30, 60, 100)
 """Tamaños de lote válidos (%) para Comprar Lote de Agua en Visitar el Mercado."""
+
+OPERACIONES_HARINA: Dict[str, Tuple[str, int]] = {
+    "comprar": ("comprar", CANTIDAD_BOLSA_PCT),
+    "comprar_media": ("comprar", CANTIDAD_MEDIA_BOLSA_PCT),
+    "vender": ("vender", CANTIDAD_BOLSA_PCT),
+    "vender_media": ("vender", CANTIDAD_MEDIA_BOLSA_PCT),
+}
+"""
+Operación del wire → (dirección, cantidad en %). Existe como tabla única porque
+``accion_C_visitar_mercado`` recorre las transacciones TRES veces (validar,
+simular saldos, aplicar): con la cantidad escrita a mano en cada bucle, añadir
+un tamaño de bolsa sería una invitación a que los tres dejasen de coincidir.
+"""
 
 
 # ===========================================================================
@@ -481,8 +499,10 @@ class ActionManager:
 
         Cada elemento de ``transacciones`` es un dict:
           · ``tipo_recurso``: ``"Blanca" | "Integral" | "Centeno" | "agua"``.
-          · ``operacion``: ``"comprar" | "vender"``. El agua solo admite
-            ``"comprar"`` (no existe venta de agua).
+          · ``operacion``: para harina, una de ``OPERACIONES_HARINA``
+            (``"comprar" | "comprar_media" | "vender" | "vender_media"``).
+            El agua solo admite ``"comprar"`` (no existe venta de agua, y
+            tampoco medio lote: ya tiene cuatro tamaños propios).
           · ``lote_pct``: requerido solo para agua, uno de
             ``LOTES_AGUA_VALIDOS`` (10, 30, 60, 100).
 
@@ -493,11 +513,18 @@ class ActionManager:
 
         Comprar harina: paga el precio de Compra visible (según la posición
         actual del visor de ese tipo en ``Market.posiciones_harina``), recibe
-        1 token (100%) de esa harina, y el visor se mueve 1 casilla hacia el
-        extremo caro (tope en posición 5).
-        Vender harina: cobra el precio de Venta visible, entrega 1 token
-        (100%) de esa harina, y el visor se mueve 1 casilla hacia el extremo
-        barato (tope en posición 1).
+        una bolsa entera —10 tokens, 100%— de esa harina, y el visor se mueve
+        1 casilla hacia el extremo caro (tope en posición 5).
+        Vender harina: cobra el precio de Venta visible, entrega una bolsa
+        entera, y el visor se mueve 1 casilla hacia el extremo barato (tope en
+        posición 1).
+        Media bolsa (``comprar_media`` / ``vender_media``): 5 tokens (50%) al
+        precio de ``Market.precio_compra_harina``/``precio_venta_harina`` con
+        ``cantidad_pct=50``, es decir la mitad redondeada hacia ARRIBA al
+        comprar y hacia ABAJO al vender. **El visor se mueve 1 casilla igual
+        que con una bolsa entera**: una transacción es una señal de mercado,
+        sin importar su tamaño. Una venta que redondea a 0 Monedas (Blanca en
+        posición 1) es legal.
         Comprar lote de agua: paga el costo de ``PRECIO_AGUA`` según la
         temperatura actual y el tamaño de lote elegido, recibe los tokens de
         agua correspondientes (``AGUA_TOKENS_POR_LOTE``).
@@ -556,10 +583,10 @@ class ActionManager:
                         f"Debe ser uno de {LOTES_AGUA_VALIDOS}."
                     )
             else:
-                if operacion not in ("comprar", "vender"):
+                if operacion not in OPERACIONES_HARINA:
                     raise InvalidActionError(
-                        f"operacion inválida: {operacion!r}. "
-                        "Debe ser 'comprar' o 'vender'."
+                        f"operacion inválida: {operacion!r}. Debe ser una de "
+                        f"{sorted(OPERACIONES_HARINA)}."
                     )
 
         # --- Simulación de saldos (sin aplicar todavía) ---
@@ -576,13 +603,14 @@ class ActionManager:
                 lote_pct = t["lote_pct"]
                 costo = PRECIO_AGUA[temp_actual][lote_pct]
                 monedas_sim -= costo
-            elif operacion == "comprar":
+            else:
                 tipo = TIPOS_HARINA_VALIDOS[tipo_recurso]
-                monedas_sim -= market.precio_compra_harina(tipo)
-            else:  # vender
-                tipo = TIPOS_HARINA_VALIDOS[tipo_recurso]
-                harina_sim[tipo_recurso] -= 100
-                monedas_sim += market.precio_venta_harina(tipo)
+                direccion, cantidad = OPERACIONES_HARINA[operacion]
+                if direccion == "comprar":
+                    monedas_sim -= market.precio_compra_harina(tipo, cantidad)
+                else:
+                    harina_sim[tipo_recurso] -= cantidad
+                    monedas_sim += market.precio_venta_harina(tipo, cantidad)
 
             if monedas_sim < 0:
                 raise MissingResourceError(
@@ -607,16 +635,18 @@ class ActionManager:
                 costo = PRECIO_AGUA[temp_actual][lote_pct]
                 player.monedas -= costo
                 player.reserva_agua += AGUA_TOKENS_POR_LOTE[lote_pct]
-            elif operacion == "comprar":
+            else:
                 tipo = TIPOS_HARINA_VALIDOS[tipo_recurso]
-                player.monedas -= market.precio_compra_harina(tipo)
-                player.reserva_harina[tipo_recurso] += 100
-                market.mover_visor_harina(tipo, hacia_caro=True)
-            else:  # vender
-                tipo = TIPOS_HARINA_VALIDOS[tipo_recurso]
-                player.monedas += market.precio_venta_harina(tipo)
-                player.reserva_harina[tipo_recurso] -= 100
-                market.mover_visor_harina(tipo, hacia_caro=False)
+                direccion, cantidad = OPERACIONES_HARINA[operacion]
+                comprando = direccion == "comprar"
+                if comprando:
+                    player.monedas -= market.precio_compra_harina(tipo, cantidad)
+                    player.reserva_harina[tipo_recurso] += cantidad
+                else:
+                    player.monedas += market.precio_venta_harina(tipo, cantidad)
+                    player.reserva_harina[tipo_recurso] -= cantidad
+                # El visor reacciona igual a media bolsa que a una entera.
+                market.mover_visor_harina(tipo, hacia_caro=comprando)
 
     def accion_D_implementar_mejora(
         self,

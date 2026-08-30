@@ -14,7 +14,7 @@ Los dos insumos físicos del juego se cuentan en **tokens**. Lo único que cambi
 
 | Insumo | 1 token equivale a | Unidad de compra habitual |
 |---|---|---|
-| **Harina** | **10%** | 1 bolsa = 100% = **10 tokens** |
+| **Harina** | **10%** | 1 bolsa = 100% = **10 tokens**; media bolsa = **5 (50%)** |
 | **Agua** | **5%** de hidratación | lote del 100% = **20 tokens** |
 
 **Notación canónica** en estos documentos y en la interfaz: **`N (P%)`** — primero el número de tokens, después su porcentaje. Ej.: `10 (100%)` de harina, `20 (100%)` de agua, `2 (10%)` de agua.

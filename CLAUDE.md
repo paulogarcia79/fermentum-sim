@@ -170,7 +170,18 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   3-track `Market.posiciones_harina` "Bolsa de Harinas" (moved by both player transactions and the
   daily Mercado de Tendencias — announced in Fase I, applied in Fase III, see below) plus
   temperature-priced water lots
-  (`engine.PRECIO_AGUA`); Acción F now pays out Monedas per zone on top of the existing
+  (`engine.PRECIO_AGUA`). The Bolsa trades in a whole bag (10 tokens, 100%) or **half a bag**
+  (5 tokens, 50%) — the four wire operations `comprar`/`comprar_media`/`vender`/`vender_media`,
+  mapped to (direction, quantity) by the single `actions.OPERACIONES_HARINA` table that all three
+  of the method's loops (validate / simulate balances / apply) read, so a new size can't make them
+  drift. A half bag costs ⌈compra/2⌉ and pays ⌊venta/2⌋ (derived inside
+  `Market.precio_compra_harina`/`precio_venta_harina`, never a second price table): rounding in
+  opposite directions is what stops the half bag being an arbitrage — at odd prices it is strictly
+  worse per token, so it is liquidity, not a discount. A sale that rounds to 0 Monedas (Blanca at
+  position 1) is legal, and the visor moves one space for a half bag exactly as for a whole one,
+  since a transaction is a market signal regardless of size. Tests:
+  `tests/test_mercado_media_bolsa.py` walks all 30 price cells.
+  Meanwhile Acción F now pays out Monedas per zone on top of the existing
   points/Datos logic (`Recipe.monedas_baja/optima/sobre`, flat `+2` Monedas Bono de Sabor); setup
   (`bootstrap.create_game`) now deals from an 8-card `PATROCINIO_CATALOG` instead of a hardcoded
   4-slot `player_index` table, driving both Día 1 turn order (`GameEngine`'s new `orden_inicial`

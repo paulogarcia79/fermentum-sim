@@ -74,7 +74,7 @@ un token:
 
 | Insumo | 1 token equivale a | Unidad de compra habitual |
 |:---|:---|:---|
-| **Harina** | **10%** | 1 bolsa = 100% = **10 tokens** |
+| **Harina** | **10%** | 1 bolsa = 100% = **10 tokens**; media bolsa = **5 (50%)** |
 | **Agua** | **5%** de hidratación | lote del 100% = **20 tokens** |
 
 En todo este reglamento las cantidades se escriben **`N (P%)`** — primero el número de tokens,
@@ -267,10 +267,17 @@ El Mercado de Insumos es donde se comercian los recursos del juego:
 
 - **Comprar Harina:** pagar el coste de Compra visible (en Monedas, según la posición actual del
   visor de ese tipo en la Bolsa de Harinas) y recibir **10 tokens — 10 (100%)**, una bolsa entera.
-  El visor se mueve 1 casilla hacia el extremo caro (tope en posición 5). El mercado solo opera en
-  bolsas enteras: no se pueden comprar ni vender tokens sueltos de harina.
+  El visor se mueve 1 casilla hacia el extremo caro (tope en posición 5).
 - **Vender Harina:** entregar **10 tokens — 10 (100%)** de esa harina y cobrar el valor de Venta
   visible en Monedas. El visor se mueve 1 casilla hacia el extremo barato (tope en posición 1).
+- **Media Bolsa:** tanto la compra como la venta admiten **media bolsa — 5 tokens, 5 (50%)**. El
+  precio es la mitad del visible, **redondeando hacia arriba al comprar y hacia abajo al vender**
+  (⌈Compra/2⌉ y ⌊Venta/2⌋), así que con precios impares media bolsa nunca sale a mejor precio por
+  token que una entera: es una facilidad de liquidez, no un descuento. Una venta que redondee a
+  **0 Monedas** (Blanca en la posición 1) es legal — se entrega la media bolsa a cambio de mover
+  el visor. **El visor se mueve 1 casilla igual que con una bolsa entera:** una transacción es una
+  señal de mercado, sin importar su tamaño. Por debajo de la media bolsa el mercado no opera: no
+  se compran ni venden tokens sueltos de harina.
 - **Comprar Lote de Agua:** pagar el coste en Monedas según la fila de temperatura actual y el
   lote elegido, y recibir el lote completo en tokens de agua (1 token = 5% de hidratación). Los
   cuatro lotes son **2 (10%)**, **6 (30%)**, **12 (60%)** y **20 (100%)**.
@@ -279,13 +286,14 @@ El Mercado de Insumos es donde se comercian los recursos del juego:
 **una por tipo de recurso** — se puede comprar Blanca, vender Centeno y comprar un lote de agua en
 la misma visita, pero no comprar y vender la misma harina, ni comprar el mismo tipo dos veces.
 
-**Bolsa de Harinas** (Monedas según la posición del visor, 1 a 5):
+**Bolsa de Harinas** (Monedas según la posición del visor, 1 a 5). Entre paréntesis, el precio de
+la **media bolsa**, que se deriva del entero con ⌈Compra/2⌉ y ⌊Venta/2⌋:
 
 | Harina | Posición 1 | Posición 2 | Posición 3 | Posición 4 | Posición 5 |
 |:---|:---:|:---:|:---:|:---:|:---:|
-| Blanca — Compra / Venta | 2 / 1 | 3 / 2 | 4 / 3 | 5 / 4 | 6 / 5 |
-| Integral — Compra / Venta | 4 / 2 | 5 / 3 | 6 / 4 | 7 / 5 | 8 / 6 |
-| Centeno — Compra / Venta | 6 / 3 | 7 / 4 | 8 / 5 | 9 / 6 | 10 / 7 |
+| Blanca — Compra / Venta | 2 (1) / 1 (0) | 3 (2) / 2 (1) | 4 (2) / 3 (1) | 5 (3) / 4 (2) | 6 (3) / 5 (2) |
+| Integral — Compra / Venta | 4 (2) / 2 (1) | 5 (3) / 3 (1) | 6 (3) / 4 (2) | 7 (4) / 5 (2) | 8 (4) / 6 (3) |
+| Centeno — Compra / Venta | 6 (3) / 3 (1) | 7 (4) / 4 (2) | 8 (4) / 5 (2) | 9 (5) / 6 (3) | 10 (5) / 7 (3) |
 
 **Suministro Hídrico Global** (Monedas según temperatura y tamaño de lote):
 

@@ -27,10 +27,34 @@ export const PRECIO_AGUA: Record<number, Record<LoteAguaPct, number>> = {
 
 export const AGUA_TOKENS_POR_LOTE: Record<LoteAguaPct, number> = { 10: 2, 30: 6, 60: 12, 100: 20 }
 
-export function precioCompraHarina(tipo: TipoHarina, posicion: number): number {
-  return PRECIOS_HARINA[tipo].compra[posicion - 1]
+/** engine.py: CANTIDAD_BOLSA_PCT / CANTIDAD_MEDIA_BOLSA_PCT. */
+export const CANTIDAD_BOLSA_PCT = 100
+export const CANTIDAD_MEDIA_BOLSA_PCT = 50
+export type CantidadHarina = typeof CANTIDAD_BOLSA_PCT | typeof CANTIDAD_MEDIA_BOLSA_PCT
+
+/**
+ * Media bolsa cuesta la mitad REDONDEADA HACIA ARRIBA (engine.py,
+ * Market.precio_compra_harina). Es lo que impide que sea un arbitraje: con
+ * precios impares sale peor por token que la bolsa entera.
+ */
+export function precioCompraHarina(
+  tipo: TipoHarina,
+  posicion: number,
+  cantidad: CantidadHarina = CANTIDAD_BOLSA_PCT,
+): number {
+  const entero = PRECIOS_HARINA[tipo].compra[posicion - 1]
+  return cantidad === CANTIDAD_BOLSA_PCT ? entero : Math.ceil(entero / 2)
 }
 
-export function precioVentaHarina(tipo: TipoHarina, posicion: number): number {
-  return PRECIOS_HARINA[tipo].venta[posicion - 1]
+/**
+ * Media bolsa cobra la mitad REDONDEADA HACIA ABAJO. Puede dar 0 Monedas
+ * (Blanca en posicion 1) y eso es legal -- el servidor lo acepta.
+ */
+export function precioVentaHarina(
+  tipo: TipoHarina,
+  posicion: number,
+  cantidad: CantidadHarina = CANTIDAD_BOLSA_PCT,
+): number {
+  const entero = PRECIOS_HARINA[tipo].venta[posicion - 1]
+  return cantidad === CANTIDAD_BOLSA_PCT ? entero : Math.floor(entero / 2)
 }
