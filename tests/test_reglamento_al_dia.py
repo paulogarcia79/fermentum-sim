@@ -15,10 +15,17 @@ Que cubre y que NO:
     mazos, los costes de tecnologia, la renta y el numero de terminos de
     puntuacion. Y ademas que RULEBOOK.md y RULEBOOK.html digan LO MISMO entre si,
     que es el fallo tipico al mantenerlos a mano en paralelo.
-  · NO: la prosa. Un test no puede juzgar si un parrafo explica bien una regla.
-    Para eso esta la lista de `FRASES_PROHIBIDAS`, que solo comprueba que no
-    sobreviva la redaccion de una regla ya superada -- el fallo concreto que se
-    repitio, no una revision de estilo.
+  · NO: la prosa. Un test no puede juzgar si un parrafo explica bien una regla,
+    ni si una frase vieja sobrevivio contradiciendo a la nueva. Eso es revision
+    humana, y la obligacion vive en CLAUDE.md, no aqui.
+
+Hubo aqui una lista de `FRASES_PROHIBIDAS` (redacciones de reglas ya superadas que
+no debian sobrevivir en el texto) y se quito **tras medirla**: inyectando la misma
+contradiccion de dos formas, cazaba la frase exacta que alguien habia enumerado y
+dejaba pasar la variante equivalente. Era el retrato de cuatro migraciones pasadas,
+sin valor predictivo sobre la siguiente, que nadie iba a podar y que solo podia
+crecer. Un test que comprueba reglas no debe acumular historia; si vuelve a
+proponerse algo asi, que sea con la medicion delante.
 
 Si este test falla tras un cambio de reglas deliberado, la respuesta NO es relajar
 la asercion: es actualizar los cuatro sitios (codigo, context/*.md, RULEBOOK.md y
@@ -367,33 +374,25 @@ def test_renta_de_panaderia(tablas, doc) -> None:
 # Mazos y tecnologias
 # ===========================================================================
 
-def _clave_clima(nombre: str) -> str:
-    """Nombre de carta de clima comparable entre el codigo y el reglamento.
-
-    Se ignoran los conectores («de», «del»): el codigo llama a la carta «Fallo
-    Refrigeración» y el reglamento «Fallo de Refrigeración». Es una diferencia de
-    redaccion en un nombre de pantalla, no una regla, y este test comprueba
-    REGLAS -- exigir la cadena exacta convertiria una mejora de estilo en un
-    fallo de suite. Lo que si se exige es que esten las 9 cartas y que las copias
-    cuadren, que es lo que afecta a la partida.
-    """
-    return re.sub(r"\b(de|del)\b", " ", nombre.lower()).replace(" ", "")
-
-
 @AMBOS
 def test_mazo_de_clima(tablas, doc) -> None:
+    """Nombre EXACTO y numero de copias de las 9 cartas.
+
+    El nombre se compara literal a proposito. Hubo un tiempo en que el codigo
+    decia «Fallo Refrigeración» y el reglamento «Fallo de Refrigeración», y este
+    test toleraba los conectores para no fallar por eso; tolerar la diferencia
+    era dejar viva una divergencia arbitraria entre las dos caras del mismo
+    juego. Se unificaron los nombres y la tolerancia se fue con ellos.
+    """
     t = _tabla(tablas, doc, primera="Evento")
-    en_doc = {_clave_clima(f[0]): f for f in t.filas}
+    en_doc = {f[0]: f for f in t.filas}
+    assert en_doc.keys() == {c.nombre for c in CLIMATE_CATALOG.values()}, (
+        f"{doc}: las cartas de clima listadas no son las del catalogo"
+    )
     for carta in CLIMATE_CATALOG.values():
-        clave = _clave_clima(carta.nombre)
-        assert clave in en_doc, f"{doc}: falta la carta de clima {carta.nombre!r}"
-        assert en_doc[clave][1] == str(carta.cantidad), (
+        assert en_doc[carta.nombre][1] == str(carta.cantidad), (
             f"{carta.nombre}: copias en el mazo"
         )
-    assert len(en_doc) == len(CLIMATE_CATALOG), (
-        f"{doc} lista {len(en_doc)} cartas de clima y el catalogo tiene "
-        f"{len(CLIMATE_CATALOG)}"
-    )
 
 
 @AMBOS
@@ -493,30 +492,6 @@ def test_datos_del_simposio(docs, doc) -> None:
         assert re.search(r"%s.{0,60}?%d" % (grado.value, datos), bloque, re.S), (
             f"{doc}: el Simposio no declara {datos} Datos para {grado.value}"
         )
-
-
-# ===========================================================================
-# Redacciones superadas
-# ===========================================================================
-
-# Solo entran aqui frases que describian una regla que YA NO EXISTE. No es una
-# revision de estilo: cada entrada corresponde a una regla concreta cuya
-# redaccion vieja sobrevivio en la prosa despues de arreglar las tablas -- el
-# fallo que se repitio dos veces.
-FRASES_PROHIBIDAS = [
-    ("+1 Dato de Investigación inmediato", "el Simposio paga por grado, no +1 fijo"),
-    ("Simposio Técnico</strong> la descarta", "ya no se puede abandonar una masa"),
-    ("**Simposio Técnico** la descarta", "ya no se puede abandonar una masa"),
-    ("Vitalidad y Acidez inician en", "la Vitalidad ya no arranca igual que la Acidez"),
-]
-
-
-@AMBOS
-def test_no_sobrevive_la_redaccion_de_reglas_superadas(docs, doc) -> None:
-    encontradas = [(f, m) for f, m in FRASES_PROHIBIDAS if f in docs[doc]]
-    assert not encontradas, (
-        f"{doc} conserva la redaccion de reglas ya superadas: {encontradas}"
-    )
 
 
 # ===========================================================================

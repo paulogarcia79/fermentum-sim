@@ -140,17 +140,23 @@ order of scoring terms vs `Player.desglose_maestria`, and scalars like `VITALIDA
 `HARINA_RECULTIVO_MANUAL`. It also asserts the two files **agree with each other** (they are
 hand-maintained in parallel, so drift between them is as likely as drift from the code) and that
 the HTML is well-formed with every table's `<th>` count matching its `<td>` counts.
-Three deliberate design points: it extracts whole *tables* rather than loose rows, because grade
+Two deliberate design points. It extracts whole *tables* rather than loose rows, because grade
 names like "Básica" head rows in four different tables and matching on first-cell alone is
-ambiguous by construction; it tolerates connector words in climate-card names (the code says
-"Fallo Refrigeración", the rulebooks "Fallo **de** Refrigeración") because that is a display
-string, not a rule, and this suite checks rules; and `FRASES_PROHIBIDAS` is a short curated list
-of wordings for rules that **no longer exist**, not a style review — prose is where a superseded
-rule survives after the tables are fixed, which is exactly how this drifted twice. When a
-deliberate rules change makes it fail, the fix is to update all four surfaces, never to loosen the
-assertion. Verified by mutation: changing a payout in `models.py`, updating only the `.md`, adding
-a scoring term, changing Acción H's cost, and adding an HTML column header without the matching
-cells are each caught.
+ambiguous by construction. And it compares every name **exactly**, with no tolerances: an earlier
+version forgave connector words because the code said "Fallo Refrigeración" while the rulebooks
+said "Fallo **de** Refrigeración", but a tolerance in the test is just a divergence nobody has to
+fix — the names were unified instead (the rulebooks were right; the code's was the ungrammatical
+one) and the tolerance went with them. **Prose is deliberately not checked.** There was briefly a
+`FRASES_PROHIBIDAS` list of superseded wordings; it was removed *after measuring it* — injecting
+the same contradiction two ways, it caught the exact sentence someone had enumerated and let the
+equivalent rephrasing through. It was a portrait of four past migrations with no predictive value
+for the next one, that nobody would prune and that could only grow. A rules test should not
+accumulate history; if something like it is proposed again, bring the measurement. Keeping the
+document free of self-contradiction is a human review, which is what the rule below is for.
+When a deliberate rules change makes this suite fail, the fix is to update all four surfaces,
+never to loosen the assertion. Verified by mutation: changing a payout in `models.py`, updating
+only the `.md`, adding a scoring term, changing Acción H's cost, diverging a climate-card name,
+and adding an HTML column header without the matching cells are each caught.
 
 `tests/test_sse.py` covers the SSE push mechanism (Milestone 5, `GET /games/{id}/events/stream`):
 error paths (missing token, room not found, game not started) via a plain non-streaming `.get()`,

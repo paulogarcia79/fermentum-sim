@@ -1549,7 +1549,7 @@ _CLIMATE_CATALOG_DATA: Dict[str, ClimateCard] = {
     ),
     "fallo_refrigeracion": ClimateCard(
         id="fallo_refrigeracion",
-        nombre="Fallo Refrigeración",
+        nombre="Fallo de Refrigeración",
         cantidad=4,
         modificador_termico=5,
         efecto_biologico=EfectoBiologico.NINGUNO,
@@ -1573,7 +1573,7 @@ _CLIMATE_CATALOG_DATA: Dict[str, ClimateCard] = {
     ),
     "fallo_calefaccion": ClimateCard(
         id="fallo_calefaccion",
-        nombre="Fallo Calefacción",
+        nombre="Fallo de Calefacción",
         cantidad=2,
         modificador_termico=-10,
         efecto_biologico=EfectoBiologico.NINGUNO,

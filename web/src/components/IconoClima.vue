@@ -16,7 +16,7 @@ defineProps<{ id: string }>()
       <path d="M18 17 L16 12 L20 12 Z" fill="none" stroke="#8a9a8a" stroke-width="1.2" stroke-linejoin="round" />
     </g>
 
-    <!-- Fallo Refrigeracion: sol pequeño (calor leve) -->
+    <!-- Fallo de Refrigeracion: sol pequeño (calor leve) -->
     <g v-else-if="id === 'fallo_refrigeracion'">
       <circle cx="12" cy="12" r="4.2" fill="#e6a94f" stroke="#a9752f" stroke-width="0.6" />
       <path
@@ -57,7 +57,7 @@ defineProps<{ id: string }>()
       <path d="M3 19 H10" fill="none" stroke="#7fa8c9" stroke-width="1.4" stroke-linecap="round" />
     </g>
 
-    <!-- Fallo Calefaccion: copo de nieve -->
+    <!-- Fallo de Calefaccion: copo de nieve -->
     <g v-else-if="id === 'fallo_calefaccion'">
       <path
         d="M12 2.5 V21.5 M4 7 L20 17 M20 7 L4 17"

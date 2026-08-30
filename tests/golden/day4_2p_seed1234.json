@@ -341,7 +341,7 @@
       },
       {
         "id": "fallo_refrigeracion",
-        "nombre": "Fallo Refrigeración",
+        "nombre": "Fallo de Refrigeración",
         "cantidad": 4,
         "modificador_termico": 5,
         "efecto_biologico": "ninguno",
@@ -373,7 +373,7 @@
       },
       {
         "id": "fallo_refrigeracion",
-        "nombre": "Fallo Refrigeración",
+        "nombre": "Fallo de Refrigeración",
         "cantidad": 4,
         "modificador_termico": 5,
         "efecto_biologico": "ninguno",
@@ -397,7 +397,7 @@
       },
       {
         "id": "fallo_refrigeracion",
-        "nombre": "Fallo Refrigeración",
+        "nombre": "Fallo de Refrigeración",
         "cantidad": 4,
         "modificador_termico": 5,
         "efecto_biologico": "ninguno",
@@ -445,7 +445,7 @@
       },
       {
         "id": "fallo_refrigeracion",
-        "nombre": "Fallo Refrigeración",
+        "nombre": "Fallo de Refrigeración",
         "cantidad": 4,
         "modificador_termico": 5,
         "efecto_biologico": "ninguno",
@@ -469,7 +469,7 @@
       },
       {
         "id": "fallo_calefaccion",
-        "nombre": "Fallo Calefacción",
+        "nombre": "Fallo de Calefacción",
         "cantidad": 2,
         "modificador_termico": -10,
         "efecto_biologico": "ninguno",
@@ -535,7 +535,7 @@
     "descarte_clima": [
       {
         "id": "fallo_calefaccion",
-        "nombre": "Fallo Calefacción",
+        "nombre": "Fallo de Calefacción",
         "cantidad": 2,
         "modificador_termico": -10,
         "efecto_biologico": "ninguno",
