@@ -259,131 +259,142 @@ async function pasarDeVerdad() {
 </template>
 
 <style scoped>
-/* Tres zonas de tablero, una por familia de acciones (ver GRUPOS_ACCION):
-   Principales y Gratuitas en paralelo -- 2fr/1fr porque son 7 espacios contra
-   3 -- y Emergencia a lo ancho debajo. Se apilan bajo 800px, el mismo
-   breakpoint que usa .columnas en GameView.vue. */
+/* La barra vive en el borde inferior de la mesa (region .region-acciones de
+   GameView.vue): las tres familias de espacios en fila -- Principales,
+   Gratuitas y Protocolos de Emergencia (ver GRUPOS_ACCION) -- y los controles
+   de turno al extremo derecho, siempre en el mismo sitio.
+
+   Ojo con el error facil: la insignia de Emergencia dice 1 PA, no 0 PA. H e I
+   son reactivas por DISPONIBILIDAD (necesitan contaminacion activa), no por
+   costo: cobran su PA y terminan el turno igual que las principales. */
+.barra-acciones {
+  display: flex;
+  align-items: stretch;
+  gap: var(--e2);
+}
+
 .zonas {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--e2);
+  min-width: 0;
 }
 
-@media (max-width: 800px) {
-  .zonas {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* Cada zona tiñe su cabecera y el borde superior de sus espacios con
-   --acento-zona; sin overflow: hidden, o recortaría los tooltips de los
-   espacios (que se posicionan por encima del tile). */
 .zona-accion {
-  border: 1px solid var(--color-borde);
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  min-width: 0;
+  padding: var(--e2);
+  border: 1px solid var(--borde);
   border-top: 2px solid var(--acento-zona);
-  border-radius: 8px;
-  padding: 0.6rem;
+  border-radius: var(--r-carta);
 }
 
 .zona-principales {
-  --acento-zona: var(--color-acento);
+  --acento-zona: var(--cobre);
+  flex: 3 1 auto;
 }
 
 .zona-gratuitas {
-  --acento-zona: var(--color-bien);
+  --acento-zona: var(--vital);
+  flex: 1 1 auto;
 }
 
 .zona-emergencia {
-  grid-column: 1 / -1;
-  --acento-zona: var(--color-mal);
+  --acento-zona: var(--borde-fuerte);
+  flex: 1 1 auto;
+  opacity: 0.6;
 }
 
-/* Solo cuando el rescate está realmente en juego. */
+/* Solo se enciende en rojo cuando el rescate esta de verdad en juego. */
 .zona-emergencia.activa {
-  border-color: var(--color-mal);
-  background: rgba(198, 90, 75, 0.08);
+  --acento-zona: var(--riesgo);
+  opacity: 1;
+  background: var(--lavado-riesgo);
 }
 
 .cabecera-zona {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.4rem;
-  margin-bottom: 0.55rem;
+  gap: var(--e1);
+  flex-wrap: wrap;
 }
 
 .cabecera-zona h4 {
-  margin: 0;
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
+  font-size: var(--t-micro);
   text-transform: uppercase;
-  color: var(--acento-zona);
+  letter-spacing: 0.08em;
+  color: var(--tinta-tenue);
 }
 
 .insignia-costo {
-  padding: 0.05rem 0.35rem;
+  font-family: var(--fuente-dato);
+  font-size: var(--t-micro);
+  padding: 0 var(--e1);
   border: 1px solid var(--acento-zona);
   border-radius: 999px;
-  font-size: 0.66rem;
-  letter-spacing: 0.04em;
   color: var(--acento-zona);
 }
 
 .nota-zona {
   flex-basis: 100%;
   margin: 0;
-  font-size: 0.7rem;
-  line-height: 1.3;
-  color: var(--color-texto-tenue);
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
 }
 
 .grid-botones {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  gap: var(--e1);
 }
 
+/* Cada espacio de accion es una casilla impresa del tablero. */
 .envoltorio-boton {
   position: relative;
 }
 
 .envoltorio-boton button {
   width: 100%;
-  padding: 0.6rem 0.5rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--color-borde);
-  border-top: 3px solid var(--acento-zona, var(--color-acento));
-  background: var(--color-fondo);
-  color: var(--color-texto);
-  font-size: 0.82rem;
+  height: 100%;
+  padding: var(--e2) var(--e1);
+  border: 1px solid var(--borde);
+  border-top: 2px solid var(--acento-zona, var(--cobre));
+  border-radius: var(--r-control);
+  background: var(--carta);
+  color: var(--tinta);
+  font-size: var(--t-xs);
   text-align: center;
+  transition: background var(--transicion), border-color var(--transicion);
 }
 
-.envoltorio-boton button:disabled {
-  border-top-color: var(--color-borde);
+.envoltorio-boton button:hover:not(:disabled) {
+  background: var(--zona);
+  border-color: var(--acento-zona, var(--cobre));
 }
 
+/* Peones de quien ya visito el espacio hoy. Aro hueco = espacio gratuito de
+   una vez al dia; punto solido = espacio con costo de PA. */
 .marcadores-jugador {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 3px;
+  right: 3px;
   display: flex;
   gap: 2px;
   z-index: 10;
 }
 
 .marcador-jugador {
-  box-sizing: border-box;
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   background: var(--color-marcador);
-  box-shadow: 0 0 0 1px var(--color-fondo);
+  box-shadow: 0 0 0 1px var(--mesa);
 }
 
 .marcador-jugador.gratis {
-  background: transparent;
+  background: none;
   border: 2px solid var(--color-marcador);
   box-shadow: none;
 }
@@ -392,31 +403,21 @@ async function pasarDeVerdad() {
   visibility: hidden;
   opacity: 0;
   position: absolute;
-  bottom: calc(100% + 0.4rem);
+  bottom: calc(100% + var(--e1));
   left: 50%;
   transform: translateX(-50%);
-  width: 240px;
+  width: 15rem;
   max-width: 60vw;
-  background: var(--color-panel);
-  border: 1px solid var(--color-borde);
-  border-radius: 6px;
-  padding: 0.5rem 0.6rem;
-  font-size: 0.78rem;
+  background: var(--zona);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-carta);
+  padding: var(--e2);
+  font-size: var(--t-xs);
   line-height: 1.35;
-  color: var(--color-texto);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  color: var(--tinta);
+  box-shadow: var(--sombra-flotante);
   z-index: 30;
-  pointer-events: none;
-  transition: opacity 0.1s ease;
-}
-
-.tooltip p {
-  margin: 0;
-}
-
-.tooltip-motivo {
-  margin-top: 0.4rem !important;
-  color: var(--color-mal);
+  transition: opacity var(--transicion);
 }
 
 .envoltorio-boton:hover .tooltip,
@@ -425,114 +426,147 @@ async function pasarDeVerdad() {
   opacity: 1;
 }
 
-/* El coste por espacio ya no se repite en cada tile (lo dice la insignia de
-   su zona); esto solo aplica a la lista plana del modal de pase. */
-.costo {
-  color: var(--color-texto-tenue);
-  font-size: 0.75rem;
+.tooltip p {
+  margin: 0;
 }
 
+.tooltip-motivo {
+  margin-top: var(--e1);
+  color: var(--riesgo);
+}
+
+/* --- Controles de turno -------------------------------------------------- */
 .fila-controles {
   display: flex;
-  gap: 0.5rem;
-}
-
-.pasar {
-  flex: 1;
-  padding: 0.5rem;
-  border-radius: 4px;
-  border: 1px solid var(--color-borde);
-  background: transparent;
-  color: var(--color-texto-tenue);
-}
-
-.deshacer {
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--e1);
   flex: 0 0 auto;
-  padding: 0.5rem 0.8rem;
-  border-radius: 4px;
-  border: 1px solid var(--color-acento);
-  background: transparent;
-  color: var(--color-acento);
-  cursor: pointer;
 }
 
-/* Modal de confirmación de pase: qué queda por hacer, con atajo directo a
-   cada acción, y el bloque rojo de colapso (opt-in) cuando aplica. */
+.pasar,
+.deshacer {
+  padding: var(--e2) var(--e3);
+  border-radius: var(--r-control);
+  border: 1px solid var(--borde);
+  background: var(--carta);
+  color: var(--tinta);
+  font-size: var(--t-xs);
+  white-space: nowrap;
+  transition: border-color var(--transicion), color var(--transicion);
+}
+
+.pasar:hover:not(:disabled) {
+  border-color: var(--cobre);
+  color: var(--cobre);
+}
+
+.deshacer:hover:not(:disabled) {
+  border-color: var(--verdin);
+  color: var(--verdin);
+}
+
+/* --- Modal de confirmacion de pase --------------------------------------- */
 .intro-pase {
-  margin: 0 0 0.75rem;
-  font-size: 0.82rem;
-  line-height: 1.45;
+  margin: 0 0 var(--e3);
+  font-size: var(--t-s);
 }
 
 .lista-restantes {
   list-style: none;
-  margin: 0;
+  margin: 0 0 var(--e3);
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: var(--e1);
 }
 
 .accion-restante {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   width: 100%;
   text-align: left;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--color-borde);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--color-texto);
-  cursor: pointer;
+  padding: var(--e2);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-control);
+  background: var(--carta);
+  color: var(--tinta);
+  transition: border-color var(--transicion);
 }
 
 .accion-restante:hover {
-  border-color: var(--color-acento);
+  border-color: var(--cobre);
 }
 
 .titulo-restante {
-  display: block;
+  font-size: var(--t-s);
   font-weight: 600;
-  font-size: 0.82rem;
 }
 
-.titulo-restante .costo {
+.costo {
+  font-family: var(--fuente-dato);
+  font-size: var(--t-micro);
   font-weight: 400;
+  color: var(--tinta-tenue);
 }
 
 .blurb-restante {
-  display: block;
-  font-size: 0.72rem;
-  color: var(--color-texto-tenue);
-  margin-top: 0.15rem;
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
   line-height: 1.35;
 }
 
 .peligro-colapso {
-  margin: 0.75rem 0 0;
-  padding: 0.5rem 0.65rem;
-  border: 1px solid var(--color-mal);
-  border-radius: 6px;
-  background: rgba(198, 90, 75, 0.12);
-  font-size: 0.78rem;
+  margin: 0;
+  padding: var(--e2);
+  border: 1px solid var(--riesgo);
+  border-radius: var(--r-control);
+  background: var(--lavado-riesgo);
+  font-size: var(--t-xs);
   line-height: 1.4;
 }
 
-.peligro-colapso strong {
-  color: var(--color-mal);
-}
-
-.secundario,
 .confirmar-pase {
   flex: 1;
-  padding: 0.45rem;
-  border-radius: 4px;
-  border: 1px solid var(--color-borde);
+  padding: var(--e2);
+  border-radius: var(--r-control);
+  border: 1px solid var(--riesgo);
   background: transparent;
-  color: var(--color-texto);
-  font-size: 0.8rem;
+  color: var(--riesgo);
+  font-size: var(--t-s);
 }
 
-.confirmar-pase {
-  border-color: var(--color-mal);
-  color: var(--color-mal);
+.confirmar-pase:hover:not(:disabled) {
+  background: var(--lavado-riesgo);
+}
+
+/* Bajo 1100px la barra deja de ser una sola fila: las zonas se apilan igual
+   que el resto del tablero (ver GameView.vue). */
+@media (max-width: 1100px) {
+  .barra-acciones {
+    flex-direction: column;
+  }
+
+  .zonas {
+    flex-wrap: wrap;
+  }
+
+  .zona-principales {
+    flex: 1 1 20rem;
+  }
+
+  .zona-gratuitas,
+  .zona-emergencia {
+    flex: 1 1 12rem;
+  }
+
+  .fila-controles {
+    flex-direction: row;
+  }
+
+  .pasar {
+    flex: 1;
+  }
 }
 </style>

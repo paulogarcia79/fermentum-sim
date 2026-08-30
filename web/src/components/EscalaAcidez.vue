@@ -49,58 +49,58 @@ const tieneRegistro = computed(() => props.registrada !== null && props.registra
 .escala-acidez {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: var(--e2);
 }
 
 .fila-pips {
   display: flex;
-  gap: 0.25rem;
+  gap: var(--e1);
 }
 
 .pip {
   width: 1.4rem;
   height: 1.4rem;
-  border-radius: 4px;
-  border: 1px solid var(--color-borde);
+  border-radius: var(--r-control);
+  border: 1px solid var(--borde);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
-  color: var(--color-texto-tenue);
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
   flex: 0 0 auto;
 }
 
 .pip.diana {
-  border-color: var(--color-acento);
-  background: rgba(217, 154, 63, 0.16);
-  color: var(--color-texto);
+  border-color: var(--cobre);
+  background: var(--lavado-cobre);
+  color: var(--tinta);
   font-weight: 700;
 }
 
 .pip.sellado {
-  box-shadow: 0 0 0 2px var(--color-bien) inset;
-  color: var(--color-bien);
+  box-shadow: 0 0 0 2px var(--vital) inset;
+  color: var(--vital);
 }
 
 .pip.fallido {
-  box-shadow: 0 0 0 2px var(--color-mal) inset;
+  box-shadow: 0 0 0 2px var(--riesgo) inset;
 }
 
 .nota {
   margin: 0;
-  font-size: 0.68rem;
-  color: var(--color-texto-tenue);
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
 }
 
 .nota strong {
-  color: var(--color-texto);
+  color: var(--tinta);
 }
 
 .sellado-texto {
-  color: var(--color-bien);
+  color: var(--vital);
 }
 
 .fallido-texto {
-  color: var(--color-mal);
+  color: var(--riesgo);
 }
 </style>

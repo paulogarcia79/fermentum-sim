@@ -26,10 +26,10 @@ const mercado = computed(() => store.estado!.market)
 }
 
 .sub-titulo {
-  font-size: 0.75rem;
+  font-size: var(--t-xs);
   text-transform: uppercase;
-  color: var(--color-texto-tenue);
-  margin: 0.75rem 0 0.35rem;
+  color: var(--tinta-tenue);
+  margin: var(--e3) 0 var(--e2);
 }
 
 .lista-recetas {
@@ -38,7 +38,7 @@ const mercado = computed(() => store.estado!.market)
   margin: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--e2);
 }
 
 .lista-recetas .slot {
@@ -49,11 +49,11 @@ const mercado = computed(() => store.estado!.market)
 
 .slot .vacio {
   display: block;
-  padding: 0.4rem 0.5rem;
+  padding: var(--e2) var(--e2);
 }
 
 .vacio {
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
   font-style: italic;
 }
 </style>

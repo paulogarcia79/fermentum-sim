@@ -33,7 +33,7 @@ const signoClase = computed(() => {
 
 <template>
   <svg viewBox="0 0 70 190" class="termometro" aria-hidden="true">
-    <rect x="13" y="10" width="14" height="145" rx="7" fill="none" stroke="var(--color-borde)" stroke-width="1.5" />
+    <rect x="13" y="10" width="14" height="145" rx="7" fill="none" stroke="var(--borde)" stroke-width="1.5" />
     <rect
       class="mercurio"
       :class="signoClase"
@@ -43,7 +43,7 @@ const signoClase = computed(() => {
       :height="Math.max(0, 160 - mercurioY)"
       rx="4.5"
     />
-    <circle class="mercurio" :class="signoClase" cx="20" :cy="BULB_CY" r="15" stroke="var(--color-borde)" stroke-width="1.5" />
+    <circle class="mercurio" :class="signoClase" cx="20" :cy="BULB_CY" r="15" stroke="var(--borde)" stroke-width="1.5" />
 
     <g v-for="tick in ticks" :key="tick.temp" class="tick" :class="{ actual: tick.temp === temperatura }">
       <line :x1="27" :y1="tick.y" :x2="33" :y2="tick.y" stroke="currentColor" stroke-width="1.3" />
@@ -60,27 +60,27 @@ const signoClase = computed(() => {
 }
 
 .mercurio {
-  fill: var(--color-texto);
+  fill: var(--tinta);
 }
 
 .mercurio.calido {
-  fill: var(--color-calido);
+  fill: var(--calido);
 }
 
 .mercurio.frio {
-  fill: var(--color-frio);
+  fill: var(--frio);
 }
 
 .mercurio.neutro {
-  fill: var(--color-texto);
+  fill: var(--tinta);
 }
 
 .tick {
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
 }
 
 .tick.actual {
-  color: var(--color-acento);
+  color: var(--cobre);
   font-weight: 700;
 }
 

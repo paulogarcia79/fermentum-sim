@@ -72,15 +72,15 @@ const posicionPrevista = computed(() => {
 .pista-harina {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--e2);
   flex-wrap: wrap;
 }
 
 .etiqueta-harina {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.78rem;
+  gap: var(--e2);
+  font-size: var(--t-xs);
   font-weight: 600;
   flex: 0 0 auto;
   min-width: 4.5rem;
@@ -94,40 +94,40 @@ const posicionPrevista = computed(() => {
 
 .tabla-precios {
   border-collapse: collapse;
-  font-size: 0.72rem;
+  font-size: var(--t-xs);
 }
 
 .tabla-precios th {
   font-weight: 400;
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
   text-align: right;
-  padding: 0.1rem 0.4rem 0.1rem 0;
+  padding: var(--e1) var(--e2) var(--e1) 0;
   white-space: nowrap;
 }
 
 .tabla-precios td {
   width: 1.8rem;
   text-align: center;
-  padding: 0.1rem 0.15rem;
+  padding: var(--e1) var(--e1);
   border: 1px solid transparent;
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
 }
 
 .tabla-precios td.actual {
-  color: var(--color-texto);
+  color: var(--tinta);
   font-weight: 700;
-  background: rgba(217, 154, 63, 0.16);
-  border-left-color: var(--color-acento);
-  border-right-color: var(--color-acento);
+  background: var(--lavado-cobre);
+  border-left-color: var(--cobre);
+  border-right-color: var(--cobre);
 }
 
 .tabla-precios td.arriba {
-  border-top-color: var(--color-acento);
+  border-top-color: var(--cobre);
   border-bottom-color: transparent;
 }
 
 .tabla-precios td.abajo {
-  border-bottom-color: var(--color-acento);
+  border-bottom-color: var(--cobre);
   border-top-color: transparent;
 }
 
@@ -135,8 +135,8 @@ const posicionPrevista = computed(() => {
    Punteado y sin relleno para que se lea como "todavia no", frente al
    recuadro solido de .actual. */
 .tabla-precios td.prevista {
-  border-color: var(--color-texto-tenue);
+  border-color: var(--tinta-tenue);
   border-style: dashed;
-  color: var(--color-texto);
+  color: var(--tinta);
 }
 </style>

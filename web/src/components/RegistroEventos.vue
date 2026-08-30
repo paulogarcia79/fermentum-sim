@@ -51,15 +51,15 @@ ul {
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: var(--e2);
   max-height: 320px;
   overflow-y: auto;
 }
 
 .fila-evento {
   display: flex;
-  gap: 0.4rem;
-  font-size: 0.8rem;
+  gap: var(--e2);
+  font-size: var(--t-s);
   align-items: flex-start;
 }
 
@@ -68,7 +68,7 @@ ul {
 }
 
 .vacio {
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
   font-style: italic;
 }
 </style>

@@ -344,57 +344,57 @@ onUnmounted(() => {
 <style scoped>
 .lobby {
   max-width: 480px;
-  margin: 3rem auto;
+  margin: var(--e6) auto;
   text-align: center;
 }
 
 h1 {
   margin-bottom: 0;
-  font-size: 2.2rem;
+  font-size: var(--t-display);
 }
 
 .subtitulo {
-  color: var(--color-texto-tenue);
-  margin-top: 0.25rem;
+  color: var(--tinta-tenue);
+  margin-top: var(--e1);
 }
 
 .formulario,
 .sala-espera {
-  margin-top: 1.5rem;
+  margin-top: var(--e5);
   text-align: left;
 }
 
 .flavor {
-  margin-top: 1.25rem;
+  margin-top: var(--e5);
   text-align: left;
 }
 
 .flavor p {
-  font-size: 0.9rem;
+  font-size: var(--t-m);
   line-height: 1.5;
-  color: var(--color-texto);
+  color: var(--tinta);
 }
 
 .flavor strong {
-  color: var(--color-acento);
+  color: var(--cobre);
 }
 
 .destacados {
   list-style: none;
   padding: 0;
-  margin: 0.75rem 0 0;
+  margin: var(--e3) 0 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.8rem;
-  color: var(--color-texto-tenue);
+  gap: var(--e2);
+  font-size: var(--t-s);
+  color: var(--tinta-tenue);
 }
 
 label {
   display: block;
-  margin-bottom: 0.75rem;
-  font-size: 0.85rem;
-  color: var(--color-texto-tenue);
+  margin-bottom: var(--e3);
+  font-size: var(--t-s);
+  color: var(--tinta-tenue);
 }
 
 /* Solo los campos de texto del formulario (nombre / código de sala). El
@@ -403,26 +403,26 @@ label {
 input:not([type='checkbox']) {
   display: block;
   width: 100%;
-  margin-top: 0.25rem;
-  padding: 0.5rem;
-  background: var(--color-fondo);
-  border: 1px solid var(--color-borde);
-  border-radius: 4px;
-  color: var(--color-texto);
-  font-size: 1rem;
+  margin-top: var(--e1);
+  padding: var(--e2);
+  background: var(--carta);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-control);
+  color: var(--tinta);
+  font-size: var(--t-m);
 }
 
 .campo-color {
-  margin-bottom: 0.9rem;
+  margin-bottom: var(--e3);
 }
 
 .campo-alerta {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  margin-bottom: 0.9rem;
+  gap: var(--e2);
+  margin-bottom: var(--e3);
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: var(--t-s);
 }
 
 .campo-alerta input {
@@ -432,22 +432,22 @@ input:not([type='checkbox']) {
      flex-shrink: 0 para que la casilla no se aplaste cuando la etiqueta
      ocupa dos lineas. */
   width: auto;
-  margin-top: 0.15rem;
+  margin-top: var(--e1);
   flex-shrink: 0;
   cursor: pointer;
 }
 
 .campo-alerta small {
   display: block;
-  color: var(--color-texto-tenue);
-  font-size: 0.75rem;
-  margin-top: 0.1rem;
+  color: var(--tinta-tenue);
+  font-size: var(--t-xs);
+  margin-top: var(--e1);
 }
 
 .swatches {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.35rem;
+  gap: var(--e2);
+  margin-top: var(--e2);
 }
 
 .swatch {
@@ -460,7 +460,7 @@ input:not([type='checkbox']) {
 }
 
 .swatch.activo {
-  border-color: var(--color-texto);
+  border-color: var(--tinta);
 }
 
 .swatch:disabled {
@@ -469,53 +469,53 @@ input:not([type='checkbox']) {
 }
 
 .campo-jugadores {
-  margin-bottom: 0.9rem;
+  margin-bottom: var(--e3);
 }
 
 .swatch-numero {
   width: 32px;
   height: 32px;
   padding: 0;
-  border-radius: 4px;
-  border: 2px solid var(--color-borde);
-  background: var(--color-fondo);
-  color: var(--color-texto);
+  border-radius: var(--r-control);
+  border: 2px solid var(--borde);
+  background: var(--carta);
+  color: var(--tinta);
   cursor: pointer;
   font-weight: 600;
 }
 
 .swatch-numero.activo {
-  border-color: var(--color-acento);
-  color: var(--color-acento);
+  border-color: var(--cobre);
+  color: var(--cobre);
 }
 
 button {
   width: 100%;
-  padding: 0.6rem;
-  border-radius: 4px;
-  border: 1px solid var(--color-borde);
-  background: var(--color-panel);
-  color: var(--color-texto);
+  padding: var(--e2);
+  border-radius: var(--r-control);
+  border: 1px solid var(--borde);
+  background: var(--zona);
+  color: var(--tinta);
 }
 
 button.primario {
-  background: var(--color-acento);
-  border-color: var(--color-acento);
-  color: #1a1410;
+  background: var(--cobre);
+  border-color: var(--cobre);
+  color: var(--tinta-sobre-acento);
   font-weight: 600;
 }
 
 .separador {
   text-align: center;
-  color: var(--color-texto-tenue);
-  margin: 0.75rem 0;
+  color: var(--tinta-tenue);
+  margin: var(--e3) 0;
 }
 
 .cabecera-sala {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: var(--e3);
 }
 
 .cabecera-sala h2 {
@@ -525,24 +525,24 @@ button.primario {
 .copiar-enlace {
   width: auto;
   flex: 0 0 auto;
-  padding: 0.35rem 0.6rem;
-  font-size: 0.8rem;
+  padding: var(--e2) var(--e2);
+  font-size: var(--t-s);
 }
 
 .lista-asientos {
   list-style: none;
   padding: 0;
-  margin: 0 0 1rem;
+  margin: 0 0 var(--e4);
 }
 
 .lista-asientos li {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.6rem;
-  background: var(--color-fondo);
-  border-radius: 4px;
-  margin-bottom: 0.35rem;
+  gap: var(--e2);
+  padding: var(--e2) var(--e2);
+  background: var(--carta);
+  border-radius: var(--r-control);
+  margin-bottom: var(--e2);
 }
 
 .punto-color {
@@ -553,24 +553,24 @@ button.primario {
 }
 
 .error {
-  color: var(--color-mal);
-  margin-top: 0.75rem;
+  color: var(--riesgo);
+  margin-top: var(--e3);
 }
 
 .confirmacion-inicio {
-  border: 1px solid var(--color-mal);
-  border-radius: 4px;
-  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--riesgo);
+  border-radius: var(--r-control);
+  padding: var(--e2) var(--e3);
 }
 
 .confirmacion-inicio .aviso {
-  margin: 0 0 0.6rem;
-  font-size: 0.85rem;
-  color: var(--color-texto);
+  margin: 0 0 var(--e2);
+  font-size: var(--t-s);
+  color: var(--tinta);
 }
 
 .botones-confirmacion {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--e2);
 }
 </style>

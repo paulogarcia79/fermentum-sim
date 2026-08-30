@@ -44,14 +44,14 @@ const temperatura = computed(() => store.estado!.environment.temperatura_actual)
 
 .cuerpo-bolsa {
   display: flex;
-  gap: 1.5rem;
+  gap: var(--e5);
   flex-wrap: wrap;
 }
 
 .seccion-harinas {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--e2);
   flex: 2 1 260px;
 }
 
@@ -60,16 +60,16 @@ const temperatura = computed(() => store.estado!.environment.temperatura_actual)
 }
 
 .seccion-agua h4 {
-  margin: 0 0 0.4rem;
-  font-size: 0.8rem;
+  margin: 0 0 var(--e2);
+  font-size: var(--t-s);
   font-weight: 600;
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
 }
 
 .fila-agua {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--e2);
 }
 
 @media (max-width: 640px) {

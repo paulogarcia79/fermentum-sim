@@ -264,7 +264,67 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   `server/errors.py` `RoomError` hierarchies to HTTP status codes via one `isinstance` walk.
   Nothing in `models.py`/`engine.py`/`actions.py`/`bootstrap.py`/`events.py`/`serialization.py`
   imports anything from `server/` — the dependency only goes one way.
-- **`web/`** — the frontend (Vue 3 + TypeScript + Vite; see `web/README.md`). One reactive store
+- **`web/`** — the frontend (Vue 3 + TypeScript + Vite; see `web/README.md`).
+
+  **Design system (`App.vue`'s global `<style>`) — read this before writing any CSS here.**
+  The UI grew panel by panel and ended up with no system at all: 30 distinct `font-size` values
+  (twelve of them inside the 0.62–0.82rem band, differing by fractions of a pixel), 48 distinct
+  `padding` declarations, 11 border radii, three alphas of the same amber wash, `#1a1410`
+  copy-pasted into 8 files, and five breakpoints with no shared token. `App.vue` now owns the only
+  token layer and **no component should write a raw hex, font size, spacing value or radius
+  again**:
+  - **Three surfaces**, the load-bearing idea — `--mesa` (the ground), `--zona` (printed board
+    regions), `--carta` (what is raised off the table). Panels rendered *inside* a region are
+    flattened by `GameView.vue`'s `.region :deep(.panel)` rule (transparent, no border, no
+    padding) precisely so there are never two concentric rectangles of the same color per module;
+    only cards carry `--sombra-carta`, and regions carry an inset hairline frame instead.
+    A **modal is the raised tier, not a printed zone**: the eight overlay roots use the global
+    `.modal` rule (`--carta` + `--borde-fuerte` + `--sombra-flotante`), never `.panel`, and each
+    wraps its `.fondo-modal` root in `<Teleport to="body">`. Both halves are load-bearing:
+    `:deep()` compiles to a plain descendant selector, so before the teleport every modal opened
+    from inside a region (all 11 action modals via `ModalShell`, `DetalleRecetaModal`, both
+    `PilaDescarte*Modal`) was flattened to a transparent, padding-less box you could read the
+    board through — and teleporting also puts every modal's `z-index` on one body-level scale
+    instead of competing inside each region's subtree.
+  - **Two accents with meaning**: `--cobre` = yours / interactive / active turn, `--verdin` =
+    shared market state. Everything else (`--vital`, `--riesgo`, `--calido`, `--frio`) is game
+    state and is never used decoratively. `--lavado-*` gives one alpha per color;
+    `--tinta-sobre-acento` replaces the 8 copies of `#1a1410`; `--velo-modal` the 8 modal scrims.
+  - **Type**: Bricolage Grotesque (titles — the bakery half), IBM Plex Sans (body — the lab half),
+    IBM Plex Mono for **every number that sits on a scale**, via the global `.dato` class. Loaded
+    from Google Fonts in `web/index.html`. Seven sizes, `--t-micro` … `--t-display`. The global
+    `.eyebrow` class replaced five differently-valued copies of the same section-label idea.
+  - **Space/radius**: `--e1`…`--e6` and `--r-control`/`--r-carta`/`--r-zona`. Icon boxes are
+    `.ico-xs/-s/-m/-l` (the eight `Icono*.vue` already declare `width:100%`, so consumers only
+    pick a box). Two breakpoints, **720px** and **1100px**.
+  - The old `--color-*` names remain as aliases pointing at the new tokens, so any component not
+    yet migrated keeps working; they are safe to delete once nothing reads them.
+
+  **`PistaMedida.vue` — the instrument, and the visual signature.** Everything measurable in
+  Fermentum is a reading on a banded scale (Vitalidad 0–6, Acidez 0–6, fermentación 1–20, precio
+  1–5). Each of those used to draw itself differently (pips, an 8px bar, a 10px bar, a table
+  visor). `PistaMedida` now draws all of them: ruled track + zone bands + a **solid bracket at the
+  current value and a dashed bracket at the projected one** + a Plex Mono readout. The dashed
+  bracket generalizes what `PistaPrecioHarina.vue` had invented for tonight's price move, and it
+  is what the contamination warning now uses — `vitalidad_prevista` is rendered *as part of the
+  reading* rather than as a badge bolted beside it. `valor: null` draws bands with no needle
+  (a recipe card shows its zones but has no position yet); `tonoPrevisto` lets the dashed bracket
+  differ in color from the solid one (`EstacionCard` colors it by the zone the dough will land in).
+  Call sites: `MiTablero`, `EstacionCard`, `RecetaCard`.
+
+  **Layout — one screen, regions scroll internally.** `GameView.vue` is a `100dvh` flex board, not
+  a scrolling document: a header rail, then `.cuerpo` = [left block: Mesa Común over Mi Tablero]
+  + a full-height side rail, then the action bar pinned as the bottom region. Every region sets
+  `min-height: 0` and `overflow-y: auto`, so no region can push another off screen. `.app-shell`'s
+  `max-width: 1100px` centering now applies only via the `centrado` class (`App.vue` binds it when
+  *not* in a game) — the lobby and ranking are documents and keep a measure limit; the board fills
+  the monitor. The action bar keeps its footprint on an opponent's turn (showing whose turn it is
+  plus force-pass) so the layout never jumps mid-round. At ≤1100px the rails unstack and the page
+  scrolls again; at ≤720px the order flips so the action bar and your own board come first.
+  `MiTablero` is correspondingly wide-and-short: its content is a `flex-wrap` row of sub-zones
+  (cultivo / estaciones+mejoras / carpeta / archivo), not one tall column.
+
+  One reactive store
   (`src/store.ts`) updated wholesale from the server's full-snapshot responses — no Pinia/Vuex,
   no optimistic updates (submit an action, wait for the response, render it; the server is the
   only rules authority and a turn-based game has no latency budget worth spending complexity on).
@@ -543,6 +603,39 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   live `GameSession` and attach a fake subscriber. Tests: `tests/test_avisos_accion.py`, whose
   last case is the guardrail for the invariant above (a free action + an undo must leave
   `len(engine.eventos)` unchanged).
+
+  **Show/hide panels (floating dock)**: the nine persistent modules `GameView.vue` renders —
+  `MazoClimaPanel`, `MercadoPanel`, `BolsaHarinasPanel`, `MazoTendenciasPanel`, the "Espacios de
+  Acción" panel, `MiTablero`, `OrdenTurnoPanel`, `TablerosOponentes`, `RegistroEventos` — can each
+  be hidden and brought back from `DockPaneles.vue`, a strip of one icon chip per panel (lit =
+  shown, dimmed = hidden) in the header rail, plus a hover ✕ on each panel via the generic
+  `PanelOcultable.vue` wrapper. It lived as a floating right-edge column while the game view was a
+  scrolling document; once the board became viewport-locked (see the layout section above) a
+  floating rail was redundant chrome — there is no scrolling for it to survive — so the chips moved
+  into the header and the 1220px gutter hack went away with them. The catalog (`IdPanel` union + `PANELES` table) lives in `web/src/data/panelesTablero.ts`,
+  following the `GRUPOS_ACCION` precedent — the table sits next to the id type it indexes, so
+  `GameView` keeps no parallel list. Hiding uses **`v-show`, not `v-if`**: the panels stay mounted
+  and keep their local state (the Registro's scroll position, an open `ⓘ` recipe tooltip); only
+  the *regions* (`.region-mesa`, `.region-medio`, `.region-tablero`, `.region-lateral`, and the
+  wrappers around them) use `v-if`, collapsing when every panel inside them is hidden — in a
+  viewport-locked board, hiding a module has to hand its space back to its neighbours rather than
+  leave a gap. Three rules keep the feature from stranding anyone: the dock itself is never
+  hideable, it carries a "Restaurar todos" (⟳), and **"Espacios de Acción" force-shows whenever
+  `esMiTurno`** — hiding it mid-turn would leave a player unable to act while the
+  `UMBRAL_INACTIVIDAD_SEGUNDOS` force-pass clock runs against them. That override is deliberately
+  *temporary*: `visible()` returns true without touching `panelesOcultos`, so the panel hides
+  again when the turn ends and the player's stated preference is never silently overwritten.
+  State is `store.preferencias.panelesOcultos`, persisted in the existing `'fermentum-preferencias'`
+  localStorage key and, like `sonido`/`alertaContaminacion`, deliberately **not** cleared by
+  `cerrarSesion()`/`volverAVistaDeLobby()` — a layout preference outlives a session. Default is
+  all nine visible, i.e. exactly the pre-existing screen for anyone who ignores the dock. Below
+  800px (the same breakpoint `.columnas` uses) the dock collapses to a single ☰ button with a
+  The chips are rendered only while the game is in progress, so the ranking screen never shows a
+  row of dead controls. Deliberately *not* included: the mandatory modals (`InicioDiaModal`,
+  `FermentationReportModal`, `ResultadoHorneadoModal`, `FinAnticipadoModal`) are not togglable —
+  they exist so an automatic collapse can't go unseen — and hidden chips carry no "something
+  changed" badge, since the state view is refetched wholesale and a per-panel diff would be a
+  feature of its own.
 
 `agents.py` is currently an empty placeholder file.
 

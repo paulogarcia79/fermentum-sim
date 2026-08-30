@@ -15,31 +15,36 @@ const descarte = computed(() => [...store.estado!.market.descarte_tendencias].re
 </script>
 
 <template>
-  <div class="fondo-modal" @click.self="emit('cerrar')">
-    <div class="modal panel">
-      <div class="cabecera-modal">
-        <h2>Pila de Descarte — Tendencias</h2>
-        <button type="button" class="cerrar" title="Cerrar" @click="emit('cerrar')">✕</button>
-      </div>
+  <!-- A body: un overlay fixed no debe colgar del subarbol de una region
+       (GameView aplana lo que hay dentro con :deep, y los z-index de cada
+       region compiten entre si). El padre logico no cambia. -->
+  <Teleport to="body">
+    <div class="fondo-modal" @click.self="emit('cerrar')">
+      <div class="modal">
+        <div class="cabecera-modal">
+          <h2>Pila de Descarte — Tendencias</h2>
+          <button type="button" class="cerrar" title="Cerrar" @click="emit('cerrar')">✕</button>
+        </div>
 
-      <p v-if="descarte.length === 0" class="vacio">Todavía no se ha descartado ninguna carta.</p>
-      <div v-else class="grilla">
-        <CartaTendencia v-for="(modificador, i) in descarte" :key="i" :modificador="modificador" compacta />
+        <p v-if="descarte.length === 0" class="vacio">Todavía no se ha descartado ninguna carta.</p>
+        <div v-else class="grilla">
+          <CartaTendencia v-for="(modificador, i) in descarte" :key="i" :modificador="modificador" compacta />
+        </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
 .fondo-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--velo-modal);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 50;
-  padding: 1rem;
+  padding: var(--e4);
 }
 
 .modal {
@@ -54,36 +59,36 @@ const descarte = computed(() => [...store.estado!.market.descarte_tendencias].re
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--e2);
 }
 
 .cabecera-modal h2 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: var(--t-l);
 }
 
 .cerrar {
   background: none;
   border: none;
-  color: var(--color-texto-tenue);
-  font-size: 1.1rem;
-  padding: 0.2rem 0.4rem;
+  color: var(--tinta-tenue);
+  font-size: var(--t-l);
+  padding: var(--e1) var(--e2);
 }
 
 .cerrar:hover {
-  color: var(--color-texto);
+  color: var(--tinta);
 }
 
 .vacio {
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
   font-style: italic;
 }
 
 .grilla {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--e2);
   overflow-y: auto;
-  padding-bottom: 0.2rem;
+  padding-bottom: var(--e1);
 }
 </style>

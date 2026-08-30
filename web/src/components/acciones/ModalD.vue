@@ -50,7 +50,7 @@ async function confirmar() {
 
 <style scoped>
 .ya-instalada {
-  color: var(--color-texto-tenue);
-  font-size: 0.78rem;
+  color: var(--tinta-tenue);
+  font-size: var(--t-xs);
 }
 </style>

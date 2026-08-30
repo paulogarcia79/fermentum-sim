@@ -144,6 +144,6 @@ async function confirmar() {
 
 <style scoped>
 .error {
-  color: var(--color-mal);
+  color: var(--riesgo);
 }
 </style>

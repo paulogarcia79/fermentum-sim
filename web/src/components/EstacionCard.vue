@@ -10,6 +10,7 @@ import type { FermentationSlot } from '../types'
 import { store } from '../store'
 import RecetaCard from './RecetaCard.vue'
 import DetalleRecetaModal from './DetalleRecetaModal.vue'
+import PistaMedida, { type BandaPista } from './PistaMedida.vue'
 
 const props = defineProps<{
   slot: FermentationSlot | null
@@ -20,25 +21,24 @@ const props = defineProps<{
 
 const TRACK_MAX = 20
 
-function pct(posicion: number): number {
-  return Math.min(100, Math.max(0, (posicion / TRACK_MAX) * 100))
-}
-
-const zonas = computed(() => {
+// Las bandas van en unidades del track (1-20), no en %: PistaMedida hace la
+// conversion. Se restan 0.5 casillas en los bordes por lo mismo que el
+// marcador se centra en su celda (ver abajo).
+const bandas = computed<BandaPista[]>(() => {
   const r = props.slot?.recipe
-  if (!r) return null
-  return {
-    baja: [pct(r.zona_baja[0] - 1), pct(r.zona_baja[1])],
-    optima: [pct(r.zona_optima[0] - 1), pct(r.zona_optima[1])],
-    sobre: [pct(r.zona_sobrefermentada[0] - 1), pct(TRACK_MAX)],
-  }
+  if (!r) return []
+  return [
+    { desde: r.zona_baja[0] - 1, hasta: r.zona_baja[1], tono: 'baja' },
+    { desde: r.zona_optima[0] - 1, hasta: r.zona_optima[1], tono: 'optima' },
+    { desde: r.zona_sobrefermentada[0] - 1, hasta: TRACK_MAX, tono: 'sobre' },
+  ]
 })
 
 // El marcador se dibuja en el CENTRO de su celda del track (pos - 0.5), no en el
 // borde derecho: así una masa en `zona_optima[0] - 1` (que el motor puntúa como zona
 // baja, 0 Datos) queda visiblemente a la izquierda de la banda verde, y una en
 // `zona_optima[0]` queda dentro — coincidiendo con lo que `resolver_horneado` hará.
-const posicionActualPct = computed(() => (props.slot ? pct(props.slot.posicion_track - 0.5) : 0))
+const posicionActual = computed(() => (props.slot ? props.slot.posicion_track - 0.5 : 0))
 
 const posicionFantasma = computed(() => {
   if (!props.slot || !store.estado) return null
@@ -47,12 +47,12 @@ const posicionFantasma = computed(() => {
   return Math.min(proyectada, TRACK_MAX + 4) // deja ver que se sale del track sin romper el layout
 })
 
-const zonaProyectada = computed(() => {
+const tonoProyectado = computed<'riesgo' | 'vital' | 'cobre' | null>(() => {
   if (!props.slot || posicionFantasma.value === null) return null
   const r = props.slot.recipe
-  if (posicionFantasma.value >= r.zona_sobrefermentada[0]) return 'colapso'
-  if (posicionFantasma.value >= r.zona_optima[0] && posicionFantasma.value <= r.zona_optima[1]) return 'optima'
-  return 'baja'
+  if (posicionFantasma.value >= r.zona_sobrefermentada[0]) return 'riesgo'
+  if (posicionFantasma.value >= r.zona_optima[0] && posicionFantasma.value <= r.zona_optima[1]) return 'vital'
+  return 'cobre'
 })
 
 const detalleAbierto = ref(false)
@@ -61,7 +61,8 @@ const detalleAbierto = ref(false)
 <template>
   <div class="estacion" :class="{ bloqueada }">
     <div class="titulo">
-      <span>Est-{{ (indice + 1).toString().padStart(2, '0') }}</span>
+      <span class="eyebrow">Est-{{ (indice + 1).toString().padStart(2, '0') }}</span>
+      <span v-if="slot" class="dato posicion">{{ slot.posicion_track }}/20</span>
     </div>
 
     <template v-if="bloqueada">
@@ -71,22 +72,21 @@ const detalleAbierto = ref(false)
       <div class="vacia">— libre —</div>
     </template>
     <template v-else>
-      <div class="track">
-        <div class="banda baja" :style="{ left: zonas!.baja[0] + '%', width: zonas!.baja[1] - zonas!.baja[0] + '%' }" />
-        <div class="banda optima" :style="{ left: zonas!.optima[0] + '%', width: zonas!.optima[1] - zonas!.optima[0] + '%' }" />
-        <div class="banda sobre" :style="{ left: zonas!.sobre[0] + '%', width: zonas!.sobre[1] - zonas!.sobre[0] + '%' }" />
-        <div class="marcador" :style="{ left: posicionActualPct + '%' }" :title="`Posición ${slot.posicion_track}`" />
-        <div
-          v-if="mostrarFantasma && posicionFantasma !== null"
-          class="marcador fantasma"
-          :class="zonaProyectada"
-          :style="{ left: pct(posicionFantasma - 0.5) + '%' }"
-          :title="`Próxima posición proyectada: ${posicionFantasma}`"
-        />
-      </div>
+      <PistaMedida
+        :valor="posicionActual"
+        :min="0"
+        :max="TRACK_MAX"
+        :previsto="mostrarFantasma && posicionFantasma !== null ? posicionFantasma - 0.5 : null"
+        :tono-previsto="tonoProyectado"
+        :bandas="bandas"
+        modo="posicion"
+        lectura=""
+      />
       <div class="detalle-fila">
-        <span>pos {{ slot.posicion_track }}/20</span>
-        <span>dado {{ slot.dado_inoculo }}</span>
+        <span>dado <span class="dato">{{ slot.dado_inoculo }}</span></span>
+        <span v-if="mostrarFantasma && posicionFantasma !== null">
+          esta noche → <span class="dato">{{ posicionFantasma }}</span>
+        </span>
         <span v-if="slot.bono_sabor">🧪 bono sabor</span>
       </div>
       <button type="button" class="boton-tarjeta" title="Ver receta completa" @click="detalleAbierto = true">
@@ -106,9 +106,13 @@ const detalleAbierto = ref(false)
 
 <style scoped>
 .estacion {
-  background: var(--color-fondo);
-  border-radius: 6px;
-  padding: 0.5rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  background: var(--carta);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-carta);
+  padding: var(--e2);
 }
 
 .estacion.bloqueada {
@@ -123,85 +127,37 @@ const detalleAbierto = ref(false)
   padding: 0;
   margin: 0;
   text-align: left;
-  cursor: pointer;
   font: inherit;
   color: inherit;
 }
 
 .boton-tarjeta:hover :deep(.receta-card) {
-  border-color: var(--color-acento);
+  border-color: var(--cobre);
 }
 
 .titulo {
   display: flex;
   justify-content: space-between;
-  font-size: 0.8rem;
-  color: var(--color-texto-tenue);
-  margin-bottom: 0.3rem;
+  align-items: baseline;
+  gap: var(--e2);
+}
+
+.posicion {
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
 }
 
 .vacia {
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
   font-style: italic;
-  font-size: 0.85rem;
-}
-
-.track {
-  position: relative;
-  height: 10px;
-  background: #2a231d;
-  border-radius: 5px;
-  overflow: visible;
-}
-
-.banda {
-  position: absolute;
-  top: 0;
-  height: 100%;
-}
-
-.banda.baja {
-  background: #4a4038;
-}
-
-.banda.optima {
-  background: var(--color-bien);
-  opacity: 0.55;
-}
-
-.banda.sobre {
-  background: var(--color-mal);
-  opacity: 0.55;
-}
-
-.marcador {
-  position: absolute;
-  top: -3px;
-  width: 4px;
-  height: 16px;
-  background: var(--color-acento);
-  border-radius: 2px;
-  transform: translateX(-50%);
-}
-
-.marcador.fantasma {
-  opacity: 0.5;
-  background: var(--color-texto);
-}
-
-.marcador.fantasma.optima {
-  background: var(--color-bien);
-}
-
-.marcador.fantasma.colapso {
-  background: var(--color-mal);
+  font-size: var(--t-xs);
 }
 
 .detalle-fila {
   display: flex;
-  gap: 0.6rem;
-  font-size: 0.7rem;
-  color: var(--color-texto-tenue);
-  margin-top: 0.3rem;
+  flex-wrap: wrap;
+  gap: var(--e2);
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
 }
 </style>

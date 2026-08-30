@@ -58,23 +58,23 @@ const centroExacto = computed(() => Math.floor((props.receta.zona_optima[0] + pr
 .rendimiento {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--e1);
 }
 
 .tabla-rendimiento {
   border-collapse: collapse;
-  font-size: 0.72rem;
+  font-size: var(--t-xs);
   width: 100%;
 }
 
 .tabla-rendimiento th,
 .tabla-rendimiento td {
-  padding: 0.15rem 0.4rem;
+  padding: var(--e1) var(--e2);
   text-align: center;
 }
 
 .tabla-rendimiento thead th {
-  border-bottom: 1px solid var(--color-borde);
+  border-bottom: 1px solid var(--borde);
 }
 
 .icono-cabecera {
@@ -86,32 +86,32 @@ const centroExacto = computed(() => Math.floor((props.receta.zona_optima[0] + pr
 
 .tabla-rendimiento tbody th {
   text-align: left;
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
   font-weight: 400;
 }
 
 .fila-optima {
-  background: rgba(111, 174, 92, 0.12);
+  background: var(--lavado-vital);
 }
 
 .fila-optima td,
 .fila-optima th {
-  color: var(--color-bien);
+  color: var(--vital);
 }
 
 .fila-sobre {
-  background: rgba(198, 90, 75, 0.1);
+  background: var(--lavado-riesgo);
 }
 
 .fila-sobre td,
 .fila-sobre th {
-  color: var(--color-mal);
+  color: var(--riesgo);
 }
 
 .nota-pie {
   margin: 0;
-  font-size: 0.62rem;
-  color: var(--color-texto-tenue);
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
   line-height: 1.3;
 }
 </style>

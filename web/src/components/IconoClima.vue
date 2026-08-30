@@ -75,8 +75,8 @@ defineProps<{ id: string }>()
 
     <!-- Alta Humedad: gotas de agua -->
     <g v-else-if="id === 'alta_humedad'">
-      <path d="M9 4 C9 4 5.5 9.5 5.5 12.3 A3.5 3.5 0 0 0 12.5 12.3 C12.5 9.5 9 4 9 4 Z" fill="#5b8dd9" stroke="#345a8a" stroke-width="0.5" />
-      <path d="M16 10 C16 10 13.3 14 13.3 16 A2.7 2.7 0 0 0 18.7 16 C18.7 14 16 10 16 10 Z" fill="#5b8dd9" stroke="#345a8a" stroke-width="0.5" opacity="0.85" />
+      <path d="M9 4 C9 4 5.5 9.5 5.5 12.3 A3.5 3.5 0 0 0 12.5 12.3 C12.5 9.5 9 4 9 4 Z" fill="var(--frio)" stroke="#345a8a" stroke-width="0.5" />
+      <path d="M16 10 C16 10 13.3 14 13.3 16 A2.7 2.7 0 0 0 18.7 16 C18.7 14 16 10 16 10 Z" fill="var(--frio)" stroke="#345a8a" stroke-width="0.5" opacity="0.85" />
     </g>
 
     <!-- Explosion Levaduras: burbujas de fermentacion -->

@@ -19,6 +19,7 @@ import IconoAgua from './IconoAgua.vue'
 import { PCT_POR_TOKEN_HARINA, fmtTokensHarina, tokensHarina } from '../data/unidades'
 import EscalaAcidez from './EscalaAcidez.vue'
 import TablaRendimiento from './TablaRendimiento.vue'
+import PistaMedida, { type BandaPista } from './PistaMedida.vue'
 
 const NOMBRE_TECNOLOGIA: Record<TecnologiaID, string> = {
   incubadora: 'Incubadora',
@@ -35,16 +36,17 @@ const props = defineProps<{
 }>()
 
 const TRACK_MAX = 20
-function pct(posicion: number): number {
-  return Math.min(100, Math.max(0, (posicion / TRACK_MAX) * 100))
-}
 
-const bandas = computed(() => {
+// Mismas bandas que dibuja EstacionCard.vue, en unidades del track: la carta
+// de la receta y la masa que la esta fermentando se leen como el mismo
+// instrumento (ver PistaMedida.vue).
+const bandas = computed<BandaPista[]>(() => {
   const r = props.receta
-  const baja = [pct(r.zona_baja[0] - 1), pct(r.zona_baja[1])]
-  const optima = [pct(r.zona_optima[0] - 1), pct(r.zona_optima[1])]
-  const sobre = [pct(r.zona_sobrefermentada[0] - 1), pct(TRACK_MAX)]
-  return { baja, optima, sobre }
+  return [
+    { desde: r.zona_baja[0] - 1, hasta: r.zona_baja[1], tono: 'baja' },
+    { desde: r.zona_optima[0] - 1, hasta: r.zona_optima[1], tono: 'optima' },
+    { desde: r.zona_sobrefermentada[0] - 1, hasta: TRACK_MAX, tono: 'sobre' },
+  ]
 })
 
 const centroExacto = computed(() =>
@@ -58,7 +60,7 @@ const detalleAbierto = ref(false)
   <div class="receta-card" :class="{ compacta, completa: !compacta, abierta: detalleAbierto }">
     <template v-if="compacta">
       <div class="cabecera">
-        <div class="icono-pan-envoltorio"><IconoPan :id="receta.id" /></div>
+        <div class="ico-m icono-pan-envoltorio"><IconoPan :id="receta.id" /></div>
         <div class="titulo">
           <span class="nombre">{{ receta.nombre }}</span>
           <span class="grado">{{ receta.grado }}</span>
@@ -79,28 +81,21 @@ const detalleAbierto = ref(false)
           class="req"
           :title="`${fmtTokensHarina(100)} de Harina ${receta.harina_base} del ${PCT_POR_TOKEN_HARINA}% = 100% (una bolsa entera)`"
         >
-          <span class="icono-req"><IconoHarina :tipo="receta.harina_base" /></span> {{ tokensHarina(100) }}
+          <span class="ico-xs"><IconoHarina :tipo="receta.harina_base" /></span> {{ tokensHarina(100) }}
           <span class="unidad-secundaria">(100%)</span>
         </span>
         <span class="req" :title="`${receta.tokens_agua} tokens de Agua = ${receta.hidratacion_pct}% de hidratación`">
-          <span class="icono-req"><IconoAgua /></span> {{ receta.tokens_agua }}
+          <span class="ico-xs"><IconoAgua /></span> {{ receta.tokens_agua }}
           <span class="unidad-secundaria">({{ receta.hidratacion_pct }}%)</span>
         </span>
       </div>
 
       <div class="escala-puntos">
-        <div class="pista">
-          <div class="banda baja" :style="{ left: bandas.baja[0] + '%', width: bandas.baja[1] - bandas.baja[0] + '%' }" />
-          <div
-            class="banda optima"
-            :style="{ left: bandas.optima[0] + '%', width: bandas.optima[1] - bandas.optima[0] + '%' }"
-          />
-          <div class="banda sobre" :style="{ left: bandas.sobre[0] + '%', width: bandas.sobre[1] - bandas.sobre[0] + '%' }" />
-        </div>
+        <PistaMedida :valor="null" :max="TRACK_MAX" :bandas="bandas" modo="posicion" lectura="" compacta />
         <div class="etiquetas-puntos">
-          <span class="pts baja">{{ receta.puntos_baja }}</span>
-          <span class="pts optima">{{ receta.puntos_optimos }}</span>
-          <span class="pts sobre">{{ receta.penalizacion_colapso }}</span>
+          <span class="pts baja dato">{{ receta.puntos_baja }}</span>
+          <span class="pts optima dato">{{ receta.puntos_optimos }}</span>
+          <span class="pts sobre dato">{{ receta.penalizacion_colapso }}</span>
         </div>
       </div>
 
@@ -125,7 +120,7 @@ const detalleAbierto = ref(false)
     <template v-else>
       <div class="cabecera-completa">
         <h4 class="titulo-completo">Receta de Protocolo: <strong>{{ receta.nombre }}</strong></h4>
-        <span class="icono-cabecera-trigo"><IconoHarina :tipo="receta.harina_base" /></span>
+        <span class="ico-s"><IconoHarina :tipo="receta.harina_base" /></span>
       </div>
       <p class="grado-linea">
         Grado: {{ receta.grado
@@ -133,17 +128,17 @@ const detalleAbierto = ref(false)
       </p>
 
       <div class="formula-base">
-        <div class="formula-titulo">Fórmula Base</div>
+        <div class="eyebrow">Fórmula Base</div>
         <div class="formula-cuerpo">
-          <div class="ilustracion-pan"><IconoPan :id="receta.id" /></div>
+          <div class="ico-l"><IconoPan :id="receta.id" /></div>
           <div class="formula-datos">
             <div class="dato-formula">
-              <span class="icono-dato"><IconoHarina :tipo="receta.harina_base" /></span>
+              <span class="ico-xs"><IconoHarina :tipo="receta.harina_base" /></span>
               {{ fmtTokensHarina(100) }} de Harina {{ receta.harina_base }}
               <span class="unidad-secundaria">(100%)</span>
             </div>
             <div class="dato-formula">
-              <span class="icono-dato"><IconoAgua /></span>
+              <span class="ico-xs"><IconoAgua /></span>
               {{ receta.tokens_agua }} tokens de Agua
               <span class="unidad-secundaria">({{ receta.hidratacion_pct }}% de hidratación)</span>
             </div>
@@ -155,7 +150,7 @@ const detalleAbierto = ref(false)
       </div>
 
       <div class="seccion">
-        <div class="seccion-titulo">Perfil de Acidez Requerido</div>
+        <div class="eyebrow">Perfil de Acidez Requerido</div>
         <EscalaAcidez
           :diana="[...receta.acidez_diana]"
           :bono-pts="receta.bono_sabor_pts"
@@ -165,19 +160,9 @@ const detalleAbierto = ref(false)
       </div>
 
       <div class="seccion">
-        <div class="seccion-titulo">Track Biológico (Fermentación)</div>
+        <div class="eyebrow">Track Biológico (Fermentación)</div>
         <div class="escala-puntos">
-          <div class="pista">
-            <div class="banda baja" :style="{ left: bandas.baja[0] + '%', width: bandas.baja[1] - bandas.baja[0] + '%' }" />
-            <div
-              class="banda optima"
-              :style="{ left: bandas.optima[0] + '%', width: bandas.optima[1] - bandas.optima[0] + '%' }"
-            />
-            <div
-              class="banda sobre"
-              :style="{ left: bandas.sobre[0] + '%', width: bandas.sobre[1] - bandas.sobre[0] + '%' }"
-            />
-          </div>
+          <PistaMedida :valor="null" :max="TRACK_MAX" :bandas="bandas" modo="posicion" lectura="" />
           <div class="etiquetas-zona">
             <span class="baja">Baja</span>
             <span class="optima">Óptima</span>
@@ -187,7 +172,7 @@ const detalleAbierto = ref(false)
       </div>
 
       <div class="seccion">
-        <div class="seccion-titulo">Rendimiento</div>
+        <div class="eyebrow">Rendimiento</div>
         <TablaRendimiento :receta="receta" />
       </div>
     </template>
@@ -197,19 +182,19 @@ const detalleAbierto = ref(false)
 <style scoped>
 .receta-card {
   position: relative;
-  background: var(--color-fondo);
-  border: 1px solid var(--color-borde);
-  border-radius: 6px;
-  padding: 0.5rem 0.6rem;
+  background: var(--carta);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-carta);
+  padding: var(--e2);
 }
 
+/* La carta completa es lo unico que se levanta de la mesa. */
 .receta-card.completa {
-  border-radius: 10px;
-  padding: 0.7rem 0.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  gap: var(--e2);
+  padding: var(--e3);
+  box-shadow: var(--sombra-carta);
 }
 
 /* -- Modo completo: cabecera -- */
@@ -217,68 +202,53 @@ const detalleAbierto = ref(false)
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.4rem;
-  border-bottom: 1px solid var(--color-borde);
-  padding-bottom: 0.4rem;
+  gap: var(--e1);
+  border-bottom: 1px solid var(--borde);
+  padding-bottom: var(--e1);
 }
 
 .titulo-completo {
-  margin: 0;
-  font-size: 0.85rem;
+  font-family: var(--fuente);
+  font-size: var(--t-micro);
   font-weight: 400;
-  color: var(--color-texto-tenue);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--tinta-tenue);
 }
 
 .titulo-completo strong {
-  color: var(--color-texto);
+  display: block;
+  font-family: var(--fuente-titulo);
+  font-size: var(--t-m);
+  letter-spacing: 0;
+  color: var(--tinta);
   font-weight: 700;
-  text-transform: uppercase;
-}
-
-.icono-cabecera-trigo {
-  width: 20px;
-  height: 20px;
-  flex: 0 0 auto;
 }
 
 .grado-linea {
-  margin: -0.3rem 0 0;
-  font-size: 0.72rem;
-  color: var(--color-texto-tenue);
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
 }
 
 /* -- Modo completo: Formula Base -- */
 .formula-base {
-  border: 1px solid var(--color-borde);
-  border-radius: 6px;
-  padding: 0.4rem 0.5rem;
-}
-
-.formula-titulo {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--color-texto-tenue);
-  margin-bottom: 0.3rem;
+  border: 1px solid var(--borde);
+  border-radius: var(--r-control);
+  padding: var(--e2);
 }
 
 .formula-cuerpo {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-}
-
-.ilustracion-pan {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 auto;
+  gap: var(--e2);
+  margin-top: var(--e1);
 }
 
 .formula-datos {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 2px;
   flex: 1 1 auto;
   min-width: 0;
 }
@@ -286,73 +256,61 @@ const detalleAbierto = ref(false)
 .dato-formula {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  font-size: 0.72rem;
-}
-
-.icono-dato {
-  width: 14px;
-  height: 14px;
-  flex: 0 0 auto;
+  gap: var(--e1);
+  font-size: var(--t-xs);
 }
 
 .pips-agua {
   display: flex;
   flex-wrap: wrap;
   gap: 2px;
-  margin-top: 0.1rem;
+  margin-top: 2px;
 }
 
 .pip-agua {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #5b8dd9;
+  background: var(--frio);
   opacity: 0.75;
   flex: 0 0 auto;
 }
 
-/* -- Modo completo: secciones genericas -- */
-.seccion-titulo {
-  font-size: 0.68rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--color-texto-tenue);
-  margin-bottom: 0.3rem;
+/* -- Secciones -- */
+.seccion > .eyebrow {
+  margin-bottom: var(--e1);
+}
+
+.formula-base > .eyebrow {
+  margin-bottom: var(--e1);
 }
 
 .etiquetas-zona {
   display: flex;
   justify-content: space-between;
-  font-size: 0.62rem;
-  color: var(--color-texto-tenue);
-  margin-top: 0.2rem;
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
+  margin-top: 2px;
 }
 
 .etiquetas-zona .optima {
-  color: var(--color-bien);
+  color: var(--vital);
 }
 
 .etiquetas-zona .sobre {
-  color: var(--color-mal);
+  color: var(--riesgo);
 }
 
+/* -- Modo compacto -- */
 .cabecera {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-}
-
-.icono-pan-envoltorio {
-  width: 26px;
-  height: 26px;
-  flex: 0 0 auto;
+  gap: var(--e1);
 }
 
 .receta-card.compacta .icono-pan-envoltorio {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .titulo {
@@ -363,122 +321,89 @@ const detalleAbierto = ref(false)
 }
 
 .nombre {
-  font-weight: 600;
-  font-size: 0.85rem;
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
+  font-size: var(--t-s);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .grado {
-  font-size: 0.7rem;
-  color: var(--color-texto-tenue);
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
 }
 
 .boton-info {
   flex: 0 0 auto;
   background: none;
   border: none;
-  color: var(--color-texto-tenue);
-  font-size: 0.9rem;
-  padding: 0 0.2rem;
-  cursor: pointer;
+  color: var(--tinta-tenue);
+  font-size: var(--t-s);
+  padding: 0 2px;
 }
 
 .boton-info:hover {
-  color: var(--color-texto);
+  color: var(--tinta);
 }
 
 .requisitos {
   display: flex;
-  gap: 0.75rem;
-  margin: 0.4rem 0;
+  gap: var(--e3);
+  margin: var(--e1) 0;
 }
 
 .req {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--color-texto-tenue);
-}
-
-.icono-req {
-  width: 16px;
-  height: 16px;
+  gap: var(--e1);
+  font-size: var(--t-xs);
+  color: var(--tinta-tenue);
 }
 
 .escala-puntos {
-  margin-top: 0.3rem;
-}
-
-.pista {
-  position: relative;
-  height: 8px;
-  background: #2a231d;
-  border-radius: 4px;
-  overflow: visible;
-}
-
-.banda {
-  position: absolute;
-  top: 0;
-  height: 100%;
-}
-
-.banda.baja {
-  background: #4a4038;
-}
-
-.banda.optima {
-  background: var(--color-bien);
-  opacity: 0.55;
-}
-
-.banda.sobre {
-  background: var(--color-mal);
-  opacity: 0.55;
+  margin-top: var(--e1);
 }
 
 .etiquetas-puntos {
   display: flex;
   justify-content: space-between;
-  font-size: 0.65rem;
-  color: var(--color-texto-tenue);
-  margin-top: 0.15rem;
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
+  margin-top: 2px;
 }
 
 .pts.optima {
-  color: var(--color-bien);
+  color: var(--vital);
 }
 
 .pts.sobre {
-  color: var(--color-mal);
+  color: var(--riesgo);
 }
 
 .tooltip {
   visibility: hidden;
   opacity: 0;
   position: absolute;
-  bottom: calc(100% + 0.4rem);
+  bottom: calc(100% + var(--e1));
   left: 50%;
   transform: translateX(-50%);
-  width: 260px;
+  width: 16rem;
   max-width: 70vw;
-  background: var(--color-panel);
-  border: 1px solid var(--color-borde);
-  border-radius: 6px;
-  padding: 0.5rem 0.6rem;
-  font-size: 0.72rem;
+  background: var(--zona);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-carta);
+  padding: var(--e2);
+  font-size: var(--t-xs);
   line-height: 1.35;
-  color: var(--color-texto);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  color: var(--tinta);
+  box-shadow: var(--sombra-flotante);
   z-index: 30;
-  transition: opacity 0.1s ease;
+  transition: opacity var(--transicion);
 }
 
 .tooltip p {
-  margin: 0 0 0.35rem;
+  margin: 0 0 var(--e1);
 }
 
 .tooltip p:last-child {

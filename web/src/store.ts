@@ -11,6 +11,7 @@ import * as api from './api'
 import type { AvisoAccionView, GameEventView, GameStateView, HorneadoRecord } from './types'
 import { reproducirNotificacionTurno, reproducirSonido } from './sonido'
 import { SONIDOS_ACCION, type IdSonido } from './data/sonidosAccion'
+import type { IdPanel } from './data/panelesTablero'
 
 export interface Sesion {
   roomId: string
@@ -28,6 +29,11 @@ export interface Preferencias {
    * (ver data/sonidosAccion.ts) mas el aviso de turno. Activado por defecto,
    * con el interruptor en la cabecera de GameView.vue. */
   sonido: boolean
+  /** Paneles del tablero que este navegador tiene ocultos, por su IdPanel
+   * (ver data/panelesTablero.ts). Se conmutan desde el dock flotante
+   * DockPaneles.vue o desde la ✕ de cada panel; por defecto no hay ninguno
+   * oculto, es decir la pantalla de siempre. */
+  panelesOcultos: IdPanel[]
 }
 
 interface Store {
@@ -158,7 +164,7 @@ const CLAVE_SESION_LOCAL = 'fermentum-sesion'
 const CLAVE_PREFERENCIAS_LOCAL = 'fermentum-preferencias'
 
 function cargarPreferenciasLocales(): Preferencias {
-  const porDefecto: Preferencias = { alertaContaminacion: true, sonido: true }
+  const porDefecto: Preferencias = { alertaContaminacion: true, sonido: true, panelesOcultos: [] }
   try {
     const crudo = localStorage.getItem(CLAVE_PREFERENCIAS_LOCAL)
     if (!crudo) return porDefecto
@@ -178,6 +184,25 @@ export function establecerAlertaContaminacion(activa: boolean): void {
 /** Interruptor de sonido, en la cabecera de la partida (GameView.vue). */
 export function establecerSonido(activo: boolean): void {
   store.preferencias.sonido = activo
+  persistirPreferencias()
+}
+
+/** Muestra/oculta un panel del tablero. La preferencia es duradera: se
+ * guarda en localStorage y sobrevive a salir de la partida (ver el comentario
+ * de CLAVE_PREFERENCIAS_LOCAL). */
+export function alternarPanel(id: IdPanel): void {
+  const ocultos = store.preferencias.panelesOcultos
+  const i = ocultos.indexOf(id)
+  if (i === -1) ocultos.push(id)
+  else ocultos.splice(i, 1)
+  persistirPreferencias()
+}
+
+/** Vuelve a mostrar los nueve paneles. Es la salida de emergencia de una
+ * preferencia que dura para siempre: sin esto, un jugador que oculto medio
+ * tablero hace tres sesiones tendria que acordarse de que ficha apago. */
+export function restaurarPaneles(): void {
+  store.preferencias.panelesOcultos = []
   persistirPreferencias()
 }
 

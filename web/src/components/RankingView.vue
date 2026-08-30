@@ -64,40 +64,40 @@ table {
 th,
 td {
   text-align: left;
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--color-borde);
+  padding: var(--e2);
+  border-bottom: 1px solid var(--borde);
 }
 
 th {
-  color: var(--color-texto-tenue);
-  font-size: 0.75rem;
+  color: var(--tinta-tenue);
+  font-size: var(--t-xs);
   text-transform: uppercase;
 }
 
 tr.ganador td {
-  color: var(--color-acento);
+  color: var(--cobre);
   font-weight: 600;
 }
 
 .acciones-fin {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
+  gap: var(--e2);
+  margin-top: var(--e4);
 }
 
 .acciones-fin button {
   flex: 1;
-  padding: 0.6rem;
-  border-radius: 4px;
-  border: 1px solid var(--color-borde);
-  background: var(--color-panel);
-  color: var(--color-texto);
+  padding: var(--e2);
+  border-radius: var(--r-control);
+  border: 1px solid var(--borde);
+  background: var(--zona);
+  color: var(--tinta);
 }
 
 .primario {
-  border: 1px solid var(--color-acento);
-  background: var(--color-acento);
-  color: #1a1410;
+  border: 1px solid var(--cobre);
+  background: var(--cobre);
+  color: var(--tinta-sobre-acento);
   font-weight: 600;
 }
 </style>

@@ -61,9 +61,9 @@ function esTurno(i: number): boolean {
 }
 
 .fila {
-  border-top: 1px solid var(--color-borde);
-  padding: 0.5rem 0;
-  font-size: 0.8rem;
+  border-top: 1px solid var(--borde);
+  padding: var(--e2) 0;
+  font-size: var(--t-s);
 }
 
 .fila:first-of-type {
@@ -71,18 +71,18 @@ function esTurno(i: number): boolean {
 }
 
 .fila.turno {
-  color: var(--color-acento);
+  color: var(--cobre);
 }
 
 .nombre-fila {
   font-weight: 600;
   display: flex;
-  gap: 0.35rem;
+  gap: var(--e2);
   align-items: center;
 }
 
 .badge-contaminado {
-  color: var(--color-mal);
+  color: var(--riesgo);
 }
 
 .punto-color {
@@ -95,15 +95,15 @@ function esTurno(i: number): boolean {
 .stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.6rem;
-  color: var(--color-texto-tenue);
-  margin-top: 0.15rem;
+  gap: var(--e2);
+  color: var(--tinta-tenue);
+  margin-top: var(--e1);
 }
 
 .masas {
   display: flex;
   flex-direction: column;
-  color: var(--color-texto-tenue);
-  margin-top: 0.15rem;
+  color: var(--tinta-tenue);
+  margin-top: var(--e1);
 }
 </style>

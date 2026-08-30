@@ -35,7 +35,7 @@ const temperaturaActual = computed(() => store.estado!.environment.temperatura_a
 <style scoped>
 .tabla-agua {
   border-collapse: collapse;
-  font-size: 0.72rem;
+  font-size: var(--t-xs);
 }
 
 .tabla-agua thead th .unidad-secundaria {
@@ -45,14 +45,14 @@ const temperaturaActual = computed(() => store.estado!.environment.temperatura_a
 
 .tabla-agua th {
   font-weight: 400;
-  color: var(--color-texto-tenue);
-  padding: 0.1rem 0.4rem;
+  color: var(--tinta-tenue);
+  padding: var(--e1) var(--e2);
   white-space: nowrap;
 }
 
 .tabla-agua thead th {
   text-align: center;
-  border-bottom: 1px solid var(--color-borde);
+  border-bottom: 1px solid var(--borde);
 }
 
 .tabla-agua tbody th {
@@ -62,28 +62,28 @@ const temperaturaActual = computed(() => store.estado!.environment.temperatura_a
 .tabla-agua td {
   width: 1.8rem;
   text-align: center;
-  padding: 0.1rem 0.3rem;
-  color: var(--color-texto-tenue);
+  padding: var(--e1) var(--e2);
+  color: var(--tinta-tenue);
 }
 
 .tabla-agua tr.actual th,
 .tabla-agua tr.actual td {
-  color: var(--color-texto);
+  color: var(--tinta);
   font-weight: 700;
-  background: rgba(217, 154, 63, 0.16);
+  background: var(--lavado-cobre);
 }
 
 .tabla-agua tr.actual td:first-of-type {
-  border-left: 1px solid var(--color-acento);
+  border-left: 1px solid var(--cobre);
 }
 
 .tabla-agua tr.actual td:last-child {
-  border-right: 1px solid var(--color-acento);
+  border-right: 1px solid var(--cobre);
 }
 
 .tabla-agua tr.actual th,
 .tabla-agua tr.actual td {
-  border-top: 1px solid var(--color-acento);
-  border-bottom: 1px solid var(--color-acento);
+  border-top: 1px solid var(--cobre);
+  border-bottom: 1px solid var(--cobre);
 }
 </style>

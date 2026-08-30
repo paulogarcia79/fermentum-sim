@@ -58,23 +58,23 @@ const orden = computed(() =>
   margin: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: var(--e2);
 }
 
 .fila {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0.4rem;
-  border-radius: 5px;
+  gap: var(--e2);
+  padding: var(--e2) var(--e2);
+  border-radius: var(--r-control);
   border-left: 3px solid transparent;
-  font-size: 0.85rem;
+  font-size: var(--t-s);
 }
 
 .fila.activo {
-  border-left-color: var(--color-acento);
-  background: var(--color-fondo);
-  color: var(--color-acento);
+  border-left-color: var(--cobre);
+  background: var(--carta);
+  color: var(--cobre);
   font-weight: 600;
 }
 
@@ -85,16 +85,16 @@ const orden = computed(() =>
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-fondo);
-  border: 1px solid var(--color-borde);
-  border-radius: 4px;
-  font-size: 0.75rem;
-  color: var(--color-texto-tenue);
+  background: var(--carta);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-control);
+  font-size: var(--t-xs);
+  color: var(--tinta-tenue);
 }
 
 .fila.activo .recuadro-num {
-  color: var(--color-acento);
-  border-color: var(--color-acento);
+  color: var(--cobre);
+  border-color: var(--cobre);
 }
 
 .peon {
@@ -112,24 +112,24 @@ const orden = computed(() =>
 }
 
 .tu {
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
   font-weight: 400;
-  font-size: 0.75rem;
+  font-size: var(--t-xs);
 }
 
 .tag {
   flex: 0 0 auto;
-  font-size: 0.68rem;
-  color: var(--color-texto-tenue);
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
 }
 
 .tag.jefe {
-  color: var(--color-acento);
+  color: var(--cobre);
 }
 
 .nota {
-  margin: 0.6rem 0 0;
-  font-size: 0.7rem;
-  color: var(--color-texto-tenue);
+  margin: var(--e2) 0 0;
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
 }
 </style>

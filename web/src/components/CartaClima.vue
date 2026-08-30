@@ -80,18 +80,18 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
   min-height: 270px;
   display: flex;
   flex-direction: column;
-  background: var(--color-panel);
-  border: 1px solid var(--color-borde);
-  border-radius: 10px;
-  padding: 0.6rem 0.65rem;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  background: var(--zona);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-zona);
+  padding: var(--e2) var(--e3);
+  box-shadow: var(--sombra-carta);
 }
 
 .carta-clima.compacta {
   width: 108px;
   min-height: 148px;
-  padding: 0.35rem 0.4rem;
-  border-radius: 7px;
+  padding: var(--e2) var(--e2);
+  border-radius: var(--r-carta);
 }
 
 .carta-clima.vacia {
@@ -102,8 +102,8 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
 }
 
 .vacio-contenido {
-  color: var(--color-texto-tenue);
-  font-size: 1.4rem;
+  color: var(--tinta-tenue);
+  font-size: var(--t-xl);
 }
 
 /* -- Cabecera -- */
@@ -111,14 +111,14 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.35rem;
-  border-bottom: 1px solid var(--color-borde);
-  padding-bottom: 0.3rem;
-  margin-bottom: 0.4rem;
+  gap: var(--e2);
+  border-bottom: 1px solid var(--borde);
+  padding-bottom: var(--e2);
+  margin-bottom: var(--e2);
 }
 
 .titulo-set {
-  font-size: 0.68rem;
+  font-size: var(--t-micro);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -126,7 +126,7 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
 
 .titulo-sub {
   font-size: 0.6rem;
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
   text-align: right;
 }
 
@@ -140,8 +140,8 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
-  padding: 0.2rem 0;
+  gap: var(--e2);
+  padding: var(--e1) 0;
 }
 
 .icono-envoltorio {
@@ -156,25 +156,25 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
 }
 
 .numero-temp {
-  font-size: 2.1rem;
+  font-size: var(--t-display);
   font-weight: 800;
   line-height: 1;
 }
 
 .compacta .numero-temp {
-  font-size: 1.25rem;
+  font-size: var(--t-l);
 }
 
 .numero-temp.calido {
-  color: var(--color-calido);
+  color: var(--calido);
 }
 
 .numero-temp.frio {
-  color: var(--color-frio);
+  color: var(--frio);
 }
 
 .numero-temp.neutro {
-  color: var(--color-texto);
+  color: var(--tinta);
 }
 
 .insignia-riesgo {
@@ -185,10 +185,10 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
   height: 1.1rem;
   border-radius: 3px;
   transform: rotate(45deg);
-  background: var(--color-mal);
-  color: #1a1410;
+  background: var(--riesgo);
+  color: var(--tinta-sobre-acento);
   font-weight: 800;
-  font-size: 0.7rem;
+  font-size: var(--t-micro);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -207,8 +207,8 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
 
 /* -- Nombre de protocolo -- */
 .nombre-protocolo {
-  margin: 0.3rem 0 0.4rem;
-  font-size: 0.82rem;
+  margin: var(--e2) 0 var(--e2);
+  font-size: var(--t-s);
   font-weight: 700;
   text-align: center;
   text-transform: uppercase;
@@ -217,7 +217,7 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
 
 .compacta .nombre-protocolo {
   font-size: 0.6rem;
-  margin: 0.2rem 0 0.3rem;
+  margin: var(--e1) 0 var(--e2);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -226,13 +226,13 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
 /* -- Recuadro de efecto (rayado, como la referencia) -- */
 .efecto-caja {
   margin-top: auto;
-  border: 1px solid var(--color-acento);
-  border-radius: 5px;
-  padding: 0.35rem 0.4rem;
+  border: 1px solid var(--cobre);
+  border-radius: var(--r-control);
+  padding: var(--e2) var(--e2);
   background: repeating-linear-gradient(
     45deg,
-    rgba(217, 154, 63, 0.14),
-    rgba(217, 154, 63, 0.14) 5px,
+    var(--lavado-cobre),
+    var(--lavado-cobre) 5px,
     transparent 5px,
     transparent 10px
   );
@@ -240,26 +240,26 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
 
 .efecto-caja p {
   margin: 0;
-  font-size: 0.68rem;
+  font-size: var(--t-micro);
   line-height: 1.3;
 }
 
 .efecto-caja p + p {
-  margin-top: 0.25rem;
+  margin-top: var(--e1);
 }
 
 .efecto-caja.neutra {
-  border-color: var(--color-borde);
+  border-color: var(--borde);
   background: none;
 }
 
 .efecto-caja.neutra p {
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
   font-style: italic;
 }
 
 .compacta .efecto-caja {
-  padding: 0.25rem 0.3rem;
+  padding: var(--e1) var(--e2);
 }
 
 .compacta .efecto-caja p {
@@ -272,13 +272,13 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: var(--r-carta);
   background: repeating-linear-gradient(
     45deg,
-    var(--color-fondo),
-    var(--color-fondo) 6px,
-    var(--color-borde) 6px,
-    var(--color-borde) 7px
+    var(--carta),
+    var(--carta) 6px,
+    var(--borde) 6px,
+    var(--borde) 7px
   );
 }
 
@@ -286,10 +286,10 @@ const tieneEfecto = computed(() => bioTexto.value !== null || pasivoTexto.value 
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
-  color: var(--color-acento);
-  background: var(--color-panel);
-  border: 1px solid var(--color-borde);
+  gap: var(--e2);
+  color: var(--cobre);
+  background: var(--zona);
+  border: 1px solid var(--borde);
   border-radius: 50%;
   width: 64%;
   aspect-ratio: 1;

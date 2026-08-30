@@ -22,36 +22,41 @@ const registro = computed(() => store.resultadoHorneado!)
 </script>
 
 <template>
-  <div class="fondo-modal">
-    <div class="modal panel">
-      <h2>🍞 ¡Horneado!</h2>
+  <!-- A body: un overlay fixed no debe colgar del subarbol de una region
+       (GameView aplana lo que hay dentro con :deep, y los z-index de cada
+       region compiten entre si). El padre logico no cambia. -->
+  <Teleport to="body">
+    <div class="fondo-modal">
+      <div class="modal">
+        <h2>🍞 ¡Horneado!</h2>
 
-      <p class="linea">
-        <strong>'{{ registro.recipe.nombre }}'</strong> — {{ ETIQUETA_ZONA[registro.zona_resultado] }}
-      </p>
-      <p class="linea">
-        Ganaste <strong>{{ registro.puntos_totales }} pts</strong><template v-if="registro.bono_sabor_aplicado">
-          (incluye Bono de Sabor)</template>
-        y <strong>{{ registro.monedas_obtenidos }} Monedas</strong><template v-if="registro.datos_obtenidos > 0">
-          · <strong>+{{ registro.datos_obtenidos }} Datos</strong></template>.
-        Tu marcador y tu Archivo de Horneados ya lo reflejan.
-      </p>
+        <p class="linea">
+          <strong>'{{ registro.recipe.nombre }}'</strong> — {{ ETIQUETA_ZONA[registro.zona_resultado] }}
+        </p>
+        <p class="linea">
+          Ganaste <strong>{{ registro.puntos_totales }} pts</strong><template v-if="registro.bono_sabor_aplicado">
+            (incluye Bono de Sabor)</template>
+          y <strong>{{ registro.monedas_obtenidos }} Monedas</strong><template v-if="registro.datos_obtenidos > 0">
+            · <strong>+{{ registro.datos_obtenidos }} Datos</strong></template>.
+          Tu marcador y tu Archivo de Horneados ya lo reflejan.
+        </p>
 
-      <button class="primario" @click="cerrarResultadoHorneado">Cerrar</button>
+        <button class="primario" @click="cerrarResultadoHorneado">Cerrar</button>
+      </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
 .fondo-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--velo-modal);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 50;
-  padding: 1rem;
+  padding: var(--e4);
 }
 
 .modal {
@@ -64,18 +69,18 @@ const registro = computed(() => store.resultadoHorneado!)
 }
 
 .linea {
-  margin: 0 0 0.75rem;
-  font-size: 0.9rem;
+  margin: 0 0 var(--e3);
+  font-size: var(--t-m);
   line-height: 1.45;
 }
 
 button.primario {
   width: 100%;
-  padding: 0.6rem;
-  border-radius: 4px;
-  border: 1px solid var(--color-acento);
-  background: var(--color-acento);
-  color: #1a1410;
+  padding: var(--e2);
+  border-radius: var(--r-control);
+  border: 1px solid var(--cobre);
+  background: var(--cobre);
+  color: var(--tinta-sobre-acento);
   font-weight: 600;
 }
 </style>

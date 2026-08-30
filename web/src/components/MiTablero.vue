@@ -8,6 +8,7 @@ import IconoAgua from './IconoAgua.vue'
 import IconoDatos from './IconoDatos.vue'
 import IconoMonedas from './IconoMonedas.vue'
 import IconoMaestria from './IconoMaestria.vue'
+import PistaMedida from './PistaMedida.vue'
 import { hexDeColor } from '../data/coloresJugador'
 import { TECNOLOGIAS } from '../data/tecnologias'
 import { fmtTokensAgua, fmtTokensHarina, pctAgua, tokensHarina } from '../data/unidades'
@@ -56,320 +57,336 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
 
 <template>
   <section class="panel mi-tablero" :style="{ borderLeftColor: colorHex }">
-    <div class="cabecera-tablero">
+    <header class="cabecera-tablero">
       <h2>
         <span class="punto-color" :style="{ background: colorHex }" />
         {{ yo.nombre }}
-        <span v-if="yo.en_estado_contaminacion" class="badge-contaminado">◉ CONTAMINADO</span>
       </h2>
-      <div class="pa-pips">
-        <span v-for="i in 3" :key="i" class="pip" :class="{ activo: i <= yo.puntos_accion }">●</span>
-      </div>
-    </div>
+      <span v-if="yo.en_estado_contaminacion" class="badge-contaminado">◉ CONTAMINADO</span>
 
-    <div class="marcador">
-      <span class="icono-marcador"><IconoMaestria /></span>
-      <span class="puntos-horneados">{{ yo.puntos_horneados }} pts horneados</span>
-      <span
-        class="proyeccion"
-        title="Puntuación si la partida terminara ahora: horneados + madurez del cultivo + conversión de riqueza − penalizaciones (desperdicio, contaminación). Cambia también sin hornear."
-      >
-        · proyección final: {{ yo.puntos_maestria_final }} PM
-      </span>
-    </div>
-
-    <div class="medidores">
-      <div class="medidor">
-        <span class="etiqueta">Vitalidad</span>
-        <div class="pips-track">
-          <span
-            v-for="i in 6"
-            :key="i"
-            class="pip-track vitalidad"
-            :class="{ activo: i <= yo.vitalidad, peligro: avisoColapso }"
-            >●</span
-          >
-        </div>
+      <span class="marcador">
+        <span class="ico-s"><IconoMaestria /></span>
+        <strong class="dato">{{ yo.puntos_horneados }}</strong> pts horneados
         <span
+          class="proyeccion"
+          title="Puntuación si la partida terminara ahora: horneados + madurez del cultivo + conversión de riqueza − penalizaciones (desperdicio, contaminación). Cambia también sin hornear."
+        >
+          · proyección <span class="dato">{{ yo.puntos_maestria_final }}</span> PM
+        </span>
+      </span>
+
+      <span class="pa" title="Puntos de Acción disponibles">
+        <span class="eyebrow">PA</span>
+        <span class="pa-pips">
+          <span v-for="i in 3" :key="i" class="pip" :class="{ activo: i <= yo.puntos_accion }">●</span>
+        </span>
+      </span>
+    </header>
+
+    <div class="zonas-tablero">
+      <!-- Estado del cultivo: las dos lecturas que deciden la partida. -->
+      <section class="sub-zona zona-estado">
+        <h3 class="eyebrow">Cultivo</h3>
+        <PistaMedida
+          etiqueta="Vitalidad"
+          :valor="yo.vitalidad"
+          :max="6"
+          :previsto="avisoColapso ? yo.vitalidad_prevista : null"
+          :tono="avisoColapso ? 'riesgo' : 'vital'"
+        />
+        <p
           v-if="avisoColapso"
-          class="badge-colapso"
+          class="aviso-colapso"
           :title="`Vitalidad ${yo.vitalidad} → ${yo.vitalidad_prevista} esta noche: entrarás en Contaminación (-3 Puntos de Maestría y no podrás Iniciar Receta). Alimenta el cultivo (Acción A, 0 PA) antes de terminar el día.`"
-          >⚠</span
         >
-      </div>
-      <div class="medidor">
-        <span class="etiqueta">Acidez</span>
-        <div class="pips-track">
-          <span v-for="i in 6" :key="i" class="pip-track acidez" :class="{ activo: i <= yo.acidez }">●</span>
-        </div>
-      </div>
-    </div>
+          ⚠ Colapsa esta noche si no lo alimentas
+        </p>
+        <PistaMedida etiqueta="Acidez" :valor="yo.acidez" :max="6" tono="frio" />
 
-    <div class="sub-titulo">Recursos</div>
-    <div class="recursos-grid">
-      <div
-        v-for="tipo in TIPOS_HARINA"
-        :key="tipo"
-        class="recurso-tile"
-        :title="`Harina ${tipo}: ${fmtTokensHarina(yo.reserva_harina[tipo])} del 10% = ${yo.reserva_harina[tipo]}%`"
-      >
-        <span class="icono-recurso"><IconoHarina :tipo="tipo" /></span>{{ tokensHarina(yo.reserva_harina[tipo]) }}
-        <span class="unidad-secundaria">({{ yo.reserva_harina[tipo] }}%)</span>
-      </div>
-      <div
-        class="recurso-tile"
-        :title="`Agua: ${fmtTokensAgua(yo.reserva_agua)} del 5% = ${pctAgua(yo.reserva_agua)}% de hidratación`"
-      >
-        <span class="icono-recurso"><IconoAgua /></span>{{ yo.reserva_agua }}
-        <span class="unidad-secundaria">({{ pctAgua(yo.reserva_agua) }}%)</span>
-      </div>
-      <div class="recurso-tile" title="Datos de Investigación">
-        <span class="icono-recurso"><IconoDatos /></span>{{ yo.datos_investigacion }}
-      </div>
-      <div class="recurso-tile" title="Monedas">
-        <span class="icono-recurso"><IconoMonedas /></span>{{ yo.monedas }}
-      </div>
-      <div class="recurso-tile" title="Dados de inóculo en reserva">
-        <span class="icono-recurso emoji">🎲</span>{{ yo.dados_inoculo }}
-      </div>
-    </div>
-    <p
-      class="linea-desperdicio"
-      :class="{ penaliza: penalizacionDesperdicio < 0 }"
-      title="Al final de la partida pierdes 1 Punto de Maestría por cada 3 tokens de insumo sin usar. Un token de harina (10%) y uno de agua (5%) cuentan igual aquí."
-    >
-      {{ yo.total_tokens_recursos }} tokens sin usar
-      <span v-if="penalizacionDesperdicio < 0">→ {{ penalizacionDesperdicio }} PM al final</span>
-      <span v-else>→ sin penalización todavía</span>
-    </p>
-
-    <div class="sub-titulo">Mejoras</div>
-    <div class="mejoras-grid">
-      <div
-        v-for="tec in TECNOLOGIAS"
-        :key="tec.id"
-        class="mejora-slot"
-        :class="{ activa: yo.tecnologias[tec.id], abierta: tecAbierta === tec.id }"
-      >
-        {{ EMOJI_TECNOLOGIA[tec.id] }} {{ tec.nombre }}
-        <button
-          type="button"
-          class="boton-info"
-          :aria-expanded="tecAbierta === tec.id"
-          title="Ver detalles"
-          @click="tecAbierta = tecAbierta === tec.id ? null : tec.id"
-        >
-          ⓘ
-        </button>
-        <div class="tooltip" role="tooltip">
-          <p>{{ tec.descripcion }}</p>
-          <p v-if="!yo.tecnologias[tec.id]">Costo: {{ tec.costo }} Datos</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="sub-titulo">Estaciones de fermentación</div>
-    <div class="estaciones">
-      <EstacionCard :slot="yo.estaciones_fermentacion[0]" :indice="0" mostrar-fantasma />
-      <EstacionCard :slot="yo.estaciones_fermentacion[1]" :indice="1" mostrar-fantasma />
-      <EstacionCard
-        :slot="yo.estaciones_fermentacion[2] ?? null"
-        :indice="2"
-        :bloqueada="!yo.tecnologias.camara_b"
-        mostrar-fantasma
-      />
-    </div>
-
-    <div class="sub-titulo">Carpeta de Proyectos ({{ yo.carpeta_proyectos.length }}/3)</div>
-    <div class="carpeta">
-      <RecetaCard v-for="(receta, i) in yo.carpeta_proyectos" :key="i" :receta="receta" />
-      <p v-if="yo.carpeta_proyectos.length === 0" class="vacio">— vacía —</p>
-    </div>
-
-    <div class="sub-titulo">
-      Archivo de Horneados ({{ yo.archivo_horneado_exitoso.length }}/5)
-    </div>
-    <ul class="archivo-lista">
-      <li
-        v-for="({ registro, colapso }, i) in registrosArchivo"
-        :key="i"
-        class="registro-horneado"
-        :class="{ colapso }"
-      >
-        <span class="nombre-registro">
-          <template v-if="colapso">⚠ </template>{{ registro.recipe.nombre }}
-        </span>
-        <span class="detalle-registro">
-          {{ ETIQUETA_ZONA[registro.zona_resultado] }} ·
-          {{ registro.puntos_totales }} pts<template v-if="registro.bono_sabor_aplicado">
-            (con Bono de Sabor)</template
+        <h3 class="eyebrow">Recursos</h3>
+        <div class="recursos-grid">
+          <div
+            v-for="tipo in TIPOS_HARINA"
+            :key="tipo"
+            class="recurso-tile"
+            :title="`Harina ${tipo}: ${fmtTokensHarina(yo.reserva_harina[tipo])} del 10% = ${yo.reserva_harina[tipo]}%`"
           >
-          · {{ registro.monedas_obtenidos }}₥
-        </span>
-      </li>
-      <p v-if="registrosArchivo.length === 0" class="vacio">— todavía nada horneado —</p>
-    </ul>
+            <span class="ico-s"><IconoHarina :tipo="tipo" /></span>
+            <span class="dato">{{ tokensHarina(yo.reserva_harina[tipo]) }}</span>
+            <span class="unidad-secundaria">({{ yo.reserva_harina[tipo] }}%)</span>
+          </div>
+          <div
+            class="recurso-tile"
+            :title="`Agua: ${fmtTokensAgua(yo.reserva_agua)} del 5% = ${pctAgua(yo.reserva_agua)}% de hidratación`"
+          >
+            <span class="ico-s"><IconoAgua /></span>
+            <span class="dato">{{ yo.reserva_agua }}</span>
+            <span class="unidad-secundaria">({{ pctAgua(yo.reserva_agua) }}%)</span>
+          </div>
+          <div class="recurso-tile" title="Datos de Investigación">
+            <span class="ico-s"><IconoDatos /></span><span class="dato">{{ yo.datos_investigacion }}</span>
+          </div>
+          <div class="recurso-tile" title="Monedas">
+            <span class="ico-s"><IconoMonedas /></span><span class="dato">{{ yo.monedas }}</span>
+          </div>
+          <div class="recurso-tile" title="Dados de inóculo en reserva">
+            <span class="ico-s emoji">🎲</span><span class="dato">{{ yo.dados_inoculo }}</span>
+          </div>
+        </div>
+        <p
+          class="linea-desperdicio"
+          :class="{ penaliza: penalizacionDesperdicio < 0 }"
+          title="Al final de la partida pierdes 1 Punto de Maestría por cada 3 tokens de insumo sin usar. Un token de harina (10%) y uno de agua (5%) cuentan igual aquí."
+        >
+          <span class="dato">{{ yo.total_tokens_recursos }}</span> tokens sin usar
+          <span v-if="penalizacionDesperdicio < 0">→ {{ penalizacionDesperdicio }} PM al final</span>
+          <span v-else>→ sin penalización todavía</span>
+        </p>
+      </section>
+
+      <section class="sub-zona zona-estaciones">
+        <h3 class="eyebrow">Estaciones de fermentación</h3>
+        <div class="estaciones">
+          <EstacionCard :slot="yo.estaciones_fermentacion[0]" :indice="0" mostrar-fantasma />
+          <EstacionCard :slot="yo.estaciones_fermentacion[1]" :indice="1" mostrar-fantasma />
+          <EstacionCard
+            :slot="yo.estaciones_fermentacion[2] ?? null"
+            :indice="2"
+            :bloqueada="!yo.tecnologias.camara_b"
+            mostrar-fantasma
+          />
+        </div>
+
+        <h3 class="eyebrow">Mejoras de laboratorio</h3>
+        <div class="mejoras-grid">
+          <div
+            v-for="tec in TECNOLOGIAS"
+            :key="tec.id"
+            class="mejora-slot"
+            :class="{ activa: yo.tecnologias[tec.id], abierta: tecAbierta === tec.id }"
+          >
+            {{ EMOJI_TECNOLOGIA[tec.id] }} {{ tec.nombre }}
+            <button
+              type="button"
+              class="boton-info"
+              :aria-expanded="tecAbierta === tec.id"
+              title="Ver detalles"
+              @click="tecAbierta = tecAbierta === tec.id ? null : tec.id"
+            >
+              ⓘ
+            </button>
+            <div class="tooltip" role="tooltip">
+              <p>{{ tec.descripcion }}</p>
+              <p v-if="!yo.tecnologias[tec.id]">Costo: {{ tec.costo }} Datos</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="sub-zona zona-carpeta">
+        <h3 class="eyebrow">Carpeta de Proyectos ({{ yo.carpeta_proyectos.length }}/3)</h3>
+        <div class="carpeta">
+          <RecetaCard v-for="(receta, i) in yo.carpeta_proyectos" :key="i" :receta="receta" />
+          <p v-if="yo.carpeta_proyectos.length === 0" class="vacio">— vacía —</p>
+        </div>
+      </section>
+
+      <section class="sub-zona zona-archivo">
+        <h3 class="eyebrow">Archivo de Horneados ({{ yo.archivo_horneado_exitoso.length }}/5)</h3>
+        <ul class="archivo-lista">
+          <li
+            v-for="({ registro, colapso }, i) in registrosArchivo"
+            :key="i"
+            class="registro-horneado"
+            :class="{ colapso }"
+          >
+            <span class="nombre-registro">
+              <template v-if="colapso">⚠ </template>{{ registro.recipe.nombre }}
+            </span>
+            <span class="detalle-registro">
+              {{ ETIQUETA_ZONA[registro.zona_resultado] }} ·
+              <span class="dato">{{ registro.puntos_totales }}</span> pts<template
+                v-if="registro.bono_sabor_aplicado"
+              >
+                (con Bono de Sabor)</template
+              >
+              · <span class="dato">{{ registro.monedas_obtenidos }}</span>₥
+            </span>
+          </li>
+          <p v-if="registrosArchivo.length === 0" class="vacio">— todavía nada horneado —</p>
+        </ul>
+      </section>
+    </div>
   </section>
 </template>
 
 <style scoped>
 .mi-tablero {
-  border-left: 4px solid transparent;
+  border-left: 3px solid transparent;
+  padding: var(--e3);
 }
 
+/* --- Cabecera ------------------------------------------------------------ */
 .cabecera-tablero {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: var(--e1) var(--e3);
+  margin-bottom: var(--e3);
 }
 
 .cabecera-tablero h2 {
-  margin: 0;
-  font-size: 1.15rem;
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--e1);
 }
 
 .punto-color {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   flex: 0 0 auto;
 }
 
 .badge-contaminado {
-  color: var(--color-mal);
-  font-size: 0.75rem;
+  color: var(--riesgo);
+  font-size: var(--t-micro);
   font-weight: 600;
+  letter-spacing: 0.06em;
 }
 
-.pa-pips {
-  letter-spacing: 0.15em;
-}
-
-.pip {
-  color: var(--color-borde);
-}
-
-.pip.activo {
-  color: var(--color-acento);
-}
-
-.medidores {
+.marcador {
   display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  margin: 0.75rem 0;
-}
-
-.medidor {
-  display: grid;
-  grid-template-columns: 70px 1fr 40px;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
+  gap: var(--e1);
+  font-size: var(--t-s);
+  color: var(--tinta-tenue);
 }
 
-.medidor .etiqueta {
-  color: var(--color-texto-tenue);
+.marcador strong {
+  color: var(--tinta);
 }
 
-.pips-track {
-  letter-spacing: 0.1em;
-  font-size: 0.75rem;
-}
-
-.pip-track {
-  color: var(--color-borde);
-}
-
-.pip-track.activo.vitalidad {
-  color: var(--color-bien);
-}
-
-.pip-track.activo.acidez {
-  color: #7fa8d9;
-}
-
-/* Aviso de colapso: la Vitalidad se pinta en rojo en vez de verde para que
-   el riesgo se vea sin tener que leer nada. Va despues de .activo.vitalidad
-   a proposito -- misma especificidad, gana la ultima regla. */
-.pip-track.activo.peligro {
-  color: var(--color-mal);
-}
-
-.badge-colapso {
-  justify-self: end;
-  color: var(--color-mal);
-  font-size: 0.9rem;
+.proyeccion {
   cursor: help;
 }
 
-.linea-desperdicio {
-  margin: 0.35rem 0 0;
-  font-size: 0.75rem;
-  color: var(--color-texto-tenue);
+.pa {
+  display: flex;
+  align-items: center;
+  gap: var(--e1);
+  margin-left: auto;
 }
 
-.linea-desperdicio.penaliza span {
-  color: var(--color-mal);
+.pa-pips {
+  letter-spacing: 0.12em;
+  font-size: var(--t-xs);
 }
 
+.pip {
+  color: var(--borde-fuerte);
+}
+
+.pip.activo {
+  color: var(--cobre);
+}
+
+/* --- Sub-zonas ----------------------------------------------------------- */
+/* El tablero propio es ancho y bajo dentro de su region, asi que se reparte
+   en columnas que envuelven, en vez de una sola pila muy alta. */
+.zonas-tablero {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--e3);
+  align-items: flex-start;
+}
+
+.sub-zona {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e2);
+  min-width: 0;
+}
+
+.zona-estado {
+  flex: 1 1 17rem;
+}
+.zona-estaciones {
+  flex: 2 1 26rem;
+}
+.zona-carpeta {
+  flex: 1 1 18rem;
+}
+.zona-archivo {
+  flex: 1 1 15rem;
+}
+
+.aviso-colapso {
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--riesgo);
+  cursor: help;
+}
+
+/* --- Recursos ------------------------------------------------------------ */
 .recursos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
-  gap: 0.4rem;
-  margin-bottom: 0.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+  gap: var(--e1);
 }
 
 .recurso-tile {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  background: var(--color-fondo);
-  border-radius: 4px;
-  padding: 0.3rem 0.4rem;
-  font-size: 0.8rem;
+  gap: var(--e1);
+  background: var(--carta);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-control);
+  padding: var(--e1);
+  font-size: var(--t-xs);
 }
 
-.icono-recurso {
-  width: 18px;
-  height: 18px;
-  flex: 0 0 auto;
-}
-
-.icono-recurso.emoji {
+.emoji {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.95rem;
+  font-size: var(--t-s);
 }
 
+.linea-desperdicio {
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
+}
+
+.linea-desperdicio.penaliza span:not(.dato) {
+  color: var(--riesgo);
+}
+
+/* --- Mejoras ------------------------------------------------------------- */
 .mejoras-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin-bottom: 0.5rem;
+  gap: var(--e1);
 }
 
 .mejora-slot {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.15rem;
-  background: var(--color-fondo);
-  border: 1px dashed var(--color-borde);
-  border-radius: 4px;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
-  color: var(--color-texto-tenue);
+  gap: 2px;
+  background: var(--carta);
+  border: 1px dashed var(--borde);
+  border-radius: var(--r-control);
+  padding: 2px var(--e2);
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
 }
 
 .mejora-slot.activa {
   border-style: solid;
-  border-color: var(--color-acento);
-  color: var(--color-texto);
+  border-color: var(--cobre);
+  color: var(--tinta);
 }
 
 .mejora-slot .boton-info {
@@ -377,10 +394,9 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
   background: none;
   border: none;
   color: inherit;
-  font-size: 0.85rem;
+  font-size: var(--t-xs);
   line-height: 1;
-  padding: 0 0 0 0.1rem;
-  cursor: pointer;
+  padding: 0 0 0 2px;
   opacity: 0.8;
 }
 
@@ -392,26 +408,26 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
   visibility: hidden;
   opacity: 0;
   position: absolute;
-  bottom: calc(100% + 0.4rem);
+  bottom: calc(100% + var(--e1));
   left: 50%;
   transform: translateX(-50%);
-  width: 220px;
+  width: 14rem;
   max-width: 70vw;
-  background: var(--color-panel);
-  border: 1px solid var(--color-borde);
-  border-radius: 6px;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.72rem;
+  background: var(--zona);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-carta);
+  padding: var(--e2);
+  font-size: var(--t-xs);
   line-height: 1.35;
-  color: var(--color-texto);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  color: var(--tinta);
+  box-shadow: var(--sombra-flotante);
   z-index: 30;
-  transition: opacity 0.1s ease;
+  transition: opacity var(--transicion);
   white-space: normal;
 }
 
 .mejora-slot .tooltip p {
-  margin: 0 0 0.35rem;
+  margin: 0 0 var(--e1);
 }
 
 .mejora-slot .tooltip p:last-child {
@@ -425,90 +441,50 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
   opacity: 1;
 }
 
-.sub-titulo {
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  color: var(--color-texto-tenue);
-  margin: 0.75rem 0 0.35rem;
-}
-
+/* --- Estaciones y carpeta ------------------------------------------------ */
 .estaciones {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
-}
-
-@media (max-width: 600px) {
-  .estaciones {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--e2);
 }
 
 .carpeta {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--e2);
 }
 
 .carpeta > :deep(.receta-card) {
-  flex: 1 1 240px;
-  max-width: 300px;
+  flex: 1 1 14rem;
 }
 
 .vacio {
-  color: var(--color-texto-tenue);
+  margin: 0;
+  color: var(--tinta-tenue);
   font-style: italic;
+  font-size: var(--t-xs);
 }
 
-/* Marcador de puntos en vivo, bajo la cabecera. */
-.marcador {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  margin-top: 0.25rem;
-}
-
-.icono-marcador {
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-}
-
-.icono-marcador :deep(svg) {
-  width: 100%;
-  height: 100%;
-}
-
-.puntos-horneados {
-  font-weight: 700;
-}
-
-.proyeccion {
-  color: var(--color-texto-tenue);
-  font-size: 0.78rem;
-  cursor: help;
-}
-
-/* Archivo de horneados: filas compactas, colapsos en rojo al final. */
+/* --- Archivo ------------------------------------------------------------- */
 .archivo-lista {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: var(--e1);
 }
 
 .registro-horneado {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 0.15rem 0.5rem;
-  font-size: 0.8rem;
-  padding: 0.3rem 0.45rem;
-  border: 1px solid var(--color-borde);
-  border-radius: 5px;
+  gap: 2px var(--e2);
+  font-size: var(--t-xs);
+  padding: var(--e1) var(--e2);
+  border: 1px solid var(--borde);
+  border-left: 2px solid var(--vital);
+  border-radius: var(--r-control);
 }
 
 .registro-horneado .nombre-registro {
@@ -516,16 +492,23 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
 }
 
 .registro-horneado .detalle-registro {
-  color: var(--color-texto-tenue);
-  font-size: 0.74rem;
+  color: var(--tinta-tenue);
+  font-size: var(--t-micro);
 }
 
 .registro-horneado.colapso {
-  border-color: var(--color-mal);
+  border-color: var(--riesgo);
+  border-left-color: var(--riesgo);
 }
 
 .registro-horneado.colapso .nombre-registro,
 .registro-horneado.colapso .detalle-registro {
-  color: var(--color-mal);
+  color: var(--riesgo);
+}
+
+@media (max-width: 720px) {
+  .estaciones {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

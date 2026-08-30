@@ -84,20 +84,20 @@ const pilaDescarteAbierta = ref(false)
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 0.4rem 1rem;
-  margin-bottom: 0.75rem;
+  gap: var(--e2) var(--e4);
+  margin-bottom: var(--e3);
 }
 
 .stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.15rem 0.9rem;
-  font-size: 0.8rem;
-  color: var(--color-texto-tenue);
+  gap: var(--e1) var(--e3);
+  font-size: var(--t-s);
+  color: var(--tinta-tenue);
 }
 
 .efecto-activo {
-  color: var(--color-acento);
+  color: var(--cobre);
   font-weight: 600;
 }
 
@@ -105,14 +105,14 @@ const pilaDescarteAbierta = ref(false)
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 1.5rem;
+  gap: var(--e5);
 }
 
 .pila {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--e2);
   background: none;
   border: none;
   padding: 0;
@@ -142,14 +142,14 @@ const pilaDescarteAbierta = ref(false)
 }
 
 .carta-revelada {
-  margin-left: 0.5rem;
+  margin-left: var(--e2);
 }
 
 .etiqueta-pila {
-  font-size: 0.7rem;
+  font-size: var(--t-micro);
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: var(--color-texto-tenue);
+  color: var(--tinta-tenue);
 }
 
 @media (max-width: 640px) {
