@@ -609,7 +609,7 @@
           </div>
           <div class="card">
             <h5><span class="dot" style="background:var(--accent-datos)"></span>Datos de Investigación</h5>
-            <p>La divisa técnica del laboratorio. Se ganan horneando en Zona Óptima, por Simposio Técnico, o por cultivo maduro. Se gastan en Tecnologías, Horas Extras y Pedido de Urgencia.</p>
+            <p>La divisa técnica del laboratorio. Se ganan horneando en Zona Óptima y sacrificando un pan del Archivo en el Simposio Técnico; algunos Patrocinios reparten alguno al empezar. Se gastan en Tecnologías, Horas Extras, Pedido de Urgencia e Inóculo de Emergencia.</p>
           </div>
         </div>
       </section>
@@ -618,7 +618,7 @@
         <div class="section-head"><span class="n">03</span><h2>Preparación de la partida</h2></div>
         <ol class="rules-list">
           <li>Colocar el Tablero Central con la temperatura en <strong>20 °C</strong> y el Track de Orden de Turno al lado.</li>
-          <li>Repartir a cada jugador un Tablero Individual, sus marcadores, 3 Dados de Inóculo y 8 Cubos de Laboratorio. Vitalidad y Acidez inician en <strong>Nivel 1</strong>. Colocar una Ficha de Bloqueo sobre la tercera ranura de fermentación (se libera con Cámara B).</li>
+          <li>Repartir a cada jugador un Tablero Individual, sus marcadores, 3 Dados de Inóculo y 8 Cubos de Laboratorio. La Vitalidad inicia en <strong>Nivel 2</strong> y la Acidez en <strong>Nivel 1</strong>. Colocar una Ficha de Bloqueo sobre la tercera ranura de fermentación (se libera con Cámara B).</li>
           <li><strong>Asignación de Patrocinios:</strong> barajar las 8 Cartas de Patrocinio y repartir una boca abajo a cada jugador. Revelar todas simultáneamente.
             <ul class="rules-list">
               <li>El jugador con la <strong>Iniciativa más baja</strong> recibe el token de Investigador Jefe y actúa primero el Día 1. Los demás se ordenan de forma ascendente.</li>
@@ -634,17 +634,17 @@
           <table>
             <caption>Cartas de Patrocinio — reparto de recursos iniciales</caption>
             <thead>
-              <tr><th>Iniciativa</th><th>Harina — tokens (%)</th><th>Agua — tokens (%)</th><th>Monedas</th></tr>
+              <tr><th>Iniciativa</th><th>Harina — tokens (%)</th><th>Agua — tokens (%)</th><th>Monedas</th><th>Datos</th></tr>
             </thead>
             <tbody>
-              <tr><td>1</td><td class="wrap">10 (100%) de Blanca</td><td>2 (10%)</td><td>9</td></tr>
-              <tr><td>2</td><td class="wrap">10 (100%) de Blanca</td><td>6 (30%)</td><td>8</td></tr>
-              <tr><td>3</td><td class="wrap">10 (100%) de Blanca</td><td>12 (60%)</td><td>6</td></tr>
-              <tr><td>4</td><td class="wrap">10 (100%) de Integral</td><td>6 (30%)</td><td>8</td></tr>
-              <tr><td>5</td><td class="wrap">10 (100%) de Integral</td><td>12 (60%)</td><td>6</td></tr>
-              <tr><td>6</td><td class="wrap">10 (100%) de Centeno</td><td>6 (30%)</td><td>8</td></tr>
-              <tr><td>7</td><td class="wrap">10 (100%) de Centeno</td><td>12 (60%)</td><td>6</td></tr>
-              <tr><td>8</td><td class="wrap">20 (200%) de Blanca</td><td>20 (100%)</td><td>4</td></tr>
+              <tr><td>1</td><td class="wrap">10 (100%) de Blanca</td><td>2 (10%)</td><td>9</td><td>—</td></tr>
+              <tr><td>2</td><td class="wrap">10 (100%) de Blanca</td><td>6 (30%)</td><td>8</td><td>—</td></tr>
+              <tr><td>3</td><td class="wrap">10 (100%) de Blanca</td><td>12 (60%)</td><td>6</td><td>1</td></tr>
+              <tr><td>4</td><td class="wrap">10 (100%) de Integral</td><td>6 (30%)</td><td>8</td><td>—</td></tr>
+              <tr><td>5</td><td class="wrap">10 (100%) de Integral</td><td>12 (60%)</td><td>6</td><td>1</td></tr>
+              <tr><td>6</td><td class="wrap">10 (100%) de Centeno</td><td>6 (30%)</td><td>8</td><td>—</td></tr>
+              <tr><td>7</td><td class="wrap">10 (100%) de Centeno</td><td>12 (60%)</td><td>6</td><td>1</td></tr>
+              <tr><td>8</td><td class="wrap">20 (200%) de Blanca</td><td>20 (100%)</td><td>4</td><td>2</td></tr>
             </tbody>
           </table>
         </div>
@@ -659,7 +659,7 @@
         <ol class="rules-list">
           <li><strong>Fase I: Ambiente</strong> — se preparan las variables globales del día.</li>
           <li><strong>Fase II: Acción</strong> — los jugadores usan sus Puntos de Acción.</li>
-          <li><strong>Fase III: Fermentación</strong> — resolución automática de las masas y desgaste del cultivo base.</li>
+          <li><strong>Fase III: Fermentación</strong> — resolución automática de las masas, desgaste del cultivo base y cobro de los <strong>Ingresos de Panadería</strong> (cada pan del Archivo rinde Monedas).</li>
         </ol>
       </section>
 
@@ -763,7 +763,8 @@
 
         <h3 class="sub">F · Hornear y Vender <em class="aside">(Finalización de Protocolo)</em></h3>
         <p><strong>Costo:</strong> 1 PA. <strong>Límite:</strong> 1 vez por día (por espacio de acción) — no aplica al colapso automático de Fase III. Finaliza el protocolo de una masa y la vende de inmediato: se obtienen Puntos de Maestría, Monedas y (en Zona Óptima) Datos de Investigación, según la zona del track donde se encuentre el marcador.</p>
-        <p><strong>No se puede hornear una masa en Crecimiento.</strong> Todavía no es pan: la Acción F la rechaza y el espacio aparece deshabilitado. Toda masa nace en Crecimiento al iniciarse la receta y sale de él en cuanto la fermentación la lleva al Pre-fermento. Para deshacerte de una masa que aún crece, el <strong>Simposio Técnico</strong> la descarta y paga 1 Dato.</p>
+        <p><strong>No se puede hornear una masa en Crecimiento.</strong> Todavía no es pan: la Acción F la rechaza y el espacio aparece deshabilitado. Toda masa nace en Crecimiento al iniciarse la receta y sale de él en cuanto la fermentación la lleva al Pre-fermento.</p>
+        <p><strong>Y tampoco puedes deshacerte de ella.</strong> Iniciar una receta es un compromiso irreversible: no existe ninguna acción que abandone una masa. Una masa que ya no quieres seguirá avanzando cada noche hasta que la hornees o hasta que colapse sola. Nunca se queda atascada ocupando la estación — la Fase III la mueve siempre — pero el precio de haberte equivocado de día es que vas a pagar su penalización de colapso.</p>
 
         <div class="zone-legend">
           <span class="lc">Crecimiento — no se hornea</span>
@@ -791,7 +792,11 @@
         <p><strong>Costo:</strong> 1 PA + <strong>Monedas según el grado de la carta</strong> — Básica <strong>1</strong>, Intermedia <strong>2</strong>, Avanzada <strong>3</strong>. El precio es <em>aditivo</em>: el Punto de Acción y el espacio siguen siendo el límite real, y las Monedas hacen del mercado una economía en lugar de una cola. <strong>Límites:</strong> máximo 3 cartas en la Carpeta de Proyectos (si está llena, hay que descartar una antes de investigar otra); además, 1 vez por día (por espacio de acción). Toma una carta de receta de cualquiera de las 4 estaciones del Mercado Central y la coloca inactiva en la Carpeta de Proyectos propia. El espacio del mercado queda vacío hasta el Protocolo de Refresco del día siguiente.</p>
 
         <h3 class="sub">Simposio Técnico</h3>
-        <p><strong>Costo:</strong> 1 PA. <strong>Límite:</strong> 1 vez por día (por espacio de acción), sin importar el origen. Descarta una carta de la Carpeta de Proyectos o de una estación activa (perdiendo esa masa sin puntuación ni penalización, recuperando el Dado de Inóculo) a cambio de +1 Dato de Investigación inmediato.</p>
+        <p><strong>Costo:</strong> 1 PA + <strong>un pan horneado con éxito de tu Archivo</strong>. <strong>Límite:</strong> 1 vez por día (por espacio de acción).</p>
+        <p>Presentas uno de tus panes en el simposio: retiras su registro del <strong>Archivo de Horneados Exitosos</strong> y ganas Datos de Investigación <strong>según el grado de la carta</strong> — Básica <strong>1</strong>, Intermedia <strong>2</strong>, Avanzada <strong>3</strong>. La carta vuelve al descarte del mazo de recetas y puede reaparecer al rebarajar.</p>
+        <p>Es la <strong>única forma de sacar un pan del Archivo</strong>, y hacerlo cuesta, todo a la vez: los <strong>Puntos de Maestría</strong> de ese horneado; su <strong>renta</strong> de Ingresos de Panadería para el resto de la partida; un escalón de <strong>Variedad de Recetas</strong>, si era el único pan de ese tipo; y un paso del contador <strong>X/5</strong> que termina la partida.</p>
+        <p class="note"><strong>No es una jugada eficiente, y no pretende serlo.</strong> Ningún puñado de Datos compensa ese precio: el Simposio es una <strong>palanca de emergencia</strong> — quemar un éxito pasado para salvar el presente — y en la práctica se sacrifica siempre el pan más barato que se tenga. Un jugador con 4 panes en el Archivo puede además sacrificar uno para <em>retrasar</em> el final de la partida; es carísimo, y por eso es legítimo. Lo que no puede es deshacer un final ya desencadenado.</p>
+        <p><strong>Ojo, cambió respecto a versiones anteriores:</strong> el Simposio ya <strong>no</strong> descarta de la Carpeta de Proyectos ni de una estación de fermentación. Para descartar de la Carpeta está la propia acción Investigar Protocolo cuando la carpeta está llena; y <strong>abandonar una masa ya no es posible en absoluto</strong>.</p>
 
         <h4 class="sub-sub">Acciones auxiliares y de emergencia · costo 0 PA</h4>
 
@@ -812,7 +817,7 @@
         <h3 class="sub">Protocolos de Emergencia <em class="aside">(Rescate de Cultivo)</em></h3>
         <p>Solo si la Vitalidad del cultivo base ha llegado a 0 (ver <a href="#s9">Fase III</a>):</p>
         <ul class="rules-list">
-          <li><strong>H · Re-cultivo Manual:</strong> 1 PA + <strong>5 tokens de harina — 5&nbsp;(50%)</strong> (cualquier tipo, sin costo de agua). Retira la Contaminación y sitúa Vitalidad y Acidez en Nivel 1. <strong>Límite:</strong> 1 vez por día (por espacio de acción), además de requerir Contaminación activa.</li>
+          <li><strong>H · Re-cultivo Manual:</strong> 1 PA + <strong>3 tokens de harina — 3&nbsp;(30%)</strong> (cualquier tipo, sin costo de agua). Retira la Contaminación y sitúa Vitalidad y Acidez en Nivel 1. <strong>Límite:</strong> 1 vez por día (por espacio de acción), además de requerir Contaminación activa.</li>
           <li><strong>I · Inóculo de Emergencia:</strong> 1 PA + 1 Dato de Investigación. Retira la Contaminación y sitúa Vitalidad y Acidez en Nivel 2 — resultado superior al Re-cultivo Manual. <strong>Límite:</strong> 1 vez por día (por espacio de acción), además de requerir Contaminación activa.</li>
         </ul>
       </section>
@@ -840,7 +845,7 @@
 
         <h3 class="sub">Puntuación por grado</h3>
         <p>Los Puntos de Maestría de la Zona Óptima están escalonados por grado y <strong>no se solapan</strong>: Básica <strong>9 – 12</strong>, Intermedia <strong>13 – 16</strong>, Avanzada <strong>17 – 20</strong>.</p>
-        <p class="wrap" style="font-size:0.9rem;color:var(--ink-muted);">Las Monedas y el ancho de las zonas <strong>no</strong> están escalonados: son el eje que distingue, dentro de un mismo grado, una carta de puntos baratos de una carta caja fuerte. Compárense Hogaza Centeno (17 puntos, 27 Monedas, zona óptima de 4 casillas) y Pumpernickel (20 puntos, 28 Monedas, pero solo 3 casillas de zona óptima y un colapso de −8). El Bono de Sabor va por libre igual: Panettone es Intermedia y aun así tiene el mayor bono del juego (+8) — no es la carta de más puntos, es la de más sabor.</p>
+        <p class="wrap" style="font-size:0.9rem;color:var(--ink-muted);">Las Monedas y el ancho de las zonas <strong>no</strong> están escalonados: son el eje que distingue, dentro de un mismo grado, una carta de puntos baratos de una carta caja fuerte. Compárense Hogaza Centeno (17 puntos, 18 Monedas, zona óptima de 4 casillas) y Pumpernickel (20 puntos, 19 Monedas, pero solo 3 casillas de zona óptima y un colapso de −8). El Bono de Sabor va por libre igual: Panettone es Intermedia y aun así tiene el mayor bono del juego (+8) — no es la carta de más puntos, es la de más sabor.</p>
 
         <div class="zone-legend">
           <span class="lb">Baja</span><span class="lo">Óptima</span><span class="ls">Sobre-fermentada</span>
@@ -852,25 +857,26 @@
               <tr>
                 <th>Receta</th><th>Grado</th><th>Coste<br><span style="font-weight:400">Monedas</span></th><th>Harina<br><span style="font-weight:400">siempre 10 (100%) en total</span></th><th>Agua<br><span style="font-weight:400">tokens (hidratación)</span></th><th>Acidez diana (bono)</th>
                 <th>Crecim.</th><th>Pre-ferm.</th><th>Óptima</th><th>Colapso</th>
-                <th>Puntos B/O/S</th><th>Monedas B/O/S</th>
+                <th>Puntos B/O/S</th><th>Monedas al hornear B/O/S</th>
               </tr>
             </thead>
             <tbody>
-<tr><td class="name">Pan de Campo</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>12 (60%)</td><td>Nivel 3 (+3)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–10</td><td class="z-optima">11–15</td><td class="z-sobre">16–20</td><td>4 / 10 / −2</td><td>13 / 17 / 11</td></tr>
-              <tr><td class="name">Pan de Molde</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>11 (55%)</td><td>Nivel 1–2 (+2)</td><td class="z-crecimiento">1–3</td><td class="z-baja">4–8</td><td class="z-optima">9–14</td><td class="z-sobre">15–20</td><td>3 / 9 / −2</td><td>12 / 16 / 10</td></tr>
-              <tr><td class="name">Baguette</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>13 (65%)</td><td>Nivel 2 (+3)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–11</td><td class="z-optima">12–15</td><td class="z-sobre">16–20</td><td>5 / 11 / −2</td><td>14 / 18 / 12</td></tr>
-              <tr><td class="name">Focaccia</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>15 (75%)</td><td>Nivel 1–2 (+2)</td><td class="z-crecimiento">1–4</td><td class="z-baja">5–9</td><td class="z-optima">10–14</td><td class="z-sobre">15–20</td><td>3 / 12 / −3</td><td>15 / 19 / 13</td></tr>
-              <tr><td class="name">Miche</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Integral 50%</td><td>14 (70%)</td><td>Nivel 3–4 (+4)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–11</td><td class="z-optima">12–16</td><td class="z-sobre">17–20</td><td>5 / 13 / −4</td><td>16 / 20 / 13</td></tr>
-              <tr><td class="name">Pizza Napolitana</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Integral 50%</td><td>13 (62%)</td><td>Nivel 3 (+4)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–10</td><td class="z-optima">11–14</td><td class="z-sobre">15–20</td><td>4 / 14 / −4</td><td>15 / 21 / 12</td></tr>
-              <tr><td class="name">Brioche</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>11 (52%)</td><td>Nivel 1 (+5)</td><td class="z-crecimiento">1–7</td><td class="z-baja">8–14</td><td class="z-optima">15–17</td><td class="z-sobre">18–20</td><td>5 / 16 / −6</td><td>14 / 21 / 11</td></tr>
-              <tr><td class="name">Panettone</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>10 (47%)</td><td>Nivel 1 (+8)</td><td class="z-crecimiento">1–10</td><td class="z-baja">11–16</td><td class="z-optima">17–18</td><td class="z-sobre">19–20</td><td>8 / 16 / −8</td><td>13 / 22 / 10</td></tr>
-              <tr><td class="name">Hogaza Centeno</td><td>Avanzada</td><td>3</td><td class="wrap">Centeno 100%</td><td>14 (67%)</td><td>Nivel 4–5 (+6)</td><td class="z-crecimiento">1–6</td><td class="z-baja">7–12</td><td class="z-optima">13–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>20 / 27 / 17</td></tr>
-              <tr><td class="name">Pan Semillas</td><td>Avanzada</td><td>3</td><td class="wrap">Integral 100%</td><td>16 (78%)</td><td>Nivel 3–4 (+7)</td><td class="z-crecimiento">1–6</td><td class="z-baja">7–13</td><td class="z-optima">14–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>19 / 26 / 16</td></tr>
-              <tr><td class="name">Pan Graham</td><td>Avanzada</td><td>3</td><td class="wrap">Integral 100%</td><td>16 (80%)</td><td>Nivel 4–5 (+6)</td><td class="z-crecimiento">1–6</td><td class="z-baja">7–13</td><td class="z-optima">14–17</td><td class="z-sobre">18–20</td><td>6 / 19 / −6</td><td>18 / 26 / 15</td></tr>
-              <tr><td class="name">Pumpernickel</td><td>Avanzada</td><td>3</td><td class="wrap">Centeno 100%</td><td>17 (85%)</td><td>Nivel 5–6 (+8)</td><td class="z-crecimiento">1–9</td><td class="z-baja">10–15</td><td class="z-optima">16–18</td><td class="z-sobre">19–20</td><td>8 / 20 / −8</td><td>16 / 28 / 12</td></tr>
+<tr><td class="name">Pan de Campo</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>12 (60%)</td><td>Nivel 3 (+3)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–10</td><td class="z-optima">11–15</td><td class="z-sobre">16–20</td><td>4 / 10 / −2</td><td>10 / 14 / 8</td></tr>
+              <tr><td class="name">Pan de Molde</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>11 (55%)</td><td>Nivel 1–2 (+2)</td><td class="z-crecimiento">1–3</td><td class="z-baja">4–8</td><td class="z-optima">9–14</td><td class="z-sobre">15–20</td><td>3 / 9 / −2</td><td>9 / 13 / 7</td></tr>
+              <tr><td class="name">Baguette</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>13 (65%)</td><td>Nivel 2 (+3)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–11</td><td class="z-optima">12–15</td><td class="z-sobre">16–20</td><td>5 / 11 / −2</td><td>11 / 15 / 9</td></tr>
+              <tr><td class="name">Focaccia</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>15 (75%)</td><td>Nivel 1–2 (+2)</td><td class="z-crecimiento">1–4</td><td class="z-baja">5–9</td><td class="z-optima">10–14</td><td class="z-sobre">15–20</td><td>3 / 12 / −3</td><td>12 / 16 / 10</td></tr>
+              <tr><td class="name">Miche</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Integral 50%</td><td>14 (70%)</td><td>Nivel 3–4 (+4)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–11</td><td class="z-optima">12–16</td><td class="z-sobre">17–20</td><td>5 / 13 / −4</td><td>10 / 14 / 7</td></tr>
+              <tr><td class="name">Pizza Napolitana</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Integral 50%</td><td>13 (62%)</td><td>Nivel 3 (+4)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–10</td><td class="z-optima">11–14</td><td class="z-sobre">15–20</td><td>4 / 14 / −4</td><td>9 / 15 / 6</td></tr>
+              <tr><td class="name">Brioche</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>11 (52%)</td><td>Nivel 1 (+5)</td><td class="z-crecimiento">1–7</td><td class="z-baja">8–14</td><td class="z-optima">15–17</td><td class="z-sobre">18–20</td><td>5 / 16 / −6</td><td>8 / 15 / 5</td></tr>
+              <tr><td class="name">Panettone</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>10 (47%)</td><td>Nivel 1 (+8)</td><td class="z-crecimiento">1–10</td><td class="z-baja">11–16</td><td class="z-optima">17–18</td><td class="z-sobre">19–20</td><td>8 / 16 / −8</td><td>7 / 16 / 4</td></tr>
+              <tr><td class="name">Hogaza Centeno</td><td>Avanzada</td><td>3</td><td class="wrap">Centeno 100%</td><td>14 (67%)</td><td>Nivel 4–5 (+6)</td><td class="z-crecimiento">1–6</td><td class="z-baja">7–12</td><td class="z-optima">13–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>11 / 18 / 8</td></tr>
+              <tr><td class="name">Pan Semillas</td><td>Avanzada</td><td>3</td><td class="wrap">Integral 100%</td><td>16 (78%)</td><td>Nivel 3–4 (+7)</td><td class="z-crecimiento">1–6</td><td class="z-baja">7–13</td><td class="z-optima">14–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>10 / 17 / 7</td></tr>
+              <tr><td class="name">Pan Graham</td><td>Avanzada</td><td>3</td><td class="wrap">Integral 100%</td><td>16 (80%)</td><td>Nivel 4–5 (+6)</td><td class="z-crecimiento">1–6</td><td class="z-baja">7–13</td><td class="z-optima">14–17</td><td class="z-sobre">18–20</td><td>6 / 19 / −6</td><td>9 / 17 / 6</td></tr>
+              <tr><td class="name">Pumpernickel</td><td>Avanzada</td><td>3</td><td class="wrap">Centeno 100%</td><td>17 (85%)</td><td>Nivel 5–6 (+8)</td><td class="z-crecimiento">1–9</td><td class="z-baja">10–15</td><td class="z-optima">16–18</td><td class="z-sobre">19–20</td><td>8 / 20 / −8</td><td>7 / 19 / 3</td></tr>
             </tbody>
           </table>
         </div>
+        <p class="callout"><strong>La columna de Monedas es solo el pago del momento de hornear.</strong> Cada pan que entra en tu Archivo sigue produciendo Monedas <strong>todas las noches</strong> mientras siga allí — Básica 1, Intermedia 2, Avanzada 3 (ver <a href="#s9">Ingresos de Panadería</a>). Los números de la tabla ya están ajustados a la baja para dejarle sitio a esa renta: <strong>cualquier carta recupera al tercer día lo que pagaba antes de golpe</strong>, y a partir de ahí gana más. Por eso el pan barato horneado el Día 3 puede rendir más que el pan caro horneado el Día 8.</p>
         <p class="wrap" style="font-size:0.86rem;color:var(--ink-muted);max-width:68ch;">La columna <strong>Coste</strong> es lo que cuesta llevarse la carta del Mercado Central con la <a href="#s7">Acción G</a>; va impresa en la carta. No confundir con la harina y el agua, que son lo que cuesta <strong>iniciarla</strong> después con la Acción B.</p>
         <p class="wrap" style="font-size:0.86rem;color:var(--ink-muted);max-width:68ch;">El número entre paréntesis junto a la Acidez Diana es el bono de Puntos de Maestría del Bono de Sabor (ver <a href="#s7">Acción F</a>); el Bono de Sabor también otorga siempre +2 Monedas adicionales, sin importar la receta.</p>
       </section>
@@ -904,7 +910,28 @@
             </tbody>
           </table>
         </div>
+        <p class="note"><strong>La cuenta que conviene tener presente.</strong> El desgaste resta 1 y Alimentar el Cultivo repone 1 una vez al día, así que <strong>quien alimenta a diario se queda donde empezó</strong>: en Vitalidad 2. Desde ahí, un Aletargamiento Invernal (−2) te deja en 1 y sobrevives. Si te saltas la alimentación un solo día y cae esa carta, llegas a 0. Eso es exactamente lo que la Contaminación castiga.</p>
         <p>La Vitalidad nunca desciende por debajo de 0. Si un jugador llega a 0 en cualquier momento, sufre una penalización inmediata de <strong>−3 Puntos de Maestría</strong> y entra en <strong>Contaminación</strong>: no puede iniciar nuevas recetas hasta ejecutar un Protocolo de Emergencia. Cada episodio de Contaminación aplica su propia penalización — se acumulan si ocurre más de una vez.</p>
+
+        <h3 class="sub">9.4 · Ingresos de Panadería</h3>
+        <p>Cada jugador cobra Monedas de la reserva general <strong>por cada pan de su Archivo de Horneados Exitosos</strong>, según el grado de cada carta:</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Grado del pan archivado</th><th>Monedas por noche</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Básica</td><td><span class="chip monedas">1</span></td></tr>
+              <tr><td class="name">Intermedia</td><td><span class="chip monedas">2</span></td></tr>
+              <tr><td class="name">Avanzada</td><td><span class="chip monedas">3</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Se cobra por <strong>todos</strong> los panes del Archivo, todas las noches, sin límite de días. Un jugador con una Focaccia y un Pumpernickel archivados cobra 1 + 3 = 4 Monedas cada Fase III.</p>
+        <ul class="rules-list">
+          <li><strong>Un pan horneado hoy cobra esta misma noche.</strong> No hay que esperar al día siguiente.</li>
+          <li><strong>Los colapsos no rinden nada.</strong> Solo paga el Archivo de Horneados <em>Exitosos</em>. Provocar un colapso es fácil y barato, así que pagarlo sería regalar la renta sin haber horneado bien nada.</li>
+          <li><strong>Si un pan sale del Archivo, su renta se va con él.</strong> La única forma de que eso ocurra es el Simposio Técnico.</li>
+        </ul>
+        <p class="callout"><strong>Este es el motor de la partida.</strong> Hornear no es solo puntuar: es montar una fuente de ingresos que trabaja para ti el resto del juego. Un pan horneado el Día 3 cobra seis o siete noches; el mismo pan horneado el Día 9 cobra una o dos. Pero la partida termina cuando alguien hornea su <strong>quinto</strong> pan, así que correr para montar la renta es también correr para cerrar tu propia ventana. Esa tensión es deliberada.</p>
       </section>
 
       <section class="rule" id="s10">
@@ -943,16 +970,19 @@
               <tr><td>1</td><td class="name">Puntos Base</td><td class="wrap">Suma de los puntos de todas las recetas horneadas, positivas y negativas (colapsos incluidos).</td></tr>
               <tr><td>2</td><td class="name">Puntos de Sabor</td><td class="wrap">Suma de los bonos de Bono de Sabor de cada carta horneada con el Cubo de Acidez sellado.</td></tr>
               <tr><td>3</td><td class="name">Madurez del Cultivo</td><td class="wrap">(Vitalidad + Acidez actuales) ÷ 2, redondeando hacia arriba.</td></tr>
-              <tr><td>4</td><td class="name">Penalización por Desperdicio</td><td class="wrap">−1 punto por cada 3 <strong>tokens de insumo</strong> sin utilizar. Un token de harina (10&nbsp;%) y uno de agua (5&nbsp;%) cuentan <strong>1:1</strong> aquí — ver <a href="#unidades">Las dos unidades de insumo</a>.</td></tr>
-              <tr><td>5</td><td class="name">Penalización por Contaminación</td><td class="wrap">−3 puntos por cada vez que la Vitalidad llegó a 0.</td></tr>
-              <tr><td>6</td><td class="name">Conversión de Riqueza</td><td class="wrap">+1 punto por cada 5 Monedas restantes (división entera).</td></tr>
+              <tr><td>4</td><td class="name">Variedad de Recetas</td><td class="wrap">Puntos por la amplitud del repertorio: cuenta las recetas <strong>distintas</strong> (por protocolo, no por copia) del Archivo de Horneados Exitosos — 0&nbsp;/&nbsp;+1&nbsp;/&nbsp;+3&nbsp;/&nbsp;+6&nbsp;/&nbsp;+10&nbsp;/&nbsp;+15 para 0&nbsp;a&nbsp;5 tipos. Los colapsos no cuentan, y repetir un pan ya horneado no suma. Un pan sacrificado en el Simposio deja de contar.</td></tr>
+              <tr><td>5</td><td class="name">Penalización por Desperdicio</td><td class="wrap">−1 punto por cada 3 <strong>tokens de insumo</strong> sin utilizar. Un token de harina (10&nbsp;%) y uno de agua (5&nbsp;%) cuentan <strong>1:1</strong> aquí — ver <a href="#unidades">Las dos unidades de insumo</a>.</td></tr>
+              <tr><td>6</td><td class="name">Penalización por Contaminación</td><td class="wrap">−3 puntos por cada vez que la Vitalidad llegó a 0.</td></tr>
+              <tr><td>7</td><td class="name">Conversión de Riqueza</td><td class="wrap">+1 punto por cada 5 Monedas restantes (división entera).</td></tr>
             </tbody>
           </table>
         </div>
+        <p class="note"><strong>Los Ingresos de Panadería no son un término de puntuación.</strong> La renta se cobra en Monedas durante la partida; lo que llegue al final sin gastar puntúa por Conversión de Riqueza como cualquier otra Moneda. Su valor real es lo que te dejó comprar mientras jugabas.</p>
 
         <h3 class="sub">11.3 · Desempate</h3>
         <ol class="rules-list">
-          <li>Gana el investigador con el mayor Nivel de Vitalidad en su cultivo base.</li>
+          <li>Gana el investigador con más recetas <strong>distintas</strong> horneadas con éxito (el mismo recuento que alimenta Variedad de Recetas).</li>
+          <li>Si persiste el empate, gana quien tenga el mayor Nivel de Vitalidad en su cultivo base.</li>
           <li>Si persiste el empate, gana quien tenga más Datos de Investigación.</li>
         </ol>
       </section>
