@@ -58,10 +58,19 @@ El final del juego se desencadena de inmediato si ocurre una de estas dos condic
 1. **Puntos Base:** Suma de los puntos de todas las recetas horneadas (positivos y negativos).
 2. **Puntos de Sabor:** Suma de los bonos de Acidez impresos en las cartas que tengan un Cubo de Laboratorio sellado.
 3. **Madurez del Cultivo:** `(Vitalidad Actual + Acidez Actual) / 2` (redondeando hacia arriba).
-4. **Desperdicio (Penalización):** -1 punto de Maestría por cada 3 **tokens de insumo** sin utilizar en la reserva. Un **Token de Harina (10%)** y un **Token de Agua (5%)** cuentan **1:1** aquí, pese a representar porcentajes distintos: se suman en un único total (`sum(reserva_harina) / 10 + reserva_agua`) y de ahí sale la división entera por 3. Esta es la única regla del juego que suma los dos insumos, y es la que fija el 10% como unidad atómica de la harina — ver PLAYER_STATE.md §"Unidades de Insumo (Tokens)".
-5. **Conversión de Riqueza:** +1 punto de Maestría por cada 5 Monedas restantes en la reserva final (división entera).
+4. **Variedad de Recetas:** puntos por la amplitud del repertorio horneado — el número de recetas **distintas** (por carta, no por copia) en el archivo de horneados exitosos, en curva triangular `n*(n+1)/2`:
+
+   | Recetas distintas | 0 | 1 | 2 | 3 | 4 | 5 |
+   |---|---|---|---|---|---|---|
+   | Puntos de Maestría | 0 | +1 | +3 | +6 | +10 | +15 |
+
+   Sólo cuenta el archivo de horneados **exitosos**: un colapso nunca aporta variedad, ni siquiera de una carta que no se haya horneado bien nunca. La razón es de incentivos — provocar un colapso es gratis (iniciar una masa y dejar que la Fase III la hornee sola al sobrefermentar), así que contarlo permitiría cosechar el bono sin hornear bien nada. El mazo reparte varias copias de cada carta (ver RECIPE_DATABASE.md), de modo que hornear dos veces el mismo pan cuenta como **una** clase. Como la partida termina al quinto horneado exitoso, el tope real del término es +15, y repetir una sola carta renuncia al incremento más grande de la curva.
+5. **Desperdicio (Penalización):** -1 punto de Maestría por cada 3 **tokens de insumo** sin utilizar en la reserva. Un **Token de Harina (10%)** y un **Token de Agua (5%)** cuentan **1:1** aquí, pese a representar porcentajes distintos: se suman en un único total (`sum(reserva_harina) / 10 + reserva_agua`) y de ahí sale la división entera por 3. Esta es la única regla del juego que suma los dos insumos, y es la que fija el 10% como unidad atómica de la harina — ver PLAYER_STATE.md §"Unidades de Insumo (Tokens)".
+6. **Contaminación (Penalización):** -3 puntos de Maestría por cada episodio de contaminación sufrido (cada vez que la Vitalidad llegó a 0), acumulativo.
+7. **Conversión de Riqueza:** +1 punto de Maestría por cada 5 Monedas restantes en la reserva final (división entera).
 
 ### Desempate
 En caso de empate en Puntos de Maestría, el ganador se determina por:
-1. El investigador con el mayor Nivel de Vitalidad en su cultivo base.
-2. Si persiste el empate, el jugador con más Datos de Investigación.
+1. El investigador con más recetas **distintas** horneadas con éxito (el mismo recuento que alimenta «Variedad de Recetas»).
+2. Si persiste el empate, el investigador con el mayor Nivel de Vitalidad en su cultivo base.
+3. Si persiste el empate, el jugador con más Datos de Investigación.

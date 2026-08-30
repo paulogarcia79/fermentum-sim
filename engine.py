@@ -1769,9 +1769,14 @@ class GameEngine:
 
         Criterios (CORE_MECHANICS.md §3 «Desempate»):
           1. Puntos de Maestría totales (``Player.puntos_maestria_final``).
-          2. Desempate 1: mayor Vitalidad actual del cultivo base.
-          3. Desempate 2: mayor cantidad de Datos de Investigación.
-          4. Si persiste empate: orden de inscripción (posición en la lista).
+          2. Desempate 1: mayor variedad de recetas distintas horneadas con
+             éxito (``Player.recetas_distintas_horneadas``). Va por delante de
+             la Vitalidad: la variedad es el objetivo que el término
+             «Variedad de Recetas» pide perseguir, así que también decide
+             quién gana un empate.
+          3. Desempate 2: mayor Vitalidad actual del cultivo base.
+          4. Desempate 3: mayor cantidad de Datos de Investigación.
+          5. Si persiste empate: orden de inscripción (posición en la lista).
 
         Se puede llamar en cualquier momento (resultados parciales si la partida
         aún no ha terminado).
@@ -1784,6 +1789,7 @@ class GameEngine:
             self._players,
             key=lambda p: (
                 p.puntos_maestria_final,
+                p.recetas_distintas_horneadas,
                 p.vitalidad,
                 p.datos_investigacion,
             ),

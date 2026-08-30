@@ -110,6 +110,17 @@ export interface Player {
    * ahora -- el marcador "en vivo". Inyectado por server/views.py, igual que
    * puntos_maestria_final. */
   puntos_horneados: number
+  /** Los 7 terminos de la puntuacion final (CORE_MECHANICS.md 3), ya en orden
+   * de presentacion: la vista de ranking los recorre sin conocer ni cuantos
+   * son ni su aritmetica. Lo calcula el servidor
+   * (Player.desglose_maestria), que es la unica fuente de verdad de la
+   * formula. */
+  desglose_maestria: Record<string, number>
+  /** Recetas DISTINTAS horneadas con exito -- el recuento que alimenta el
+   * termino «Variedad de Recetas» (curva triangular n*(n+1)/2) y el primer
+   * criterio de desempate. Viaja aparte del desglose porque se muestra
+   * durante la partida, donde no hay desglose a la vista. */
+  recetas_distintas_horneadas: number
   /** Insumos sin usar contados como en la regla de desperdicio (-1 PM por cada 3,
    * CORE_MECHANICS.md 3.4): tokens de harina del 10% + tokens de agua del 5%,
    * sumados 1:1. Lo calcula el servidor (Player.total_tokens_recursos). */

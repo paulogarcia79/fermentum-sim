@@ -48,6 +48,20 @@ const registrosArchivo = computed<{ registro: HorneadoRecord; colapso: boolean }
   ...yo.value.archivo_colapsos.map((registro) => ({ registro, colapso: true })),
 ])
 
+/** Termino «Variedad de Recetas» (CORE_MECHANICS.md 3), tal como llega del
+ * servidor. La curva triangular NO se replica aqui: `puntos_variedad` viaja
+ * dentro de `desglose_maestria`, y el valor marginal de la proxima clase
+ * nueva es simplemente "una clase mas", no la formula. */
+const variedad = computed(() => {
+  const distintas = yo.value.recetas_distintas_horneadas
+  return {
+    distintas,
+    puntos: yo.value.desglose_maestria['Variedad de Recetas'] ?? 0,
+    // Incremento de la curva al pasar de n a n+1 clases: n+1.
+    proxima: distintas + 1,
+  }
+})
+
 const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
   optima: 'Zona Óptima',
   pre_fermento: 'Pre-fermento',
@@ -192,7 +206,16 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
       </section>
 
       <section class="sub-zona zona-archivo">
-        <h3 class="eyebrow">Archivo de Horneados ({{ yo.archivo_horneado_exitoso.length }}/5)</h3>
+        <h3 class="eyebrow">
+          Archivo de Horneados ({{ yo.archivo_horneado_exitoso.length }}/5)
+          <span
+            class="variedad"
+            :title="`Variedad de Recetas: ${variedad.distintas} receta(s) distinta(s) horneada(s) con éxito = +${variedad.puntos} PM al final. La próxima receta NUEVA suma +${variedad.proxima} PM; repetir una ya horneada no suma nada.`"
+          >
+            · <span class="dato">{{ variedad.distintas }}</span> tipos
+            <span class="dato">+{{ variedad.puntos }}</span> PM
+          </span>
+        </h3>
         <ul class="archivo-lista">
           <li
             v-for="({ registro, colapso }, i) in registrosArchivo"
@@ -317,6 +340,12 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
 .zona-carpeta {
   flex: 1 1 18rem;
 }
+.variedad {
+  color: var(--cobre);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .zona-archivo {
   flex: 1 1 15rem;
 }

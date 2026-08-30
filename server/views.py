@@ -29,13 +29,17 @@ Construye el dict JSON que se envía a los clientes HTTP a partir de
      regla — la vista es la misma para cualquier solicitante (no hay
      información oculta entre jugadores en este juego), así que cada
      cliente simplemente indexa por su propio ``player_index``.
-  4. **Puntuación**: ``Player.puntos_maestria_final`` y
-     ``GameEngine.calcular_ranking_final`` son ``@property``/métodos, no
-     campos de dataclass — ``dataclasses.asdict`` no los incluye. Se
-     calculan aquí (``puntos_maestria_final`` por jugador, ``ranking`` con
-     el resultado de ``calcular_ranking_final``) en vez de que el cliente
-     reimplemente la fórmula de puntuación de ``CORE_MECHANICS.md`` §3 en
-     TypeScript — el mismo principio que la disponibilidad de acciones.
+  4. **Puntuación**: ``Player.puntos_maestria_final``,
+     ``Player.desglose_maestria`` y ``GameEngine.calcular_ranking_final`` son
+     ``@property``/métodos, no campos de dataclass — ``dataclasses.asdict``
+     no los incluye. Se calculan aquí (``puntos_maestria_final``,
+     ``desglose_maestria`` y ``recetas_distintas_horneadas`` por jugador,
+     ``ranking`` con el resultado de ``calcular_ranking_final``) en vez de
+     que el cliente reimplemente la fórmula de puntuación de
+     ``CORE_MECHANICS.md`` §3 en TypeScript — el mismo principio que la
+     disponibilidad de acciones. El desglose viaja término a término y ya
+     ordenado, así que la pantalla de ranking lo pinta recorriéndolo, sin
+     conocer ni el número de términos ni su aritmética.
   5. **Mazo de Tendencias de Mercado**: ``Market.mazo_tendencias`` (el mazo
      de Tendencias restante, en orden) se reemplaza por su longitud —
      mismo tratamiento que el mazo de clima y el mazo de recetas. Su
@@ -97,6 +101,15 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
     for datos_jugador, jugador, asiento in zip(estado["players"], engine.players, sesion.seats):
         datos_jugador["puntos_maestria_final"] = jugador.puntos_maestria_final
         datos_jugador["puntos_horneados"] = jugador.puntos_horneados
+        # Desglose de los 7 términos de CORE_MECHANICS.md §3, ya en orden de
+        # presentación, y el recuento de recetas distintas horneadas con
+        # éxito que alimenta el término «Variedad de Recetas». El recuento
+        # viaja aparte del desglose porque la UI lo muestra durante la
+        # partida (cabecera del Archivo de Horneados), donde no hay ningún
+        # desglose a la vista, y despejarlo desde el número triangular sería
+        # absurdo.
+        datos_jugador["desglose_maestria"] = jugador.desglose_maestria
+        datos_jugador["recetas_distintas_horneadas"] = jugador.recetas_distintas_horneadas
         # Insumos sin usar, en la unidad de la regla de desperdicio de
         # CORE_MECHANICS.md §3.4 (-1 PM por cada 3): un token de harina del
         # 10% y uno de agua del 5% cuentan igual. Es un @property, así

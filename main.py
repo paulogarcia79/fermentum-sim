@@ -22,7 +22,6 @@ Diseño:
 
 from __future__ import annotations
 
-import math
 import os
 import sys
 from typing import List, Optional, Tuple
@@ -927,16 +926,21 @@ def _mostrar_ranking_final(engine: GameEngine) -> None:
     # Los Puntos de Maestria se leen del propio jugador.
     ranking = engine.calcular_ranking_final()
 
-    print(f"  {'Pos':<4} {'Investigador':<20} {'PM Total':>9} {'Vitalidad':>9} {'Datos':>6}")
-    print(f"  {'─'*55}")
+    # Las columnas van en el mismo orden que los criterios de desempate
+    # (CORE_MECHANICS.md §3 «Desempate»): PM → Tipos → Vitalidad → Datos, para
+    # que un empate se pueda leer de izquierda a derecha.
+    print(f"  {'Pos':<4} {'Investigador':<20} {'PM Total':>9} {'Tipos':>6} "
+          f"{'Vitalidad':>9} {'Datos':>6}")
+    print(f"  {'─'*62}")
 
     medallas = ["🥇", "🥈", "🥉"]
     for pos_0, (posicion, player) in enumerate(ranking):
         medalla = medallas[pos_0] if pos_0 < 3 else "   "
         color = _C.YELLOW if pos_0 == 0 else (_C.WHITE if pos_0 == 1 else "")
         fila = (f"  {posicion:<4} {player.nombre:<20} "
-                f"{player.puntos_maestria_final:>9} {player.vitalidad:>9} "
-                f"{player.datos_investigacion:>6}")
+                f"{player.puntos_maestria_final:>9} "
+                f"{player.recetas_distintas_horneadas:>6} "
+                f"{player.vitalidad:>9} {player.datos_investigacion:>6}")
         print(f"{medalla} {_c(color, fila)}")
 
     print()
@@ -945,24 +949,36 @@ def _mostrar_ranking_final(engine: GameEngine) -> None:
              f"  ★ Ganador: {ganador.nombre} con "
              f"{ganador.puntos_maestria_final} Puntos de Maestría\n"))
 
-    # Desglose de cada jugador
+    # Desglose de cada jugador. Se recorre `Player.desglose_maestria` en vez
+    # de recalcular los términos aquí: es la única fuente de verdad de la
+    # fórmula de CORE_MECHANICS.md §3, y mientras estuvo duplicada en este
+    # bloque se quedó sin imprimir «Conversión de Riqueza», con lo que el
+    # desglose no sumaba su propio TOTAL.
     _subheader("Desglose de puntuación")
+    # Contexto extra para los términos que se calculan sobre estado del
+    # jugador y no sobre el archivo de horneados.
+    def _nota(termino: str, player) -> str:
+        notas = {
+            "Madurez": f"(Vit {player.vitalidad} + Acidez {player.acidez})",
+            "Variedad de Recetas": (
+                f"({player.recetas_distintas_horneadas} "
+                f"{'receta distinta' if player.recetas_distintas_horneadas == 1 else 'recetas distintas'})"
+            ),
+            "Desperdicio": f"({player.total_tokens_recursos} tokens sin usar)",
+            "Contaminación": f"({player.contador_contaminaciones}× episodio)",
+            "Conversión de Riqueza": f"({player.monedas} Monedas)",
+        }
+        return notas.get(termino, "")
+
     for _, player in ranking:
-        todos = player.archivo_horneado_exitoso + player.archivo_colapsos
-        pts_base = sum(r.puntos_base for r in todos)
-        pts_sabor = sum(r.puntos_bono_sabor for r in todos)
-        madurez = math.ceil((player.vitalidad + player.acidez) / 2)
-        desperdicio = -(player.total_tokens_recursos // 3)
-        contam = player.puntos_penalizacion_contaminacion
-        total = player.puntos_maestria_final
+        desglose = player.desglose_maestria
+        ancho = max(len(t) for t in desglose)
         print(f"\n  {player.nombre}:")
-        print(f"    Base:        {pts_base:>4}")
-        print(f"    Sabor:       {pts_sabor:>4}")
-        print(f"    Madurez:    +{madurez:>3}  (Vit {player.vitalidad} + Acidez {player.acidez})")
-        print(f"    Desperdicio: {desperdicio:>4}  ({player.total_tokens_recursos} tokens sin usar)")
-        print(f"    Contam.:     {contam:>4}  ({player.contador_contaminaciones}× episodio)")
-        print(f"    {'─'*26}")
-        print(f"    TOTAL:       {_c(_C.BOLD, str(total)):>4}")
+        for termino, puntos in desglose.items():
+            print(f"    {termino + ':':<{ancho + 1}} {puntos:>5}  {_nota(termino, player)}".rstrip())
+        print(f"    {'─'*(ancho + 7)}")
+        total = player.puntos_maestria_final
+        print(f"    {'TOTAL:':<{ancho + 1}} {_c(_C.BOLD, f'{total:>5}')}")
 
 
 # ===========================================================================

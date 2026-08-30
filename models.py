@@ -1000,54 +1000,106 @@ class Player:
         )
 
     @property
-    def puntos_maestria_final(self) -> int:
+    def recetas_distintas_horneadas(self) -> int:
         """
-        Calcula el total de Puntos de Maestría al final de la partida.
+        Número de recetas DISTINTAS (por ``Recipe.id``) horneadas con éxito.
 
-        Componentes (CORE_MECHANICS.md §3):
-          1. Puntos Base   : suma de puntos de todas las recetas horneadas (positivos + negativos)
-          2. Puntos de Sabor: suma de bono_sabor_pts de registros con bono_sabor_aplicado == True
-          3. Madurez del Cultivo: ceil((vitalidad + acidez) / 2)
-          4. Penalización Desperdicio: -1 pt por cada 3 tokens de insumos sin usar
-          5. Penalización Contaminación: -3 pts × contador_contaminaciones
-          6. Conversión de Riqueza: +1 pt por cada 5 Monedas restantes en la reserva final
+        Sólo cuenta ``archivo_horneado_exitoso``: un colapso nunca suma
+        variedad. La razón no es estética sino de incentivos — un colapso es
+        gratis de provocar (iniciar una masa y dejar que la Fase III la
+        hornee sola al sobrefermentar), así que contarlo convertiría el bono
+        de variedad en algo que se cosecha sin hornear bien nada.
 
-        Debe invocarse únicamente al final del día que termina la partida.
+        El mazo físico reparte copias de cada carta
+        (``COPIAS_POR_GRADO``), de modo que hornear dos Pan Graham cuenta
+        como UNA sola clase: lo que se premia es la amplitud del repertorio,
+        no el número de horneados.
+        """
+        return len({r.recipe.id for r in self.archivo_horneado_exitoso})
+
+    @property
+    def puntos_variedad(self) -> int:
+        """
+        Puntos de Maestría del término «Variedad de Recetas» (CORE_MECHANICS.md §3).
+
+        Curva triangular sobre ``recetas_distintas_horneadas``::
+
+            n:   0   1   2   3   4    5
+            PM:  0   1   3   6  10   15
+
+        Es decir ``n*(n+1)//2``: cada clase nueva vale más que la anterior.
+        La escalada es deliberada — como la partida termina al quinto
+        horneado exitoso, el tope real es 5, y repetir una carta una sola vez
+        renuncia al incremento más grande disponible (5 PM) en vez de a un
+        promedio.
+        """
+        n: int = self.recetas_distintas_horneadas
+        return n * (n + 1) // 2
+
+    @property
+    def desglose_maestria(self) -> Dict[str, int]:
+        """
+        Los 7 términos de la puntuación final, por separado y ya en orden de
+        presentación (CORE_MECHANICS.md §3).
+
+        Única fuente de verdad de la fórmula: ``puntos_maestria_final`` no es
+        más que la suma de estos valores, y tanto el desglose del CLI
+        (``main.py``) como el de la pantalla de ranking web lo recorren en
+        lugar de recalcular los términos por su cuenta. Antes de existir este
+        mapa la aritmética estaba duplicada en ``main.py``, que llevaba
+        tiempo omitiendo «Conversión de Riqueza» y por tanto imprimiendo un
+        desglose que no sumaba su propio TOTAL.
+
+        El ORDEN DE INSERCIÓN es carga útil, no decoración: es el orden en
+        que lo pintan todos los consumidores (positivos primero,
+        penalizaciones al final).
+
+        Returns:
+            Mapa ordenado {nombre_del_término: puntos}. Los valores pueden
+            ser negativos (Desperdicio, Contaminación, y Base si hubo
+            colapsos).
         """
         todos_los_horneados: List[HorneadoRecord] = (
             self.archivo_horneado_exitoso + self.archivo_colapsos
         )
+        return {
+            # 1. Puntos base de recetas
+            "Base": sum(r.puntos_base for r in todos_los_horneados),
+            # 2. Puntos de sabor (bono de acidez sellado en cada carta)
+            "Sabor": sum(
+                r.recipe.bono_sabor_pts
+                for r in todos_los_horneados
+                if r.bono_sabor_aplicado
+            ),
+            # 3. Madurez del cultivo base al final de la partida
+            "Madurez": math.ceil((self.vitalidad + self.acidez) / 2),
+            # 4. Amplitud del repertorio horneado (curva triangular)
+            "Variedad de Recetas": self.puntos_variedad,
+            # 5. Penalización por desperdicio de insumos (-1 por cada 3 tokens)
+            "Desperdicio": -(self.total_tokens_recursos // 3),
+            # 6. Penalización por episodios de contaminación
+            "Contaminación": self.puntos_penalizacion_contaminacion,
+            # 7. Conversión de riqueza (+1 pt por cada 5 Monedas restantes)
+            "Conversión de Riqueza": self.monedas // 5,
+        }
 
-        # 1. Puntos base de recetas
-        puntos_base: int = sum(r.puntos_base for r in todos_los_horneados)
+    @property
+    def puntos_maestria_final(self) -> int:
+        """
+        Calcula el total de Puntos de Maestría al final de la partida.
 
-        # 2. Puntos de sabor (bono de acidez sellado en cada carta)
-        puntos_sabor: int = sum(
-            r.recipe.bono_sabor_pts
-            for r in todos_los_horneados
-            if r.bono_sabor_aplicado
-        )
+        Componentes (CORE_MECHANICS.md §3), ver ``desglose_maestria``:
+          1. Puntos Base   : suma de puntos de todas las recetas horneadas (positivos + negativos)
+          2. Puntos de Sabor: suma de bono_sabor_pts de registros con bono_sabor_aplicado == True
+          3. Madurez del Cultivo: ceil((vitalidad + acidez) / 2)
+          4. Variedad de Recetas: n*(n+1)/2 sobre las recetas distintas horneadas con éxito
+          5. Penalización Desperdicio: -1 pt por cada 3 tokens de insumos sin usar
+          6. Penalización Contaminación: -3 pts × contador_contaminaciones
+          7. Conversión de Riqueza: +1 pt por cada 5 Monedas restantes en la reserva final
 
-        # 3. Madurez del cultivo base al final de la partida
-        madurez: int = math.ceil((self.vitalidad + self.acidez) / 2)
-
-        # 4. Penalización por desperdicio de insumos (-1 por cada 3 tokens)
-        penalizacion_desperdicio: int = -(self.total_tokens_recursos // 3)
-
-        # 5. Penalización por episodios de contaminación
-        penalizacion_contaminacion: int = self.puntos_penalizacion_contaminacion
-
-        # 6. Conversión de riqueza (+1 pt por cada 5 Monedas restantes)
-        conversion_riqueza: int = self.monedas // 5
-
-        return (
-            puntos_base
-            + puntos_sabor
-            + madurez
-            + penalizacion_desperdicio
-            + penalizacion_contaminacion
-            + conversion_riqueza
-        )
+        Debe invocarse únicamente al final del día que termina la partida.
+        """
+        return sum(self.desglose_maestria.values())
 
     def __repr__(self) -> str:
         return (

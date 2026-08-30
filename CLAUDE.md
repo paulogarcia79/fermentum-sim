@@ -383,6 +383,38 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   zero masses even though `recuperar_vitalidad` is legal with none. Prices are mirrored for the
   modal in `web/src/data/preciosPliegues.ts`, following the `preciosHarina.ts` precedent. Tests:
   `tests/test_pliegues_monedas.py`.
+
+  **Variedad de Recetas — the 7th scoring term, and the breakdown it forced.** Endgame scoring
+  rewarded *how well* you bake and was indifferent to *what* you bake, so with duplicate copies of
+  every card in the deck (`COPIAS_POR_GRADO`) the optimal line was to find one recipe whose flour
+  you already stock and repeat it until the 5th bake ends the game. `Player.puntos_variedad` now
+  pays `n*(n+1)//2` on `recetas_distintas_horneadas` = distinct `Recipe.id` in
+  `archivo_horneado_exitoso` (0/1/3/6/10/15). Four things carry weight:
+  - **Successes only, and that is an incentive argument, not a taxonomy one.** A collapse is free
+    to provoke — start a mass, let Fase III auto-bake it on overshoot — so counting `archivo_colapsos`
+    would let a player harvest the bonus without baking anything well.
+  - **Triangular, not flat.** Marginal increments are 1,2,3,4,5, so a single repeat forfeits the
+    largest increment on the board rather than an average one. The ceiling is genuinely 5 because
+    the 5th *successful* bake ends the game.
+  - **`Player.desglose_maestria` is now the single source of the formula.** `puntos_maestria_final`
+    is `sum(desglose_maestria.values())`, and its **insertion order is the display order** for
+    every consumer. This was forced, not cosmetic: `main.py` had recomputed all six terms by hand,
+    and that duplicate had already drifted — it never printed Conversión de Riqueza, so the CLI
+    breakdown did not sum to its own TOTAL. `tests/test_variedad_recetas.py` pins the key list.
+  - **Variedad is the *first* tiebreaker**, ahead of Vitalidad (`calcular_ranking_final`'s sort
+    tuple, `CORE_MECHANICS.md` §Desempate). `RankingView.vue` and `main.py`'s table therefore order
+    their columns PM → Tipos → Vitalidad → Datos, so a tie reads left to right.
+
+  Everything new is a `@property`, so `dataclasses.asdict` skips it: the golden snapshot is
+  untouched, nothing persisted changed, and **no `VERSION_FORMATO` bump**. `server/views.py` ships
+  `desglose_maestria` + `recetas_distintas_horneadas` from its existing per-player loop; the
+  triangular formula is **not** mirrored in TypeScript (unlike `preciosHarina.ts` et al.) because
+  the points arrive inside the breakdown and the only client-side arithmetic is "the next new kind
+  is worth `n+1`". `MiTablero.vue`'s archive header shows the live count and PM;
+  `RankingView.vue` renders the breakdown as one block per player under the table. The same commit
+  added the two terms `CORE_MECHANICS.md` §3 had never documented — it listed 5 while the code
+  applied 6, silently omitting the contamination penalty — so the doc list now matches
+  `desglose_maestria` key for key. Tests: `tests/test_variedad_recetas.py`.
 - **`main.py`** — CLI only: rendering (`mostrar_estado_jugador`, `mostrar_mercado`, colored
   output helpers), prompting (`_pedir_int`, `_pedir_opcion`, `_params_accion_*`), and the
   `main()` entrypoint / `setup_game()`. Contains no rules logic — it calls into `engine`/

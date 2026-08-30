@@ -27,6 +27,7 @@ async function onCrearSalaNueva() {
           <th>#</th>
           <th>Investigador</th>
           <th>Puntos de Maestría</th>
+          <th title="Recetas distintas horneadas con éxito">Tipos</th>
           <th>Vitalidad</th>
           <th>Datos</th>
           <th>Monedas</th>
@@ -36,13 +37,33 @@ async function onCrearSalaNueva() {
         <tr v-for="fila in filas" :key="fila.player_idx" :class="{ ganador: fila.posicion === 1 }">
           <td>{{ fila.posicion }}</td>
           <td>{{ fila.jugador.nombre }}</td>
-          <td>{{ fila.jugador.puntos_maestria_final }}</td>
+          <td class="dato">{{ fila.jugador.puntos_maestria_final }}</td>
+          <td class="dato">{{ fila.jugador.recetas_distintas_horneadas }}</td>
           <td>{{ fila.jugador.vitalidad }}</td>
           <td>{{ fila.jugador.datos_investigacion }}</td>
           <td>{{ fila.jugador.monedas }}</td>
         </tr>
       </tbody>
     </table>
+
+    <section class="desglose">
+      <h3 class="eyebrow">Desglose de puntuación</h3>
+      <div class="bloques">
+        <article v-for="fila in filas" :key="fila.player_idx" class="bloque-jugador">
+          <h4>{{ fila.jugador.nombre }}</h4>
+          <dl>
+            <template v-for="(puntos, termino) in fila.jugador.desglose_maestria" :key="termino">
+              <dt>{{ termino }}</dt>
+              <dd class="dato" :class="{ negativo: puntos < 0 }">
+                {{ puntos > 0 ? '+' : '' }}{{ puntos }}
+              </dd>
+            </template>
+            <dt class="total">Total</dt>
+            <dd class="total dato">{{ fila.jugador.puntos_maestria_final }}</dd>
+          </dl>
+        </article>
+      </div>
+    </section>
 
     <div class="acciones-fin">
       <button class="primario" :disabled="creandoSala" @click="onCrearSalaNueva">Crear sala nueva</button>
@@ -76,6 +97,61 @@ th {
 
 tr.ganador td {
   color: var(--cobre);
+  font-weight: 600;
+}
+
+.desglose {
+  margin-top: var(--e5);
+}
+
+.desglose h3 {
+  margin: 0 0 var(--e3);
+}
+
+.bloques {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--e3);
+}
+
+.bloque-jugador {
+  background: var(--zona);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-zona);
+  padding: var(--e3);
+}
+
+.bloque-jugador h4 {
+  margin: 0 0 var(--e2);
+  font-size: var(--t-s);
+}
+
+.bloque-jugador dl {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--e1) var(--e2);
+  margin: 0;
+  font-size: var(--t-xs);
+}
+
+.bloque-jugador dt {
+  color: var(--tinta-tenue);
+}
+
+.bloque-jugador dd {
+  margin: 0;
+  text-align: right;
+}
+
+.bloque-jugador dd.negativo {
+  color: var(--riesgo);
+}
+
+.bloque-jugador .total {
+  margin-top: var(--e1);
+  padding-top: var(--e1);
+  border-top: 1px solid var(--borde);
+  color: var(--tinta);
   font-weight: 600;
 }
 
