@@ -8,9 +8,20 @@ import IconoAgua from './IconoAgua.vue'
 import IconoDatos from './IconoDatos.vue'
 import IconoMonedas from './IconoMonedas.vue'
 import IconoMaestria from './IconoMaestria.vue'
-import PistaMedida from './PistaMedida.vue'
+import PistaMedida, { type BandaPista } from './PistaMedida.vue'
 import { hexDeColor } from '../data/coloresJugador'
 import { TECNOLOGIAS } from '../data/tecnologias'
+import { ACIDEZ_EQUILIBRIO_CENTRO, puntosEquilibrio } from '../data/preciosAcidez'
+
+// La «Madurez del Cultivo» ya no premia la acidez cruda sino el equilibrio, con
+// el pico en el centro de la pista y 0 puntos en ambos extremos. La banda se
+// dibuja en el tablero, no solo en el modal de Descarte, porque es una regla de
+// puntuacion que el jugador consulta al decidir si persigue una diana extrema.
+const BANDAS_ACIDEZ: BandaPista[] = [
+  { desde: -1, hasta: ACIDEZ_EQUILIBRIO_CENTRO - 1, tono: 'neutra' },
+  { desde: ACIDEZ_EQUILIBRIO_CENTRO - 1, hasta: ACIDEZ_EQUILIBRIO_CENTRO, tono: 'optima' },
+  { desde: ACIDEZ_EQUILIBRIO_CENTRO, hasta: 6, tono: 'neutra' },
+]
 import { fmtTokensAgua, fmtTokensHarina, pctAgua, tokensHarina } from '../data/unidades'
 import type { HorneadoRecord, TecnologiaID, TipoHarina } from '../types'
 
@@ -115,7 +126,14 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
         >
           ⚠ Colapsa esta noche si no lo alimentas
         </p>
-        <PistaMedida etiqueta="Acidez" :valor="yo.acidez" :max="6" tono="frio" />
+        <PistaMedida
+          etiqueta="Acidez"
+          :valor="yo.acidez"
+          :max="6"
+          :bandas="BANDAS_ACIDEZ"
+          tono="frio"
+          :lectura="`${yo.acidez}/6 · ${puntosEquilibrio(yo.acidez)} pts`"
+        />
 
         <h3 class="eyebrow">Recursos</h3>
         <div class="recursos-grid">

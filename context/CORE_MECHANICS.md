@@ -58,7 +58,9 @@ El final del juego se desencadena de inmediato si ocurre una de estas dos condic
 ### Cálculo de Puntos de Maestría Finales
 1. **Puntos Base:** Suma de los puntos de todas las recetas horneadas (positivos y negativos).
 2. **Puntos de Sabor:** Suma de los bonos de Acidez impresos en las cartas que tengan un Cubo de Laboratorio sellado.
-3. **Madurez del Cultivo:** `(Vitalidad Actual + Acidez Actual) / 2` (redondeando hacia arriba).
+3. **Madurez del Cultivo:** `vitalidad + (PUNTOS_EQUILIBRIO_MAX - |acidez - ACIDEZ_EQUILIBRIO_CENTRO|)`, es decir `vitalidad + (3 - |acidez - 3|)` (`models.Player.puntos_equilibrio_acidez`). La Vitalidad puntúa entera; la Acidez puntúa por lo **centrada** que esté, no por lo alta que sea: 0, +1, +2, **+3**, +2, +1, 0 para los niveles 0 a 6. No necesita `max(0, ...)` porque el centro está a distancia 3 de ambos bordes y `acidez` ya vive acotada en [0, 6].
+
+   Premiaba antes la acidez **cruda** (`ceil((vitalidad + acidez) / 2)`), lo que no tenía coste alguno mientras la Acidez sólo sabía subir — el juego empujaba a todo el mundo al mismo extremo y luego castigaba haberlo seguido. Con la Acidez convertida en un dial bidireccional (acción Descarte, ACTIONS_REGISTRY.md), premiar el equilibrio es lo que le da un precio a perseguir una diana extrema; es el reverso exacto de cómo se derivan los `bono_sabor_pts` del catálogo (RECIPE_DATABASE.md).
 4. **Variedad de Recetas:** puntos por la amplitud del repertorio horneado — el número de recetas **distintas** (por carta, no por copia) en el archivo de horneados exitosos, en curva triangular `n*(n+1)/2`:
 
    | Recetas distintas | 0 | 1 | 2 | 3 | 4 | 5 |

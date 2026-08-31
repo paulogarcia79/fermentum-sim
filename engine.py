@@ -226,6 +226,30 @@ porque el desgaste metabólico es de -1 Vitalidad por día: a un precio bajo,
 comprarla a diario equivaldría a inmunidad permanente a la Contaminación.
 """
 
+# --- Descarte y Refresco del cultivo (control de Acidez) ---
+PRECIO_DESCARTE: Dict[int, int] = {1: 1, 2: 3, 3: 6}
+"""
+Escalera de precios (en Monedas) del sentido *descendente* del Descarte:
+niveles de Acidez retirados -> coste. Descartar parte del cultivo y refrescarlo
+con harina nueva es la operación que en panadería real baja la acidez, y es
+tirar producto: por eso se paga y por eso el sentido contrario (subir, que es
+sólo añadir agua) no cuesta Monedas.
+
+Marginal creciente (1, 2 y 3 Monedas por el 1º, 2º y 3er nivel) por la misma
+razón que ``PRECIO_PLIEGUES``: el volumen nunca es un descuento.
+"""
+
+COSTE_REFRESCO_AGUA: Dict[int, int] = {1: 2, 2: 5, 3: 9}
+"""
+Escalera de costes (en tokens de Agua) del sentido *ascendente* del Descarte:
+niveles de Acidez ganados -> tokens. El primer escalón son los mismos 2 tokens
+que costaba la mitad de agua de la Acción A antes de que el control de Acidez
+se consolidara aquí, así que subir un nivel cuesta hoy exactamente lo que
+costaba entonces.
+
+Marginal creciente (2, 3 y 4 tokens) en espejo de ``PRECIO_DESCARTE``.
+"""
+
 # ===========================================================================
 # SECCIÓN 2: MODELOS AUXILIARES DEL MERCADO CENTRAL
 # ===========================================================================
@@ -1176,9 +1200,13 @@ class GameEngine:
         pendientes). En caso contrario, es elegible si tiene PA disponibles,
         si aún no ha usado Acción A u Horas Extras hoy, si aún puede pagar
         un Pedido de Urgencia (0 PA, sin límite por ronda, sin flag de "ya
-        usado" — se autolimita por Datos de Investigación disponibles), o si
+        usado" — se autolimita por Datos de Investigación disponibles), si
         aún le queda el espacio de Pliegues sin usar y puede pagar al menos su
-        escalón más barato (0 PA, se paga en Monedas — ver PRECIO_PLIEGUES).
+        escalón más barato (0 PA, se paga en Monedas — ver PRECIO_PLIEGUES), o
+        si le queda el espacio de Descarte sin usar y puede pagar el escalón
+        más barato de *alguno* de sus dos sentidos: bajar cuesta Monedas
+        (PRECIO_DESCARTE), subir cuesta Agua (COSTE_REFRESCO_AGUA), así que un
+        jugador sin Monedas pero con agua sigue teniendo una visita pendiente.
         """
         if indice in self._turno_pasado:
             return False
@@ -1191,6 +1219,13 @@ class GameEngine:
             or (
                 "E" not in player.acciones_pa_usadas_hoy
                 and player.monedas >= min(PRECIO_PLIEGUES.values())
+            )
+            or (
+                "descarte" not in player.acciones_pa_usadas_hoy
+                and (
+                    player.monedas >= min(PRECIO_DESCARTE.values())
+                    or player.reserva_agua >= min(COSTE_REFRESCO_AGUA.values())
+                )
             )
         )
 

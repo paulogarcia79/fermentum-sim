@@ -25,7 +25,9 @@ from typing import Any, Dict, List
 
 from actions import HARINA_RECULTIVO_MANUAL
 from engine import (
+    COSTE_REFRESCO_AGUA,
     GameEngine,
+    PRECIO_DESCARTE,
     PRECIO_PLIEGUES,
     PRECIO_PLIEGUES_VITALIDAD,
     PRECIO_RECETA,
@@ -118,6 +120,20 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         "E",
         "E" not in usados and (puede_plegar_masa or puede_recuperar_vitalidad),
         motivo_e,
+    )
+    # «Descarte»: 0 PA pero ocupa espacio, y sus DOS sentidos cobran en recursos
+    # distintos, así que basta con poder pagar el escalón más barato de alguno —
+    # un jugador sin Monedas sigue pudiendo subir la acidez con agua.
+    puede_subir_acidez = player.reserva_agua >= min(COSTE_REFRESCO_AGUA.values())
+    puede_bajar_acidez = player.monedas >= min(PRECIO_DESCARTE.values())
+    if "descarte" in usados:
+        motivo_descarte = "Ya usaste este espacio hoy"
+    else:
+        motivo_descarte = "Sin Monedas ni Agua"
+    agregar(
+        "descarte",
+        "descarte" not in usados and (puede_subir_acidez or puede_bajar_acidez),
+        motivo_descarte,
     )
     if "F" in usados:
         motivo_f = "Ya usaste este espacio hoy"

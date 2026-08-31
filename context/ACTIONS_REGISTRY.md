@@ -5,7 +5,7 @@
 * Cada jugador dispone de 2 Puntos de Acción (PA) por Día de Laboratorio.
 * Al ejecutar una acción, el jugador debe desplazar un Cubo de Laboratorio a su "Checklist de Protocolo" (Zona 5 del tablero) para indicar el consumo del punto.
 * Algunas acciones requieren el gasto adicional de tokens (Harina/Agua) o Datos de Investigación. **Un Token de Harina = 10%; un Token de Agua = 5% de hidratación** — ver PLAYER_STATE.md §"Unidades de Insumo (Tokens)" para la notación `N (P%)` usada en todo este registro.
-* **Un espacio de acción, una visita por día:** cada espacio de acción (B a G, Simposio Técnico, H, I y también E, que no cuesta PA pero sí ocupa espacio) solo puede visitarse UNA vez por Día de Laboratorio, por jugador — un peón de investigador marca el espacio con su color en cuanto lo visita, bloqueándolo para él (no para el resto de jugadores) hasta el día siguiente. Con 2-3 PA (Horas Extras incluida) esto significa: como máximo un uso de cada espacio distinto por día, nunca el mismo espacio dos veces. El tope es una propiedad **del espacio**, no del coste: la Acción E lo conserva aunque se pague en Monedas. Las excepciones son Acción A y Horas Extras (que se limitan con su propio marcador de "ya usada", no con un espacio) y Pedido de Urgencia, sin límite alguno: se autolimita por Datos de Investigación.
+* **Un espacio de acción, una visita por día:** cada espacio de acción (B a G, Simposio Técnico, H, I y también E y Descarte, que no cuestan PA pero sí ocupan espacio) solo puede visitarse UNA vez por Día de Laboratorio, por jugador — un peón de investigador marca el espacio con su color en cuanto lo visita, bloqueándolo para él (no para el resto de jugadores) hasta el día siguiente. Con 2-3 PA (Horas Extras incluida) esto significa: como máximo un uso de cada espacio distinto por día, nunca el mismo espacio dos veces. El tope es una propiedad **del espacio**, no del coste: la Acción E y el Descarte lo conservan aunque se paguen en Monedas o en agua. Las excepciones son Acción A y Horas Extras (que se limitan con su propio marcador de "ya usada", no con un espacio) y Pedido de Urgencia, sin límite alguno: se autolimita por Datos de Investigación.
 
 ---
 
@@ -96,9 +96,23 @@
 ### A. Mantenimiento del Cultivo (Alimentación)
 * **Costo:** 0 PA.
 * **Límite:** 1 vez por ronda (valida `accion_alimentar_usada == False`).
-* **Efecto Modular:** * Restar **1 Token de Harina — 1 (10%)** (de cualquier tipo) = +1 Vitalidad (Máx 6).
-    * Restar **2 Tokens de Agua — 2 (10%)** = +1 Acidez (Máx 6). Ojo: son 2 tokens, no 1, porque el token de agua es del 5%.
-    * (Se puede hacer uno, otro, o ambos en la misma acción).
+* **Efecto:** Restar **1 Token de Harina — 1 (10%)** (de cualquier tipo) = **+1 Vitalidad** (Máx 6). Repone exactamente el -1 del desgaste metabólico de Fase III, de modo que quien alimenta a diario orbita su Vitalidad inicial.
+* **Ya NO toca la Acidez.** Tuvo una mitad de agua que daba +1 Acidez, pero mientras la Acidez sólo sabía subir esa mitad era un trinquete — y encima uno que convenía accionar siempre, porque la Madurez premiaba el nivel bruto. Todo el control voluntario de la Acidez vive ahora en la acción **Descarte**, abajo; la Acción A quedó reducida a lo único que hacía sin ambigüedad.
+
+### Descarte (Refresco del Cultivo)
+* **Costo:** 0 PA, pero **ocupa su espacio de acción** (ver §1). No termina el turno del jugador: se puede encadenar con otra acción en la misma visita.
+* **Límite:** 1 vez por día (por espacio de acción — ver §1). Es, junto a la Acción E, una de las dos acciones de 0 PA que ocupan espacio: el mismo argumento se aplica aquí, ya que las Monedas son renovables y el precio por sí solo no limitaría nada.
+* **Efecto:** ajusta la Acidez del cultivo base en **uno de los dos sentidos** (uno solo por visita), con el clamp habitual [0, 6]:
+
+  | Niveles | +1 / -1 | +2 / -2 | +3 / -3 |
+  |:---|:---:|:---:|:---:|
+  | **Subir** — Tokens de Agua (`COSTE_REFRESCO_AGUA`) | 2 | 5 | 9 |
+  | **Bajar** — Monedas (`PRECIO_DESCARTE`) | 1 | 3 | 6 |
+
+* **Por qué cada sentido cobra un recurso distinto:** subir la acidez es sólo añadir agua; bajarla es descartar parte del cultivo y refrescarlo con harina nueva, es decir tirar producto, y por eso se paga en la moneda del juego. La asimetría además protege al jugador arruinado, que conserva un sentido del dial sin una sola Moneda — y es lo que hace que `_jugador_elegible` tenga que comprobar **ambos** recursos, no sólo Monedas.
+* **Ambas escaleras son crecientes al margen** (2, 3 y 4 tokens; 1, 2 y 3 Monedas): el volumen nunca es un descuento, la misma regla que `PRECIO_PLIEGUES`. El escalón se cobra entero aunque el ajuste tope contra 0 o 6.
+* **No emite ningún `GameEvent`**, pese a cambiar estado visible. Al ser 0 PA ocurre dentro de la ventana de deshacer, y `GameSession.restaurar_checkpoint` repone el motor desde un pickle: un evento suyo haría *encoger* `engine.eventos` al deshacer y dejaría los punteros `since` / `Last-Event-ID` de los clientes por delante del servidor.
+* **Interacción con el recuento final:** sirve para caer dentro de la `acidez_diana` de una receta antes de iniciarla (Bono de Sabor, ver §2B), pero la **Madurez del Cultivo** premia el equilibrio y no el nivel bruto (CORE_MECHANICS.md §3.3), con el pico en Acidez 3 y 0 puntos en los extremos. Perseguir una diana extrema cuesta puntos finales mientras se sostiene — y es exactamente por eso que esas cartas pagan más `bono_sabor_pts`.
 
 ### E. Técnica (Pliegues)
 * **Costo:** Monedas, según la cantidad de avance que se compre — **1 espacio = 1 Moneda, 2 espacios = 3 Monedas, 3 espacios = 6 Monedas**. El precio es creciente al margen a propósito: comprar más nunca es un descuento por volumen. La variante de Vitalidad (ver Sinergia) cuesta **6 Monedas** fijas.

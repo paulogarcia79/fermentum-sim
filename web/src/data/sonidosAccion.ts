@@ -76,6 +76,11 @@ export const SONIDOS_ACCION: Record<IdSonido, Sonido> = {
   // --- Gratuitas (0 PA) ---------------------------------------------------
   A: gratuita(1046.5), // Do6
   E: gratuita(1567.98), // Sol6 -- E salio de Principales: se paga en Monedas
+  // Descarte: un solo tono, no dos por sentido. El AvisoAccion solo lleva el
+  // id de la accion y el jugador, nunca sus parametros (ver server/sessions.py),
+  // asi que la direccion del ajuste no llega hasta aqui -- y tampoco deberia:
+  // es informacion del turno ajeno que el tablero ya muestra al refrescarse.
+  descarte: gratuita(1174.66), // Re6
   horas_extras: gratuita(1244.5), // Re#6
   pedido_urgencia: gratuita(1396.9), // Fa6
 

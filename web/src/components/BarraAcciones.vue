@@ -7,6 +7,7 @@ import ModalB from './acciones/ModalB.vue'
 import ModalC from './acciones/ModalC.vue'
 import ModalD from './acciones/ModalD.vue'
 import ModalE from './acciones/ModalE.vue'
+import ModalDescarte from './acciones/ModalDescarte.vue'
 import ModalF from './acciones/ModalF.vue'
 import ModalG from './acciones/ModalG.vue'
 import ModalSimposio from './acciones/ModalSimposio.vue'
@@ -230,6 +231,7 @@ async function pasarDeVerdad() {
     <ModalC v-if="modalAbierto === 'C'" @cerrar="cerrar" />
     <ModalD v-if="modalAbierto === 'D'" @cerrar="cerrar" />
     <ModalE v-if="modalAbierto === 'E'" @cerrar="cerrar" />
+    <ModalDescarte v-if="modalAbierto === 'descarte'" @cerrar="cerrar" />
     <ModalF v-if="modalAbierto === 'F'" @cerrar="cerrar" />
     <ModalG v-if="modalAbierto === 'G'" @cerrar="cerrar" />
     <ModalSimposio v-if="modalAbierto === 'simposio'" @cerrar="cerrar" />

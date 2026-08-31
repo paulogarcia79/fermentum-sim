@@ -9,6 +9,7 @@ export type IdAccion =
   | 'C'
   | 'D'
   | 'E'
+  | 'descarte'
   | 'F'
   | 'G'
   | 'simposio'
@@ -18,11 +19,13 @@ export type IdAccion =
   | 'pedido_urgencia'
 
 export const descripcionesAcciones: Record<IdAccion, string> = {
-  A: 'Gratis, una vez por día. Puedes restar 1 token de Harina (10%, cualquier tipo) por +1 Vitalidad y/o 2 tokens de Agua (10%) por +1 Acidez (máx. 6 cada una) — uno, otro, o ambos en la misma acción.',
+  A: 'Gratis, una vez por día. Resta 1 token de Harina (10%, cualquier tipo) por +1 Vitalidad (máx. 6). Repone exactamente el -1 que el desgaste metabólico quita cada noche. Ya no toca la Acidez: eso es ahora la acción «Descarte».',
   B: 'Consume 10 tokens de Harina de un tipo (100%, una bolsa entera) + los tokens de Agua exactos que pida la receta (1 token = 5% de hidratación). Sella tu Vitalidad (dado de inóculo) y, si tu Acidez cae en el rango de bono de la receta, también tu Acidez.',
   C: 'Compra y/o vende Harina (Blanca, Integral o Centeno) contra el visor de precio compartido de la Bolsa de Harinas, y/o compra un lote de Agua al precio de la temperatura actual (los lotes son de 2 tokens (10%), 6 (30%), 12 (60%) o 20 (100%)). Cada compra o venta de harina mueve una bolsa entera de 10 tokens (100%) o media bolsa de 5 (50%); la media cuesta la mitad del precio visible redondeando hacia arriba al comprar y hacia abajo al vender, y mueve el visor una casilla igual que una bolsa entera. Puedes combinar varias transacciones en la misma visita, pero como máximo una por tipo de recurso (no puedes comprar y vender la misma harina, ni comprar dos veces).',
   D: 'Gasta Datos de Investigación en una mejora permanente de laboratorio: Incubadora (3 Datos, ajusta la temperatura local ±5°C), Cámara B (4 Datos, desbloquea Estación 03 y mejora Pliegues), Módulo Analítico (3 Datos, +1 Dato extra al hornear en zona óptima y habilita recetas Avanzadas) o Criopreservación (2 Datos, ignora el desgaste metabólico de Vitalidad en Fase III). Cada mejora solo puede instalarse una vez, pero puedes llegar a instalar varias distintas a lo largo de la partida.',
   E: 'Gratis en PA, una vez por día: se paga en Monedas. Compra 1, 2 o 3 espacios de avance de fermentación por 1, 3 o 6 Monedas y repártelos entre tus masas. Con la mejora Cámara B puedes repartirlos entre dos masas distintas (la mejora no aumenta cuántos compras), o bien recuperar +1 Vitalidad de tu cultivo base por 6 Monedas. Ojo: pasarte de la zona óptima empuja la masa a la zona sobrefermentada, que la Fase III hornea en colapso.',
+  descarte:
+    'Gratis en PA, una vez por día: es el único control voluntario de tu Acidez, y va en los dos sentidos. SUBIR se paga en Agua (2, 5 o 9 tokens por +1, +2 o +3); BAJAR se paga en Monedas (1, 3 o 6 por -1, -2 o -3), porque descartar parte del cultivo y refrescarlo es tirar producto. Un solo sentido por visita. Sirve para caer dentro de la Acidez Diana de una receta antes de iniciarla (Bono de Sabor), pero recuerda que la Madurez final premia el equilibrio: el pico está en Acidez 3 y los extremos 0 y 6 no puntúan.',
   F: 'Finaliza el protocolo de una masa y la vende de inmediato: obtiene Puntos de Maestría y Monedas según su zona (más Datos de Investigación si cae en Zona Óptima). El bono de Acidez, si la carta lo tiene sellado, suma puntos y +2 Monedas — salvo en un colapso.',
   G: 'Toma 1 carta de receta del Mercado Central y la guarda boca arriba en tu Carpeta de Proyectos (máximo 3; si está llena, debes descartar una previa). El espacio del mercado queda vacío hasta el reabastecimiento al inicio del día siguiente.',
   simposio: 'Sacrifica un horneado exitoso de tu Archivo para publicarlo y ganar Datos de Investigación según su grado (Básica 1, Intermedia 2, Avanzada 3). El registro sale del archivo para siempre: pierdes sus Puntos de Maestría, su renta diaria, su paso hacia el 5/5 y, si era el único de su tipo, un escalón de Variedad de Recetas. Es una palanca de emergencia, nunca una jugada eficiente.',
@@ -95,6 +98,7 @@ export const GRUPOS_ACCION: readonly GrupoAccion[] = [
     acciones: [
       { id: 'A', etiqueta: 'Alimentar Cultivo', costo: '0 PA' },
       { id: 'E', etiqueta: 'Pliegues', costo: '1-6 Monedas' },
+      { id: 'descarte', etiqueta: 'Descarte', costo: 'Agua o Monedas' },
       { id: 'horas_extras', etiqueta: 'Horas Extras', costo: '0 PA' },
       { id: 'pedido_urgencia', etiqueta: 'Pedido de Urgencia', costo: '0 PA' },
     ],

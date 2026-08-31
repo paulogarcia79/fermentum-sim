@@ -47,7 +47,7 @@ def _alimentar(cliente, room_id, token):
     r = cliente.post(
         f"/games/{room_id}/actions",
         headers={"X-Player-Token": token},
-        json={"accion": "A", "params": {"usar_harina": True, "tipo_harina": "Blanca", "usar_agua": False}},
+        json={"accion": "A", "params": {"tipo_harina": "Blanca"}},
     )
     return r
 
@@ -114,19 +114,17 @@ def test_accion_que_termina_turno_cierra_la_ventana() -> None:
 
 
 def test_accion_gratuita_rechazada_no_toca_el_checkpoint() -> None:
-    """Fail-fast: una A invalida (sin agua suficiente) no debe ni crear ni
-    destruir el punto de restauracion."""
+    """Fail-fast: una A invalida (tipo de harina inexistente) no debe ni crear
+    ni destruir el punto de restauracion."""
     cliente, room_id, token, _, _ = _partida_2p()
 
-    # Rechazada de entrada: pedir agua con reserva insuficiente NO crea checkpoint.
+    # Rechazada de entrada por parametro invalido: NO crea checkpoint.
     r = cliente.post(
         f"/games/{room_id}/actions",
         headers={"X-Player-Token": token},
-        json={"accion": "A", "params": {"usar_harina": False, "usar_agua": True}},
+        json={"accion": "A", "params": {"tipo_harina": "Trigo"}},
     )
-    if r.status_code == 200:
-        # Si el patrocinio de este seed le dio agua de sobra, el caso no aplica.
-        return
+    assert r.status_code != 200, r.text
     assert _estado(cliente, room_id, token)["puede_deshacer"] is False
 
 

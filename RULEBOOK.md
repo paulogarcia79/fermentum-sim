@@ -265,15 +265,16 @@ Cada jugador dispone de **2 Puntos de Acción (PA)** por Día de Laboratorio.
   por usar.
 - **Registro:** al ejecutar una acción de costo, el jugador desplaza un Cubo de Laboratorio a su
   Checklist de Protocolo para marcar el gasto del punto.
-- **Acciones que no terminan el turno:** Alimentar el Cultivo, Técnica (Pliegues), Horas Extras y
-  Pedido de Urgencia son gratuitas en PA y **no** cierran la visita del jugador — un jugador que ya
-  gastó sus 2 PA en otras acciones sigue recibiendo visitas mientras le quede alguna de estas
-  cuatro acciones sin usar ese día (en el caso de Pliegues, mientras conserve el espacio E libre y
-  Monedas suficientes para pagarlo). Cualquier acción de costo en PA, o un **Pasar** explícito, sí cierra
-  la visita; **Pasar** además renuncia de inmediato a cualquier acción gratuita pendiente por el
-  resto del día.
+- **Acciones que no terminan el turno:** Alimentar el Cultivo, Técnica (Pliegues), Descarte, Horas
+  Extras y Pedido de Urgencia son gratuitas en PA y **no** cierran la visita del jugador — un
+  jugador que ya gastó sus 2 PA en otras acciones sigue recibiendo visitas mientras le quede alguna
+  de estas cinco acciones sin usar ese día (en el caso de Pliegues y Descarte, mientras conserve su
+  espacio libre y con qué pagarlo: Monedas para Pliegues, y Monedas **o** agua para Descarte, que
+  cobra un recurso distinto en cada sentido). Cualquier acción de costo en PA, o un **Pasar**
+  explícito, sí cierra la visita; **Pasar** además renuncia de inmediato a cualquier acción gratuita
+  pendiente por el resto del día.
 - **Un espacio de acción, una visita por día:** cada espacio de acción (B a G, Simposio Técnico,
-  H, I y también **E**, que no cuesta PA pero sí ocupa espacio) solo puede visitarse **una vez por
+  H, I y también **E** y **Descarte**, que no cuestan PA pero sí ocupan espacio) solo puede visitarse **una vez por
   Día de Laboratorio, por jugador** — el investigador marca el espacio con su color en cuanto lo
   visita, bloqueándolo para él (no para el resto de jugadores) hasta el día siguiente. Con 2-3 PA
   (Horas Extras incluida) esto significa como máximo un uso de cada espacio distinto por día, nunca
@@ -452,10 +453,41 @@ absoluto** (ver [9.2](#92-colapso-estructural-sobre-fermentación)).
 
 #### A. Alimentar el Cultivo (Mantenimiento)
 
-**Límite:** una vez por Día de Laboratorio. Se puede gastar **1 token de harina — 1 (10%)** (de
-cualquier tipo) por +1 Vitalidad, y/o **2 tokens de agua — 2 (10%)** por +1 Acidez (máximo Nivel 6
-en ambos) — uno, otro, o ambos en la misma acción. Ojo con el agua: son **2** tokens, no 1, porque
-el token de agua es del 5%.
+**Límite:** una vez por Día de Laboratorio. Se gasta **1 token de harina — 1 (10%)** (de cualquier
+tipo) por **+1 Vitalidad** (máximo Nivel 6). Repone exactamente el -1 que el Metabolismo resta cada
+Fase III, así que quien alimenta a diario orbita su Vitalidad inicial.
+
+Esta acción **no toca la Acidez**. Todo el control voluntario de la Acidez vive en la acción
+**Descarte**, que la mueve en los dos sentidos.
+
+#### Descarte (Refresco del Cultivo)
+
+**Costo:** 0 PA, pero **ocupa su espacio de acción**: una vez por Día de Laboratorio, como
+cualquier otro espacio. No termina tu turno.
+
+Es el único control voluntario de la Acidez, y funciona en **los dos sentidos** — pero cada uno se
+paga con un recurso distinto, y eso no es arbitrario: subir la acidez es sólo añadir agua, mientras
+que bajarla es descartar parte del cultivo y refrescarlo con harina nueva, es decir **tirar
+producto**. Elige un solo sentido por visita.
+
+| Mover la Acidez | +1 | +2 | +3 |
+|:---|:---:|:---:|:---:|
+| **Subir** — cuesta tokens de agua | 2 | 5 | 9 |
+
+| Mover la Acidez | -1 | -2 | -3 |
+|:---|:---:|:---:|:---:|
+| **Bajar** — cuesta Monedas | 1 | 3 | 6 |
+
+Ambas escaleras son **crecientes al margen** (2, 3 y 4 tokens; 1, 2 y 3 Monedas): comprar más nunca
+sale más barato por unidad. La Acidez sigue acotada entre los Niveles 0 y 6, y el escalón se cobra
+entero aunque el ajuste tope contra un extremo.
+
+**Para qué sirve.** Para caer dentro de la **Acidez Diana** de una receta antes de iniciarla y
+sellar así su Bono de Sabor (§7). Pero no lo uses a ciegas: la **Madurez del Cultivo** del recuento
+final (§11.2) premia el *equilibrio*, no la acidez bruta — su pico está en el **Nivel 3** y los
+extremos 0 y 6 no puntúan. Perseguir la diana de un Panettone (Nivel 1) o de un Pumpernickel
+(Niveles 5-6) cuesta puntos finales mientras la sostienes, y por eso esas cartas son justamente las
+que más Bono de Sabor pagan.
 
 #### E. Técnica (Pliegues)
 
@@ -559,18 +591,18 @@ de más sabor.
 
 | Receta | Grado | Coste (Monedas) | Harina (siempre 10 tokens / 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono de Sabor) | Crecimiento | Pre-fermento | Óptima | Colapso | Puntos (Pre-f. / Óptima / Colapso) | Monedas al hornear (Pre-f. / Óptima / Colapso) |
 |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| Pan de Campo | Básica | 1 | Blanca 100% | 12 (60%) | Nivel 3 (+3) | 1–5 | 6–10 | 11–15 | 16–20 | 4 / 10 / −2 | 10 / 14 / 8 |
+| Pan de Campo | Básica | 1 | Blanca 100% | 12 (60%) | Nivel 3 (+1) | 1–5 | 6–10 | 11–15 | 16–20 | 4 / 10 / −2 | 10 / 14 / 8 |
 | Pan de Molde | Básica | 1 | Blanca 100% | 11 (55%) | Nivel 1–2 (+2) | 1–3 | 4–8 | 9–14 | 15–20 | 3 / 9 / −2 | 9 / 13 / 7 |
-| Baguette | Básica | 1 | Blanca 100% | 13 (65%) | Nivel 2 (+3) | 1–5 | 6–11 | 12–15 | 16–20 | 5 / 11 / −2 | 11 / 15 / 9 |
+| Baguette | Básica | 1 | Blanca 100% | 13 (65%) | Nivel 2 (+2) | 1–5 | 6–11 | 12–15 | 16–20 | 5 / 11 / −2 | 11 / 15 / 9 |
 | Focaccia | Básica | 1 | Blanca 100% | 15 (75%) | Nivel 1–2 (+2) | 1–4 | 5–9 | 10–14 | 15–20 | 3 / 12 / −3 | 12 / 16 / 10 |
-| Miche | Intermedia | 2 | Blanca 50% + Integral 50% | 14 (70%) | Nivel 3–4 (+4) | 1–5 | 6–11 | 12–16 | 17–20 | 5 / 13 / −4 | 10 / 14 / 7 |
-| Pizza Napolitana | Intermedia | 2 | Blanca 50% + Integral 50% | 13 (62%) | Nivel 3 (+4) | 1–5 | 6–10 | 11–14 | 15–20 | 4 / 14 / −4 | 9 / 15 / 6 |
-| Brioche | Intermedia | 2 | Blanca 50% + Centeno 50% | 11 (52%) | Nivel 1 (+5) | 1–7 | 8–14 | 15–17 | 18–20 | 5 / 16 / −6 | 8 / 15 / 5 |
-| Panettone | Intermedia | 2 | Blanca 50% + Centeno 50% | 10 (47%) | Nivel 1 (+8) | 1–10 | 11–16 | 17–18 | 19–20 | 8 / 16 / −8 | 7 / 16 / 4 |
-| Hogaza Centeno | Avanzada | 3 | Centeno 100% | 14 (67%) | Nivel 4–5 (+6) | 1–6 | 7–12 | 13–16 | 17–20 | 6 / 17 / −5 | 11 / 18 / 8 |
-| Pan Semillas | Avanzada | 3 | Integral 100% | 16 (78%) | Nivel 3–4 (+7) | 1–6 | 7–13 | 14–16 | 17–20 | 6 / 17 / −5 | 10 / 17 / 7 |
-| Pan Graham | Avanzada | 3 | Integral 100% | 16 (80%) | Nivel 4–5 (+6) | 1–6 | 7–13 | 14–17 | 18–20 | 6 / 19 / −6 | 9 / 17 / 6 |
-| Pumpernickel | Avanzada | 3 | Centeno 100% | 17 (85%) | Nivel 5–6 (+8) | 1–9 | 10–15 | 16–18 | 19–20 | 8 / 20 / −8 | 7 / 19 / 3 |
+| Miche | Intermedia | 2 | Blanca 50% + Integral 50% | 14 (70%) | Nivel 3–4 (+2) | 1–5 | 6–11 | 12–16 | 17–20 | 5 / 13 / −4 | 10 / 14 / 7 |
+| Pizza Napolitana | Intermedia | 2 | Blanca 50% + Integral 50% | 13 (62%) | Nivel 3 (+2) | 1–5 | 6–10 | 11–14 | 15–20 | 4 / 14 / −4 | 9 / 15 / 6 |
+| Brioche | Intermedia | 2 | Blanca 50% + Centeno 50% | 11 (52%) | Nivel 1 (+3) | 1–7 | 8–14 | 15–17 | 18–20 | 5 / 16 / −6 | 8 / 15 / 5 |
+| Panettone | Intermedia | 2 | Blanca 50% + Centeno 50% | 10 (47%) | Nivel 1 (+3) | 1–10 | 11–16 | 17–18 | 19–20 | 8 / 16 / −8 | 7 / 16 / 4 |
+| Hogaza Centeno | Avanzada | 3 | Centeno 100% | 14 (67%) | Nivel 4–5 (+4) | 1–6 | 7–12 | 13–16 | 17–20 | 6 / 17 / −5 | 11 / 18 / 8 |
+| Pan Semillas | Avanzada | 3 | Integral 100% | 16 (78%) | Nivel 3–4 (+3) | 1–6 | 7–13 | 14–16 | 17–20 | 6 / 17 / −5 | 10 / 17 / 7 |
+| Pan Graham | Avanzada | 3 | Integral 100% | 16 (80%) | Nivel 4–5 (+4) | 1–6 | 7–13 | 14–17 | 18–20 | 6 / 19 / −6 | 9 / 17 / 6 |
+| Pumpernickel | Avanzada | 3 | Centeno 100% | 17 (85%) | Nivel 5–6 (+4) | 1–9 | 10–15 | 16–18 | 19–20 | 8 / 20 / −8 | 7 / 19 / 3 |
 
 *El track de fermentación de cada carta se divide en **cuatro** zonas. **Crecimiento** no tiene
 columna de pago porque **no se puede hornear ahí**: la masa todavía no es pan y la
@@ -746,7 +778,17 @@ puntuación.
    negativas (colapsos incluidos).
 2. **Puntos de Sabor:** suma de los bonos de Bono de Sabor de cada carta horneada con el Cubo de
    Acidez sellado.
-3. **Madurez del Cultivo:** (Vitalidad actual + Acidez actual) ÷ 2, redondeando hacia arriba.
+3. **Madurez del Cultivo:** **Vitalidad actual + equilibrio de Acidez**, donde el equilibrio vale
+   **3 − |Acidez − 3|**. Es decir, la Vitalidad puntúa entera y la Acidez puntúa por lo *centrada*
+   que esté, no por lo alta que sea:
+
+   | Acidez | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+   |:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+   | Puntos de equilibrio | 0 | +1 | +2 | **+3** | +2 | +1 | 0 |
+
+   Un cultivo maduro es uno **compensado**, no uno maximalmente ácido. Esta es la contrapartida de
+   que la Acidez sea un dial que puedes mover en ambos sentidos (Descarte): mientras sólo subía,
+   premiar el nivel bruto no tenía coste alguno y empujaba a todo el mundo al mismo extremo.
 4. **Variedad de Recetas:** puntos por la amplitud de tu repertorio — cuenta cuántas recetas
    **distintas** (por protocolo, no por copia) hay en tu Archivo de Horneados Exitosos:
 

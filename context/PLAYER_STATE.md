@@ -6,7 +6,7 @@ Para la simulación, cada instancia de `Jugador` debe inicializarse y gestionar 
 
 ### Atributos Biológicos (Zona 1: Cultivo Base / Masa Madre)
 * `vitalidad` (Integer): Nivel de actividad de la levadura. Límite: Mínimo 0, Máximo 6.
-* `acidez` (Integer): Perfil de ácido láctico/acético. Límite: Mínimo 0, Máximo 6.
+* `acidez` (Integer): Perfil de ácido láctico/acético. Límite: Mínimo 0, Máximo 6. Es **bidireccional**: la única forma voluntaria de moverla, en cualquiera de los dos sentidos, es la acción **Descarte** (0 PA, ocupa espacio, 1 vez por día — ver ACTIONS_REGISTRY.md). La Acción A ya no la toca. Las otras dos fuentes son la carta de clima «Acidificación Acelerada» (+1 a todos) y los Protocolos H/I, que la fijan en 1 y 2 respectivamente pero exigen Contaminación activa.
 
 ### Unidades de Insumo (Tokens)
 

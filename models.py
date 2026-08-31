@@ -21,7 +21,6 @@ Estándares aplicados (ARCHITECTURE.md):
 
 from __future__ import annotations
 
-import math
 import random
 from dataclasses import dataclass, field
 from enum import Enum
@@ -139,6 +138,30 @@ carta lo deja en 1, y la contaminación vuelve a castigar lo que debe castigar, 
 descuidar el mantenimiento. Ver CLIMATE_LOGIC.md.
 """
 
+ACIDEZ_EQUILIBRIO_CENTRO: int = 3
+"""
+Nivel de Acidez que corona el término «Madurez del Cultivo» (CORE_MECHANICS.md §3.3).
+
+Es el centro exacto de la pista 0-6. Madurez ya no premia la acidez CRUDA sino el
+EQUILIBRIO: un cultivo maduro es uno compensado, no uno maximamente ácido. El cambio
+es la contrapartida de que la Acidez pasara a ser un dial bidireccional (la Acción
+«Descarte»): mientras sólo subía, premiar el nivel bruto no tenía coste alguno y
+empujaba a todo el mundo al mismo extremo. Ahora los dos extremos de la pista pagan
+0 puntos, así que las recetas de diana extrema — Panettone y Brioche en 1,
+Pumpernickel en 5-6 — cuestan Madurez mientras las sostienes, que es exactamente por
+lo que su Bono de Sabor vale más (ver bono_sabor_pts en RECIPE_CATALOG).
+"""
+
+PUNTOS_EQUILIBRIO_MAX: int = 3
+"""
+Puntos de Madurez que otorga estar justo en ``ACIDEZ_EQUILIBRIO_CENTRO``.
+
+El término completo es ``vitalidad + (PUNTOS_EQUILIBRIO_MAX - |acidez - centro|)``, que
+decae un punto por casilla hacia cada lado y llega a 0 en los extremos 0 y 6. Vale 3 y
+no otro número porque es la distancia del centro a cualquiera de los dos extremos: así
+la caída llega a cero exactamente en el borde de la pista, sin necesidad de un clamp.
+"""
+
 AMPLIACION_OPTIMA_MODULO: int = 1
 """
 Casillas que el Módulo Analítico añade a CADA lado de la zona óptima.
@@ -232,7 +255,18 @@ class Recipe:
         tokens_agua: Cantidad de tokens de agua (5% c/u) requeridos para iniciarla.
         acidez_diana: Conjunto de niveles de acidez que activan el Bono de Sabor.
         bono_sabor_pts: Puntos de Maestría del bono de acidez impresos en la carta
-            (GDD v0.0.2, Módulo IV §2 — columna "Bono").
+            (GDD v0.0.2, Módulo IV §2 — columna "Bono"). Sigue siendo un campo
+            IMPRESO y no una @property, por la misma razón que ``grado`` (ver
+            ``__post_init__``): ``serialization.snapshot`` es ``dataclasses.asdict``
+            y no serializa propiedades. Pero los 12 valores del catálogo NO son
+            libres: se derivan de ``base(grado) + (1 si la diana está fuera del
+            centro)``, con base Básica 1 / Intermedia 2 / Avanzada 3 y la distancia
+            medida como la MÍNIMA de ``acidez_diana`` a ``ACIDEZ_EQUILIBRIO_CENTRO``
+            (con un dial de acidez el jugador elige el extremo más cercano del rango).
+            Es el reverso exacto de la Madurez por equilibrio: una diana extrema te
+            saca del pico de Madurez mientras la sostienes, y el bono te paga por
+            ello. ``tests/test_acidez_descarte.py`` verifica la regla sobre el
+            catálogo entero, así que una carta nueva no puede salirse de ella.
         zona_crecimiento: Rango [inicio, fin] donde la masa todavía crece y NO es pan:
             no se puede hornear (Acción F la rechaza), así que no tiene pago asociado.
             Es además el caso por defecto: ver ``esta_en_crecimiento``.
@@ -1057,6 +1091,25 @@ class Player:
         return n * (n + 1) // 2
 
     @property
+    def puntos_equilibrio_acidez(self) -> int:
+        """
+        Mitad de Acidez del término «Madurez del Cultivo» (CORE_MECHANICS.md §3.3).
+
+        ``PUNTOS_EQUILIBRIO_MAX - |acidez - ACIDEZ_EQUILIBRIO_CENTRO|``: 3 puntos justo
+        en el centro de la pista, un punto menos por casilla hacia cada lado, 0 en los
+        extremos 0 y 6. No necesita ``max(0, ...)`` porque el centro está a distancia 3
+        de ambos bordes y ``Player.acidez`` ya vive acotada en [0, 6]
+        (``ajustar_acidez``), de modo que el resultado nunca puede ser negativo.
+
+        Es una @property y no un cálculo suelto dentro de ``desglose_maestria`` porque
+        la UI necesita explicar el término (dónde está el pico) sin duplicar la
+        fórmula, igual que ``vitalidad_prevista`` se calcula en el servidor y no en
+        TypeScript.
+        """
+        distancia = abs(self.acidez - ACIDEZ_EQUILIBRIO_CENTRO)
+        return PUNTOS_EQUILIBRIO_MAX - distancia
+
+    @property
     def desglose_maestria(self) -> Dict[str, int]:
         """
         Los 7 términos de la puntuación final, por separado y ya en orden de
@@ -1092,7 +1145,7 @@ class Player:
                 if r.bono_sabor_aplicado
             ),
             # 3. Madurez del cultivo base al final de la partida
-            "Madurez": math.ceil((self.vitalidad + self.acidez) / 2),
+            "Madurez": self.vitalidad + self.puntos_equilibrio_acidez,
             # 4. Amplitud del repertorio horneado (curva triangular)
             "Variedad de Recetas": self.puntos_variedad,
             # 5. Penalización por desperdicio de insumos (-1 por cada 3 tokens)
@@ -1111,7 +1164,7 @@ class Player:
         Componentes (CORE_MECHANICS.md §3), ver ``desglose_maestria``:
           1. Puntos Base   : suma de puntos de todas las recetas horneadas (positivos + negativos)
           2. Puntos de Sabor: suma de bono_sabor_pts de registros con bono_sabor_aplicado == True
-          3. Madurez del Cultivo: ceil((vitalidad + acidez) / 2)
+          3. Madurez del Cultivo: vitalidad + (3 - |acidez - 3|), ver puntos_equilibrio_acidez
           4. Variedad de Recetas: n*(n+1)/2 sobre las recetas distintas horneadas con éxito
           5. Penalización Desperdicio: -1 pt por cada 3 tokens de insumos sin usar
           6. Penalización Contaminación: -3 pts × contador_contaminaciones
@@ -1270,7 +1323,7 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=60,
         tokens_agua=12,
         acidez_diana=(3,),
-        bono_sabor_pts=3,
+        bono_sabor_pts=1,
         zona_crecimiento=(1, 5),
         zona_pre_fermento=(6, 10),
         zona_optima=(11, 15),
@@ -1311,7 +1364,7 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=65,
         tokens_agua=13,
         acidez_diana=(2,),
-        bono_sabor_pts=3,
+        bono_sabor_pts=2,
         zona_crecimiento=(1, 5),
         zona_pre_fermento=(6, 11),
         zona_optima=(12, 15),
@@ -1354,7 +1407,7 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=70,
         tokens_agua=14,
         acidez_diana=(3, 4),
-        bono_sabor_pts=4,
+        bono_sabor_pts=2,
         zona_crecimiento=(1, 5),
         zona_pre_fermento=(6, 11),
         zona_optima=(12, 16),
@@ -1374,7 +1427,7 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=62,
         tokens_agua=13,
         acidez_diana=(3,),
-        bono_sabor_pts=4,
+        bono_sabor_pts=2,
         zona_crecimiento=(1, 5),
         zona_pre_fermento=(6, 10),
         zona_optima=(11, 14),
@@ -1394,7 +1447,7 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=52,
         tokens_agua=11,
         acidez_diana=(1,),
-        bono_sabor_pts=5,
+        bono_sabor_pts=3,
         zona_crecimiento=(1, 7),
         zona_pre_fermento=(8, 14),
         zona_optima=(15, 17),
@@ -1416,7 +1469,7 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=47,
         tokens_agua=10,
         acidez_diana=(1,),
-        bono_sabor_pts=8,
+        bono_sabor_pts=3,
         zona_crecimiento=(1, 10),
         zona_pre_fermento=(11, 16),
         zona_optima=(17, 18),
@@ -1438,7 +1491,7 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=67,
         tokens_agua=14,
         acidez_diana=(4, 5),
-        bono_sabor_pts=6,
+        bono_sabor_pts=4,
         zona_crecimiento=(1, 6),
         zona_pre_fermento=(7, 12),
         zona_optima=(13, 16),
@@ -1458,7 +1511,7 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=78,
         tokens_agua=16,
         acidez_diana=(3, 4),
-        bono_sabor_pts=7,
+        bono_sabor_pts=3,
         zona_crecimiento=(1, 6),
         zona_pre_fermento=(7, 13),
         zona_optima=(14, 16),
@@ -1478,7 +1531,7 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=80,
         tokens_agua=16,
         acidez_diana=(4, 5),
-        bono_sabor_pts=6,
+        bono_sabor_pts=4,
         zona_crecimiento=(1, 6),
         zona_pre_fermento=(7, 13),
         zona_optima=(14, 17),
@@ -1500,7 +1553,7 @@ _RECIPE_CATALOG_DATA: Dict[str, Recipe] = {
         hidratacion_pct=85,
         tokens_agua=17,
         acidez_diana=(5, 6),
-        bono_sabor_pts=8,
+        bono_sabor_pts=4,
         zona_crecimiento=(1, 9),
         zona_pre_fermento=(10, 15),
         zona_optima=(16, 18),

@@ -76,13 +76,14 @@ p1.accion_alimentar_usada = False
 v0, a0 = p1.vitalidad, p1.acidez
 
 manager.accion_A_alimentar(p1, tipo_harina="Blanca")
-check("A full: +1 vit", lambda: None if p1.vitalidad == v0 + 1 else (_ for _ in ()).throw(AssertionError()))
-check("A full: +1 acid", lambda: None if p1.acidez == a0 + 1 else (_ for _ in ()).throw(AssertionError()))
+check("A: +1 vit", lambda: None if p1.vitalidad == v0 + 1 else (_ for _ in ()).throw(AssertionError()))
+# La Accion A ya NO toca la Acidez: todo el control voluntario vive en «Descarte».
+check("A: no toca acidez", lambda: None if p1.acidez == a0 else (_ for _ in ()).throw(AssertionError()))
 
 xraises(InvalidActionError, "A doble uso en mismo dia", lambda: manager.accion_A_alimentar(p1, tipo_harina="Blanca"))
 
 p1.accion_alimentar_usada = False
-xraises(InvalidActionError, "A sin recursos", lambda: manager.accion_A_alimentar(p1, usar_harina=False, usar_agua=False))
+xraises(InvalidActionError, "A sin tipo de harina", lambda: manager.accion_A_alimentar(p1))
 
 # Accion A es gratuita (0 PA, ACTIONS_REGISTRY.md SS3) -- debe funcionar incluso sin PA.
 p1.puntos_accion = 0
@@ -90,8 +91,41 @@ manager.accion_A_alimentar(p1, tipo_harina="Blanca")
 check("A funciona con 0 PA (accion gratuita)", lambda: None if p1.accion_alimentar_usada else (_ for _ in ()).throw(AssertionError()))
 
 p1.accion_alimentar_usada = False
-p1.reserva_agua = 0
-xraises(MissingResourceError, "A agua insuficiente", lambda: manager.accion_A_alimentar(p1, usar_harina=False, usar_agua=True))
+p1.reserva_harina["Blanca"] = 0
+xraises(MissingResourceError, "A harina insuficiente", lambda: manager.accion_A_alimentar(p1, tipo_harina="Blanca"))
+p1.reserva_harina["Blanca"] = 100
+
+# ========================================================================
+print("--- Descarte: control bidireccional de Acidez ---")
+p1.accion_alimentar_usada = False
+p1.acciones_pa_usadas_hoy = []
+p1.puntos_accion = 2
+p1.acidez = 3
+p1.reserva_agua = 20
+p1.monedas = 20
+
+manager.accion_descarte_acidez(p1, operacion="subir", niveles=3)
+check("Descarte subir 3: acidez 3->6", lambda: None if p1.acidez == 6 else (_ for _ in ()).throw(AssertionError()))
+check("Descarte subir 3: cuesta 9 agua", lambda: None if p1.reserva_agua == 11 else (_ for _ in ()).throw(AssertionError()))
+check("Descarte no gasta PA", lambda: None if p1.puntos_accion == 2 else (_ for _ in ()).throw(AssertionError()))
+check("Descarte ocupa su espacio", lambda: None if "descarte" in p1.acciones_pa_usadas_hoy else (_ for _ in ()).throw(AssertionError()))
+
+xraises(EspacioAccionYaUsadoError, "Descarte 2x mismo dia", lambda: manager.accion_descarte_acidez(p1, operacion="bajar", niveles=1))
+
+p1.acciones_pa_usadas_hoy = []
+manager.accion_descarte_acidez(p1, operacion="bajar", niveles=2)
+check("Descarte bajar 2: acidez 6->4", lambda: None if p1.acidez == 4 else (_ for _ in ()).throw(AssertionError()))
+check("Descarte bajar 2: cuesta 3 monedas", lambda: None if p1.monedas == 17 else (_ for _ in ()).throw(AssertionError()))
+
+p1.acciones_pa_usadas_hoy = []
+xraises(InvalidActionError, "Descarte operacion invalida", lambda: manager.accion_descarte_acidez(p1, operacion="mezclar", niveles=1))
+xraises(InvalidActionError, "Descarte niveles fuera de escalera", lambda: manager.accion_descarte_acidez(p1, operacion="subir", niveles=4))
+
+p1.reserva_agua = 1
+xraises(MissingResourceError, "Descarte subir sin agua", lambda: manager.accion_descarte_acidez(p1, operacion="subir", niveles=1))
+p1.monedas = 0
+xraises(MissingResourceError, "Descarte bajar sin monedas", lambda: manager.accion_descarte_acidez(p1, operacion="bajar", niveles=1))
+check("Descarte rechazado no ocupa el espacio", lambda: None if "descarte" not in p1.acciones_pa_usadas_hoy else (_ for _ in ()).throw(AssertionError()))
 
 # ========================================================================
 print("--- B: Iniciar Receta ---")

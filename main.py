@@ -29,8 +29,10 @@ from typing import List, Optional, Tuple
 from actions import COSTOS_TECNOLOGIA, ActionManager
 from bootstrap import create_game
 from engine import (
+    COSTE_REFRESCO_AGUA,
     DATOS_SIMPOSIO,
     PRECIO_AGUA,
+    PRECIO_DESCARTE,
     PRECIO_PLIEGUES,
     PRECIO_PLIEGUES_VITALIDAD,
     PRECIO_RECETA,
@@ -40,6 +42,7 @@ from engine import (
 from events import EventoTipo, GameEvent
 from exceptions import FermentumError
 from models import (
+    ACIDEZ_EQUILIBRIO_CENTRO,
     FermentationSlot,
     Grado,
     HorneadoRecord,
@@ -342,7 +345,9 @@ _MENU_ACCIONES = """
   │  H  Re-cultivo Manual      (emergencia, contamin.)  [1PA]       │
   │  I  Inóculo Emergencia     (emergencia, contamin.)  [1PA]       │
   ├─── AUXILIARES (GRATUITAS) ─────────────────────────────────────┤
-  │  A  Alimentar cultivo      (+1 Vit / +1 Acid, 1×)  [0PA]       │
+  │  A  Alimentar cultivo      (+1 Vitalidad, 1× día)   [0PA]       │
+  │  R  Descarte               (± Acidez: agua sube,    [0PA]       │
+  │                             Monedas bajan, 1× día)              │
   │  X  Horas Extras           (+1PA a cambio de 1 Dato) [0PA]      │
   │  U  Pedido de Urgencia     (recurso directo × 1 Dato) [0PA]     │
   │  P  Pasar turno            (sin más acciones)                   │
@@ -376,34 +381,45 @@ def _pedir_opcion(prompt: str, opciones: List[str]) -> Optional[str]:
 # --- Recolectores de parámetros por acción ----------------------------------
 
 def _params_accion_A(player: Player) -> Optional[dict]:
-    print("  ¿Qué recursos usar para alimentar el cultivo?")
+    print("  Alimentar el cultivo: 10% de harina → +1 Vitalidad.")
+    print("  (La Acidez se ajusta con la acción «Descarte», no aquí.)")
 
-    # Harina
-    usar_h_raw = input("  ¿Usar 10% de harina? (s/n): ").strip().lower()
-    usar_h = usar_h_raw == "s"
-    tipo_h: Optional[str] = None
-    if usar_h:
-        disponibles = [(k, v) for k, v in player.reserva_harina.items() if v >= 10]
-        if not disponibles:
-            _warn("No hay ningún tipo de harina con al menos 10% disponible.")
-            return None
-        print("  Tipos disponibles:")
-        for i, (tipo, pct) in enumerate(disponibles):
-            print(f"    [{i}] {tipo}: {pct}%")
-        idx = _pedir_int("Tipo de harina a consumir", 0, len(disponibles) - 1)
-        if idx is None:
-            return None
-        tipo_h = disponibles[idx][0]
-
-    # Agua
-    usar_a_raw = input("  ¿Usar 10% de agua (2 tokens)? (s/n): ").strip().lower()
-    usar_a = usar_a_raw == "s"
-
-    if not usar_h and not usar_a:
-        _warn("Debes seleccionar al menos un recurso.")
+    disponibles = [(k, v) for k, v in player.reserva_harina.items() if v >= 10]
+    if not disponibles:
+        _warn("No hay ningún tipo de harina con al menos 10% disponible.")
+        return None
+    print("  Tipos disponibles:")
+    for i, (tipo, pct) in enumerate(disponibles):
+        print(f"    [{i}] {tipo}: {pct}%")
+    idx = _pedir_int("Tipo de harina a consumir", 0, len(disponibles) - 1)
+    if idx is None:
         return None
 
-    return {"usar_harina": usar_h, "tipo_harina": tipo_h, "usar_agua": usar_a}
+    return {"tipo_harina": disponibles[idx][0]}
+
+
+def _params_accion_descarte(player: Player) -> Optional[dict]:
+    print(f"  Acidez actual: {player.acidez}  (el pico de Madurez está en "
+          f"{ACIDEZ_EQUILIBRIO_CENTRO})")
+    print("  [0] Subir  — se paga en tokens de Agua: "
+          + ", ".join(f"+{n} = {c}" for n, c in sorted(COSTE_REFRESCO_AGUA.items())))
+    print("  [1] Bajar  — se paga en Monedas: "
+          + ", ".join(f"-{n} = {c}" for n, c in sorted(PRECIO_DESCARTE.items())))
+    sentido = _pedir_int("Sentido", 0, 1)
+    if sentido is None:
+        return None
+    operacion = "subir" if sentido == 0 else "bajar"
+
+    escalera = COSTE_REFRESCO_AGUA if operacion == "subir" else PRECIO_DESCARTE
+    recurso = "tokens de Agua" if operacion == "subir" else "Monedas"
+    niveles = _pedir_int(f"Niveles a mover ({recurso})", min(escalera), max(escalera))
+    if niveles is None:
+        return None
+
+    signo = 1 if operacion == "subir" else -1
+    destino = max(0, min(6, player.acidez + signo * niveles))
+    print(f"  → Acidez {player.acidez} → {destino}, coste {escalera[niveles]} {recurso}.")
+    return {"operacion": operacion, "niveles": niveles}
 
 
 def _params_accion_B(player: Player, engine: GameEngine) -> Optional[dict]:
@@ -723,6 +739,14 @@ def _despachar_accion(
         _ok("Cultivo alimentado.")
         return True
 
+    elif opcion == "R":
+        params = _params_accion_descarte(player)
+        if not params:
+            return False
+        manager.accion_descarte_acidez(player, **params)
+        _ok(f"Cultivo ajustado. Acidez = {player.acidez}.")
+        return True
+
     elif opcion == "B":
         params = _params_accion_B(player, engine)
         if not params:
@@ -976,7 +1000,10 @@ def _mostrar_ranking_final(engine: GameEngine) -> None:
     # jugador y no sobre el archivo de horneados.
     def _nota(termino: str, player) -> str:
         notas = {
-            "Madurez": f"(Vit {player.vitalidad} + Acidez {player.acidez})",
+            "Madurez": (
+                f"(Vit {player.vitalidad} + equilibrio {player.puntos_equilibrio_acidez} "
+                f"por Acidez {player.acidez})"
+            ),
             "Variedad de Recetas": (
                 f"({player.recetas_distintas_horneadas} "
                 f"{'receta distinta' if player.recetas_distintas_horneadas == 1 else 'recetas distintas'})"

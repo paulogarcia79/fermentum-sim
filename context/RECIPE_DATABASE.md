@@ -23,6 +23,8 @@ Para la simulación, cada entidad de tipo `Receta` debe contener los siguientes 
 * `penalizacion_colapso` (Integer): Puntos de Maestría negativos aplicados en horneado de emergencia (o si se hornea manual en esa zona).
 * `monedas_pre_fermento` / `monedas_optima` / `monedas_colapso` (Integer): Monedas cobradas al Hornear y Vender (Acción F) según la zona de horneado. El crecimiento no tiene campo: no se hornea ahí.
 * `bono_sabor_pts` (Integer): Puntos de Maestría del Bono de Sabor, otorgados junto con +2 Monedas si el Cubo de Acidez estaba sellado (y el horneado no fue un colapso).
+
+  Los 12 valores del catálogo **se derivan, no se autoran a mano**: `base(grado) + (1 si la diana está fuera del centro, si no 0)`, con `base` = Básica 1 / Intermedia 2 / Avanzada 3, y la distancia medida como la **mínima** de `acidez_diana` a `ACIDEZ_EQUILIBRIO_CENTRO` (= 3) — mínima porque con un dial de acidez el jugador elige el extremo más cercano del rango. Es el reverso exacto de «Madurez del Cultivo» (CORE_MECHANICS.md §3.3), que premia el equilibrio: la carta paga justo por el sitio de la pista que la Madurez cobra. `tests/test_acidez_descarte.py` verifica la regla sobre el catálogo entero, así que una carta nueva no puede salirse de ella.
 *(El campo `req_tecnologico` ya no existe: **ninguna receta está restringida por tecnología**. La regla es estructural — `Recipe` no tiene dónde escribir una puerta tecnológica —, así que no puede reintroducirse editando una carta. El freno de una receta cara es su precio de adquisición y su coste en insumos, no una mejora de laboratorio.)
 
 ---
@@ -35,18 +37,18 @@ recibía una copia de la del jugador 1.
 
 | ID Receta | Grado | Coste (Monedas) | Harinas (siempre 100% en total) | Agua — Tokens (Hidratación) | Acidez Diana (Bono) | Crecimiento | Pre-fermento | Óptima | Colapso | Puntos (Pre-f./Óptimo/Colapso) | Monedas al hornear (Pre-f./Óptima/Colapso) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Pan de Campo** | Básica | 1 | Blanca 100% | 12 (60%) | [3] (+3) | 1 - 5 | 6 - 10 | 11 - 15 | 16 - 20 | 4 / 10 / -2 | 10 / 14 / 8 |
+| **Pan de Campo** | Básica | 1 | Blanca 100% | 12 (60%) | [3] (+1) | 1 - 5 | 6 - 10 | 11 - 15 | 16 - 20 | 4 / 10 / -2 | 10 / 14 / 8 |
 | **Pan de Molde** | Básica | 1 | Blanca 100% | 11 (55%) | [1, 2] (+2) | 1 - 3 | 4 - 8 | 9 - 14 | 15 - 20 | 3 / 9 / -2 | 9 / 13 / 7 |
-| **Baguette** | Básica | 1 | Blanca 100% | 13 (65%) | [2] (+3) | 1 - 5 | 6 - 11 | 12 - 15 | 16 - 20 | 5 / 11 / -2 | 11 / 15 / 9 |
+| **Baguette** | Básica | 1 | Blanca 100% | 13 (65%) | [2] (+2) | 1 - 5 | 6 - 11 | 12 - 15 | 16 - 20 | 5 / 11 / -2 | 11 / 15 / 9 |
 | **Focaccia** | Básica | 1 | Blanca 100% | 15 (75%) | [1, 2] (+2) | 1 - 4 | 5 - 9 | 10 - 14 | 15 - 20 | 3 / 12 / -3 | 12 / 16 / 10 |
-| **Miche** | Intermedia | 2 | Blanca 50% + Integral 50% | 14 (70%) | [3, 4] (+4) | 1 - 5 | 6 - 11 | 12 - 16 | 17 - 20 | 5 / 13 / -4 | 10 / 14 / 7 |
-| **Pizza Napolitana** | Intermedia | 2 | Blanca 50% + Integral 50% | 13 (62%) | [3] (+4) | 1 - 5 | 6 - 10 | 11 - 14 | 15 - 20 | 4 / 14 / -4 | 9 / 15 / 6 |
-| **Brioche** | Intermedia | 2 | Blanca 50% + Centeno 50% | 11 (52%) | [1] (+5) | 1 - 7 | 8 - 14 | 15 - 17 | 18 - 20 | 5 / 16 / -6 | 8 / 15 / 5 |
-| **Panettone** | Intermedia | 2 | Blanca 50% + Centeno 50% | 10 (47%) | [1] (+8) | 1 - 10 | 11 - 16 | 17 - 18 | 19 - 20 | 8 / 16 / -8 | 7 / 16 / 4 |
-| **Hogaza Centeno** | Avanzada | 3 | Centeno 100% | 14 (67%) | [4, 5] (+6) | 1 - 6 | 7 - 12 | 13 - 16 | 17 - 20 | 6 / 17 / -5 | 11 / 18 / 8 |
-| **Pan Semillas** | Avanzada | 3 | Integral 100% | 16 (78%) | [3, 4] (+7) | 1 - 6 | 7 - 13 | 14 - 16 | 17 - 20 | 6 / 17 / -5 | 10 / 17 / 7 |
-| **Pan Graham** | Avanzada | 3 | Integral 100% | 16 (80%) | [4, 5] (+6) | 1 - 6 | 7 - 13 | 14 - 17 | 18 - 20 | 6 / 19 / -6 | 9 / 17 / 6 |
-| **Pumpernickel** | Avanzada | 3 | Centeno 100% | 17 (85%) | [5, 6] (+8) | 1 - 9 | 10 - 15 | 16 - 18 | 19 - 20 | 8 / 20 / -8 | 7 / 19 / 3 |
+| **Miche** | Intermedia | 2 | Blanca 50% + Integral 50% | 14 (70%) | [3, 4] (+2) | 1 - 5 | 6 - 11 | 12 - 16 | 17 - 20 | 5 / 13 / -4 | 10 / 14 / 7 |
+| **Pizza Napolitana** | Intermedia | 2 | Blanca 50% + Integral 50% | 13 (62%) | [3] (+2) | 1 - 5 | 6 - 10 | 11 - 14 | 15 - 20 | 4 / 14 / -4 | 9 / 15 / 6 |
+| **Brioche** | Intermedia | 2 | Blanca 50% + Centeno 50% | 11 (52%) | [1] (+3) | 1 - 7 | 8 - 14 | 15 - 17 | 18 - 20 | 5 / 16 / -6 | 8 / 15 / 5 |
+| **Panettone** | Intermedia | 2 | Blanca 50% + Centeno 50% | 10 (47%) | [1] (+3) | 1 - 10 | 11 - 16 | 17 - 18 | 19 - 20 | 8 / 16 / -8 | 7 / 16 / 4 |
+| **Hogaza Centeno** | Avanzada | 3 | Centeno 100% | 14 (67%) | [4, 5] (+4) | 1 - 6 | 7 - 12 | 13 - 16 | 17 - 20 | 6 / 17 / -5 | 11 / 18 / 8 |
+| **Pan Semillas** | Avanzada | 3 | Integral 100% | 16 (78%) | [3, 4] (+3) | 1 - 6 | 7 - 13 | 14 - 16 | 17 - 20 | 6 / 17 / -5 | 10 / 17 / 7 |
+| **Pan Graham** | Avanzada | 3 | Integral 100% | 16 (80%) | [4, 5] (+4) | 1 - 6 | 7 - 13 | 14 - 17 | 18 - 20 | 6 / 19 / -6 | 9 / 17 / 6 |
+| **Pumpernickel** | Avanzada | 3 | Centeno 100% | 17 (85%) | [5, 6] (+4) | 1 - 9 | 10 - 15 | 16 - 18 | 19 - 20 | 8 / 20 / -8 | 7 / 19 / 3 |
 
 ---
 
@@ -125,9 +127,16 @@ en el marcador y no solo en la lista de la compra:
 Las **Monedas y el ancho de las zonas NO están bandeados**: siguen siendo el eje que
 distingue, dentro de un mismo grado, una carta de puntos baratos de una carta caja
 fuerte (compárense Hogaza Centeno, 17 pts / 18 Monedas, y Pumpernickel, 20 / 19 con una
-ventana óptima de 3 espacios y un colapso de -8). Igual que el Bono de Sabor: Panettone
-es Intermedia y aun así tiene el mayor bono del juego (+8) — no es la carta de más
-puntos, es la de más sabor.
+ventana óptima de 3 espacios y un colapso de -8).
+
+El **Bono de Sabor sí está bandeado**, y a propósito: desde que se deriva de
+`grado × distancia al centro` (ver arriba) cae en 1-2 para Básica, 2-3 para Intermedia y
+3-4 para Avanzada. Antes no lo estaba — Panettone era Intermedia y tenía el mayor bono
+del juego (+8) — pero ese diseño daba por supuesto que la Acidez era un trinquete de un
+solo sentido, de modo que una diana baja era un premio *inalcanzable* y podía valer
+cualquier cosa. Con el dial de Descarte toda diana es alcanzable, así que lo que
+diferencia a una carta ya no es si puedes llegar, sino **cuánta Madurez te cuesta
+quedarte allí** — y eso es exactamente lo que mide la distancia al centro.
 
 `tests/test_recetas_grado.py` fija estas bandas y la composición 4/4/4; añadir una carta
 fuera de banda rompe la suite, que es el punto.

@@ -45,8 +45,17 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 12
+VERSION_FORMATO = 13
 """
+Bumped a 13: la Acidez pasa a ser un dial bidireccional (accion «Descarte») y eso
+arrastra dos cambios de economia que un pickle viejo no tiene forma de reflejar. Los
+12 `bono_sabor_pts` del catalogo se recortaron y re-derivaron sobre grado x distancia
+al centro, y `Recipe` es un campo impreso que viaja DENTRO del pickle en cuatro sitios
+(carpeta, estaciones, mercado, archivos), asi que una partida restaurada seguiria
+pagando los bonos de la economia anterior. Ademas `Madurez` dejo de premiar la acidez
+cruda: una partida a medias guardada bajo la formula vieja puntuaria distinto al
+reanudarse. Mismo criterio que el bump de Ingresos de Panaderia.
+
 Bumped a 11: `Recipe` cambia de forma otra vez -- la pista de fermentacion pasa de
 tres zonas a CUATRO (`zona_crecimiento` nueva, y `zona_baja`/`zona_sobrefermentada`
 renombradas a `zona_pre_fermento`/`zona_colapso`, con sus pagos). Un pickle viejo trae

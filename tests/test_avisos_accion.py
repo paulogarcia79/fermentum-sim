@@ -185,7 +185,7 @@ def test_pasar_y_deshacer_tambien_difunden() -> None:
     r = cliente.post(
         f"/games/{room_id}/actions",
         headers={"X-Player-Token": token},
-        json={"accion": "A", "params": {"usar_harina": True, "tipo_harina": "Blanca"}},
+        json={"accion": "A", "params": {"tipo_harina": "Blanca"}},
     )
     assert r.status_code == 200, r.text
 
@@ -214,10 +214,33 @@ def test_accion_gratuita_y_deshacer_no_alteran_el_log_de_eventos() -> None:
     cliente.post(
         f"/games/{room_id}/actions",
         headers={"X-Player-Token": token},
-        json={"accion": "A", "params": {"usar_harina": True, "tipo_harina": "Blanca"}},
+        json={"accion": "A", "params": {"tipo_harina": "Blanca"}},
     )
     assert len(sesion.engine.eventos) == antes
 
     cliente.post(f"/games/{room_id}/undo", headers={"X-Player-Token": token})
     # `sesion.engine` es un objeto NUEVO tras restaurar el checkpoint.
+    assert len(sesion.engine.eventos) == antes
+
+
+def test_descarte_y_deshacer_no_alteran_el_log_de_eventos() -> None:
+    """
+    Mismo invariante para «Descarte». Es la razon por la que la accion NO emite
+    ningun GameEvent pese a cambiar estado visible: al ser 0 PA vive dentro de
+    la ventana de deshacer, y `restaurar_checkpoint` repone el motor desde un
+    pickle -- un evento suyo haria ENCOGER `engine.eventos` al deshacer.
+    """
+    cliente, room_id, tokens, sesion = _partida_iniciada()
+    token = _token_del_jugador_en_turno(cliente, room_id, tokens)
+    antes = len(sesion.engine.eventos)
+
+    r = cliente.post(
+        f"/games/{room_id}/actions",
+        headers={"X-Player-Token": token},
+        json={"accion": "descarte", "params": {"operacion": "bajar", "niveles": 1}},
+    )
+    assert r.status_code == 200, r.text
+    assert len(sesion.engine.eventos) == antes
+
+    cliente.post(f"/games/{room_id}/undo", headers={"X-Player-Token": token})
     assert len(sesion.engine.eventos) == antes

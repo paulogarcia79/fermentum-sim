@@ -70,12 +70,9 @@ def _intentar_alimentar(player: "Player", manager: "ActionManager") -> bool:
     if player.accion_alimentar_usada:
         return False
     tipo = next((t for t, cant in player.reserva_harina.items() if cant >= 10), None)
-    usar_agua = player.reserva_agua >= 2
-    if tipo is None and not usar_agua:
+    if tipo is None:
         return False
-    manager.accion_A_alimentar(
-        player, usar_harina=tipo is not None, tipo_harina=tipo, usar_agua=usar_agua
-    )
+    manager.accion_A_alimentar(player, tipo_harina=tipo)
     return True
 
 

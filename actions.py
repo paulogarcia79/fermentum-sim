@@ -26,7 +26,7 @@ Patrón de uso::
     manager = ActionManager(engine)
 
     def turno_jugador(engine: GameEngine, player: Player) -> None:
-        manager.accion_A_alimentar(player, usar_harina=True, usar_agua=True)
+        manager.accion_A_alimentar(player, tipo_harina="Blanca")
         manager.accion_F_hornear(player, slot_index=0)
 
     engine.ejecutar_dia_laboratorio(ejecutar_turno_jugador=turno_jugador)
@@ -45,8 +45,10 @@ from engine import (
     AGUA_TOKENS_POR_LOTE,
     CANTIDAD_BOLSA_PCT,
     CANTIDAD_MEDIA_BOLSA_PCT,
+    COSTE_REFRESCO_AGUA,
     DATOS_SIMPOSIO,
     PRECIO_AGUA,
+    PRECIO_DESCARTE,
     PRECIO_PLIEGUES,
     PRECIO_PLIEGUES_VITALIDAD,
     PRECIO_RECETA,
@@ -103,6 +105,22 @@ Operación del wire → (dirección, cantidad en %). Existe como tabla única po
 ``accion_C_visitar_mercado`` recorre las transacciones TRES veces (validar,
 simular saldos, aplicar): con la cantidad escrita a mano en cada bucle, añadir
 un tamaño de bolsa sería una invitación a que los tres dejasen de coincidir.
+"""
+
+
+OPERACIONES_ACIDEZ: Dict[str, Tuple[int, str, Dict[int, int]]] = {
+    "subir": (+1, "agua", COSTE_REFRESCO_AGUA),
+    "bajar": (-1, "monedas", PRECIO_DESCARTE),
+}
+"""
+Operación del wire → (signo, recurso que se paga, escalera de coste).
+
+Los dos sentidos del Descarte cobran en recursos DISTINTOS — subir es añadir agua,
+bajar es tirar cultivo y reponerlo — así que sin esta tabla el método tendría dos
+ramas paralelas donde hoy tiene una sola: validar el saldo, cobrarlo y mover la
+acidez leen todos la misma fila. Es el mismo motivo por el que existe
+``OPERACIONES_HARINA``: si un sentido nuevo (o una escalera nueva) obliga a tocar
+tres sitios, tarde o temprano se tocan dos.
 """
 
 
@@ -299,43 +317,37 @@ class ActionManager:
     def accion_A_alimentar(
         self,
         player: Player,
-        usar_harina: bool = True,
         tipo_harina: Optional[str] = None,
-        usar_agua: bool = True,
     ) -> None:
         """
         Acción A: Alimentar / Refrescar el Cultivo (ACTIONS_REGISTRY.md §3).
 
         Costo:      0 PA (acción auxiliar gratuita, una vez por Fase II).
-        Recursos:   Según combinación elegida.
-        Efecto:     +1 Vitalidad si se consume 10% de harina del tipo indicado.
-                    +1 Acidez si se consumen 2 tokens de agua (10%).
-                    Ambos efectos son simultáneos en la alimentación completa.
+        Recursos:   10% de harina del tipo indicado.
+        Efecto:     +1 Vitalidad (máx. 6).
 
-        Alimentación parcial:
-          ``usar_harina=False, usar_agua=True``  → solo +1 Acidez.
-          ``usar_harina=True, usar_agua=False``  → solo +1 Vitalidad.
+        Solo puede ejecutarse una vez por Fase II («accion_alimentar_usada»), y
+        repone exactamente el -1 que el desgaste metabólico resta cada Fase III:
+        un jugador que alimenta a diario ORBITA su Vitalidad inicial.
 
-        Solo puede ejecutarse una vez por Fase II («accion_alimentar_usada»).
+        Nota de diseño: esta acción **ya no toca la Acidez**. Tuvo una mitad de
+        agua que daba +1 Acidez, pero mientras la Acidez sólo sabía subir esa
+        mitad era un trinquete — y peor, uno que convenía accionar siempre,
+        porque la Madurez premiaba el nivel bruto. Todo el control voluntario de
+        la Acidez vive ahora en la acción «Descarte»
+        (``accion_descarte_acidez``), que la mueve en los dos sentidos; la
+        Acción A quedó reducida a lo único que hacía sin ambigüedad, que es el
+        mantenimiento de la Vitalidad.
 
         Args:
             player: Jugador que ejecuta la acción.
-            usar_harina: True para consumir 10% de harina y ganar +1 Vitalidad.
             tipo_harina: Clave del tipo de harina a consumir ("Blanca", "Centeno"
-                o "Integral"). Requerido si usar_harina=True.
-            usar_agua: True para consumir 2 tokens de agua y ganar +1 Acidez.
+                o "Integral").
 
         Raises:
-            InvalidActionError: Sin recurso activo, ya usada este turno, o
-                tipo_harina inválido.
-            MissingResourceError: Si se solicita un recurso que el jugador no posee.
+            InvalidActionError: Ya usada este turno, o tipo_harina inválido.
+            MissingResourceError: Si el jugador no tiene la harina pedida.
         """
-        if not usar_harina and not usar_agua:
-            raise InvalidActionError(
-                "Acción A requiere al menos un recurso (harina o agua). "
-                "Especifica usar_harina=True y/o usar_agua=True."
-            )
-
         if player.accion_alimentar_usada:
             raise InvalidActionError(
                 f"'{player.nombre}' ya usó la Acción A este turno de Fase II. "
@@ -343,31 +355,107 @@ class ActionManager:
             )
 
         # --- Bloque de validaciones (Fail-Fast) ---
-        if usar_harina:
-            tipos_validos = {"Blanca", "Centeno", "Integral"}
-            if tipo_harina not in tipos_validos:
-                raise InvalidActionError(
-                    f"tipo_harina debe ser uno de {sorted(tipos_validos)}. "
-                    f"Recibido: {tipo_harina!r}"
-                )
-            if player.reserva_harina.get(tipo_harina, 0) < 10:
-                raise MissingResourceError(
-                    f"'{player.nombre}' necesita al menos 10% de Harina {tipo_harina} "
-                    f"pero tiene {player.reserva_harina.get(tipo_harina, 0)}%."
-                )
-        if usar_agua:
-            self._require_agua(player, 2)
+        tipos_validos = {"Blanca", "Centeno", "Integral"}
+        if tipo_harina not in tipos_validos:
+            raise InvalidActionError(
+                f"tipo_harina debe ser uno de {sorted(tipos_validos)}. "
+                f"Recibido: {tipo_harina!r}"
+            )
+        if player.reserva_harina.get(tipo_harina, 0) < 10:
+            raise MissingResourceError(
+                f"'{player.nombre}' necesita al menos 10% de Harina {tipo_harina} "
+                f"pero tiene {player.reserva_harina.get(tipo_harina, 0)}%."
+            )
 
         # --- Aplicar efectos (0 PA) ---
-        if usar_harina:
-            player.reserva_harina[tipo_harina] -= 10
-            player.ajustar_vitalidad(+1)
-
-        if usar_agua:
-            player.reserva_agua -= 2
-            player.ajustar_acidez(+1)
-
+        player.reserva_harina[tipo_harina] -= 10
+        player.ajustar_vitalidad(+1)
         player.accion_alimentar_usada = True
+
+    def accion_descarte_acidez(
+        self,
+        player: Player,
+        operacion: str,
+        niveles: int,
+    ) -> None:
+        """
+        Acción «Descarte»: ajustar la Acidez del cultivo base en ambos sentidos.
+
+        Costo:      0 PA, pero OCUPA su espacio de acción (una vez por día).
+        Recursos:   según el sentido, ver ``OPERACIONES_ACIDEZ``.
+                      · ``"subir"``: ``COSTE_REFRESCO_AGUA[niveles]`` tokens de agua
+                        (2 / 5 / 9 por +1 / +2 / +3).
+                      · ``"bajar"``: ``PRECIO_DESCARTE[niveles]`` Monedas
+                        (1 / 3 / 6 por -1 / -2 / -3).
+        Efecto:     Acidez ± ``niveles``, con el clamp [0, 6] de ``ajustar_acidez``.
+
+        Un solo sentido por visita: mezclar los dos en la misma llamada no
+        significaría nada que no signifique ya su diferencia.
+
+        Notas de diseño, las tres load-bearing:
+
+        · **No cuesta PA pero sí ocupa espacio.** Es el mismo argumento que la
+          Acción E: las Monedas son RENOVABLES (la Acción C vende harina cada
+          día), así que "el precio lo limita" es falso — sin el tope de una vez
+          por día, un jugador rico compraría visitas hasta vaciar la bolsa. Por
+          eso llama a ``ocupar_espacio_accion`` y no a ``consumir_punto_accion``.
+
+        · **No emite ningún GameEvent.** Al ser gratuita en PA ocurre dentro de
+          la ventana de deshacer, y ``GameSession.restaurar_checkpoint`` repone
+          el motor entero desde un pickle: si esta acción escribiera en
+          ``engine.eventos``, la lista ENCOGERÍA al deshacer y los punteros
+          ``since`` / ``Last-Event-ID`` de cada cliente quedarían más allá del
+          final. Ver el comentario del checkpoint en ``server/sessions.py``.
+
+        · **Subir cuesta agua y bajar cuesta Monedas**, no al revés y no las dos
+          lo mismo. Bajar la acidez es descartar parte del cultivo y reponerlo:
+          se tira producto, y por eso se paga en la moneda del juego. Subirla es
+          sólo añadir agua. La asimetría también protege al jugador arruinado,
+          que conserva un sentido del dial cuando no le queda ni una Moneda.
+
+        Args:
+            player: Jugador que ejecuta la acción.
+            operacion: ``"subir"`` o ``"bajar"`` (claves de ``OPERACIONES_ACIDEZ``).
+            niveles: Casillas de acidez a mover, 1-3.
+
+        Raises:
+            EspacioAccionYaUsadoError: El espacio ya se ocupó hoy.
+            InvalidActionError: Operación desconocida o ``niveles`` fuera de la escalera.
+            MissingResourceError: Sin agua / sin Monedas para el escalón pedido.
+        """
+        if "descarte" in player.acciones_pa_usadas_hoy:
+            raise EspacioAccionYaUsadoError(
+                f"'{player.nombre}' ya ocupó el espacio de Descarte hoy. "
+                "Solo puede ajustar su Acidez una vez por día."
+            )
+
+        if operacion not in OPERACIONES_ACIDEZ:
+            raise InvalidActionError(
+                f"operacion debe ser una de {sorted(OPERACIONES_ACIDEZ)}. "
+                f"Recibido: {operacion!r}"
+            )
+        signo, recurso, escalera = OPERACIONES_ACIDEZ[operacion]
+
+        if niveles not in escalera:
+            raise InvalidActionError(
+                f"niveles debe ser uno de {sorted(escalera)} para '{operacion}'. "
+                f"Recibido: {niveles!r}"
+            )
+        coste = escalera[niveles]
+
+        # --- Bloque de validaciones (Fail-Fast) ---
+        if recurso == "agua":
+            self._require_agua(player, coste)
+        else:
+            self._require_monedas(player, coste)
+
+        # --- Aplicar efectos (0 PA, ocupa el espacio) ---
+        if recurso == "agua":
+            player.reserva_agua -= coste
+        else:
+            player.monedas -= coste
+        player.ajustar_acidez(signo * niveles)
+        player.ocupar_espacio_accion("descarte")
 
     def accion_B_iniciar_receta(
         self,

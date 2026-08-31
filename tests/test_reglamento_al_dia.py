@@ -215,7 +215,7 @@ def _seccion(texto: str, titulo: str, largo: int = 3000) -> str:
 AMBOS = pytest.mark.parametrize("doc", ["RULEBOOK.md", "RULEBOOK.html"])
 
 # La tabla de recetas: 12 columnas, la primera es el nombre de la carta.
-COL_GRADO, COL_COSTE, COL_AGUA = 1, 2, 4
+COL_GRADO, COL_COSTE, COL_AGUA, COL_DIANA = 1, 2, 4, 5
 COL_ZONAS, COL_PUNTOS, COL_MONEDAS = 6, 10, 11
 
 
@@ -290,6 +290,38 @@ def test_recetas_monedas(tablas, doc) -> None:
         )
         assert t.fila(receta.nombre)[COL_MONEDAS] == esperado, (
             f"{receta.nombre}: monedas al hornear"
+        )
+
+
+@AMBOS
+def test_recetas_acidez_diana_y_bono(tablas, doc) -> None:
+    """
+    La columna que este guardarrail NO cubria, y que el dial de Acidez toco
+    entera: la Acidez Diana y, entre parentesis, su Bono de Sabor.
+
+    Se comprueban las dos mitades por separado porque fallan por motivos
+    distintos: la diana se desincroniza al reautorar una carta, y el bono al
+    rebalancear la escala entera. La diana se compara como CONJUNTO de niveles
+    (los reglamentos escriben "Nivel 1-2" o "[1, 2]" segun el documento, pero
+    ambos significan lo mismo) mientras que el bono se compara exacto.
+    """
+    t = _tabla_recetas(tablas, doc)
+    for receta in RECIPE_CATALOG.values():
+        celda = t.fila(receta.nombre)[COL_DIANA]
+        niveles = {int(n) for n in re.findall(r"\d+", celda.split("(")[0])}
+        # "Nivel 1-2" abrevia un rango; el catalogo lo lista carta a carta.
+        if len(niveles) == 2:
+            lo, hi = min(niveles), max(niveles)
+            niveles = set(range(lo, hi + 1))
+        assert niveles == set(receta.acidez_diana), (
+            f"{receta.nombre}: acidez diana {celda!r} vs {receta.acidez_diana}"
+        )
+
+        bono = re.search(r"\(\+(\d+)\)", celda)
+        assert bono, f"{receta.nombre}: la celda {celda!r} no imprime el bono"
+        assert int(bono.group(1)) == receta.bono_sabor_pts, (
+            f"{receta.nombre}: bono de sabor impreso {bono.group(1)}, "
+            f"el catalogo dice {receta.bono_sabor_pts}"
         )
 
 

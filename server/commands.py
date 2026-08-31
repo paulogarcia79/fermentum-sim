@@ -40,6 +40,7 @@ ACCIONES_QUE_TERMINAN_TURNO: Dict[str, bool] = {
     "C": True,
     "D": True,
     "E": False,
+    "descarte": False,
     "F": True,
     "G": True,
     "simposio": True,
@@ -119,9 +120,14 @@ def _despachar(
     if accion == "A":
         return manager.accion_A_alimentar(
             player,
-            usar_harina=params.get("usar_harina", True),
             tipo_harina=params.get("tipo_harina"),
-            usar_agua=params.get("usar_agua", True),
+        )
+
+    if accion == "descarte":
+        return manager.accion_descarte_acidez(
+            player,
+            operacion=params.get("operacion"),
+            niveles=_requerir_int(params, "niveles"),
         )
 
     if accion == "B":

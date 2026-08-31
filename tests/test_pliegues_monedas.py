@@ -259,6 +259,11 @@ def test_un_jugador_sin_pa_sigue_elegible_por_el_espacio_de_pliegues() -> None:
     activo.horas_extras_usadas = True
     activo.datos_investigacion = 0
     activo.monedas = min(PRECIO_PLIEGUES.values())
+    # El espacio de «Descarte» tambien mantiene elegible a un jugador sin PA
+    # (y su escalon mas barato tambien cuesta 1 Moneda), asi que hay que
+    # apagarlo para que este test aisle de verdad la clausula de Pliegues.
+    activo.acciones_pa_usadas_hoy = ["descarte"]
+    activo.reserva_agua = 0
 
     assert engine._jugador_elegible(engine._players.index(activo))
 
@@ -266,7 +271,7 @@ def test_un_jugador_sin_pa_sigue_elegible_por_el_espacio_de_pliegues() -> None:
     assert not engine._jugador_elegible(engine._players.index(activo))
 
     activo.monedas = 30
-    activo.acciones_pa_usadas_hoy = ["E"]
+    activo.acciones_pa_usadas_hoy = ["E", "descarte"]
     assert not engine._jugador_elegible(engine._players.index(activo))
 
 
