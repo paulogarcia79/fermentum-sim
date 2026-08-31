@@ -573,7 +573,7 @@ además una variante alternativa: recuperar **+1 de Vitalidad** en el cultivo ba
 sin comprar ningún espacio de avance.
 
 **Riesgo:** el avance no tiene tope. Comprar 3 espacios puede empujar una masa más allá de su zona
-óptima hasta la zona sobrefermentada, que la Fase III hornea automáticamente en colapso y con
+óptima hasta la zona de colapso, que la Fase III hornea automáticamente en colapso y con
 penalización. Ese riesgo es el contrapeso del escalón caro: el juego avisa, pero no lo impide.
 
 #### Horas Extras
@@ -729,7 +729,7 @@ Las cuatro zonas del track, de menos a más fermentada: **Crecimiento** (la masa
 se puede hornear), **Pre-fermento** (cruda, hornea con puntos y Monedas reducidos), **Óptima**
 (puntos completos y +1 Dato) y **Colapso** (horneado automático con penalización).
 
-Si, tras aplicar el Avance Final, la posición de una masa entra en su Zona Sobre-fermentada, la
+Si, tras aplicar el Avance Final, la posición de una masa entra en su Zona de Colapso, la
 masa colapsa de inmediato: se hornea automáticamente con costo 0 PA, aplicando la penalización de
 puntos y el ingreso de Monedas de recuperación de coste de esa zona (ver [Catálogo de
 Recetas](#8-catálogo-de-recetas)). El Dado de Inóculo se recupera y la estación de fermentación
@@ -847,7 +847,7 @@ importar lo que costó: ver [Desarrollo Tecnológico](#112-cálculo-de-puntos-de
 |:---|:---:|:---|
 | **Incubadora** | 3 Datos | Permite ajustar la temperatura local ±5°C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima. |
 | **Cámara B** | 4 Datos | Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas. |
-| **Módulo Analítico** | 4 Datos | **Ensancha la Zona Óptima 1 casilla por cada lado** — se come una casilla de la Zona Baja por abajo y una de la Sobre-fermentada por arriba, así que **también retrasa el colapso**. Además sube el rendimiento del horneado: **2 Datos** en cualquier punto de la Zona Óptima y **3** en el centro exacto. |
+| **Módulo Analítico** | 4 Datos | **Ensancha la Zona Óptima 1 casilla por cada lado** — se come una casilla del Pre-fermento por abajo y una del Colapso por arriba, así que **también retrasa el colapso**. Además sube el rendimiento del horneado: **2 Datos** en cualquier punto de la Zona Óptima y **3** en el centro exacto. |
 | **Criopreservación** | 2 Datos | Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III. |
 
 ---

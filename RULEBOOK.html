@@ -1,3 +1,12 @@
+<!doctype html>
+<!-- charset OBLIGATORIO, y OBLIGATORIAMENTE aquí arriba: este documento se abre
+     suelto (file://), donde no hay cabecera HTTP que declare la codificación, y
+     el navegador solo la busca en los primeros 1024 bytes. Si baja del comentario
+     de mantenimiento queda fuera de ese margen, el navegador adivina, acierta
+     windows-1252, y cada acento y cada raya de un reglamento en español se
+     convierten en «BÃ¡sica» y «âˆ'». -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <!--
   MANTENIMIENTO — leer antes de editar.
 
@@ -497,6 +506,12 @@
   tbody tr:last-child td { border-bottom: none; }
   tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
 
+  /* `baja` y `sobre` son los nombres ANTIGUOS de las zonas (hoy Pre-fermento y
+     Colapso). Se conservan sólo como identificadores de CSS, donde ningún
+     lector los ve, para no repetir en 48 sitios un renombrado que no aporta
+     nada y que si se hace a medias apaga el color de una zona en silencio. El
+     texto visible usa siempre el vocabulario vigente: si aquí aparece
+     «Sobre-fermentada» fuera de un selector, es una errata. */
   td.z-crecimiento { background: var(--zone-crecimiento-bg) !important; color: var(--zone-crecimiento-ink); font-weight: 400; }
   td.z-baja { background: var(--zone-baja-bg) !important; color: var(--zone-baja-ink); font-weight: 600; }
   td.z-optima { background: var(--zone-optima-bg) !important; color: var(--zone-optima-ink); font-weight: 600; }
@@ -908,7 +923,10 @@
         <p class="wrap" style="font-size:0.9rem;color:var(--ink-muted);">Las Monedas y el ancho de las zonas <strong>no</strong> están escalonados: son el eje que distingue, dentro de un mismo grado, una carta de puntos baratos de una carta caja fuerte. Compárense Hogaza Centeno (17 puntos, 18 Monedas, zona óptima de 4 casillas) y Pumpernickel (20 puntos, 19 Monedas, pero solo 3 casillas de zona óptima y un colapso de −8). El Bono de Sabor va por libre igual: Panettone es Intermedia y aun así tiene el mayor bono del juego (+8) — no es la carta de más puntos, es la de más sabor.</p>
 
         <div class="zone-legend">
-          <span class="lb">Baja</span><span class="lo">Óptima</span><span class="ls">Sobre-fermentada</span>
+          <span class="lc">Crecimiento — no se hornea</span>
+          <span class="lb">Pre-fermento — masa cruda</span>
+          <span class="lo">Zona Óptima</span>
+          <span class="ls">Colapso</span>
         </div>
 
         <div class="table-wrap">
@@ -917,7 +935,7 @@
               <tr>
                 <th>Receta</th><th>Grado</th><th>Coste<br><span style="font-weight:400">Monedas</span></th><th>Harina<br><span style="font-weight:400">siempre 10 (100%) en total</span></th><th>Agua<br><span style="font-weight:400">tokens (hidratación)</span></th><th>Acidez diana (bono)</th>
                 <th>Crecim.</th><th>Pre-ferm.</th><th>Óptima</th><th>Colapso</th>
-                <th>Puntos B/O/S</th><th>Monedas al hornear B/O/S</th>
+                <th>Puntos<br><span style="font-weight:400">Pre-f. / Óptima / Colapso</span></th><th>Monedas al hornear<br><span style="font-weight:400">Pre-f. / Óptima / Colapso</span></th>
               </tr>
             </thead>
             <tbody>
@@ -956,7 +974,7 @@
         <div class="callout"><strong>Principio de Memoria Biológica.</strong> Una vez iniciada, una masa es un ecosistema independiente. Si el cultivo base llega a Vitalidad 0 o se contamina después, esa masa en curso no se ve afectada — sigue avanzando con el dado sellado en la mezcla original.</div>
 
         <h3 class="sub">9.2 · Colapso Estructural (sobre-fermentación)</h3>
-        <p>Si la posición de una masa entra en su Zona Sobre-fermentada tras el Avance Final, colapsa de inmediato: se hornea automáticamente con costo 0 PA, aplicando la penalización de puntos y el ingreso de recuperación de coste de esa zona. El Dado de Inóculo se recupera y la estación queda libre para el día siguiente. Un colapso nunca otorga el Bono de Sabor.</p>
+        <p>Si la posición de una masa entra en su Zona de Colapso tras el Avance Final, colapsa de inmediato: se hornea automáticamente con costo 0 PA, aplicando la penalización de puntos y el ingreso de recuperación de coste de esa zona. El Dado de Inóculo se recupera y la estación queda libre para el día siguiente. Un colapso nunca otorga el Bono de Sabor.</p>
         <p><strong>Las zonas que cuentan son las tuyas, no las impresas.</strong> Con el <strong>Módulo Analítico</strong> instalado, tu Zona Óptima corre una casilla en cada dirección, así que el umbral de colapso está una casilla más arriba de lo que dice la carta. Es un efecto <strong>vivo</strong>: instalarlo hoy salva esta noche una masa que ya estaba fermentando, sin que hiciera falta tenerlo al iniciarla. Ensanchar no mueve el centro exacto — la zona perdona más, pero clavar el centro cuesta lo mismo.</p>
 
         <h3 class="sub">9.3 · Desgaste Metabólico</h3>
@@ -1010,7 +1028,7 @@
             <tbody>
               <tr><td class="name">Incubadora</td><td><span class="chip datos">3 Datos</span></td><td class="wrap">Ajusta la temperatura local ±5 °C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima.</td></tr>
               <tr><td class="name">Cámara B</td><td><span class="chip datos">4 Datos</span></td><td class="wrap">Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas.</td></tr>
-              <tr><td class="name">Módulo Analítico</td><td><span class="chip datos">4 Datos</span></td><td class="wrap"><strong>Ensancha la Zona Óptima 1 casilla por cada lado</strong> — se come una casilla de la Zona Baja por abajo y una de la Sobre-fermentada por arriba, así que <strong>también retrasa el colapso</strong>. Además sube el rendimiento del horneado: <strong>2 Datos</strong> en cualquier punto de la Zona Óptima y <strong>3</strong> en el centro exacto.</td></tr>
+              <tr><td class="name">Módulo Analítico</td><td><span class="chip datos">4 Datos</span></td><td class="wrap"><strong>Ensancha la Zona Óptima 1 casilla por cada lado</strong> — se come una casilla del Pre-fermento por abajo y una del Colapso por arriba, así que <strong>también retrasa el colapso</strong>. Además sube el rendimiento del horneado: <strong>2 Datos</strong> en cualquier punto de la Zona Óptima y <strong>3</strong> en el centro exacto.</td></tr>
               <tr><td class="name">Criopreservación</td><td><span class="chip datos">2 Datos</span></td><td class="wrap">Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III.</td></tr>
             </tbody>
           </table>

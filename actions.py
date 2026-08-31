@@ -853,8 +853,11 @@ class ActionManager:
           · Incubadora:       3 Datos  → ajuste ±5°C local en Fase III.
           · Cámara B:         4 Datos  → desbloquea Estación 03 y mejora Acción E.
           · Módulo Analítico: 4 Datos  → ensancha la zona óptima ±1 casilla (y
-            retrasa el colapso) y sube los Datos del horneado a 2 (3 en centro exacto)
-                                         y habilita recetas Avanzadas (Acción B).
+                                         retrasa el colapso con ella) y sube los
+                                         Datos del horneado a 2, o 3 en el centro
+                                         exacto. **No** abre recetas: ninguna carta
+                                         está restringida por tecnología desde que
+                                         se borró `Recipe.req_tecnologico`.
           · Criopreservación: 2 Datos  → ignora el desgaste metabólico de
                                          Fase III (Estasis Biológica).
 

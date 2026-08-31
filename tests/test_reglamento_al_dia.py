@@ -668,6 +668,30 @@ def test_los_dos_ficheros_coinciden_en_la_tabla_de_recetas(tablas) -> None:
     assert not distintas, f"filas de receta distintas entre .md y .html: {distintas}"
 
 
+@AMBOS
+def test_el_vocabulario_de_zonas_es_el_vigente(docs, doc) -> None:
+    """Las cuatro zonas tienen UN nombre cada una, el que dice el codigo.
+
+    El renombrado a cuatro zonas (`zona_baja` -> `zona_pre_fermento`,
+    `zona_sobrefermentada` -> `zona_colapso`) dejo atras once frases con los
+    nombres viejos, entre ellas una leyenda de la pista que anunciaba TRES
+    zonas al lado de una tabla con cuatro columnas. Ninguna tabla podia
+    detectarlo: los datos estaban bien y solo el vocabulario estaba mal.
+
+    Se comprueba el texto visible, no el HTML entero: los selectores CSS
+    conservan `z-baja` / `z-sobre` a proposito (ver el comentario en el bloque
+    de estilos), porque renombrar 48 identificadores que nadie lee solo puede
+    salir mal.
+    """
+    visible = re.sub(r"<style.*?</style>", "", docs[doc], flags=re.S)
+    visible = re.sub(r"<[^>]+>", " ", visible)
+    for retirado in ("Zona Baja", "zona baja", "Sobre-fermentada", "sobrefermentada"):
+        assert retirado not in visible, (
+            f"{doc}: «{retirado}» es un nombre de zona RETIRADO. Las cuatro "
+            "zonas son Crecimiento, Pre-fermento, Óptima y Colapso."
+        )
+
+
 def test_el_html_esta_bien_formado_y_sus_tablas_cuadran(html) -> None:
     """Anadir una columna en el <thead> y olvidarla en el <tbody> no rompe nada
     visible, pero descuadra la tabla. Es lo que casi pasa al meter la columna de

@@ -103,7 +103,7 @@ function tonoResultante(indice: number): 'riesgo' | 'vital' | 'cobre' {
   return 'cobre'
 }
 
-/** Masas que este reparto empujaria a zona sobrefermentada. Es legal a
+/** Masas que este reparto empujaria a la zona de colapso. Es legal a
  *  proposito (la Fase III las hornea en colapso): se avisa, no se bloquea. */
 const masasEnRiesgo = computed(() =>
   estacionesActivas.value
@@ -195,7 +195,7 @@ async function confirmar() {
       </div>
 
       <p v-if="masasEnRiesgo.length" class="aviso-riesgo">
-        ⚠ Este reparto empuja a zona sobrefermentada:
+        ⚠ Este reparto empuja a zona de colapso:
         {{ masasEnRiesgo.join(', ') }}. La Fase III la horneará en colapso.
       </p>
     </template>
