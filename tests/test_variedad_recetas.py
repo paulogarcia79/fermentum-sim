@@ -1,7 +1,7 @@
 """
 tests/test_variedad_recetas.py -- el termino de puntuacion final «Variedad de
 Recetas» (CORE_MECHANICS.md §3): la curva triangular sobre las recetas
-DISTINTAS horneadas con exito, el desglose de los 7 terminos que sustituyo a la
+DISTINTAS horneadas con exito, el desglose de terminos que sustituyo a la
 aritmetica que estuvo duplicada a mano en la CLI, su papel como primer criterio de desempate y su
 viaje al cliente via server/views.py.
 """
@@ -13,12 +13,13 @@ from models import HorneadoRecord, Player, RECIPE_CATALOG
 from server.sessions import RoomManager
 from server.views import game_state_view
 
-# Los 7 terminos de CORE_MECHANICS.md §3, en el orden en que se presentan.
+# Los 8 terminos de CORE_MECHANICS.md §3, en el orden en que se presentan.
 TERMINOS_ESPERADOS = [
     "Base",
     "Sabor",
     "Madurez",
     "Variedad de Recetas",
+    "Desarrollo Tecnológico",
     "Desperdicio",
     "Contaminación",
     "Conversión de Riqueza",
@@ -120,7 +121,7 @@ def test_el_desglose_suma_exactamente_los_puntos_finales() -> None:
     assert desglose["Variedad de Recetas"] == 3  # dos exitos distintos
 
 
-def test_el_desglose_lleva_los_siete_terminos_en_orden() -> None:
+def test_el_desglose_lleva_todos_los_terminos_en_orden() -> None:
     """
     Guardarrail del refactor: RankingView.vue recorre este mapa en
     vez de recalcular la formula, y el orden de insercion es el de

@@ -52,6 +52,9 @@ Los jugadores compiten por acumular la mayor cantidad de **Puntos de Maestría**
 principalmente:
 
 - Horneando recetas con éxito, especialmente en su Zona Óptima de fermentación.
+- Horneando recetas **variadas**: cada tipo nuevo de pan vale más que el anterior.
+- Equipando el laboratorio con **Tecnologías**: cada mejora instalada puntúa al final, y también
+  con una curva creciente.
 - Manteniendo una masa madre con alta Vitalidad y un buen equilibrio de Acidez hasta el final de
   la partida.
 - Gestionando con cuidado la economía del laboratorio: insumos, Datos de Investigación y Monedas.
@@ -760,6 +763,10 @@ barajado de nuevo, como mazo nuevo.
 Cada jugador puede instalar hasta 4 mejoras permanentes a lo largo de la partida (Acción D). Cada
 una solo puede instalarse una vez, pero un jugador puede llegar a tener varias distintas.
 
+Además de su efecto en partida, **cada mejora instalada puntúa al final**, en curva creciente y sin
+importar lo que costó: ver [Desarrollo Tecnológico](#112-cálculo-de-puntos-de-maestría-finales) en
+§11.2. Una mejora no se desinstala nunca, así que esos puntos, una vez ganados, no se pierden.
+
 | Tecnología | Costo | Efecto |
 |:---|:---:|:---|
 | **Incubadora** | 3 Datos | Permite ajustar la temperatura local ±5°C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima. |
@@ -810,14 +817,27 @@ puntuación.
    mazo trae varias copias de cada protocolo, hornear dos veces el mismo pan cuenta como **una**
    clase, y repetir renuncia al mayor incremento de la curva. Un pan sacrificado en el Simposio
    Técnico deja de contar aquí.
-5. **Penalización por Desperdicio:** −1 punto por cada 3 **tokens de insumo** sin utilizar en la
+5. **Desarrollo Tecnológico:** puntos por la amplitud del laboratorio que construiste — cuenta
+   cuántas **Tecnologías** tienes instaladas (§10), con la **misma curva** que Variedad de Recetas:
+
+   | Mejoras instaladas | 0 | 1 | 2 | 3 | 4 |
+   |:---|:---:|:---:|:---:|:---:|:---:|
+   | Puntos de Maestría | 0 | +1 | +3 | +6 | +10 |
+
+   El tope es +10 en lugar de +15 sencillamente porque sólo hay cuatro mejoras. **Lo que cuenta es
+   cuántas tienes, no lo que pagaste:** la Criopreservación (2 Datos) puntúa igual que la Cámara B
+   (4 Datos), del mismo modo que un pan Básico y uno Avanzado cuentan un tipo cada uno más arriba.
+   Y como una mejora no se desinstala jamás, este término nunca baja — a diferencia de Variedad,
+   que sí pierde un escalón si sacrificas un pan en el Simposio Técnico.
+
+6. **Penalización por Desperdicio:** −1 punto por cada 3 **tokens de insumo** sin utilizar en la
    reserva final. Un token de harina (10%) y uno de agua (5%) cuentan **1:1** aquí pese a
    representar porcentajes distintos: se suman en un único total y de ahí sale la división. Es la
    única regla que mezcla los dos insumos — ver [Las dos unidades de
    insumo](#las-dos-unidades-de-insumo).
-6. **Penalización por Contaminación:** −3 puntos por cada vez que la Vitalidad del jugador llegó a
+7. **Penalización por Contaminación:** −3 puntos por cada vez que la Vitalidad del jugador llegó a
    0 durante la partida.
-7. **Conversión de Riqueza:** +1 punto por cada 5 Monedas restantes en la reserva final (división
+8. **Conversión de Riqueza:** +1 punto por cada 5 Monedas restantes en la reserva final (división
    entera).
 
 > **Los Ingresos de Panadería no son un término de puntuación.** La renta se cobra en Monedas

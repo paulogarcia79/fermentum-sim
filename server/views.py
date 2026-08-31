@@ -102,13 +102,15 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
     for datos_jugador, jugador, asiento in zip(estado["players"], engine.players, sesion.seats):
         datos_jugador["puntos_maestria_final"] = jugador.puntos_maestria_final
         datos_jugador["puntos_horneados"] = jugador.puntos_horneados
-        # Desglose de los 7 términos de CORE_MECHANICS.md §3, ya en orden de
+        # Desglose de los 8 términos de CORE_MECHANICS.md §3, ya en orden de
         # presentación, y el recuento de recetas distintas horneadas con
         # éxito que alimenta el término «Variedad de Recetas». El recuento
         # viaja aparte del desglose porque la UI lo muestra durante la
         # partida (cabecera del Archivo de Horneados), donde no hay ningún
         # desglose a la vista, y despejarlo desde el número triangular sería
-        # absurdo.
+        # absurdo. «Desarrollo Tecnológico», en cambio, NO necesita su propio
+        # recuento: `tecnologias` ya viaja como cuatro booleanos en el snapshot,
+        # así que el cliente lo deriva sin que el servidor mande nada nuevo.
         datos_jugador["desglose_maestria"] = jugador.desglose_maestria
         datos_jugador["recetas_distintas_horneadas"] = jugador.recetas_distintas_horneadas
         # Insumos sin usar, en la unidad de la regla de desperdicio de

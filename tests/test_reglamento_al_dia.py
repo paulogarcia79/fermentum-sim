@@ -55,6 +55,7 @@ from models import (
     PATROCINIO_CATALOG,
     Player,
     RECIPE_CATALOG,
+    puntos_triangulares,
     TENDENCIA_MODIFICADORES,
     TipoHarina,
     VITALIDAD_INICIAL,
@@ -471,6 +472,7 @@ TERMINOS_EN_EL_REGLAMENTO = {
     "Sabor": "Puntos de Sabor",
     "Madurez": "Madurez del Cultivo",
     "Variedad de Recetas": "Variedad de Recetas",
+    "Desarrollo Tecnológico": "Desarrollo Tecnológico",
     "Desperdicio": "Penalización por Desperdicio",
     "Contaminación": "Penalización por Contaminación",
     "Conversión de Riqueza": "Conversión de Riqueza",
@@ -489,6 +491,62 @@ def test_todos_los_terminos_de_puntuacion_estan_en_el_reglamento(docs, doc) -> N
     """El fallo real: el codigo aplicaba 7 terminos y el reglamento listaba 6."""
     faltan = [n for n in TERMINOS_EN_EL_REGLAMENTO.values() if n not in docs[doc]]
     assert not faltan, f"{doc} no menciona estos terminos de puntuacion: {faltan}"
+
+
+# Las DOS curvas triangulares que los reglamentos imprimen, contra la unica
+# funcion que las deriva. La de Variedad llevaba desde su commit sin comprobar:
+# era un hueco del contrato declarado de este fichero («todo numero que se pueda
+# derivar del codigo»), no una politica, asi que entra con la de tecnologias.
+#
+# termino -> (rotulo de la primera celda de cabecera en el .md, n maximo)
+CURVAS_TRIANGULARES = {
+    "Variedad de Recetas": ("Recetas distintas", 5),
+    "Desarrollo Tecnológico": ("Mejoras instaladas", 4),
+}
+
+
+def _curva(n_max: int) -> List[str]:
+    """La curva tal y como la imprimen los reglamentos: 0, +1, +3, +6..."""
+    return [
+        str(v) if v == 0 else f"+{v}"
+        for v in (puntos_triangulares(n) for n in range(n_max + 1))
+    ]
+
+
+@pytest.mark.parametrize("termino", sorted(CURVAS_TRIANGULARES))
+def test_curvas_triangulares_del_md_celda_a_celda(tablas, termino) -> None:
+    """En el .md cada curva es una tabla de verdad, asi que se compara entera."""
+    rotulo, n_max = CURVAS_TRIANGULARES[termino]
+    t = _tabla(tablas, "RULEBOOK.md", primera=rotulo)
+    assert t.cabecera[1:] == [str(n) for n in range(n_max + 1)], (
+        f"RULEBOOK.md, tabla «{rotulo}»: la cabecera debe ir de 0 a {n_max}"
+    )
+    assert t.fila("Puntos de Maestría")[1:] == _curva(n_max), (
+        f"RULEBOOK.md, tabla «{rotulo}»: la curva impresa no es "
+        f"models.puntos_triangulares. Termino: {termino}."
+    )
+
+
+@pytest.mark.parametrize("termino", sorted(CURVAS_TRIANGULARES))
+def test_curvas_triangulares_del_html_en_su_propia_fila(tablas, termino) -> None:
+    """En el .html las curvas son PROSA dentro de la tabla de 11.2, no tablas.
+
+    Se busca la secuencia dentro de la celda de SU termino y no en la seccion
+    entera a proposito: «0 / +1 / +3 / +6 / +10 / +15» contiene literalmente a
+    «0 / +1 / +3 / +6 / +10», de modo que un `in` sobre todo el bloque daria por
+    buena una fila de Desarrollo Tecnologico que no existiese.
+    """
+    _, n_max = CURVAS_TRIANGULARES[termino]
+    tabla = _tabla(tablas, "RULEBOOK.html", "Componente", primera="#")
+    filas = [f for f in tabla.filas if len(f) > 2 and f[1] == termino]
+    assert len(filas) == 1, (
+        f"RULEBOOK.html 11.2: esperaba 1 fila para «{termino}», encontre {len(filas)}"
+    )
+    esperado = " / ".join(_curva(n_max))
+    assert esperado in filas[0][2], (
+        f"RULEBOOK.html 11.2, «{termino}»: no encuentro la curva {esperado!r} "
+        f"en su celda. Dice: {filas[0][2][:160]!r}"
+    )
 
 
 @AMBOS

@@ -505,6 +505,48 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   applied 6, silently omitting the contamination penalty — so the doc list now matches
   `desglose_maestria` key for key. Tests: `tests/test_variedad_recetas.py`.
 
+  **Desarrollo Tecnológico — the same curve, pointed at the engine instead of the repertoire.**
+  Scoring rewarded *what you bake* and was indifferent to the *engine you build*: the four
+  technologies paid only in-game, so `Player.puntos_desarrollo_tecnologico` now pays
+  `n*(n+1)//2` on `Technologies.cantidad_instaladas` (0/1/3/6/10), slotted 5th in
+  `desglose_maestria` right behind Variedad so the two breadth terms read as a pair. The intent
+  is **symmetry, not a rebalance** — and it is accepted with open eyes that techs now pay a
+  **third** time on top of their two in-game benefits (the Módulo widens the óptima, Cripo dodges
+  the −3, Cámara B opens Estación 03). Four things carry weight:
+  - **One derivation, two printed tables.** Both terms are the same curve, so the arithmetic moved
+    out to a module-level `models.puntos_triangulares` that `puntos_variedad` also calls. That is
+    not tidiness: `tests/test_reglamento_al_dia.py` now diffs **both** rulebook curves against
+    that one function, so "same curve as Variedad" is structurally true rather than a claim two
+    tables are free to contradict. Variedad's own table had never been checked — a gap in that
+    file's stated contract, not a policy — and it came in with this one.
+  - **The curve is a prefix of Variedad's, which nearly made the guardrail vacuous.**
+    `0 / +1 / +3 / +6 / +10 / +15` literally contains `0 / +1 / +3 / +6 / +10`, so a substring
+    check over §11.2 would pass with the tech row **deleted**. The `.html` check is therefore
+    scoped to the row whose *name* cell matches the term. (The two documents are structurally
+    different here: `.md` prints real tables, `.html` writes the curve as prose inside one
+    `# / Componente / Cálculo` table whose literal index cells renumber on insert.) Verified by
+    mutation: deleting the `.html` row fails exactly one test.
+  - **Unweighted count, deliberately.** Criopreservación (2 Datos) scores like Cámara B (4),
+    matching Variedad, where a Básica and an Avanzada are one class each. A Datos-weighted bracket
+    table was rejected twice over: nothing on a card derives it, and it would drift silently the
+    day `COSTOS_TECNOLOGIA` is rebalanced. Consequence, accepted and documented: cheap-first is
+    strictly correct — a *sequencing* nudge, not a dominant line, since the top increment still
+    needs all four.
+  - **It is monotonic, and that is the asymmetry to not "fix".** The Simposio pops a record and
+    Variedad drops a tier; nothing uninstalls a technology, because `Technologies.activar` has no
+    inverse. Reversibility would need a whole new action with its own availability rules, modal,
+    sound and rulebook section. The **tiebreaker chain is untouched** for a related reason: tech
+    count correlates with the Datos rung already in it.
+
+  No new server field — `tecnologias` already ships as four booleans, so `MiTablero.vue` derives
+  the count itself (unlike `recetas_distintas_horneadas`, which had to be sent) and the points
+  arrive inside `desglose_maestria`; `RankingView.vue` needed **zero** changes, since it iterates
+  the breakdown. Everything added is a `@property`, so the golden snapshot passes
+  **unregenerated** and there is no `VERSION_FORMATO` bump. The same commit fixed pre-existing
+  drift in `web/src/data/tecnologias.ts`, which had the Módulo at 3 Datos (server says 4) and
+  still advertised the deleted Avanzada gate — `ModalD.vue` renders that field, so it had been
+  quoting the wrong price. Tests: `tests/test_desarrollo_tecnologico.py`.
+
   **Ingresos de Panadería — the archive became an income stream, and the Simposio became its
   only exit.** Baking paid once (`monedas_optima`, 16–28, the biggest cash event in the game) and
   the recipe never produced again: `archivo_horneado_exitoso` fed scoring and the endgame trigger

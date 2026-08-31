@@ -61,16 +61,30 @@ El final del juego se desencadena de inmediato si ocurre una de estas dos condic
 3. **Madurez del Cultivo:** `vitalidad + (PUNTOS_EQUILIBRIO_MAX - |acidez - ACIDEZ_EQUILIBRIO_CENTRO|)`, es decir `vitalidad + (3 - |acidez - 3|)` (`models.Player.puntos_equilibrio_acidez`). La Vitalidad puntúa entera; la Acidez puntúa por lo **centrada** que esté, no por lo alta que sea: 0, +1, +2, **+3**, +2, +1, 0 para los niveles 0 a 6. No necesita `max(0, ...)` porque el centro está a distancia 3 de ambos bordes y `acidez` ya vive acotada en [0, 6].
 
    Premiaba antes la acidez **cruda** (`ceil((vitalidad + acidez) / 2)`), lo que no tenía coste alguno mientras la Acidez sólo sabía subir — el juego empujaba a todo el mundo al mismo extremo y luego castigaba haberlo seguido. Con la Acidez convertida en un dial bidireccional (acción Descarte, ACTIONS_REGISTRY.md), premiar el equilibrio es lo que le da un precio a perseguir una diana extrema; es el reverso exacto de cómo se derivan los `bono_sabor_pts` del catálogo (RECIPE_DATABASE.md).
-4. **Variedad de Recetas:** puntos por la amplitud del repertorio horneado — el número de recetas **distintas** (por carta, no por copia) en el archivo de horneados exitosos, en curva triangular `n*(n+1)/2`:
+4. **Variedad de Recetas:** puntos por la amplitud del repertorio horneado — el número de recetas **distintas** (por carta, no por copia) en el archivo de horneados exitosos, en la curva triangular `models.puntos_triangulares` (`n*(n+1)/2`):
 
    | Recetas distintas | 0 | 1 | 2 | 3 | 4 | 5 |
    |---|---|---|---|---|---|---|
    | Puntos de Maestría | 0 | +1 | +3 | +6 | +10 | +15 |
 
    Sólo cuenta el archivo de horneados **exitosos**: un colapso nunca aporta variedad, ni siquiera de una carta que no se haya horneado bien nunca. La razón es de incentivos — provocar un colapso es gratis (iniciar una masa y dejar que la Fase III la hornee sola al sobrefermentar), así que contarlo permitiría cosechar el bono sin hornear bien nada. El mazo reparte varias copias de cada carta (ver RECIPE_DATABASE.md), de modo que hornear dos veces el mismo pan cuenta como **una** clase. Como la partida termina al quinto horneado exitoso, el tope real del término es +15, y repetir una sola carta renuncia al incremento más grande de la curva.
-5. **Desperdicio (Penalización):** -1 punto de Maestría por cada 3 **tokens de insumo** sin utilizar en la reserva. Un **Token de Harina (10%)** y un **Token de Agua (5%)** cuentan **1:1** aquí, pese a representar porcentajes distintos: se suman en un único total (`sum(reserva_harina) / 10 + reserva_agua`) y de ahí sale la división entera por 3. Esta es la única regla del juego que suma los dos insumos, y es la que fija el 10% como unidad atómica de la harina — ver PLAYER_STATE.md §"Unidades de Insumo (Tokens)".
-6. **Contaminación (Penalización):** -3 puntos de Maestría por cada episodio de contaminación sufrido (cada vez que la Vitalidad llegó a 0), acumulativo.
-7. **Conversión de Riqueza:** +1 punto de Maestría por cada 5 Monedas restantes en la reserva final (división entera).
+5. **Desarrollo Tecnológico:** puntos por la amplitud del laboratorio construido — el número de mejoras **instaladas** (`Technologies.cantidad_instaladas`), en la **misma** curva triangular que «Variedad de Recetas» (`models.puntos_triangulares`, una sola derivación para las dos tablas):
+
+   | Mejoras instaladas | 0 | 1 | 2 | 3 | 4 |
+   |---|---|---|---|---|---|
+   | Puntos de Maestría | 0 | +1 | +3 | +6 | +10 |
+
+   El tope es +10 y no +15 porque sólo hay cuatro mejoras: la curva es idéntica y lo que cambia es dónde se corta. La intención es de **simetría**, no de reequilibrio — la puntuación premiaba *qué horneas* y era indiferente al **motor que construyes**, así que «amplitud del laboratorio» acompaña a «amplitud del repertorio». Se acepta con los ojos abiertos que las tecnologías pasan a cobrar por **tercera** vez, encima de sus dos beneficios en partida (el Módulo ensancha la óptima, la Criopreservación esquiva el desgaste, la Cámara B abre la Estación 03, la Incubadora dobla el clima).
+
+   **No se pondera por coste**: Criopreservación (2 Datos) cuenta igual que Cámara B (4), exactamente como una Básica y una Avanzada cuentan una clase cada una en Variedad pese a costar 1 y 3 Monedas. Una tabla de tramos sobre los Datos invertidos se descartó por dos razones: sería una segunda tabla que no se deriva de ninguna carta, y se desviaría en silencio el día que se reequilibre `COSTOS_TECNOLOGIA`. La consecuencia — comprar primero lo barato es estrictamente correcto — está aceptada: es un empujón de **orden**, no una línea dominante, porque el incremento más grande sigue exigiendo las cuatro y la mejora que te saltes es justo la que querías.
+
+   A diferencia de Variedad, este término **nunca baja**. El Simposio Técnico saca un horneado del archivo y hace caer un escalón de Variedad; nada desinstala una mejora, porque `Technologies.activar` no tiene inversa. La asimetría es **deliberada**: hacerlo reversible exigiría una acción nueva con sus reglas de disponibilidad, su modal, su sonido y su sección de reglamento — otra funcionalidad, no ésta. No es un descuido pendiente de arreglar.
+
+   El término **no toca el desempate**: el recuento de tecnologías correlaciona con los Datos, que ya son el cuarto criterio, así que sería un escalón redundante.
+
+6. **Desperdicio (Penalización):** -1 punto de Maestría por cada 3 **tokens de insumo** sin utilizar en la reserva. Un **Token de Harina (10%)** y un **Token de Agua (5%)** cuentan **1:1** aquí, pese a representar porcentajes distintos: se suman en un único total (`sum(reserva_harina) / 10 + reserva_agua`) y de ahí sale la división entera por 3. Esta es la única regla del juego que suma los dos insumos, y es la que fija el 10% como unidad atómica de la harina — ver PLAYER_STATE.md §"Unidades de Insumo (Tokens)".
+7. **Contaminación (Penalización):** -3 puntos de Maestría por cada episodio de contaminación sufrido (cada vez que la Vitalidad llegó a 0), acumulativo.
+8. **Conversión de Riqueza:** +1 punto de Maestría por cada 5 Monedas restantes en la reserva final (división entera).
 
 ### Desempate
 En caso de empate en Puntos de Maestría, el ganador se determina por:

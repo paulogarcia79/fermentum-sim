@@ -162,6 +162,29 @@ no otro número porque es la distancia del centro a cualquiera de los dos extrem
 la caída llega a cero exactamente en el borde de la pista, sin necesidad de un clamp.
 """
 
+
+def puntos_triangulares(n: int) -> int:
+    """
+    Curva triangular ``n*(n+1)//2``, compartida por los dos términos de
+    AMPLITUD de la puntuación final: «Variedad de Recetas» (sobre las recetas
+    distintas horneadas) y «Desarrollo Tecnológico» (sobre las mejoras
+    instaladas). Ver CORE_MECHANICS.md §3.
+
+    Escala 0, 1, 3, 6, 10, 15... es decir, incrementos 1, 2, 3, 4, 5: cada
+    unidad nueva vale más que la anterior, de modo que repetir renuncia al
+    incremento más grande disponible y no a un promedio.
+
+    Vive suelta, y no dentro de las properties que la usan, por dos razones que
+    se refuerzan: los reglamentos imprimen las DOS tablas y
+    ``tests/test_reglamento_al_dia.py`` las contrasta celda a celda contra
+    ESTA función, así que hay una sola derivación para dos tablas y ninguna
+    puede desviarse en silencio; y que las dos curvas sean literalmente la
+    misma es lo que permite al reglamento decir «la misma curva que Variedad»
+    en vez de imprimir una segunda fórmula sin relación.
+    """
+    return n * (n + 1) // 2
+
+
 AMPLIACION_OPTIMA_MODULO: int = 1
 """
 Casillas que el Módulo Analítico añade a CADA lado de la zona óptima.
@@ -1081,14 +1104,45 @@ class Player:
             n:   0   1   2   3   4    5
             PM:  0   1   3   6  10   15
 
-        Es decir ``n*(n+1)//2``: cada clase nueva vale más que la anterior.
-        La escalada es deliberada — como la partida termina al quinto
+        Es decir ``puntos_triangulares``: cada clase nueva vale más que la
+        anterior. La escalada es deliberada — como la partida termina al quinto
         horneado exitoso, el tope real es 5, y repetir una carta una sola vez
         renuncia al incremento más grande disponible (5 PM) en vez de a un
         promedio.
         """
-        n: int = self.recetas_distintas_horneadas
-        return n * (n + 1) // 2
+        return puntos_triangulares(self.recetas_distintas_horneadas)
+
+    @property
+    def puntos_desarrollo_tecnologico(self) -> int:
+        """
+        Puntos de Maestría del término «Desarrollo Tecnológico»
+        (CORE_MECHANICS.md §3).
+
+        La misma curva triangular que «Variedad de Recetas», sobre las mejoras
+        de laboratorio INSTALADAS (``Technologies.cantidad_instaladas``)::
+
+            n:   0   1   2   3   4
+            PM:  0   1   3   6  10
+
+        El tope es 10 y no 15 porque sólo hay cuatro mejoras, igual que el de
+        Variedad es 15 porque la partida termina al quinto horneado: en los dos
+        casos la curva es la misma y lo que cambia es dónde se corta.
+
+        **Sin ponderar por coste**: Criopreservación (2 Datos) cuenta
+        exactamente igual que Cámara B (4), del mismo modo que una Básica y una
+        Avanzada cuentan una clase cada una en Variedad pese a costar 1 y 3
+        Monedas. Lo que se premia es la amplitud del laboratorio, no lo que
+        costó montarlo. La consecuencia — comprar primero lo barato es
+        estrictamente correcto — está aceptada: es un empujón de ORDEN, no una
+        línea dominante, porque el incremento más grande sigue exigiendo las
+        cuatro y la mejora que te saltes es justo la que querías.
+
+        A diferencia de Variedad, este término **nunca baja**: el Simposio
+        Técnico saca un horneado del archivo, pero nada desinstala una mejora
+        (``Technologies`` no tiene inversa de ``activar``). La asimetría es
+        deliberada, no un descuido pendiente de arreglar.
+        """
+        return puntos_triangulares(self.tecnologias.cantidad_instaladas)
 
     @property
     def puntos_equilibrio_acidez(self) -> int:
@@ -1112,7 +1166,7 @@ class Player:
     @property
     def desglose_maestria(self) -> Dict[str, int]:
         """
-        Los 7 términos de la puntuación final, por separado y ya en orden de
+        Los 8 términos de la puntuación final, por separado y ya en orden de
         presentación (CORE_MECHANICS.md §3).
 
         Única fuente de verdad de la fórmula: ``puntos_maestria_final`` no es
@@ -1148,11 +1202,13 @@ class Player:
             "Madurez": self.vitalidad + self.puntos_equilibrio_acidez,
             # 4. Amplitud del repertorio horneado (curva triangular)
             "Variedad de Recetas": self.puntos_variedad,
-            # 5. Penalización por desperdicio de insumos (-1 por cada 3 tokens)
+            # 5. Amplitud del laboratorio construido (la MISMA curva triangular)
+            "Desarrollo Tecnológico": self.puntos_desarrollo_tecnologico,
+            # 6. Penalización por desperdicio de insumos (-1 por cada 3 tokens)
             "Desperdicio": -(self.total_tokens_recursos // 3),
-            # 6. Penalización por episodios de contaminación
+            # 7. Penalización por episodios de contaminación
             "Contaminación": self.puntos_penalizacion_contaminacion,
-            # 7. Conversión de riqueza (+1 pt por cada 5 Monedas restantes)
+            # 8. Conversión de riqueza (+1 pt por cada 5 Monedas restantes)
             "Conversión de Riqueza": self.monedas // 5,
         }
 
@@ -1165,10 +1221,11 @@ class Player:
           1. Puntos Base   : suma de puntos de todas las recetas horneadas (positivos + negativos)
           2. Puntos de Sabor: suma de bono_sabor_pts de registros con bono_sabor_aplicado == True
           3. Madurez del Cultivo: vitalidad + (3 - |acidez - 3|), ver puntos_equilibrio_acidez
-          4. Variedad de Recetas: n*(n+1)/2 sobre las recetas distintas horneadas con éxito
-          5. Penalización Desperdicio: -1 pt por cada 3 tokens de insumos sin usar
-          6. Penalización Contaminación: -3 pts × contador_contaminaciones
-          7. Conversión de Riqueza: +1 pt por cada 5 Monedas restantes en la reserva final
+          4. Variedad de Recetas: puntos_triangulares(recetas distintas horneadas con éxito)
+          5. Desarrollo Tecnológico: puntos_triangulares(mejoras de laboratorio instaladas)
+          6. Penalización Desperdicio: -1 pt por cada 3 tokens de insumos sin usar
+          7. Penalización Contaminación: -3 pts × contador_contaminaciones
+          8. Conversión de Riqueza: +1 pt por cada 5 Monedas restantes en la reserva final
 
         Debe invocarse únicamente al final del día que termina la partida.
         """

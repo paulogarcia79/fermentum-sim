@@ -73,6 +73,23 @@ const variedad = computed(() => {
   }
 })
 
+/** Termino «Desarrollo Tecnologico» (CORE_MECHANICS.md 3): la MISMA curva
+ * triangular que Variedad, pero sobre las mejoras instaladas. Como Variedad,
+ * la curva no se replica aqui -- los puntos viajan dentro de
+ * `desglose_maestria` y el valor marginal de la proxima mejora es n+1.
+ *
+ * El recuento SI se deriva aqui, a diferencia de `recetas_distintas_horneadas`
+ * que el servidor manda aparte: `tecnologias` ya llega como cuatro booleanos,
+ * asi que contarlos no duplica ninguna regla. */
+const desarrollo = computed(() => {
+  const instaladas = TECNOLOGIAS.filter((t) => yo.value.tecnologias[t.id]).length
+  return {
+    instaladas,
+    puntos: yo.value.desglose_maestria['Desarrollo Tecnológico'] ?? 0,
+    proxima: instaladas + 1,
+  }
+})
+
 const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
   optima: 'Zona Óptima',
   pre_fermento: 'Pre-fermento',
@@ -189,7 +206,15 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
           />
         </div>
 
-        <h3 class="eyebrow">Mejoras de laboratorio</h3>
+        <h3 class="eyebrow">
+          Mejoras de laboratorio ({{ desarrollo.instaladas }}/{{ TECNOLOGIAS.length }})
+          <span
+            class="termino-pm"
+            :title="`Desarrollo Tecnológico: ${desarrollo.instaladas} mejora(s) instalada(s) = +${desarrollo.puntos} PM al final. La próxima mejora suma +${desarrollo.proxima} PM, cueste los Datos que cueste: cuenta cuántas tienes, no lo que pagaste.`"
+          >
+            · <span class="dato">+{{ desarrollo.puntos }}</span> PM
+          </span>
+        </h3>
         <div class="mejoras-grid">
           <div
             v-for="tec in TECNOLOGIAS"
@@ -227,7 +252,7 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
         <h3 class="eyebrow">
           Archivo de Horneados ({{ yo.archivo_horneado_exitoso.length }}/5)
           <span
-            class="variedad"
+            class="termino-pm"
             :title="`Variedad de Recetas: ${variedad.distintas} receta(s) distinta(s) horneada(s) con éxito = +${variedad.puntos} PM al final. La próxima receta NUEVA suma +${variedad.proxima} PM; repetir una ya horneada no suma nada.`"
           >
             · <span class="dato">{{ variedad.distintas }}</span> tipos
@@ -365,7 +390,9 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
 .zona-carpeta {
   flex: 1 1 18rem;
 }
-.variedad {
+/* Los dos terminos de AMPLITUD de la puntuacion final (Variedad de Recetas y
+   Desarrollo Tecnologico), colgados de la cabecera de su zona. */
+.termino-pm {
   color: var(--cobre);
   text-transform: none;
   letter-spacing: normal;

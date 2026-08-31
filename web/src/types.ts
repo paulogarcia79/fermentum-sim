@@ -110,7 +110,7 @@ export interface Player {
    * ahora -- el marcador "en vivo". Inyectado por server/views.py, igual que
    * puntos_maestria_final. */
   puntos_horneados: number
-  /** Los 7 terminos de la puntuacion final (CORE_MECHANICS.md 3), ya en orden
+  /** Los 8 terminos de la puntuacion final (CORE_MECHANICS.md 3), ya en orden
    * de presentacion: la vista de ranking los recorre sin conocer ni cuantos
    * son ni su aritmetica. Lo calcula el servidor
    * (Player.desglose_maestria), que es la unica fuente de verdad de la
