@@ -40,8 +40,8 @@ async function confirmar() {
     <p class="info-linea">Ignora el mercado por completo. Elige un solo tipo de recurso.</p>
     <div class="opciones-radio">
       <label
-        ><input type="radio" value="harina" v-model="recursoUrgencia" /> Harina (+{{ fmtTokensHarina(100) }} ·
-        100%)</label
+        ><input type="radio" value="harina" v-model="recursoUrgencia" /> Harina (+{{ fmtTokensHarina(50) }} ·
+        50%, media bolsa)</label
       >
       <label><input type="radio" value="agua" v-model="recursoUrgencia" /> Agua</label>
     </div>

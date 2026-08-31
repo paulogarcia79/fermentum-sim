@@ -11,7 +11,7 @@ from models import (
     Grado, RECIPE_CATALOG, Environment,
 )
 from engine import GameEngine, Market
-from actions import ActionManager
+from actions import ActionManager, HARINA_PEDIDO_URGENCIA
 from exceptions import (
     NotEnoughActionPointsError, MissingResourceError,
     StationBlockedError, CarpetaFullError,
@@ -281,7 +281,7 @@ print("--- Pedido de Urgencia ---")
 ph = p1.reserva_harina["Blanca"]
 p1.datos_investigacion = 5
 manager.accion_auxiliar_pedido_urgencia(p1, harina_urgencia=TipoHarina.BLANCA)
-check("Pedido Urgencia: +100 Blanca", lambda: None if p1.reserva_harina["Blanca"] == ph + 100 else (_ for _ in ()).throw(AssertionError()))
+check("Pedido Urgencia: +media bolsa Blanca", lambda: None if p1.reserva_harina["Blanca"] == ph + HARINA_PEDIDO_URGENCIA else (_ for _ in ()).throw(AssertionError()))
 check("Pedido Urgencia: -1 dato", lambda: None if p1.datos_investigacion == 4 else (_ for _ in ()).throw(AssertionError()))
 check("Pedido Urgencia: no consume PA", lambda: None if p1.puntos_accion == 2 else (_ for _ in ()).throw(AssertionError()))
 

@@ -34,7 +34,7 @@ export const descripcionesAcciones: Record<IdAccion, string> = {
   horas_extras:
     'Gratis, en cualquier momento de tu turno, una vez por día. Costo: 1 Dato de Investigación. Otorga inmediatamente +1 Punto de Acción.',
   pedido_urgencia:
-    'Gratis, sin límite por ronda. Costo: 1 Dato de Investigación. Ignora el mercado y obtiene directamente 10 tokens de un tipo de Harina (100%), o los tokens de Agua que elijas (5% cada uno) — uno de los dos, no ambos.',
+    'Gratis, sin límite por ronda. Costo: 1 Dato de Investigación. Ignora el mercado y obtiene directamente 5 tokens de un tipo de Harina (50%, media bolsa), o los tokens de Agua que elijas (5% cada uno) — uno de los dos, no ambos. Es media bolsa y no una entera para que revender lo pedido deje de ser el mejor negocio de la partida.',
 }
 
 /**

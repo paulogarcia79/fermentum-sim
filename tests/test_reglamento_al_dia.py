@@ -40,7 +40,11 @@ from typing import Dict, List, Sequence
 
 import pytest
 
-from actions import COSTOS_TECNOLOGIA, HARINA_RECULTIVO_MANUAL
+from actions import (
+    COSTOS_TECNOLOGIA,
+    HARINA_PEDIDO_URGENCIA,
+    HARINA_RECULTIVO_MANUAL,
+)
 from engine import (
     DATOS_SIMPOSIO,
     PRECIO_AGUA,
@@ -571,6 +575,20 @@ def test_coste_del_protocolo_h(docs, doc) -> None:
     i = docs[doc].index("Re-cultivo Manual")
     assert f"{HARINA_RECULTIVO_MANUAL}%" in docs[doc][i : i + 300], (
         f"{doc}: el Protocolo H deberia costar {HARINA_RECULTIVO_MANUAL}% de harina"
+    )
+
+
+@AMBOS
+def test_cantidad_del_pedido_de_urgencia(docs, doc) -> None:
+    """Media bolsa, no una entera: la cantidad ES la regla de balance (el
+    arbitraje de 1 Dato -> bolsa entera -> reventa), no un detalle de formato."""
+    bloque = _seccion(docs[doc], "Pedido de Urgencia", largo=900)
+    assert f"{HARINA_PEDIDO_URGENCIA}%" in bloque, (
+        f"{doc}: el Pedido de Urgencia deberia entregar "
+        f"{HARINA_PEDIDO_URGENCIA}% de harina"
+    )
+    assert "(100%)" not in bloque, (
+        f"{doc}: el Pedido de Urgencia sigue anunciando una bolsa entera"
     )
 
 

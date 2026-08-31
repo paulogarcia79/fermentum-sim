@@ -529,9 +529,13 @@ mismo día. Solo puede activarse **una vez por Día de Laboratorio** por jugador
 #### Pedido de Urgencia
 
 **Costo:** 1 Dato de Investigación. Ignora el Mercado por completo — sin importar el precio
-vigente — y obtiene directamente de la reserva general **un** tipo de recurso a elección: **10
-tokens — 10 (100%)** de un tipo de harina, o los tokens de agua que el jugador desee (5% cada
-uno). A diferencia de Horas
+vigente — y obtiene directamente de la reserva general **un** tipo de recurso a elección: **media
+bolsa — 5 (50%)** de un tipo de harina, o los tokens de agua que el jugador desee (5% cada
+uno). Media bolsa, y no una entera, porque el Pedido era también el mejor arbitraje de la partida:
+1 Dato entregaba una bolsa completa de cualquier harina, y una bolsa de Centeno en posición 5 se
+revende en el acto por 7 Monedas. La emergencia se conserva (dos Pedidos completan una bolsa, y una
+receta Intermedia sólo pide media de cada harina), pero la reventa se hunde — la venta de media
+bolsa redondea hacia **abajo**, así que ese mismo Centeno pasa a pagar 3. A diferencia de Horas
 Extras, no tiene límite de usos por día — se autolimita únicamente por los Datos de Investigación
 disponibles. Al no costar PA, queda exento de la regla "1 vez por día por espacio de acción" de la
 [Fase II](#6-fase-ii-acción) — es intencional, no un descuido.

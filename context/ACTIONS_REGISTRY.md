@@ -133,7 +133,8 @@
 * **Costo:** 1 Token de Datos de Investigación.
 * **Tipo:** Acción Gratuita (0 PA).
 * **Momento:** En cualquier momento durante el turno del jugador en la Fase II.
-* **Efecto:** Ignora el Mercado por completo (y su precio vigente) y obtiene directamente de la reserva general UN tipo de recurso: **10 Tokens de Harina — 10 (100%)** de un tipo elegido O los **Tokens de Agua** que el jugador indique (5% c/u), a elección del jugador.
+* **Efecto:** Ignora el Mercado por completo (y su precio vigente) y obtiene directamente de la reserva general UN tipo de recurso: **media bolsa de Harina — 5 (50%)** de un tipo elegido O los **Tokens de Agua** que el jugador indique (5% c/u), a elección del jugador.
+* **Por qué media bolsa y no una entera:** el Pedido era, además de un rescate logístico, el mejor arbitraje de la partida — 1 Dato compraba una bolsa entera de *cualquier* harina, y una bolsa de Centeno en posición 5 se revende en el acto por 7 Monedas. Con el Contrato con el Molino (§C) convirtiendo la venta de harina en una línea económica real, ese bucle habría escalado antes que ninguna otra cosa. Media bolsa conserva la función de emergencia (2 Pedidos completan una bolsa entera, y una receta Intermedia sólo pide 50% de cada harina, o sea un Pedido exacto por mitad) y parte el arbitraje por más de la mitad, porque la venta de media bolsa redondea hacia **abajo**: el Centeno en posición 5 baja de 7 a 3 Monedas por Dato.
 * **Límite:** Ninguno — a diferencia de Horas Extras, no hay tope de usos por ronda; se autolimita por los Datos de Investigación disponibles. A diferencia de las Acciones B a I y Simposio Técnico, Pedido de Urgencia no cuesta PA y por lo tanto queda exento de la regla "1 vez por día por espacio de acción" (§1) — es intencional, no un descuido.
 
 ### Protocolos de Emergencia (Rescate de Cultivo)

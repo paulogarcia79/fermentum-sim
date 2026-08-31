@@ -144,6 +144,26 @@ Sigue siendo el rescate peor de los dos (Vitalidad/Acidez a 1, frente a 2 del Pr
 """
 
 
+HARINA_PEDIDO_URGENCIA: int = 50
+"""
+Porcentaje de harina (media bolsa, 5 tokens) que entrega el Pedido de Urgencia.
+
+Bajó de 100 a 50 porque el Pedido era, además de un rescate logístico, el mejor
+arbitraje del juego: 1 Dato entregaba una bolsa entera de CUALQUIER harina, y una
+bolsa entera de Centeno en posición 5 se revende en el acto por 7 Monedas. Con el
+Contrato con el Molino haciendo que vender harina sea por fin una línea económica
+real, ese bucle habría escalado antes que ninguna otra cosa.
+
+Media bolsa conserva la función de emergencia (2 Datos siguen completando una bolsa
+para una receta Básica, y una Intermedia sólo pide 50% de cada harina, o sea un
+Pedido exacto por mitad) y parte el arbitraje por más de la mitad: la venta de media
+bolsa redondea hacia ABAJO (``Market.precio_venta_harina``), así que el Centeno en
+posición 5 pasa de 7 a 3 Monedas por Dato.
+
+No añade estado persistido: sigue siendo un número que la acción entrega.
+"""
+
+
 class ActionManager:
     """
     Gestiona todas las acciones disponibles durante la Fase II de Fermentum.
@@ -1209,12 +1229,13 @@ class ActionManager:
                  tope por ronda; se autolimita por Datos de Investigación
                  disponibles).
 
-        Requiere: ``harina_urgencia`` (tipo de harina, otorga 100%) XOR
+        Requiere: ``harina_urgencia`` (tipo de harina, otorga
+                  ``HARINA_PEDIDO_URGENCIA`` = media bolsa) XOR
                   ``agua_tokens_urgencia > 0`` (tokens de agua, 5% c/u).
 
         Args:
             player: Jugador que activa el Pedido de Urgencia.
-            harina_urgencia: Tipo de harina a obtener (100% directo).
+            harina_urgencia: Tipo de harina a obtener (media bolsa directa).
             agua_tokens_urgencia: Tokens de agua a obtener.
 
         Raises:
@@ -1241,7 +1262,7 @@ class ActionManager:
         player.datos_investigacion -= 1
 
         if harina_urgencia is not None:
-            player.reserva_harina[harina_urgencia.value] += 100
+            player.reserva_harina[harina_urgencia.value] += HARINA_PEDIDO_URGENCIA
         else:
             player.reserva_agua += agua_tokens_urgencia
 
