@@ -38,10 +38,13 @@ def create_game(nombres: List[str], event_sink: Optional[EventSink] = None) -> G
 
     Proceso:
       1. Crear el entorno (mazo de clima barajado, temp 20°C).
-      2. Crear el mercado central (mazo de recetas, 4 slots visibles).
-      3. Asignar una receta básica aleatoria distinta a cada jugador (si hay
+      2. Asignar una receta básica aleatoria distinta a cada jugador (si hay
          stock suficiente; se repiten cíclicamente si hay más jugadores que
          recetas básicas).
+      3. Crear el mercado central con esas Básicas ya retiradas del mazo, que
+         solo entonces se baraja y revela sus 4 cartas visibles. El orden
+         importa: repartir antes de barajar es lo que impide que una carta ya
+         entregada siga contada en el mazo (ver ``Market.crear_inicial``).
       4. Barajar el mazo de 8 Cartas de Patrocinio y repartir 1 por jugador
          sentado (GDD v0.0.2, Módulo I §6.4 / Anexo B) — determina el orden
          de turno del Día 1 (por Iniciativa ascendente) y los recursos
@@ -78,13 +81,22 @@ def create_game(nombres: List[str], event_sink: Optional[EventSink] = None) -> G
         )
 
     env = Environment.crear_inicial()
-    market = Market.crear_inicial()
 
     # Jugadores — cada uno recibe una receta básica distinta si hay stock.
+    # Se barajan los PROTOCOLOS Básicos, no sus copias físicas: RULEBOOK.md §3.5
+    # promete que cada jugador abre con un protocolo distinto, y con 4 Básicas
+    # una partida a 4 los reparte todos.
     basicas_disponibles: List[Recipe] = list({
         r.id: r for r in RECIPE_CATALOG.values() if r.grado == Grado.BASICA
     }.values())
     random.shuffle(basicas_disponibles)
+    repartidas: List[Recipe] = [
+        basicas_disponibles[i % len(basicas_disponibles)] for i in range(len(nombres))
+    ]
+
+    # El mercado se construye DESPUÉS del reparto y recibe las Básicas ya
+    # entregadas, para retirarlas del mazo antes de barajarlo y revelar.
+    market = Market.crear_inicial(basicas_repartidas=repartidas)
 
     # Cartas de Patrocinio — 1 por jugador sentado, de un mazo de 8 barajado.
     cartas_patrocinio: List[PatrocinioCard] = list(PATROCINIO_CATALOG)
@@ -93,7 +105,7 @@ def create_game(nombres: List[str], event_sink: Optional[EventSink] = None) -> G
 
     players: List[Player] = []
     for i, nombre in enumerate(nombres):
-        receta = basicas_disponibles[i % len(basicas_disponibles)]
+        receta = repartidas[i]
         carta = dealt[i]
         players.append(
             Player.crear_dia_1(
@@ -105,15 +117,6 @@ def create_game(nombres: List[str], event_sink: Optional[EventSink] = None) -> G
                 datos_iniciales=carta.datos,
             )
         )
-
-    # La Básica repartida sale del mazo del mercado (RULEBOOK.md §3.4): en el
-    # mazo físico cada protocolo tiene varias copias, así que se retira UNA por
-    # jugador, no el protocolo entero. `remove` compara por igualdad y `Recipe`
-    # es frozen, de modo que todas las copias son intercambiables.
-    for player in players:
-        for receta in player.carpeta_proyectos:
-            if receta in market.mazo_recetas:
-                market.mazo_recetas.remove(receta)
 
     # Orden de turno del Día 1: índices en `players`, ascendente por Iniciativa.
     orden_inicial: List[int] = sorted(

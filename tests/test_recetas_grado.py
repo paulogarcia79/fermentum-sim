@@ -264,10 +264,14 @@ def test_build_recipe_deck_vigila_la_integridad_del_catalogo() -> None:
 
 def test_la_basica_repartida_sale_del_mazo_del_mercado() -> None:
     """
-    RULEBOOK.md §3.4: la Basica que va a la Carpeta inicial se retira del mazo.
-    Se retira UNA copia por jugador, no el protocolo entero -- con 4 copias por
-    Basica, quitar las cuatro dejaria el estrato de reserva vacio en una partida
-    a 4 jugadores.
+    RULEBOOK.md §3.5: la Basica que va a la Carpeta inicial se retira del mazo
+    ANTES de barajarlo y revelar la exposicion, no despues. Se retira UNA copia
+    por jugador, no el protocolo entero -- con 4 copias por Basica, quitar las
+    cuatro dejaria ese protocolo fuera del mercado en una partida a 4 jugadores.
+
+    El orden es lo que hace la retirada segura: con el mazo barajado en una sola
+    baraja, una Basica puede salir en las 4 cartas visibles, asi que retirarla
+    del mazo despues de revelar podria no encontrar ninguna copia que quitar.
     """
     engine = create_game(["Alba", "Bruno", "Cora", "Dani"])
     market = engine.market
@@ -278,20 +282,6 @@ def test_la_basica_repartida_sale_del_mazo_del_mercado() -> None:
         repartida = player.carpeta_proyectos[0]
         assert repartida.grado is Grado.BASICA
         assert en_juego.count(repartida) == COPIAS_POR_GRADO[Grado.BASICA] - 1
-
-
-def test_las_basicas_van_al_fondo_del_mazo_del_mercado() -> None:
-    """
-    Cada jugador ya empieza con una Basica: en el mercado son la reserva para
-    cuando se agote el mazo principal, no la oferta. Ninguna Basica debe quedar
-    por delante de una carta de compra.
-    """
-    market = Market.crear_inicial()
-    en_juego = [r for r in market.recetas_visibles if r is not None] + market.mazo_recetas
-    grados = [r.grado for r in en_juego]
-    primera_basica = grados.index(Grado.BASICA)
-
-    assert all(g is Grado.BASICA for g in grados[primera_basica:])
 
 
 def test_la_receta_inicial_siempre_es_basica() -> None:

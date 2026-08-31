@@ -1725,7 +1725,7 @@ def expandir_copias(recetas: Iterable[Recipe]) -> List[Recipe]:
 
     Retorna la lista SIN barajar, igual que ``build_climate_deck``: el orden
     aleatorio lo aplica quien construye el mazo (``Market.crear_inicial``), que
-    además necesita barajar por estratos y no el mazo entero.
+    además retira las Básicas ya repartidas antes de barajar.
 
     Las copias son la MISMA instancia repetida: ``Recipe`` es ``frozen=True``, así
     que compartir referencias es seguro y es lo que ya hace el mazo de clima.
@@ -1740,9 +1740,9 @@ def build_recipe_deck() -> List[Recipe]:
     """
     Mazo de recetas completo (36 cartas), sin barajar.
 
-    ``Market.crear_inicial`` no lo usa -- necesita los dos estratos por separado
-    para barajarlos aparte -- pero esta función fija la integridad del catálogo en
-    un solo sitio, igual que ``build_climate_deck`` para el clima.
+    Es el mazo que usa ``Market.crear_inicial``, que le retira las Básicas ya
+    repartidas y lo baraja entero. Fija además la integridad del catálogo en un
+    solo sitio, igual que ``build_climate_deck`` para el clima.
 
     Raises:
         AssertionError: Si el total no suma exactamente TOTAL_MAZO_RECETAS.

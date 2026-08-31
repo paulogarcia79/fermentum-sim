@@ -26,7 +26,7 @@ import random
 from dataclasses import dataclass, field
 from enum import Enum
 from types import MappingProxyType
-from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
 from events import EventoTipo, EventSink, GameEvent
 from exceptions import (
@@ -48,12 +48,9 @@ from models import (
     Player,
     Recipe,
     TipoHarina,
+    build_recipe_deck,
     build_tendencias_deck,
     TOTAL_MAZO_RECETAS,
-    expandir_copias,
-    get_recetas_avanzadas,
-    get_recetas_basicas,
-    get_recetas_intermedias,
 )
 
 # ===========================================================================
@@ -323,42 +320,63 @@ class Market:
     # ------------------------------------------------------------------
 
     @classmethod
-    def crear_inicial(cls) -> "Market":
+    def crear_inicial(cls, basicas_repartidas: Sequence[Recipe] = ()) -> "Market":
         """
         Construye el mercado en su estado inicial de partida.
 
         El mazo de recetas son las 36 cartas físicas (cada protocolo con sus
-        copias, ver ``COPIAS_POR_GRADO``): las "de compra" -- Avanzadas e
-        Intermedias mezcladas entre sí -- con las Básicas barajadas al fondo
-        como reserva.
+        copias, ver ``COPIAS_POR_GRADO``) barajadas como UNA SOLA baraja: los
+        tres grados se mezclan entre sí y una Básica puede asomar en el mercado
+        igual que una Avanzada. La escasez de las Avanzadas sigue siendo real,
+        pero la aporta ``COPIAS_POR_GRADO`` (2 copias frente a 4), no un estrato:
+        el mazo no está ordenado, solo desigualmente poblado.
+
+        Antes de barajar se retiran las copias ya repartidas a las Carpetas de
+        Proyectos iniciales (``basicas_repartidas``, RULEBOOK.md §3.5) — una
+        copia por jugador, no el protocolo entero. **El orden importa**: retirar
+        antes de barajar y revelar es lo que garantiza que la carta que un
+        jugador tiene en la mano no siga contada en el mazo. Hacerlo después de
+        revelar deja una ventana en la que todas las copias de esa Básica pueden
+        estar en la exposición y la retirada no encuentra nada que quitar.
+
         Se revelan las primeras NUM_RECIPE_SLOTS cartas. Los 3 visores de la Bolsa
         de Harinas inician en ``POSICION_HARINA_INICIAL`` y el mazo de Tendencias
         de Mercado (21 cartas) se baraja.
 
-        Las Intermedias van MEZCLADAS con las Avanzadas, no en un tercer estrato
-        por debajo: el escalón medio existe para escalarse durante la partida, y
-        un mazo en escalera estricta lo haría aparecer justo cuando ya sobra.
-        Las Básicas siguen al fondo por la razón de siempre: cada jugador ya
-        empieza con una, así que en el mercado son la red de seguridad para
-        cuando el mazo principal se agota.
+        Args:
+            basicas_repartidas: Cartas Básicas ya entregadas a los jugadores en
+                la preparación. Se retira UNA copia de cada una. Por defecto
+                vacío, que es el mercado de una partida sin reparto previo (lo
+                que usan los tests que solo quieren un mercado cualquiera).
 
         Returns:
             Instancia de Market lista para el inicio de la partida.
+
+        Raises:
+            InvalidActionError: Si alguna carta de ``basicas_repartidas`` no
+                tiene copias en el mazo. No se ignora en silencio: significaría
+                que el catálogo y el reparto han dejado de cuadrar.
         """
-        # Cartas de compra: lo que un jugador va al mercado a buscar. Cada
-        # protocolo entra con sus copias físicas (COPIAS_POR_GRADO): las Básicas
-        # son comunes y las Avanzadas escasas, así que la rareza es una barrera
-        # independiente del precio.
-        principales: List[Recipe] = expandir_copias(
-            get_recetas_avanzadas() + get_recetas_intermedias()
-        )
-        basicas: List[Recipe] = expandir_copias(get_recetas_basicas())
-        random.shuffle(principales)
-        random.shuffle(basicas)
-        mazo: List[Recipe] = principales + basicas
-        assert len(mazo) == TOTAL_MAZO_RECETAS, (
-            f"El mazo de recetas debe tener exactamente {TOTAL_MAZO_RECETAS} "
-            f"cartas, los dos estratos suman {len(mazo)}."
+        mazo: List[Recipe] = build_recipe_deck()
+
+        # La Básica repartida sale del mazo (RULEBOOK.md §3.5): UNA copia por
+        # jugador, no el protocolo entero — con 4 copias por Básica, quitar las
+        # cuatro dejaría el protocolo fuera del mercado en una partida a 4.
+        # `remove` compara por igualdad y `Recipe` es frozen, así que todas las
+        # copias son intercambiables.
+        for receta in basicas_repartidas:
+            if receta not in mazo:
+                raise InvalidActionError(
+                    f"No quedan copias de '{receta.id}' en el mazo de recetas "
+                    f"para retirar del reparto inicial."
+                )
+            mazo.remove(receta)
+
+        random.shuffle(mazo)
+        esperado: int = TOTAL_MAZO_RECETAS - len(basicas_repartidas)
+        assert len(mazo) == esperado, (
+            f"El mazo de recetas debe tener {esperado} cartas tras retirar "
+            f"{len(basicas_repartidas)} del reparto inicial, tiene {len(mazo)}."
         )
 
         visibles: List[Optional[Recipe]] = [

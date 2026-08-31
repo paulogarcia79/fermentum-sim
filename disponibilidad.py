@@ -58,10 +58,9 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     )
     hay_estacion_libre = player.indice_estacion_disponible is not None
     hay_receta_visible = any(r is not None for r in engine.market.recetas_visibles)
-    # Precio de la receta visible MÁS BARATA, no el mínimo global: las Básicas viven
-    # al fondo del mazo (son la reserva, no la oferta), así que un mercado sin
-    # ninguna Básica a la vista es el estado normal en los primeros días —
-    # justo cuando el jugador está más pobre.
+    # Precio de la receta visible MÁS BARATA, no el mínimo global: el mazo es una
+    # sola baraja, así que lo que se puede pagar depende de las 4 cartas que hoy
+    # están sobre la mesa, no de lo que el catálogo tenga más barato.
     precio_receta_minimo = min(
         (PRECIO_RECETA[r.grado] for r in engine.market.recetas_visibles if r is not None),
         default=0,

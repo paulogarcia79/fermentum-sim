@@ -147,18 +147,28 @@ fuera de banda rompe la suite, que es el punto.
   hay cuatro y no tres — con tres, el jugador 4 recibía una copia de la del jugador 1.
 * **Mazo del mercado** (`Market.crear_inicial`): 36 cartas físicas — cada protocolo entra con sus
   copias (`models.COPIAS_POR_GRADO`: 4 por Básica, 3 por Intermedia, 2 por Avanzada, ver
-  `expandir_copias`/`build_recipe_deck`, calcados de `build_climate_deck`). Avanzadas e
-  Intermedias **mezcladas entre sí** arriba, Básicas barajadas al fondo. Las copias van por
+  `expandir_copias`/`build_recipe_deck`, calcados de `build_climate_deck`) — **barajadas como una
+  sola baraja**, sin estratos. Las copias van por
   **grado y no por carta** (a diferencia de `ClimateCard.cantidad`, que es un campo por carta)
   porque el grado ya lo derivan las harinas: una tabla por carta serían 12 números derivables que
   podrían desmentir al reglamento. La escasez de las Avanzadas (8 cartas de 36) es una barrera
-  independiente de su precio.
-  `bootstrap.create_game` retira después **una copia** por jugador de la Básica repartida — una
-  copia, no el protocolo: con 4 por Básica, quitar las cuatro vaciaría el estrato de reserva en
-  una partida a 4. Las Intermedias no van en un tercer estrato por debajo de
-  las Avanzadas: el escalón medio existe para escalarse durante la partida, y una escalera
-  estricta lo haría aparecer justo cuando ya sobra. Las Básicas están al fondo porque cada
-  jugador ya empieza con una: en el mercado son la reserva, no la oferta.
+  independiente de su precio, y es **toda** la barrera: el mazo no está ordenado, solo
+  desigualmente poblado.
+
+  Hubo un tiempo en que las Básicas iban barajadas al fondo, como reserva, porque cada jugador ya
+  empieza con una. Se retiró ese estrato: una Básica en el mercado cuesta 1 Moneda
+  (`engine.PRECIO_RECETA`) y **Variedad de Recetas** paga de forma triangular por hornear cinco
+  recetas *distintas*, así que la carta barata dejó de ser oferta sobrante y pasó a ser la vía
+  natural para ensanchar el repertorio. El precio a pagar, aceptado a conciencia: los primeros días
+  ya no son la ventana pobre en la que ninguna carta asequible asoma, y una Avanzada cuesta más de
+  encontrar.
+
+  `Market.crear_inicial` recibe las Básicas ya repartidas y retira **una copia** de cada una —
+  una copia, no el protocolo: con 4 por Básica, quitar las cuatro dejaría ese protocolo fuera del
+  mercado en una partida a 4. **La retirada ocurre antes de barajar y revelar**, que es lo que la
+  hace segura: en una baraja única una Básica puede salir entre las 4 cartas visibles, así que
+  descontarla del mazo *después* de revelar podría no encontrar copia que quitar y dejar el mazo
+  una carta de más. Por eso `bootstrap.create_game` reparte primero y construye el mercado después.
 
 Un grado que no se nombre en `crear_inicial` es sencillamente invisible aunque esté en el
 catálogo — le pasó a las Intermedias al introducirlas. La suite lo verifica.

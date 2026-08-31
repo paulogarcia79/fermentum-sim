@@ -128,6 +128,10 @@ Fermentum usa dos recursos económicos independientes, que no se convierten entr
 
 ## 3. Preparación de la Partida
 
+> **Todos los mazos se barajan al preparar la partida, antes de repartir o revelar ninguna carta:**
+> el de Recetas, el de Clima, el de Tendencias de Mercado y el de Patrocinio. Los pasos de abajo lo
+> repiten módulo por módulo; ninguno de ellos es una excepción.
+
 1. Colocar el Tablero Central con la temperatura en **20°C** y el Track de Orden de Turno al
    lado.
 2. Repartir a cada jugador un Tablero Individual, sus marcadores, 3 Dados de Inóculo y 8 Cubos de
@@ -160,18 +164,24 @@ Fermentum usa dos recursos económicos independientes, que no se convierten entr
    con conocimiento. Existen porque los Datos son escasos hasta el primer horneado en Zona Óptima
    — el Simposio Técnico exige sacrificar un pan ya horneado, y al empezar nadie tiene ninguno.
 
-4. **Carpeta de Proyectos inicial:** separar todas las cartas de grado Básica del mazo general,
-   barajarlas, y entregar a cada jugador 1 al azar **de un protocolo distinto** (con 4 protocolos
-   Básicos, una partida a 4 jugadores los reparte todos) — se coloca boca arriba en su Carpeta de
-   Proyectos, en estado inactivo. Deberá usarse la acción Iniciar Receta durante la partida para
-   activarla. Las recetas básicas restantes se remezclan de vuelta en el mazo general.
-5. **Mazo de mercado:** barajar juntas todas las cartas **Avanzadas e Intermedias** — son las
-   cartas que un jugador va al mercado a buscar — y colocar debajo, barajadas aparte, las
-   **Básicas** restantes. Las Básicas van al fondo porque cada jugador ya empieza con una: en el
-   mercado son la reserva para cuando el mazo principal se agote, no la oferta.
-6. **Mercado inicial:** revelar las primeras 4 cartas de ese mazo (serán Avanzadas o Intermedias
-   mezcladas; las Básicas no asoman mientras quede mazo principal). Colocar los 3 visores de la
-   Bolsa de Harinas en la posición central (**3 de 5**) para Blanca, Integral y Centeno.
+4. **Carpeta de Proyectos inicial:** separar **un ejemplar de cada protocolo Básico** (son 4),
+   barajar esos cuatro y entregar a cada jugador 1 al azar — de un **protocolo distinto**, de modo
+   que una partida a 4 jugadores los reparte todos. Se coloca boca arriba en su Carpeta de
+   Proyectos, en estado inactivo: deberá usarse la acción Iniciar Receta durante la partida para
+   activarla.
+5. **Mazo de mercado:** retirar del mazo general **una copia** de cada Básica repartida en el paso
+   anterior — una copia, no el protocolo entero: cada Básica tiene 4 ejemplares y quitarlos todos
+   dejaría ese pan fuera del mercado. Devolver al mazo el resto de las Básicas y **barajarlo
+   entero, todas las cartas juntas**. No hay estratos: una Básica puede asomar en el mercado igual
+   que una Avanzada. Lo que hace raras a las Avanzadas es que solo hay 2 copias de cada una frente
+   a 4 de cada Básica (ver [Resumen de Mazos](#12-anexo-resumen-de-mazos)), no el sitio que ocupan.
+6. **Mercado inicial:** revelar las primeras 4 cartas de ese mazo — pueden ser de cualquier grado.
+   Colocar los 3 visores de la Bolsa de Harinas en la posición central (**3 de 5**) para Blanca,
+   Integral y Centeno.
+7. **Mazos del día:** barajar el **mazo de Clima** (30 cartas) y el **mazo de Tendencias de
+   Mercado** (21 cartas) por separado y colocarlos boca abajo junto al Tablero Central, cada uno
+   con su espacio de descarte al lado. No se revela ninguna carta en la preparación: la primera de
+   cada mazo sale en la Fase I del Día 1.
 
 Cada jugador arranca, sin importar su carta de Patrocinio, con: **Vitalidad 2**, Acidez 1, 3 Dados
 de Inóculo, 0 Puntos de Acción, todas las Tecnologías desactivadas, y 1 receta Básica aleatoria en
@@ -863,9 +873,10 @@ En caso de empate en Puntos de Maestría:
 | **Total** | **12** | — | **36** |
 
 Las Básicas son comunes y las Avanzadas escasas: la rareza es una barrera independiente del
-precio. Antes de barajar el mazo de mercado se separa una Básica por jugador para las Carpetas de
-Proyectos iniciales (ver [Preparación](#3-preparación-de-la-partida)), y las Básicas restantes se
-barajan al fondo del mazo.
+precio, y es la **única** barrera de posición que hay — el mazo se baraja entero, sin estratos, así
+que los tres grados se mezclan y una Básica puede salir en el mercado igual que una Avanzada. Antes
+de barajarlo se retira una copia de cada Básica repartida a las Carpetas de Proyectos iniciales
+(ver [Preparación](#3-preparación-de-la-partida)).
 
 Todos los valores de cada protocolo, en el [Catálogo de Recetas](#8-catálogo-de-recetas).
 
