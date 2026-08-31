@@ -846,6 +846,13 @@ class GameEngine:
           · El mazo de clima se agotó, o
           · Algún jugador alcanzó 5 horneados exitosos.
         El día en curso se completa antes de que el motor deje de avanzar.
+
+        Es un **pestillo de gatillo, no "la partida ya acabó"**: entre que
+        salta (a media Fase II, si fue el 5º horneado) y que se puntúa hay
+        una jornada entera de juego normal, para que todos jueguen el mismo
+        número de días. Quien quiera saber si la partida *terminó* debe leer
+        ``fase_actual == Fase.TERMINADA``; este flag solo dice que hoy es la
+        última jornada.
         """
         return self._partida_terminada
 
@@ -867,10 +874,17 @@ class GameEngine:
         momento", ver su docstring) y todo el resto de la vista de estado
         siguen funcionando sin cambios para un fin anticipado.
 
+        La condición de rechazo es la **fase**, no ``_partida_terminada``:
+        un gatillo natural ya disparado deja ese flag en ``True`` mientras
+        se sigue jugando la última jornada (ver ``partida_terminada``), y en
+        esa jornada el acuerdo unánime tiene que poder saltarse el resto del
+        día igual que en cualquier otro momento. Solo con la partida ya
+        puntuada (``Fase.TERMINADA``) no queda nada que terminar.
+
         Raises:
             GameAlreadyOverError: Si la partida ya había terminado.
         """
-        if self._partida_terminada:
+        if self._fase == Fase.TERMINADA:
             raise GameAlreadyOverError("La partida ya había terminado.")
         self._partida_terminada = True
         self._fase = Fase.TERMINADA

@@ -337,8 +337,11 @@ export function aplicarEstado(nuevo: GameStateView): void {
   const votos = nuevo.votos_fin_anticipado
   const otrosVotaron = votos.some((i) => i !== miIndice)
   const yoVote = miIndice !== undefined && votos.includes(miIndice)
+  // La condición es la fase y no `partida_terminada`: ese flag ya está en true
+  // durante la última jornada (ver GameView.vue), en la que el acuerdo unánime
+  // sigue siendo válido para saltarse lo que queda de día.
   if (
-    !nuevo.partida_terminada &&
+    nuevo.fase_actual !== 'terminada' &&
     otrosVotaron &&
     !yoVote &&
     votos.length > finAnticipadoDescartadoEnConteo

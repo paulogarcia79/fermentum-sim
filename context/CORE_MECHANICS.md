@@ -53,9 +53,19 @@ Ocurre simultáneamente para todos una vez terminada la Fase II.
 
 ### Gatillos de Finalización
 El final del juego se desencadena de inmediato si ocurre una de estas dos condiciones:
-1. El mazo de Clima se agota por completo.
+1. El mazo de Clima se agota por completo (detectado en `_robar_carta_clima`, durante la Fase I).
 2. Un jugador hornea exitosamente su **quinta (5ta) receta** (las recetas colapsadas con valor negativo no cuentan).
-*Una vez desencadenado, se termina el Día de Laboratorio en curso y se puntúa.*
+
+*Desencadenar el final no detiene el juego: se termina el Día de Laboratorio en curso —Fase II
+entera y Fase III completa— y solo entonces se puntúa, de modo que todos los jugadores disputan el
+mismo número de días.* En el motor esto es exactamente lo que significa `partida_terminada`: un
+**pestillo de gatillo**, no «la partida acabó». Ningún camino de la Fase II lo lee; el único que lo
+consulta es `iniciar_dia`, que impide abrir un día de más. Quien necesite saber si la partida
+terminó de verdad debe mirar `fase_actual == Fase.TERMINADA`, que solo se alcanza tras el
+`resolver_fase_III` de esa última jornada (o de inmediato con el fin anticipado por voto unánime,
+`forzar_fin_de_partida`, que es la única forma de cortar la última jornada). El pestillo no se
+revierte: sacrificar el 5º horneado con un Simposio Técnico después del gatillo no cancela el
+final.
 
 ### Cálculo de Puntos de Maestría Finales
 1. **Puntos Base:** Suma de los puntos de todas las recetas horneadas (positivos y negativos).

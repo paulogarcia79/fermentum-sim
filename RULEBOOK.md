@@ -59,8 +59,10 @@ principalmente:
   la partida.
 - Gestionando con cuidado la economía del laboratorio: insumos, Datos de Investigación y Monedas.
 
-La partida termina en cuanto se agota el mazo de Clima, o en cuanto algún jugador hornea con éxito
-su quinta receta — lo que ocurra primero.
+El final se desencadena en cuanto se agota el mazo de Clima, o en cuanto algún jugador hornea con
+éxito su quinta receta — lo que ocurra primero. La partida no se corta ahí: se juega el Día de
+Laboratorio en curso hasta el final, de modo que todos los jugadores disputan el mismo número de
+días.
 
 ---
 
@@ -856,14 +858,21 @@ importar lo que costó: ver [Desarrollo Tecnológico](#112-cálculo-de-puntos-de
 
 ### 11.1 Gatillos de Finalización
 
-La partida termina de inmediato en cuanto ocurre cualquiera de estas dos condiciones:
+El final de la partida se **desencadena** de inmediato en cuanto ocurre cualquiera de estas dos
+condiciones:
 
-1. El mazo de Clima se agota por completo.
+1. El mazo de Clima se agota por completo (se detecta al revelar la carta de Clima de la Fase I).
 2. Algún jugador hornea con éxito su **quinta receta** (las recetas colapsadas con valor negativo
    no cuentan para este conteo).
 
-Una vez desencadenado el final, se completa el Día de Laboratorio en curso y se calcula la
-puntuación.
+**Disparar el final no detiene el juego: la partida termina al concluir el Día de Laboratorio en
+curso.** Ese día se juega entero — todas las visitas de Fase II que queden y la Fase III completa
+(avance de masas, colapsos, ingresos de panadería, desgaste metabólico y tendencia de mercado) —
+y solo entonces se calcula la puntuación. Así todos los jugadores disputan exactamente el mismo
+número de días, sin importar en qué momento del día saltó el gatillo.
+
+El gatillo, una vez disparado, no se revierte: si el jugador que horneó su quinta receta la
+sacrifica después con un Simposio Técnico, la partida termina igualmente esta noche.
 
 ### 11.2 Cálculo de Puntos de Maestría Finales
 

@@ -30,6 +30,24 @@ const estado = computed(() => store.estado!)
 const miIndice = computed(() => store.sesion!.playerIndex)
 const esMiTurno = computed(() => estado.value.jugador_en_turno_idx === miIndice.value)
 
+// `partida_terminada` es el pestillo del gatillo, no el final de la partida:
+// cuando alguien hornea su 5ª receta salta a media Fase II y todavía queda la
+// jornada entera por jugar (todos los jugadores juegan el mismo número de
+// días). Lo que sí marca el final es la fase, que solo pasa a `terminada` tras
+// la Fase III de esa última jornada -- o de inmediato con el voto unánime.
+const partidaTerminada = computed(() => estado.value.fase_actual === 'terminada')
+const ultimaJornada = computed(
+  () => estado.value.partida_terminada && !partidaTerminada.value,
+)
+
+// Por qué es la última: se deduce del estado (no del registro de eventos) para
+// que siga siendo correcto al reconectar a mitad de la jornada.
+const motivoUltimaJornada = computed(() => {
+  const quinto = estado.value.players.find((j) => j.archivo_horneado_exitoso.length >= 5)
+  if (quinto) return `${quinto.nombre} horneó su quinta receta con éxito.`
+  return 'Se agotó el mazo de Clima.'
+})
+
 const NOMBRE_FASE: Record<string, string> = {
   preparacion: 'Preparación',
   fase_i: 'Fase I · Ambiente',
@@ -89,7 +107,7 @@ onUnmounted(() => detenerTransmisionEnVivo())
 </script>
 
 <template>
-  <div class="game-view" :class="{ terminada: estado.partida_terminada }">
+  <div class="game-view" :class="{ terminada: partidaTerminada }">
     <header class="cabecera">
       <div class="identidad">
         <h1>Fermentum</h1>
@@ -102,7 +120,7 @@ onUnmounted(() => detenerTransmisionEnVivo())
       </div>
 
       <p class="turno-indicador" :class="{ 'mi-turno': esMiTurno }">
-        <template v-if="estado.partida_terminada">La partida ha terminado.</template>
+        <template v-if="partidaTerminada">La partida ha terminado.</template>
         <template v-else-if="esMiTurno">Es tu turno.</template>
         <template v-else-if="estado.jugador_en_turno_idx !== null">
           Turno de {{ estado.players[estado.jugador_en_turno_idx].nombre }}…
@@ -113,7 +131,7 @@ onUnmounted(() => detenerTransmisionEnVivo())
       <div class="controles-cabecera">
         <!-- El dock vive en la cabecera y no flotando sobre el tablero: en una
              vista que no hace scroll, un raíl flotante es cromo de más. -->
-        <DockPaneles v-if="!estado.partida_terminada" />
+        <DockPaneles v-if="!partidaTerminada" />
         <!-- Vive aqui y no en BarraAcciones.vue porque ese componente solo
              se monta con v-if="esMiTurno", y el control tiene que existir
              justo cuando el que actua es otro. -->
@@ -133,9 +151,19 @@ onUnmounted(() => detenerTransmisionEnVivo())
       </div>
     </header>
 
+    <!-- Aviso persistente, no un modal: saber que hoy es el último día cambia
+         cada decisión que queda (hornear ya aunque sea en Pre-fermento, vender
+         todo por Conversión de Riqueza, no comprar recetas), así que tiene que
+         estar a la vista toda la jornada y no solo en el instante del gatillo. -->
+    <p v-if="ultimaJornada" class="ultima-jornada">
+      <strong class="eyebrow">Última jornada</strong>
+      {{ motivoUltimaJornada }} Se juega el Día
+      {{ estado.environment.dia_actual }} completo y la partida se puntúa al acabar la noche.
+    </p>
+
     <p v-if="store.error" class="error">⚠ {{ store.error }}</p>
 
-    <RankingView v-if="estado.partida_terminada" />
+    <RankingView v-if="partidaTerminada" />
 
     <template v-else>
       <div class="cuerpo">
@@ -522,6 +550,25 @@ onUnmounted(() => detenerTransmisionEnVivo())
 
 .ya-confirmaste {
   color: var(--vital);
+}
+
+.ultima-jornada {
+  flex: 0 0 auto;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--e2);
+  color: var(--calido);
+  background: var(--lavado-cobre);
+  border: 1px solid var(--calido);
+  border-radius: var(--r-carta);
+  padding: var(--e2) var(--e3);
+  font-size: var(--t-s);
+}
+
+.ultima-jornada .eyebrow {
+  flex: 0 0 auto;
+  color: var(--calido);
 }
 
 .error {

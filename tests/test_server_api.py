@@ -17,6 +17,7 @@ from typing import Any, Dict
 
 from starlette.testclient import TestClient
 
+from models import FermentationSlot, HorneadoRecord
 from server.app import crear_app
 
 
@@ -190,6 +191,96 @@ def _sala_en_curso_de_2(cliente: TestClient) -> Dict[str, str]:
         "token_alba": token_alba,
         "token_bruno": token_bruno,
     }
+
+
+def test_ultima_jornada_sigue_jugandose_por_http() -> None:
+    """El contrato que lee el cliente durante la ultima jornada (ver
+    GameView.vue): tras el 5º horneado, `partida_terminada` ya es True pero
+    `fase_actual` sigue en "fase_ii" -- y ahi esta la distincion, porque el
+    cliente pintaba el ranking (y escondia la barra de acciones) en cuanto veia
+    el pestillo, dejando al resto de la mesa sin poder jugar el dia que les
+    corresponde. Aqui se comprueba por HTTP que ese dia SI se puede jugar."""
+    random.seed(21)
+    app = crear_app()
+    cliente = TestClient(app)
+    s = _sala_en_curso_de_2(cliente)
+    room_id = s["room_id"]
+
+    # Alba (indice 0, le toca con esta semilla) llega al horneado numero 5.
+    engine = app.state.salas.obtener(room_id).engine
+    alba = engine.players[0]
+    receta = alba.carpeta_proyectos[0]
+    alba.archivo_horneado_exitoso = [
+        HorneadoRecord(
+            recipe=receta,
+            posicion_final=receta.zona_optima[0],
+            puntos_base=receta.puntos_optimos,
+            bono_sabor_aplicado=False,
+            fue_colapso=False,
+            datos_obtenidos=0,
+            monedas_obtenidos=0,
+            ampliacion_aplicada=0,
+        )
+        for _ in range(4)
+    ]
+    alba.estaciones_fermentacion[0] = FermentationSlot(
+        recipe=receta,
+        dado_inoculo=1,
+        posicion_track=receta.zona_optima[0],
+        bono_sabor=False,
+        modificador_incubadora=0,
+    )
+
+    r = cliente.post(
+        f"/games/{room_id}/actions",
+        headers={"X-Player-Token": s["token_alba"]},
+        json={"accion": "F", "params": {"slot_index": 0}},
+    )
+    assert r.status_code == 200, r.text
+    estado = r.json()
+
+    # El gatillo salto, pero la partida NO ha terminado: es la ultima jornada.
+    assert estado["partida_terminada"] is True
+    assert estado["fase_actual"] == "fase_ii"
+    assert len(estado["ranking"]) == 2  # el ranking ya es valido, pero es parcial
+
+    # Y Bruno, que aun no habia jugado hoy, conserva su turno y puede actuar.
+    # (Alba tampoco ha acabado: hornear le cerro la visita, no el dia -- le
+    # quedan 1 PA y sus acciones gratuitas, y el gatillo no se los quita.)
+    assert estado["jugador_en_turno_idx"] == 1
+    tokens = {0: s["token_alba"], 1: s["token_bruno"]}
+    jugaron = set()
+    while (idx := estado["jugador_en_turno_idx"]) is not None:
+        jugaron.add(idx)
+        r = cliente.post(f"/games/{room_id}/pass", headers={"X-Player-Token": tokens[idx]})
+        assert r.status_code == 200, r.text
+        estado = r.json()
+    assert jugaron == {0, 1}
+
+    # Con la Fase II agotada, la Fase III cierra el dia y ahi si termina todo.
+    assert estado["fase_actual"] == "terminada"
+
+
+def test_fin_anticipado_puede_cortar_la_ultima_jornada() -> None:
+    """El voto unanime es la unica forma de saltarse lo que queda de la ultima
+    jornada. Antes rebotaba con 410 partida_terminada, porque el motor miraba
+    el pestillo del gatillo en vez de la fase."""
+    random.seed(21)
+    app = crear_app()
+    cliente = TestClient(app)
+    s = _sala_en_curso_de_2(cliente)
+    room_id = s["room_id"]
+
+    engine = app.state.salas.obtener(room_id).engine
+    engine._partida_terminada = True  # gatillo natural ya disparado hoy
+
+    r = cliente.post(f"/games/{room_id}/confirm-end", headers={"X-Player-Token": s["token_alba"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["fase_actual"] == "fase_ii"
+
+    r = cliente.post(f"/games/{room_id}/confirm-end", headers={"X-Player-Token": s["token_bruno"]})
+    assert r.status_code == 200, r.text
+    assert r.json()["fase_actual"] == "terminada"
 
 
 def test_votar_fin_anticipado_requiere_partida_en_curso() -> None:
