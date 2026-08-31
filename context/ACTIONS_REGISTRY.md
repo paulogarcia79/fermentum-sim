@@ -29,7 +29,10 @@
     * *Vender Harina:* Entregar **10 Tokens — 10 (100%), una bolsa entera**, cobrar el valor visible de Venta en Monedas y mover el visor 1 casilla a la izquierda (tope en posición 1).
     * *Media Bolsa:* Tanto comprar como vender admiten media bolsa — **5 Tokens — 5 (50%)**. El precio es la mitad del visible, **redondeando hacia ARRIBA al comprar y hacia ABAJO al vender** (⌈compra/2⌉, ⌊venta/2⌋), de modo que con precios impares media bolsa nunca sale a mejor precio por token que una entera: es liquidez, no descuento. Una venta que redondea a 0 Monedas (Blanca en posición 1) es legal — se entrega media bolsa a cambio de mover el visor. **El visor se mueve 1 casilla igual que con una bolsa entera**: una transacción es una señal de mercado, sin importar su tamaño. No se opera por debajo de la media bolsa: no se pueden comprar ni vender tokens sueltos.
     * *Comprar Lote de Agua:* Pagar el coste en Monedas según la fila de temperatura actual y recibir el lote completo en Tokens de Agua (1 token = 5% de hidratación). Los cuatro lotes son **2 (10%), 6 (30%), 12 (60%) y 20 (100%)**.
-* **Regla de Exclusividad:** una visita (1 PA) puede incluir como máximo UNA transacción por tipo de recurso — comprar Blanca y vender Centeno y comprar un lote de agua en la misma visita está permitido; comprar o vender el mismo tipo dos veces en la misma visita no lo está.
+    * *Contratar el Molino:* Pagar **una sola vez** el precio del tipo de harina elegido (Blanca 3, Integral 4, Centeno 6 Monedas) y quedarse con el **Contrato con el Molino** de esa harina. Desde esa misma noche, en **cada Fase III**, el molino entrega **2 Tokens — 2 (20%)** de esa harina, para siempre. **No mueve el visor** (el molino produce fuera de la Bolsa). Un contrato por jugador y por partida: no se cambia de harina, no se cancela y no se revende.
+* **Regla de Exclusividad:** una visita (1 PA) puede incluir como máximo UNA transacción por tipo de recurso — comprar Blanca y vender Centeno y comprar un lote de agua en la misma visita está permitido; comprar o vender el mismo tipo dos veces en la misma visita no lo está. **El Molino cuenta como su propio tipo de recurso**, así que firmar el contrato de Centeno y comprar Centeno en la misma visita sí es legal — el molino no entrega hasta la noche, y ese día todavía necesitas harina.
+* **Por qué existe el Contrato con el Molino:** hasta ahora la única forma de tener harina era comprarla en la Bolsa, y comprar mueve el visor hacia el extremo caro — de modo que el lado de **venta** del mercado era funcionalidad muerta. Una ida y vuelta comprar→vender pierde el diferencial (1/2/3 Monedas) y mueve el visor dos veces en tu contra, y el Mercado de Tendencias desplaza los tres visores a la vez con un mazo simétrico, así que tampoco había especulación posible. El Contrato es la única fuente de harina que no pasa por el mercado; con él, un jugador produce harina que nunca compró y vender por fin significa algo.
+* **Cómo se derivaron los tres precios — horizonte de amortización común: la 4ª noche.** Valorando la entrega diaria al precio de Compra de la posición 3 (la inicial de los tres visores): Blanca 4×20% = 0,8/noche, Integral 6×20% = 1,2, Centeno 8×20% = 1,6. A las 4 noches los tres cubren su precio (3,2 ≥ 3; 4,8 ≥ 4; 6,4 ≥ 6) y a las 3 ninguno llega (2,4; 3,6; 4,8). Que el horizonte sea **el mismo** en los tres es lo que hace que elegir tipo siga siendo una pregunta sobre qué harina necesitas y no sobre cuál se recupera antes — el mismo principio que reparte el horizonte de los Ingresos de Panadería entre los tres grados. El horizonte es una noche más largo que el de la renta (4 frente a 3) a propósito: la renta se cobra por haber horneado, que ya es la jugada difícil, mientras que el Contrato solo pide Monedas, y firmar el primer día no debe ser automáticamente la apertura correcta.
 * **Tablas de precio** (posición del visor 1-5 → Monedas). Cada celda es `Compra/Venta`, y entre paréntesis el precio de la media bolsa, derivado de la entera con ⌈compra/2⌉ y ⌊venta/2⌋:
 
   | | 1 | 2 | 3 | 4 | 5 |
@@ -37,6 +40,14 @@
   | Blanca (Compra/Venta) | 2(1)/1(0) | 3(2)/2(1) | 4(2)/3(1) | 5(3)/4(2) | 6(3)/5(2) |
   | Integral (Compra/Venta) | 4(2)/2(1) | 5(3)/3(1) | 6(3)/4(2) | 7(4)/5(2) | 8(4)/6(3) |
   | Centeno (Compra/Venta) | 6(3)/3(1) | 7(4)/4(2) | 8(4)/5(2) | 9(5)/6(3) | 10(5)/7(3) |
+
+  Contrato con el Molino (pago único en Monedas; la entrega es la misma para los tres):
+
+  | Harina | Contrato | Entrega cada Fase III |
+  |---|---|---|
+  | Blanca | 3 | 2 (20%) |
+  | Integral | 4 | 2 (20%) |
+  | Centeno | 6 | 2 (20%) |
 
   Agua (Monedas por temperatura °C × tamaño de lote, en Tokens de Agua del 5%):
 

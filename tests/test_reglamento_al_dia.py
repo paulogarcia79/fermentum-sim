@@ -48,9 +48,11 @@ from actions import (
 from engine import (
     DATOS_SIMPOSIO,
     PRECIO_AGUA,
+    PRECIO_CONTRATO_MOLINO,
     PRECIO_RECETA,
     PRECIO_RENTA,
     PRECIOS_HARINA,
+    RENDIMIENTO_MOLINO_PCT,
 )
 from models import (
     CLIMATE_CATALOG,
@@ -375,8 +377,14 @@ def test_vitalidad_inicial(docs, doc) -> None:
 
 @AMBOS
 def test_bolsa_de_harinas(tablas, doc) -> None:
-    """Las 5 posiciones del visor, compra y venta, por tipo de harina."""
-    t = _tabla(tablas, doc, primera="Harina")
+    """Las 5 posiciones del visor, compra y venta, por tipo de harina.
+
+    El fragmento «pos» hace falta desde que el Contrato con el Molino trajo una
+    segunda tabla encabezada por «Harina»: es exactamente la ambiguedad que
+    _tabla existe para detectar, y se desambigua por cabecera, no aflojando la
+    busqueda («Posición 1» en el .md, «Pos. 1» en el .html).
+    """
+    t = _tabla(tablas, doc, "pos", primera="Harina")
     for tipo in TipoHarina:
         fila = t.fila_que_empieza_por(tipo.value)
         precios = PRECIOS_HARINA[tipo]
@@ -405,6 +413,25 @@ def test_renta_de_panaderia(tablas, doc) -> None:
     t = _tabla(tablas, doc, "Monedas por noche")
     for grado, monedas in PRECIO_RENTA.items():
         assert t.fila(grado.value)[1] == str(monedas), f"renta de {grado.value}"
+
+
+@AMBOS
+def test_contrato_con_el_molino(tablas, doc) -> None:
+    """Precio por tipo Y entrega nocturna, en la misma tabla.
+
+    La entrega se comprueba celda a celda en las tres filas aunque sea el mismo
+    numero en las tres: que sea PLANA es justo la regla de diseno (lo que escala
+    es el precio), asi que una fila que se desviase seria una contradiccion del
+    reglamento consigo mismo, no una erratа cosmetica.
+    """
+    t = _tabla(tablas, doc, "Contrato", "Entrega")
+    for tipo, precio in PRECIO_CONTRATO_MOLINO.items():
+        fila = t.fila(tipo.value)
+        assert fila[1] == str(precio), f"contrato de {tipo.value}"
+        assert f"{RENDIMIENTO_MOLINO_PCT}%" in fila[2], (
+            f"{doc}: la entrega de {tipo.value} deberia ser "
+            f"{RENDIMIENTO_MOLINO_PCT}%"
+        )
 
 
 # ===========================================================================

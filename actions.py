@@ -48,6 +48,7 @@ from engine import (
     COSTE_REFRESCO_AGUA,
     DATOS_SIMPOSIO,
     PRECIO_AGUA,
+    PRECIO_CONTRATO_MOLINO,
     PRECIO_DESCARTE,
     PRECIO_PLIEGUES,
     PRECIO_PLIEGUES_VITALIDAD,
@@ -93,6 +94,19 @@ TIPOS_HARINA_VALIDOS: Dict[str, TipoHarina] = {t.value: t for t in TipoHarina}
 
 LOTES_AGUA_VALIDOS = (10, 30, 60, 100)
 """Tamaños de lote válidos (%) para Comprar Lote de Agua en Visitar el Mercado."""
+
+RECURSO_MOLINO = "molino"
+"""
+Clave de ``tipo_recurso`` con la que una transacción de la Acción C firma el
+Contrato con el Molino, en lugar de nombrar una harina.
+
+Es una clave propia y no el tipo de harina contratado **a propósito**: la Regla
+de Exclusividad de la visita se aplica sobre ``tipo_recurso``, así que darle la
+suya hace que dos contratos en la misma visita choquen entre sí (que es lo que
+queremos: un contrato por jugador y para siempre) sin impedir firmar el contrato
+de Centeno y comprar Centeno en esa misma visita — que es justo la jugada natural
+el día que firmas, porque el molino no entrega hasta la noche.
+"""
 
 OPERACIONES_HARINA: Dict[str, Tuple[str, int]] = {
     "comprar": ("comprar", CANTIDAD_BOLSA_PCT),
@@ -629,18 +643,33 @@ class ActionManager:
                  transacciones incluya el lote).
 
         Cada elemento de ``transacciones`` es un dict:
-          · ``tipo_recurso``: ``"Blanca" | "Integral" | "Centeno" | "agua"``.
+          · ``tipo_recurso``: ``"Blanca" | "Integral" | "Centeno" | "agua" |
+            "molino"``.
           · ``operacion``: para harina, una de ``OPERACIONES_HARINA``
             (``"comprar" | "comprar_media" | "vender" | "vender_media"``).
             El agua solo admite ``"comprar"`` (no existe venta de agua, y
-            tampoco medio lote: ya tiene cuatro tamaños propios).
+            tampoco medio lote: ya tiene cuatro tamaños propios). El molino
+            solo admite ``"contratar"``.
           · ``lote_pct``: requerido solo para agua, uno de
             ``LOTES_AGUA_VALIDOS`` (10, 30, 60, 100).
+          · ``tipo_harina``: requerido solo para el molino, la harina que
+            producirá el contrato.
 
         Regla de Exclusividad (GDD v0.0.2 §C): una visita puede incluir como
         máximo UNA transacción por tipo de recurso — comprar Blanca y vender
         Centeno y comprar un lote de agua en la misma visita está permitido;
-        comprar Blanca dos veces, o comprar y vender Blanca, no lo está.
+        comprar Blanca dos veces, o comprar y vender Blanca, no lo está. El
+        molino cuenta como su propio tipo de recurso (``RECURSO_MOLINO``), de
+        modo que firmar el contrato de Centeno y comprar Centeno en la misma
+        visita sí es legal — el molino no entrega hasta la noche.
+
+        Contratar el Molino: paga ``PRECIO_CONTRATO_MOLINO[tipo]`` una sola vez
+        y, desde esa misma noche, recibe ``RENDIMIENTO_MOLINO_PCT`` de esa
+        harina en cada Fase III, para siempre. Un contrato por jugador y por
+        partida: no se cancela, no se cambia de harina y no se revende. **No
+        mueve el visor** — el molino produce fuera de la Bolsa, y que la
+        producción propia no sea una señal de mercado es precisamente lo que
+        hace que vender esa harina más tarde valga la pena.
 
         Comprar harina: paga el precio de Compra visible (según la posición
         actual del visor de ese tipo en ``Market.posiciones_harina``), recibe
@@ -674,6 +703,7 @@ class ActionManager:
             NotEnoughActionPointsError: PA insuficientes.
             InvalidActionError: Lista vacía, transacción malformada, o
                 más de una transacción sobre el mismo tipo de recurso.
+            RuleViolationError: Ya tiene un Contrato con el Molino firmado.
             MissingResourceError: Monedas o harina insuficientes en algún
                 punto de la simulación de la visita completa.
         """
@@ -690,10 +720,15 @@ class ActionManager:
             tipo_recurso = t.get("tipo_recurso")
             operacion = t.get("operacion")
 
-            if tipo_recurso not in TIPOS_HARINA_VALIDOS and tipo_recurso != "agua":
+            if (
+                tipo_recurso not in TIPOS_HARINA_VALIDOS
+                and tipo_recurso != "agua"
+                and tipo_recurso != RECURSO_MOLINO
+            ):
                 raise InvalidActionError(
                     f"tipo_recurso inválido: {tipo_recurso!r}. Debe ser "
-                    f"'agua' o uno de {sorted(TIPOS_HARINA_VALIDOS)}."
+                    f"'agua', {RECURSO_MOLINO!r} o uno de "
+                    f"{sorted(TIPOS_HARINA_VALIDOS)}."
                 )
             if tipo_recurso in tipos_vistos:
                 raise InvalidActionError(
@@ -702,7 +737,26 @@ class ActionManager:
                 )
             tipos_vistos.add(tipo_recurso)
 
-            if tipo_recurso == "agua":
+            if tipo_recurso == RECURSO_MOLINO:
+                if operacion != "contratar":
+                    raise InvalidActionError(
+                        "El Molino solo admite operacion='contratar' "
+                        "(un contrato no se cancela ni se revende)."
+                    )
+                if player.contrato_molino is not None:
+                    raise RuleViolationError(
+                        f"'{player.nombre}' ya tiene un Contrato con el Molino "
+                        f"de Harina {player.contrato_molino}. Solo se firma uno "
+                        "por partida, y no puede cambiarse."
+                    )
+                tipo_harina = t.get("tipo_harina")
+                if tipo_harina not in TIPOS_HARINA_VALIDOS:
+                    raise InvalidActionError(
+                        f"tipo_harina inválido para el Contrato con el Molino: "
+                        f"{tipo_harina!r}. Debe ser uno de "
+                        f"{sorted(TIPOS_HARINA_VALIDOS)}."
+                    )
+            elif tipo_recurso == "agua":
                 if operacion != "comprar":
                     raise InvalidActionError(
                         "El agua solo admite operacion='comprar' (no se vende)."
@@ -730,7 +784,10 @@ class ActionManager:
             tipo_recurso = t["tipo_recurso"]
             operacion = t["operacion"]
 
-            if tipo_recurso == "agua":
+            if tipo_recurso == RECURSO_MOLINO:
+                tipo = TIPOS_HARINA_VALIDOS[t["tipo_harina"]]
+                monedas_sim -= PRECIO_CONTRATO_MOLINO[tipo]
+            elif tipo_recurso == "agua":
                 lote_pct = t["lote_pct"]
                 costo = PRECIO_AGUA[temp_actual][lote_pct]
                 monedas_sim -= costo
@@ -761,7 +818,11 @@ class ActionManager:
             tipo_recurso = t["tipo_recurso"]
             operacion = t["operacion"]
 
-            if tipo_recurso == "agua":
+            if tipo_recurso == RECURSO_MOLINO:
+                tipo = TIPOS_HARINA_VALIDOS[t["tipo_harina"]]
+                player.monedas -= PRECIO_CONTRATO_MOLINO[tipo]
+                player.contrato_molino = tipo.value
+            elif tipo_recurso == "agua":
                 lote_pct = t["lote_pct"]
                 costo = PRECIO_AGUA[temp_actual][lote_pct]
                 player.monedas -= costo

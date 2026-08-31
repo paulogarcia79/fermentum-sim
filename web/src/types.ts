@@ -91,6 +91,12 @@ export interface Player {
   datos_investigacion: number
   monedas: number
   reserva_harina: Record<TipoHarina, number>
+  /** Harina del Contrato con el Molino firmado por este jugador, o null si no
+   * ha firmado ninguno. Uno por partida y permanente; entrega
+   * RENDIMIENTO_MOLINO_PCT de esa harina cada Fase III. Es la unica fuente de
+   * harina que no pasa por la Bolsa. Campo de models.Player, llega por
+   * serialization.snapshot como cualquier otro. */
+  contrato_molino: TipoHarina | null
   accion_alimentar_usada: boolean
   reserva_agua: number
   estaciones_fermentacion: (FermentationSlot | null)[]

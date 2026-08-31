@@ -45,8 +45,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 13
+VERSION_FORMATO = 14
 """
+Bumped a 14: `Player` gana `contrato_molino`, el Contrato con el Molino que produce
+harina cada Fase III. Un pickle viejo trae `Player`s sin el campo, y al restaurarse
+`_entregar_rendimiento_molino` leeria un atributo inexistente en la primera noche.
+
 Bumped a 13: la Acidez pasa a ser un dial bidireccional (accion «Descarte») y eso
 arrastra dos cambios de economia que un pickle viejo no tiene forma de reflejar. Los
 12 `bono_sabor_pts` del catalogo se recortaron y re-derivaron sobre grado x distancia

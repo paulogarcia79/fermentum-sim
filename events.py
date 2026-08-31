@@ -43,6 +43,8 @@ class EventoTipo(str, Enum):
     DESGASTE = "desgaste"
     # Ingresos de Panadería: cada horneado del archivo paga Monedas cada noche.
     RENTA_PANADERIA = "renta_panaderia"
+    # Contrato con el Molino: el molino entrega harina cada noche a quien lo firmó.
+    RENDIMIENTO_MOLINO = "rendimiento_molino"
     CONTAMINACION = "contaminacion"
     FIN_DE_PARTIDA = "fin_de_partida"
 

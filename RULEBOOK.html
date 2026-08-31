@@ -752,8 +752,9 @@
           <li><strong>Vender Harina:</strong> entregar <strong>10 tokens — 10&nbsp;(100%)</strong> y cobrar el valor de Venta visible. El visor baja 1 casilla (tope en 1).</li>
           <li><strong>Media Bolsa:</strong> comprar y vender admiten también <strong>media bolsa — 5 tokens, 5&nbsp;(50%)</strong>, a la mitad del precio visible <strong>redondeando hacia arriba al comprar y hacia abajo al vender</strong> (⌈Compra/2⌉ y ⌊Venta/2⌋). Con precios impares media bolsa nunca sale a mejor precio por token que una entera: es liquidez, no descuento. Una venta que redondee a <strong>0 Monedas</strong> (Blanca en la posición 1) es legal. <strong>El visor se mueve 1 casilla igual que con una bolsa entera</strong> — una transacción es una señal de mercado, sin importar su tamaño. Por debajo de la media bolsa el Mercado no opera: no se compran ni venden tokens sueltos de harina.</li>
           <li><strong>Comprar Lote de Agua:</strong> pagar según temperatura actual y lote elegido, recibiendo el lote completo en tokens (1 token = 5&nbsp;% de hidratación). Los cuatro lotes son <strong>2&nbsp;(10%)</strong>, <strong>6&nbsp;(30%)</strong>, <strong>12&nbsp;(60%)</strong> y <strong>20&nbsp;(100%)</strong>.</li>
+          <li><strong>Contratar el Molino:</strong> pagar <strong>una sola vez</strong> el precio del tipo de harina elegido y quedarse con el <strong>Contrato con el Molino</strong> de esa harina. Desde esa misma noche, en cada Fase III, el molino entrega <strong>2 tokens — 2&nbsp;(20%)</strong> de esa harina, para siempre (ver <a href="#s9">Entrega del Molino</a>). <strong>No mueve el visor</strong>: el molino produce fuera de la Bolsa. Un contrato por jugador y por partida — no se cambia de harina, no se cancela y no se revende.</li>
         </ul>
-        <div class="callout"><strong>Regla de Exclusividad.</strong> Una visita puede combinar varias transacciones, pero como máximo una por tipo de recurso — comprar Blanca, vender Centeno y comprar un lote de agua en la misma visita está permitido; comprar y vender la misma harina, o comprar el mismo tipo dos veces, no lo está.</div>
+        <div class="callout"><strong>Regla de Exclusividad.</strong> Una visita puede combinar varias transacciones, pero como máximo una por tipo de recurso — comprar Blanca, vender Centeno y comprar un lote de agua en la misma visita está permitido; comprar y vender la misma harina, o comprar el mismo tipo dos veces, no lo está. <strong>El Molino cuenta como su propio recurso</strong>, así que firmar el contrato de Centeno y comprar Centeno en esa misma visita sí es legal — el molino no entrega hasta la noche, y hoy todavía necesitas harina.</div>
 
         <div class="table-wrap">
           <table>
@@ -766,6 +767,19 @@
             </tbody>
           </table>
         </div>
+
+        <div class="table-wrap">
+          <table>
+            <caption>Contrato con el Molino — pago único en Monedas; la entrega nocturna es la misma para los tres</caption>
+            <thead><tr><th>Harina</th><th>Contrato</th><th>Entrega cada noche</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Blanca</td><td>3</td><td>2 (20%)</td></tr>
+              <tr><td class="name">Integral</td><td>4</td><td>2 (20%)</td></tr>
+              <tr><td class="name">Centeno</td><td>6</td><td>2 (20%)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="callout"><strong>Los tres se amortizan la misma noche: la cuarta.</strong> Valorando la entrega al precio de Compra de la posición 3 (donde arrancan los tres visores), el Molino de Blanca produce 0,8 Monedas por noche, el de Integral 1,2 y el de Centeno 1,6 — y a las cuatro noches los tres han cubierto su precio, mientras que a las tres no lo cubre ninguno. Que el horizonte sea idéntico es lo que mantiene la elección en «qué harina necesito» y no en «cuál se recupera antes». Es una noche más lento que los Ingresos de Panadería a propósito: la renta se cobra por haber horneado, que ya es la jugada difícil, mientras que el Contrato solo pide Monedas.</p>
 
         <div class="table-wrap">
           <table>
@@ -971,6 +985,11 @@
           <li><strong>Si un pan sale del Archivo, su renta se va con él.</strong> La única forma de que eso ocurra es el Simposio Técnico.</li>
         </ul>
         <p class="callout"><strong>Este es el motor de la partida.</strong> Hornear no es solo puntuar: es montar una fuente de ingresos que trabaja para ti el resto del juego. Un pan horneado el Día 3 cobra seis o siete noches; el mismo pan horneado el Día 9 cobra una o dos. Pero la partida termina cuando alguien hornea su <strong>quinto</strong> pan, así que correr para montar la renta es también correr para cerrar tu propia ventana. Esa tensión es deliberada.</p>
+
+        <h3 class="sub">9.5 · Entrega del Molino</h3>
+        <p>Cada jugador que tenga firmado un <strong>Contrato con el Molino</strong> (Acción C, ver <a href="#s7">Catálogo de acciones</a>) recibe de la reserva general <strong>2 tokens — 2&nbsp;(20%)</strong> de la harina que contrató. Todas las noches, para siempre, sin límite de días y sin volver a pagar nada.</p>
+        <p>La entrega es <strong>la misma para los tres tipos de harina</strong>: lo que cambia entre ellos es el precio del contrato, no lo que produce. Así solo hay un número de producción que recordar, y elegir qué harina contratar es una pregunta sobre qué necesita tu panadería, no sobre qué contrato rinde más.</p>
+        <p class="callout"><strong>Por qué existe este paso.</strong> Antes, la única forma de tener harina era comprarla en la Bolsa — y comprar empuja el visor hacia el extremo caro. Eso dejaba muerto el lado de <em>venta</em> del mercado: una ida y vuelta comprar→vender pierde siempre el diferencial y mueve el visor dos veces en tu contra, y como la Tendencia desplaza los tres visores a la vez, tampoco había especulación posible. El Molino es la única harina que no compras, y por eso la única que puedes vender sin haberla pagado antes al precio de la Bolsa.</p>
       </section>
 
       <section class="rule" id="s10">

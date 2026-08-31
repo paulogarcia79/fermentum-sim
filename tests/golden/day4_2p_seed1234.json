@@ -13,6 +13,7 @@
         "Centeno": 0,
         "Integral": 0
       },
+      "contrato_molino": null,
       "accion_alimentar_usada": true,
       "reserva_agua": 2,
       "estaciones_fermentacion": [
@@ -166,6 +167,7 @@
         "Centeno": 0,
         "Integral": 0
       },
+      "contrato_molino": null,
       "accion_alimentar_usada": true,
       "reserva_agua": 6,
       "estaciones_fermentacion": [

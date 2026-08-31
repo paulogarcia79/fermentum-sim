@@ -23,6 +23,7 @@ import {
   type CantidadHarina,
   type LoteAguaPct,
 } from '../../data/preciosHarina'
+import { PRECIO_CONTRATO_MOLINO, RENDIMIENTO_MOLINO_PCT } from '../../data/preciosMolino'
 import { fmtAgua, fmtHarina } from '../../data/unidades'
 import type { TipoHarina } from '../../types'
 
@@ -81,6 +82,13 @@ function deltaMonedas(tipo: TipoHarina, op: OperacionHarina): number {
 const operacionAgua = ref<'' | 'comprar'>('')
 const loteAgua = ref<LoteAguaPct>(10)
 
+// Contrato con el Molino: su propia fila porque en el wire es su propio
+// tipo_recurso ('molino'), no el de la harina contratada -- por eso firmar
+// Centeno y comprar Centeno en la misma visita no choca con la Regla de
+// Exclusividad. Uno por partida: si ya hay contrato, la fila solo informa.
+const harinaMolino = ref<'' | TipoHarina>('')
+const yaTieneContrato = computed(() => yo.value.contrato_molino !== null)
+
 const enviando = ref(false)
 const error = ref<string | null>(null)
 
@@ -97,6 +105,13 @@ const transacciones = computed(() => {
   if (operacionAgua.value === 'comprar') {
     lista.push({ tipo_recurso: 'agua', operacion: 'comprar', lote_pct: loteAgua.value })
   }
+  if (harinaMolino.value) {
+    lista.push({
+      tipo_recurso: 'molino',
+      operacion: 'contratar',
+      tipo_harina: harinaMolino.value,
+    })
+  }
   return lista
 })
 
@@ -110,6 +125,7 @@ const saldoProyectado = computed(() => {
     if (elegida) monedas += deltaMonedas(tipo, elegida)
   }
   if (operacionAgua.value === 'comprar') monedas -= precioAgua(loteAgua.value)
+  if (harinaMolino.value) monedas -= PRECIO_CONTRATO_MOLINO[harinaMolino.value]
   return monedas
 })
 
@@ -165,6 +181,28 @@ async function confirmar() {
         </option>
       </select>
     </label>
+
+    <div class="campo molino">
+      <p class="eyebrow">Contrato con el Molino</p>
+      <p v-if="yaTieneContrato" class="info-linea">
+        Ya tienes contratada <strong>Harina {{ yo.contrato_molino }}</strong
+        >: te entrega {{ fmtHarina(RENDIMIENTO_MOLINO_PCT) }} cada noche. Solo se firma uno por
+        partida y no puede cambiarse.
+      </p>
+      <template v-else>
+        <p class="info-linea">
+          Pago único. A partir de esta noche el molino te entrega
+          {{ fmtHarina(RENDIMIENTO_MOLINO_PCT) }} de esa harina en cada Fase III, para siempre — sin
+          pasar por la Bolsa y sin mover el visor. Se amortiza a la cuarta noche.
+        </p>
+        <select v-model="harinaMolino">
+          <option value="">— sin contrato —</option>
+          <option v-for="tipo in TIPOS_HARINA" :key="tipo" :value="tipo">
+            Contratar {{ tipo }} — {{ PRECIO_CONTRATO_MOLINO[tipo] }} Monedas
+          </option>
+        </select>
+      </template>
+    </div>
 
     <p class="info-linea">
       Monedas actuales: <strong>{{ yo.monedas }}</strong> → tras esta visita:

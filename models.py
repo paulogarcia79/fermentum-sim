@@ -759,6 +759,25 @@ class Player:
     múltiplos de 10 (ej. 100 = una bolsa completa, 0 = sin reserva).
     """
 
+    contrato_molino: Optional[str] = None
+    """
+    Tipo de harina del Contrato con el Molino firmado por este jugador, o None si
+    no ha firmado ninguno. Las claves son las mismas que ``reserva_harina``
+    ("Blanca", "Centeno", "Integral") precisamente para que la entrega nocturna
+    sea ``reserva_harina[contrato_molino] += RENDIMIENTO_MOLINO_PCT``, sin
+    traducción de por medio.
+
+    Un solo contrato por jugador y para siempre: se firma en la Acción C pagando
+    ``PRECIO_CONTRATO_MOLINO[tipo]`` una vez, y a partir de esa noche el molino
+    entrega ``RENDIMIENTO_MOLINO_PCT`` de esa harina en cada Fase III. Es la
+    única fuente de harina que no pasa por el mercado, y existe porque sin ella
+    vender harina no era una línea económica: la única forma de tener harina era
+    comprarla, y comprar mueve el visor en tu contra antes de que puedas vender.
+
+    Es un campo, no una propiedad derivada: el contrato es una decisión del
+    jugador que nada más en el estado permite reconstruir.
+    """
+
     accion_alimentar_usada: bool = False
     """
     True si la Acción A (Alimentar) ya fue ejecutada este turno de Fase II.

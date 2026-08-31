@@ -252,7 +252,7 @@ Se revela la carta superior del mazo de Tendencias de Mercado (21 cartas) y se d
 todos** durante el resto del día.
 
 **Este paso no mueve ningún visor.** La carta es un pronóstico: se aplica al final de este mismo
-día (§9.5) y, por tanto, fija los precios de la Bolsa de Harinas del **día siguiente**. Los precios
+día (§9.7) y, por tanto, fija los precios de la Bolsa de Harinas del **día siguiente**. Los precios
 que rigen hoy son los que dejó la tendencia anunciada ayer, de modo que cualquiera que compre o
 venda harina hoy (Acción C) lo hace conociendo ya hacia dónde se moverá el mercado esta noche.
 
@@ -359,10 +359,17 @@ El Mercado de Insumos es donde se comercian los recursos del juego:
 - **Comprar Lote de Agua:** pagar el coste en Monedas según la fila de temperatura actual y el
   lote elegido, y recibir el lote completo en tokens de agua (1 token = 5% de hidratación). Los
   cuatro lotes son **2 (10%)**, **6 (30%)**, **12 (60%)** y **20 (100%)**.
+- **Contratar el Molino:** pagar **una sola vez** el precio del tipo de harina elegido y quedarse
+  con el **Contrato con el Molino** de esa harina. Desde esa misma noche, en cada Fase III, el
+  molino entrega **2 tokens — 2 (20%)** de esa harina, para siempre ([§9.5](#95-entrega-del-molino)).
+  **No mueve el visor:** el molino produce fuera de la Bolsa. Un contrato por jugador y por
+  partida — no se cambia de harina, no se cancela y no se revende.
 
 **Regla de Exclusividad:** una misma visita puede combinar varias transacciones, pero como máximo
 **una por tipo de recurso** — se puede comprar Blanca, vender Centeno y comprar un lote de agua en
-la misma visita, pero no comprar y vender la misma harina, ni comprar el mismo tipo dos veces.
+la misma visita, pero no comprar y vender la misma harina, ni comprar el mismo tipo dos veces. **El
+Molino cuenta como su propio recurso**, así que firmar el contrato de Centeno y comprar Centeno en
+esa misma visita sí es legal — el molino no entrega hasta la noche, y hoy todavía necesitas harina.
 
 **Bolsa de Harinas** (Monedas según la posición del visor, 1 a 5). Entre paréntesis, el precio de
 la **media bolsa**, que se deriva del entero con ⌈Compra/2⌉ y ⌊Venta/2⌋:
@@ -372,6 +379,22 @@ la **media bolsa**, que se deriva del entero con ⌈Compra/2⌉ y ⌊Venta/2⌋:
 | Blanca — Compra / Venta | 2 (1) / 1 (0) | 3 (2) / 2 (1) | 4 (2) / 3 (1) | 5 (3) / 4 (2) | 6 (3) / 5 (2) |
 | Integral — Compra / Venta | 4 (2) / 2 (1) | 5 (3) / 3 (1) | 6 (3) / 4 (2) | 7 (4) / 5 (2) | 8 (4) / 6 (3) |
 | Centeno — Compra / Venta | 6 (3) / 3 (1) | 7 (4) / 4 (2) | 8 (4) / 5 (2) | 9 (5) / 6 (3) | 10 (5) / 7 (3) |
+
+**Contrato con el Molino** (pago único en Monedas; la entrega nocturna es la misma para los tres):
+
+| Harina | Contrato | Entrega cada noche |
+|:---|:---:|:---:|
+| Blanca | 3 | 2 (20%) |
+| Integral | 4 | 2 (20%) |
+| Centeno | 6 | 2 (20%) |
+
+> **Los tres se amortizan la misma noche: la cuarta.** Valorando la entrega al precio de Compra de
+> la posición 3 (donde arrancan los tres visores), el Molino de Blanca produce 0,8 Monedas por
+> noche, el de Integral 1,2 y el de Centeno 1,6 — y a las cuatro noches los tres han cubierto su
+> precio, mientras que a las tres no lo cubre ninguno. Que el horizonte sea idéntico es lo que
+> mantiene la elección en «qué harina necesito» y no en «cuál se recupera antes». Es una noche más
+> lento que los Ingresos de Panadería a propósito: la renta se cobra por haber horneado, que ya es
+> la jugada difícil, mientras que el Contrato solo pide Monedas.
 
 **Suministro Hídrico Global** (Monedas según temperatura y tamaño de lote):
 
@@ -738,14 +761,31 @@ Tres precisiones que deciden partidas:
 > **quinto** pan, así que correr para montar la renta es también correr para cerrar tu propia
 > ventana. Esa tensión es deliberada.
 
-### 9.5 Rotación del Mercado de Recetas
+### 9.5 Entrega del Molino
+
+Cada jugador que tenga firmado un **Contrato con el Molino** (Acción C, §7) recibe de la reserva
+general **2 tokens — 2 (20%)** de la harina que contrató. Todas las noches, para siempre, sin
+límite de días y sin volver a pagar nada.
+
+La entrega es **la misma para los tres tipos de harina**: lo que cambia entre ellos es el precio
+del contrato, no lo que produce. Así solo hay un número de producción que recordar, y elegir qué
+harina contratar es una pregunta sobre qué necesita tu panadería, no sobre qué contrato rinde más.
+
+> **Por qué existe este paso.** Antes, la única forma de tener harina era comprarla en la Bolsa — y
+> comprar empuja el visor hacia el extremo caro. Eso dejaba muerto el lado de *venta* del mercado:
+> una ida y vuelta comprar→vender pierde siempre el diferencial y mueve el visor dos veces en tu
+> contra, y como la Tendencia desplaza los tres visores a la vez, tampoco había especulación
+> posible. El Molino es la única harina que no compras, y por eso la única que puedes vender sin
+> haberla pagado antes al precio de la Bolsa.
+
+### 9.6 Rotación del Mercado de Recetas
 
 Al cerrar el día, se descarta la carta de receta situada en la estación más a la derecha del
 Mercado Central (la más antigua). Si esa estación ya estaba vacía por una Acción G, se descarta la
 siguiente carta real hacia la izquierda. El hueco que deja se rellena en el Protocolo de Refresco
 del día siguiente (§5.4).
 
-### 9.6 Aplicación de la Tendencia de Mercado
+### 9.7 Aplicación de la Tendencia de Mercado
 
 Ahora se cobra la carta de Tendencia anunciada esta mañana (§5.3). Su modificador desplaza
 **simultáneamente** los 3 visores de la Bolsa de Harinas (Blanca, Integral y Centeno). Cada visor

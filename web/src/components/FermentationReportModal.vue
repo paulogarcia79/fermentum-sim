@@ -5,6 +5,7 @@
 // diga explicitamente, no algo que tenga que notar por su cuenta.
 import { computed } from 'vue'
 import { reconocerReporteDia, store } from '../store'
+import { fmtHarina } from '../data/unidades'
 import type { GameEventView } from '../types'
 
 const dia = computed(() => store.reporteDiaPendiente!)
@@ -56,6 +57,15 @@ function porJugador(idx: number, tipos: string[]): GameEventView[] {
               🥖 Ingresos de panadería: +{{ ev.datos.monedas_recibidas }} Monedas
               ({{ (ev.datos.desglose as { receta_nombre: string; monedas: number }[])
                     .map((d) => `${d.receta_nombre} +${d.monedas}`).join(', ') }})
+            </li>
+
+            <li
+              v-for="(ev, i) in porJugador(idx, ['rendimiento_molino'])"
+              :key="'mo' + i"
+              class="renta"
+            >
+              🌾 Contrato con el Molino: +{{ fmtHarina(Number(ev.datos.harina_pct)) }} de Harina
+              {{ ev.datos.tipo_harina }}
             </li>
 
             <li v-for="(ev, i) in porJugador(idx, ['masa_avanzo'])" :key="'m' + i">

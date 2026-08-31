@@ -12,6 +12,7 @@ import PistaMedida, { type BandaPista } from './PistaMedida.vue'
 import { hexDeColor } from '../data/coloresJugador'
 import { TECNOLOGIAS } from '../data/tecnologias'
 import { ACIDEZ_EQUILIBRIO_CENTRO, puntosEquilibrio } from '../data/preciosAcidez'
+import { RENDIMIENTO_MOLINO_PCT } from '../data/preciosMolino'
 
 // La «Madurez del Cultivo» ya no premia la acidez cruda sino el equilibrio, con
 // el pico en el centro de la pista y 0 puntos en ambos extremos. La banda se
@@ -182,6 +183,14 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
             <span class="ico-s emoji">🎲</span><span class="dato">{{ yo.dados_inoculo }}</span>
           </div>
         </div>
+        <p
+          v-if="yo.contrato_molino"
+          class="linea-molino"
+          title="Contrato con el Molino: cada Fase III el molino te entrega esta harina, sin pasar por la Bolsa y sin mover el visor. Es permanente y no puede cambiarse."
+        >
+          🌾 Molino: <span class="dato">+{{ tokensHarina(RENDIMIENTO_MOLINO_PCT) }}</span>
+          {{ yo.contrato_molino }}/noche
+        </p>
         <p
           class="linea-desperdicio"
           :class="{ penaliza: penalizacionDesperdicio < 0 }"
@@ -445,6 +454,12 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
   margin: 0;
   font-size: var(--t-micro);
   color: var(--tinta-tenue);
+}
+
+.linea-molino {
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--verdin);
 }
 
 .linea-desperdicio.penaliza span:not(.dato) {

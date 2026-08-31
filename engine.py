@@ -183,6 +183,55 @@ Tabla de precios (en Monedas) de la Bolsa de Harinas, indexada por posición del
 visor (1-5, GDD v0.0.2 Módulo III §C). ``precios["compra"][posicion - 1]``.
 """
 
+RENDIMIENTO_MOLINO_PCT: int = 20
+"""
+Harina que el Contrato con el Molino entrega cada Fase III: 2 tokens (20%) del
+tipo contratado, **igual para los tres tipos**. El rendimiento es plano y el
+precio es el que escala (``PRECIO_CONTRATO_MOLINO``), de modo que sólo hay un
+número de producción que aprender y elegir el tipo es una pregunta sobre qué
+harina necesita tu estrategia, no sobre qué contrato rinde más.
+"""
+
+PRECIO_CONTRATO_MOLINO: Dict[TipoHarina, int] = {
+    TipoHarina.BLANCA: 3,
+    TipoHarina.INTEGRAL: 4,
+    TipoHarina.CENTENO: 6,
+}
+"""
+Coste único (en Monedas) de firmar el Contrato con el Molino, por tipo de harina
+(Acción C). Un solo contrato por jugador, permanente, sin cancelación.
+
+**Por qué existe**: hasta ahora la única forma de tener harina era comprarla en la
+Bolsa, y comprar mueve el visor hacia el extremo caro — de modo que el lado de
+venta del mercado era funcionalidad muerta: una ida y vuelta comprar→vender pierde
+el diferencial (1/2/3 Monedas) y mueve el visor dos veces en tu contra, y el Mercado
+de Tendencias es simétrico y desplaza los tres visores a la vez, así que tampoco
+había especulación posible. El Contrato es la fuente de harina que no pasa por el
+mercado; con él, vender por fin significa algo.
+
+**Derivación de los tres precios — horizonte de amortización común: el día 4.**
+Como en ``PRECIO_RENTA``, el horizonte no es una constante de ejecución sino la
+cuenta con la que se escribieron los números, y ``tests/test_contrato_molino.py::
+test_amortizacion_al_cuarto_dia`` la fija para que un reajuste futuro no la rompa
+en silencio. Valorando la entrega diaria al precio de COMPRA de la posición 3 (la
+posición inicial de los tres visores, ``POSICION_HARINA_INICIAL``):
+
+    Blanca   4 Monedas/bolsa × 20% = 0,8/noche → 4 noches = 3,2 ≥ 3
+    Integral 6 Monedas/bolsa × 20% = 1,2/noche → 4 noches = 4,8 ≥ 4
+    Centeno  8 Monedas/bolsa × 20% = 1,6/noche → 4 noches = 6,4 ≥ 6
+
+y en las 3 noches ninguno llega (2,4 < 3; 3,6 < 4; 4,8 < 6). Los tres amortizan
+exactamente el mismo día, que es lo que hace que la presión temporal sea idéntica
+en los tres y que elegir tipo siga siendo una pregunta sobre la harina y no sobre
+la velocidad de recuperación — el mismo argumento por el que la renta reparte su
+horizonte entre los tres grados.
+
+El horizonte es un día más largo que el de la renta (4 frente a 3) a propósito: la
+renta se cobra por haber horneado, que ya es la jugada difícil, mientras que el
+Contrato sólo pide Monedas, y firmar el primer día no debe ser automáticamente la
+apertura correcta.
+"""
+
 CANTIDAD_BOLSA_PCT: int = 100
 """Bolsa entera de harina: 10 tokens del 10% (la unidad en la que opera el mercado)."""
 
@@ -1314,11 +1363,17 @@ class GameEngine:
              en estado de Contaminación (gestionado por ``Player.ajustar_vitalidad``).
           4. **Ingresos de Panadería**: cada horneado exitoso del archivo paga
              ``PRECIO_RENTA[grado]`` Monedas a su dueño (ver ``_cobrar_renta_panaderia``).
+          5. **Entrega del Molino**: quien tenga firmado un Contrato con el Molino
+             recibe ``RENDIMIENTO_MOLINO_PCT`` de esa harina (ver
+             ``_entregar_rendimiento_molino``).
 
         El orden de 3 y 4 no es indiferente aunque hoy sean independientes: la renta se
         cobra DESPUÉS del desgaste para que el informe nocturno cuente la noche en el
         mismo orden en que ocurre, y para que cualquier regla futura que ligue ingresos
-        a la salud del cultivo lea una Vitalidad ya actualizada.
+        a la salud del cultivo lea una Vitalidad ya actualizada. El paso 5 va detrás del
+        4 por el mismo motivo de relato — los dos ingresos, primero el dinero y después
+        la harina — y porque son estrictamente independientes: el molino no cobra nada
+        por entregar, así que ningún orden entre ambos cambia el resultado.
         """
         # Paso 1 + 2: Avance de masas y detección/resolución de colapsos.
         #             Se itera sobre todos los jugadores de forma secuencial.
@@ -1333,6 +1388,45 @@ class GameEngine:
         # Paso 4: Ingresos de Panadería — el archivo de horneados rinde Monedas.
         for player in self._players:
             self._cobrar_renta_panaderia(player)
+
+        # Paso 5: Entrega del Molino — el contrato rinde harina.
+        for player in self._players:
+            self._entregar_rendimiento_molino(player)
+
+    def _entregar_rendimiento_molino(self, player: Player) -> int:
+        """
+        Entrega a ``player`` la harina de su Contrato con el Molino, si lo tiene.
+
+        Se deriva del contrato vivo, igual que la renta se deriva del archivo vivo:
+        no hay ningún campo de «producción diaria» cacheado, y el rendimiento es el
+        mismo ``RENDIMIENTO_MOLINO_PCT`` para los tres tipos, así que no hay una
+        segunda tabla que pueda contradecir a ``PRECIO_CONTRATO_MOLINO``.
+
+        Es un ingreso automático sin intervención del jugador, así que emite su
+        evento en el punto de la mutación (ARCHITECTURE.md): el informe nocturno lo
+        cuenta desde ``engine.eventos``, nunca comparando estados.
+
+        Args:
+            player: Jugador que recibe la entrega.
+
+        Returns:
+            Porcentaje de harina entregado (0 si no tiene contrato).
+        """
+        if player.contrato_molino is None:
+            return 0
+
+        tipo: str = player.contrato_molino
+        player.reserva_harina[tipo] += RENDIMIENTO_MOLINO_PCT
+        self._emit(
+            EventoTipo.RENDIMIENTO_MOLINO,
+            jugador_idx=self._players.index(player),
+            datos={"tipo_harina": tipo, "harina_pct": RENDIMIENTO_MOLINO_PCT},
+            mensaje=(
+                f"Contrato con el Molino: {player.nombre} recibe "
+                f"{RENDIMIENTO_MOLINO_PCT}% de Harina {tipo}."
+            ),
+        )
+        return RENDIMIENTO_MOLINO_PCT
 
     def _cobrar_renta_panaderia(self, player: Player) -> int:
         """
