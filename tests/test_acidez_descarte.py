@@ -255,7 +255,7 @@ def test_madurez_suma_vitalidad_entera_mas_el_equilibrio() -> None:
 def test_madurez_sigue_siendo_un_solo_termino_en_su_sitio() -> None:
     """
     El orden de insercion de `desglose_maestria` ES el orden de presentacion
-    para RankingView.vue, main.py y la numeracion de CORE_MECHANICS.md §3.
+    para RankingView.vue y la numeracion de CORE_MECHANICS.md §3.
     Partir el termino en dos renumeraria las cuatro superficies a la vez.
     """
     claves = list(Player(nombre="x").desglose_maestria)

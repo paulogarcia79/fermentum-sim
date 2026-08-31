@@ -41,8 +41,8 @@ serves that bundle locally.
 - `src/components/` — `LobbyView` (create/join/start) and `GameView` (`ClimaBanner`,
   `MercadoPanel`, `MiTablero`/`EstacionCard`, `TablerosOponentes`, `BarraAcciones`,
   `RegistroEventos`, `FermentationReportModal`, `RankingView`).
-- `src/components/acciones/` — one component per player action (mirrors `main.py`'s
-  `_params_accion_*` functions), plus a shared `ModalConfirmacion.vue` for the three
+- `src/components/acciones/` — one component per player action, plus a shared
+  `ModalConfirmacion.vue` for the three
   parameterless confirm actions (H, I, Horas Extras). Button enablement comes from the server's
   `acciones_disponibles` (see `disponibilidad.py`) — this client never reimplements
   `ActionManager`'s rules to decide whether a button should be clickable.

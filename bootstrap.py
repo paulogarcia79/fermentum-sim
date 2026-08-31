@@ -1,15 +1,16 @@
 """
 bootstrap.py — Construcción de una Partida Nueva
 ===================================================
-Extrae la lógica de inicialización que antes vivía solo en
-``main.py:setup_game`` a un módulo sin ninguna dependencia de CLI, para que
-un servidor (``server/``) pueda construir partidas sin importar ``main.py``
-(que trae consigo helpers de renderizado y prompts basados en ``input()``).
+``create_game`` es el único constructor de partidas: reparte las recetas
+básicas iniciales, las Cartas de Patrocinio y el orden del Día 1, y devuelve un
+``GameEngine`` listo. Lo usan ``server/sessions.py`` al iniciar una sala y los
+tests; nadie más construye un ``GameEngine`` a mano salvo las pruebas que
+quieren un tablero degenerado a propósito.
 
-``main.py:setup_game`` delega en ``create_game`` de este módulo; su única
-responsabilidad adicional es rellenar nombres por defecto cuando el llamador
-de la CLI no proporciona ninguno, una conveniencia que no tiene sentido para
-un servidor (donde los nombres siempre vienen del flujo de unión a la sala).
+Nació como extracción de la inicialización que vivía dentro de la CLI, para que
+el servidor no tuviera que importar un módulo lleno de ``input()`` y helpers de
+renderizado. La CLI ya no existe y este módulo se quedó, que era el punto: la
+construcción de la partida nunca dependió de quién la mostrara.
 """
 from __future__ import annotations
 
@@ -66,8 +67,7 @@ def create_game(nombres: List[str], event_sink: Optional[EventSink] = None) -> G
 
     Returns:
         ``GameEngine`` configurado para el Día 1 (aún no iniciado — el
-        llamador decide cuándo llamar a ``iniciar_dia()`` o
-        ``ejecutar_dia_laboratorio()``).
+        llamador decide cuándo llamar a ``iniciar_dia()``).
 
     Raises:
         InsufficientPlayersError: Si ``nombres`` está vacío.

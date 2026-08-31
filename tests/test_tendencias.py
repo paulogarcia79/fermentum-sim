@@ -19,14 +19,14 @@ from engine import (
     POSICION_HARINA_MIN,
 )
 from events import EventoTipo
-from main import setup_game
+from bootstrap import create_game
 
 
 def _engine_con_tendencias(modificadores: List[int]) -> GameEngine:
     """Motor de 2 jugadores con el mazo de tendencias forzado a `modificadores`
     (en orden de robo), para que la prueba no dependa del azar."""
     random.seed(31337)
-    engine = setup_game(["Alba", "Bruno"])
+    engine = create_game(["Alba", "Bruno"])
     engine.market.mazo_tendencias = list(modificadores)
     engine.market.descarte_tendencias = []
     engine.market.tendencia_pendiente = None

@@ -7,7 +7,7 @@ propios botones sin reimplementar reglas de ActionManager.
 from __future__ import annotations
 
 from disponibilidad import acciones_disponibles
-from main import setup_game
+from bootstrap import create_game
 
 
 def _por_id(resultado, id_):
@@ -15,7 +15,7 @@ def _por_id(resultado, id_):
 
 
 def test_dia_1_recien_iniciado_B_habilitada_H_e_I_no() -> None:
-    engine = setup_game(["Alba", "Bruno"])
+    engine = create_game(["Alba", "Bruno"])
     engine.iniciar_dia()
     p1 = engine.players[0]
 
@@ -28,7 +28,7 @@ def test_dia_1_recien_iniciado_B_habilitada_H_e_I_no() -> None:
 
 
 def test_sin_pa_deshabilita_acciones_de_costo_pero_no_las_gratuitas() -> None:
-    engine = setup_game(["Alba", "Bruno"])
+    engine = create_game(["Alba", "Bruno"])
     engine.iniciar_dia()
     p1 = engine.players[0]
     p1.puntos_accion = 0
@@ -43,7 +43,7 @@ def test_sin_pa_deshabilita_acciones_de_costo_pero_no_las_gratuitas() -> None:
 
 
 def test_contaminado_habilita_protocolos_de_emergencia_segun_recursos() -> None:
-    engine = setup_game(["Alba", "Bruno"])
+    engine = create_game(["Alba", "Bruno"])
     engine.iniciar_dia()
     p1 = engine.players[0]
     p1.en_estado_contaminacion = True
@@ -62,7 +62,7 @@ def test_contaminado_habilita_protocolos_de_emergencia_segun_recursos() -> None:
 
 
 def test_accion_ya_usada_se_refleja_como_deshabilitada() -> None:
-    engine = setup_game(["Alba", "Bruno"])
+    engine = create_game(["Alba", "Bruno"])
     engine.iniciar_dia()
     p1 = engine.players[0]
     p1.accion_alimentar_usada = True

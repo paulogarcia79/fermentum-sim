@@ -2,14 +2,41 @@
 name = "fermentum-sim"
 version = "0.1.0"
 requires-python = ">=3.12"
-dependencies = []
+# El servidor ES la aplicación: desde que se retiró la CLI no queda ninguna forma
+# de jugar que no pase por server/. starlette+uvicorn estuvieron en un grupo
+# opcional mientras existió un checkout "solo CLI" al que no había por qué
+# imponerle un framework web; ese checkout ya no existe.
+#
+# El motor de reglas en sí (models/engine/actions/bootstrap/events/serialization/
+# disponibilidad) sigue sin importar nada de terceros ni nada de server/: la
+# dependencia va en un solo sentido, y eso no lo cambia esta lista.
+dependencies = ["starlette>=0.37", "uvicorn>=0.30"]
 
 [project.optional-dependencies]
-# Core simulation (models.py/engine.py/actions.py/main.py) stays dependency-free.
-# The optional server/ package (Milestone 3+) needs its own deps, listed separately
-# so a CLI-only checkout never has to install a web framework.
 dev = ["pytest>=8", "httpx>=0.27"]
-server = ["starlette>=0.37", "uvicorn>=0.30"]
+
+# Qué se empaqueta, dicho a mano. La autodetección de setuptools sobre un
+# flat-layout se niega a construir en cuanto ve varios directorios de primer
+# nivel ("Multiple top-level packages discovered": web, data, context,
+# reference_images...), y aquí los hay: `data/` ni siquiera está en git, la crea
+# server/persistence.py la primera vez que se guarda una partida, de modo que
+# `pip install -e .` se rompía solo, sin que nadie tocara el proyecto.
+#
+# El motor son módulos sueltos en la raíz, no un paquete, así que van en
+# py-modules; `server` es el único paquete real. `test_actions_suite.py` queda
+# fuera a propósito: es un script que se ejecuta, no algo que se importe.
+[tool.setuptools]
+py-modules = [
+    "models",
+    "engine",
+    "actions",
+    "bootstrap",
+    "events",
+    "exceptions",
+    "serialization",
+    "disponibilidad",
+]
+packages = ["server"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

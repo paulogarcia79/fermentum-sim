@@ -1,7 +1,8 @@
 """
 tests/test_events.py -- prueba el registro de eventos de GameEngine
 (Milestone 2), que reemplaza el diffing de snapshots que usaba
-main.py:_reporte_fermentacion para reconstruir lo ocurrido en Fase III.
+el informe de Fase III del cliente (FermentationReportModal.vue) para reconstruir
+lo ocurrido esa noche.
 """
 from __future__ import annotations
 
@@ -10,19 +11,20 @@ import random
 from actions import ActionManager
 from engine import GameEngine, Market, NUM_RECIPE_SLOTS
 from events import EventoTipo
-from main import setup_game
+from bootstrap import create_game
+from tests._bot import jugar_dia
 from models import Environment, Player, RECIPE_CATALOG
 
 
 def test_dia_1_emite_eventos_globales_y_desgaste_por_jugador() -> None:
     random.seed(555)
-    engine = setup_game(["Alba", "Bruno"])
+    engine = create_game(["Alba", "Bruno"])
     manager = ActionManager(engine)
 
     def turno(engine, player) -> None:
         engine.pasar_turno(player)  # Pasa de inmediato: solo interesan los eventos automaticos.
 
-    engine.ejecutar_dia_laboratorio(ejecutar_turno_jugador=turno)
+    jugar_dia(engine, turno)
 
     tipos = [ev.tipo for ev in engine.eventos]
     assert tipos.count(EventoTipo.JEFE_ASIGNADO) == 1
@@ -94,7 +96,7 @@ def _stock_harinas(player, receta) -> None:
 
 
 def test_horneado_manual_emite_evento_no_colapso() -> None:
-    engine = setup_game(["Alba", "Bruno"])
+    engine = create_game(["Alba", "Bruno"])
     manager = ActionManager(engine)
     p1 = engine.players[0]
     receta = p1.carpeta_proyectos[0]
@@ -123,7 +125,7 @@ def test_horneado_manual_emite_evento_no_colapso() -> None:
 def test_horneado_una_celda_bajo_optima_no_da_datos() -> None:
     """Frontera exacta que el track del frontend dibujaba mal: una masa en
     ``zona_optima[0] - 1`` es zona baja para el motor (0 Datos, puntos_pre_fermento)."""
-    engine = setup_game(["Alba", "Bruno"])
+    engine = create_game(["Alba", "Bruno"])
     manager = ActionManager(engine)
     p1 = engine.players[0]
     receta = p1.carpeta_proyectos[0]
@@ -144,7 +146,7 @@ def test_horneado_una_celda_bajo_optima_no_da_datos() -> None:
 
 
 def test_colapso_estructural_emite_horneado_colapso_y_masa_avanzo() -> None:
-    engine = setup_game(["Alba", "Bruno"])
+    engine = create_game(["Alba", "Bruno"])
     manager = ActionManager(engine)
     p1 = engine.players[0]
     receta = p1.carpeta_proyectos[0]
@@ -171,7 +173,7 @@ def test_colapso_estructural_emite_horneado_colapso_y_masa_avanzo() -> None:
 
 
 def test_contaminacion_solo_se_emite_en_la_transicion() -> None:
-    engine = setup_game(["Alba", "Bruno"])
+    engine = create_game(["Alba", "Bruno"])
     manager = ActionManager(engine)
     p1, p2 = engine.players
     p1.vitalidad = 1  # un solo punto de desgaste estandar lo lleva a 0
@@ -180,7 +182,7 @@ def test_contaminacion_solo_se_emite_en_la_transicion() -> None:
     def turno(engine, player) -> None:
         engine.pasar_turno(player)
 
-    engine.ejecutar_dia_laboratorio(ejecutar_turno_jugador=turno)
+    jugar_dia(engine, turno)
     assert p1.en_estado_contaminacion is True
     primeras_contaminaciones = [
         ev for ev in engine.eventos if ev.tipo == EventoTipo.CONTAMINACION
@@ -189,7 +191,7 @@ def test_contaminacion_solo_se_emite_en_la_transicion() -> None:
     assert primeras_contaminaciones[0].jugador_idx == 0
 
     idx_antes = len(engine.eventos)
-    engine.ejecutar_dia_laboratorio(ejecutar_turno_jugador=turno)
+    jugar_dia(engine, turno)
     # Ya estaba contaminado: el desgaste no vuelve a emitir el evento de
     # transicion (la vitalidad se mantiene en el piso 0).
     nuevas_contaminaciones = [
@@ -210,6 +212,6 @@ def test_event_sink_recibe_los_mismos_eventos_que_engine_eventos() -> None:
     def turno(engine, player) -> None:
         engine.pasar_turno(player)
 
-    engine.ejecutar_dia_laboratorio(ejecutar_turno_jugador=turno)
+    jugar_dia(engine, turno)
 
     assert recibidos == engine.eventos

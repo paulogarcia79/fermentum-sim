@@ -2,10 +2,16 @@
 tests/test_golden_game.py -- caracterizacion del bucle Fase I/II/III completo.
 
 Juega una partida determinista (RNG global sembrado) con dos jugadores
-"bot" (tests/_bot.py) durante varios Dias de Laboratorio usando la API
-publica actual de GameEngine (ejecutar_dia_laboratorio con callback
-bloqueante), serializa el estado final con dataclasses.asdict, y lo compara
-contra un snapshot dorado en tests/golden/.
+"bot" (tests/_bot.py) durante varios Dias de Laboratorio conduciendo la
+maquina de estados de GameEngine (tests/_bot.py:jugar_dia), serializa el estado
+final con dataclasses.asdict, y lo compara contra un snapshot dorado en
+tests/golden/.
+
+El snapshot ya demostro que sirve para lo que existe: la retirada de la CLI
+elimino la ruta bloqueante (`ejecutar_dia_laboratorio`) con la que este test se
+escribio, y la migracion a la maquina de estados paso contra este mismo fichero
+SIN regenerarlo -- que es la prueba de que las dos rutas eran equivalentes, en
+vez de la suposicion de que lo eran.
 
 Proposito: dar a los refactors de Milestone 1 en adelante (turn-state
 machine, event stream) una linea base de comportamiento verificada, en un
@@ -20,11 +26,11 @@ from typing import Any, Dict
 
 from actions import ActionManager
 from engine import GameEngine
-from main import setup_game
+from bootstrap import create_game
 from models import Player
 from serialization import snapshot
 
-from tests._bot import heuristic_turn
+from tests._bot import heuristic_turn, jugar_dia
 
 SEED = 1234
 NUM_DIAS = 4
@@ -33,7 +39,7 @@ GOLDEN_PATH = Path(__file__).parent / "golden" / "day4_2p_seed1234.json"
 
 def _jugar_partida_determinista() -> Dict[str, Any]:
     random.seed(SEED)
-    engine: GameEngine = setup_game(["Alba", "Bruno"])
+    engine: GameEngine = create_game(["Alba", "Bruno"])
     manager = ActionManager(engine)
 
     def turno(engine: GameEngine, player: Player) -> None:
@@ -42,7 +48,7 @@ def _jugar_partida_determinista() -> Dict[str, Any]:
     for _ in range(NUM_DIAS):
         if engine.partida_terminada:
             break
-        engine.ejecutar_dia_laboratorio(ejecutar_turno_jugador=turno)
+        jugar_dia(engine, turno)
 
     # Normalizado a traves de JSON (p.ej. tuplas -> listas) para que la
     # comparacion contra el snapshot dorado -- tambien cargado desde JSON --

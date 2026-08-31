@@ -6,6 +6,12 @@ No es una IA competitiva: solo produce una partida reproducible y variada
 juego no trivial que serializar y comparar contra un snapshot dorado en
 tests/test_golden_game.py. Reutilizable por futuras pruebas del bucle de
 turnos (p.ej. el driver headless de la Milestone 1).
+
+Aloja ademas `jugar_dia`, el driver de un Dia de Laboratorio completo sobre la
+maquina de estados del motor. Vive aqui, y en un solo sitio, desde que se retiro
+la CLI: `GameEngine.ejecutar_dia_laboratorio` existia para darle a la terminal
+su punto de pausa entre dias, y al desaparecer quedo una sola forma de conducir
+el motor -- la misma que usa `server/`.
 """
 from __future__ import annotations
 
@@ -17,6 +23,53 @@ if TYPE_CHECKING:
     from actions import ActionManager
     from engine import GameEngine
     from models import Player
+
+
+def jugar_dia(
+    engine: "GameEngine",
+    turno: Callable[["GameEngine", "Player"], None],
+) -> bool:
+    """
+    Juega un Dia de Laboratorio completo conduciendo la maquina de estados.
+
+    Reemplaza al desaparecido `GameEngine.ejecutar_dia_laboratorio(callback)`, y
+    es su equivalente exacto: `iniciar_dia()` es `fase_I_ambiente()` seguido de
+    `_preparar_fase_II()`, y el resto es el mismo round-robin sobre
+    `jugador_activo`, que ambas rutas ya compartian via
+    `_avanzar_a_siguiente_elegible`.
+
+    **El chequeo del nonce es load-bearing, no defensivo.** Un callback puede
+    cerrar su propia visita (llamando a `pasar_turno`) o no cerrarla: las
+    acciones gratuitas -- Alimentar, Descarte, Horas Extras, Pedido de Urgencia
+    -- no terminan el turno, y `heuristic_turn` hace `return` en cuanto una de
+    ellas tiene exito. Si el driver cerrara siempre, robaria la visita a un
+    callback que aun tenia PA; si no cerrara nunca, el bucle giraria para
+    siempre sobre el mismo jugador. Comparar `turno_nonce` antes y despues es lo
+    que distingue los dos casos, y es exactamente lo que hacia la ruta
+    bloqueante. Sin el, `tests/test_golden_game.py` cuelga mientras los otros
+    dos consumidores (cuyos callbacks siempre pasan turno) seguirian en verde.
+
+    Args:
+        engine: Motor de la partida, con el dia anterior ya resuelto.
+        turno: Callback `(engine, player) -> None`, invocado UNA vez por visita.
+
+    Returns:
+        True si la partida termina con este dia, False si continua -- lo mismo
+        que devolvia `ejecutar_dia_laboratorio`.
+
+    Raises:
+        GameAlreadyOverError: Si la partida ya habia terminado (lo levanta
+            `iniciar_dia`, que conserva el guardia de la ruta retirada).
+    """
+    engine.iniciar_dia()
+
+    while (player := engine.jugador_activo) is not None:
+        nonce_antes = engine.turno_nonce
+        turno(engine, player)
+        if engine.turno_nonce == nonce_antes:
+            engine.terminar_turno_actual()
+
+    return engine.resolver_fase_III()
 
 
 def heuristic_turn(engine: "GameEngine", player: "Player", manager: "ActionManager") -> None:

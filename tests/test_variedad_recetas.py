@@ -2,7 +2,7 @@
 tests/test_variedad_recetas.py -- el termino de puntuacion final «Variedad de
 Recetas» (CORE_MECHANICS.md §3): la curva triangular sobre las recetas
 DISTINTAS horneadas con exito, el desglose de los 7 terminos que sustituyo a la
-aritmetica duplicada en main.py, su papel como primer criterio de desempate y su
+aritmetica que estuvo duplicada a mano en la CLI, su papel como primer criterio de desempate y su
 viaje al cliente via server/views.py.
 """
 from __future__ import annotations
@@ -122,7 +122,7 @@ def test_el_desglose_suma_exactamente_los_puntos_finales() -> None:
 
 def test_el_desglose_lleva_los_siete_terminos_en_orden() -> None:
     """
-    Guardarrail del refactor: main.py y RankingView.vue recorren este mapa en
+    Guardarrail del refactor: RankingView.vue recorre este mapa en
     vez de recalcular la formula, y el orden de insercion es el de
     presentacion. Mientras estuvo duplicada, la version del CLI se quedo sin
     «Conversión de Riqueza» y no sumaba su propio TOTAL.

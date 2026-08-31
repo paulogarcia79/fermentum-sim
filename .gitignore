@@ -5,4 +5,5 @@ venv/
 web/node_modules/
 web/dist/
 data/games/
+*.egg-info/
 launch.sh

@@ -110,8 +110,8 @@ class PhaseViolationError(FermentumError):
 class GameAlreadyOverError(FermentumError):
     """
     Se lanza cuando se intenta continuar una partida que ya ha terminado
-    (ej. llamar a ejecutar_dia_laboratorio() después de que el mazo de
-    clima se agotó o un jugador horneó su quinta receta exitosa).
+    (ej. llamar a iniciar_dia() después de que el mazo de clima se agotó o
+    un jugador horneó su quinta receta exitosa).
     """
 
 

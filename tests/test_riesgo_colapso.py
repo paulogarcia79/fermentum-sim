@@ -12,13 +12,14 @@ from __future__ import annotations
 import random
 
 from engine import GameEngine
-from main import setup_game
+from bootstrap import create_game
+from tests._bot import jugar_dia
 from models import EfectoClimatico
 
 
 def _engine_2p() -> GameEngine:
     random.seed(4242)
-    return setup_game(["Alba", "Bruno"])
+    return create_game(["Alba", "Bruno"])
 
 
 def test_vitalidad_1_con_desgaste_estandar_es_riesgo() -> None:
@@ -92,7 +93,7 @@ def test_la_prediccion_coincide_con_el_desgaste_real_del_dia() -> None:
     comprobar que lo predicho durante la Fase II es exactamente lo que ocurrio.
     """
     random.seed(909)
-    engine = setup_game(["Alba", "Bruno"])
+    engine = create_game(["Alba", "Bruno"])
 
     predicho: dict[str, int] = {}
 
@@ -102,7 +103,7 @@ def test_la_prediccion_coincide_con_el_desgaste_real_del_dia() -> None:
         predicho.setdefault(player.nombre, engine.vitalidad_prevista(player))
         engine.pasar_turno(player)
 
-    engine.ejecutar_dia_laboratorio(ejecutar_turno_jugador=turno)
+    jugar_dia(engine, turno)
 
     assert predicho, "El callback de turno no llego a ejecutarse."
     for jugador in engine.players:

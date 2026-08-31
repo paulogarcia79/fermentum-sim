@@ -17,7 +17,7 @@ Liderada por el Investigador Jefe, esta fase configura las variables globales de
     * *Desempate:* Mayor cantidad de Datos de Investigación.
     * *Ventaja:* El Investigador Jefe actúa primero en la Fase II y tiene prioridad en los mercados.
     * *Excepción Día 1:* En la primera ronda, el orden se determina por la Iniciativa de la Carta de Patrocinio de cada jugador (ver PLAYER_STATE.md §2), no por Vitalidad — a partir del Día 2 rige la regla estándar de este párrafo.
-* **Resolución del Clima:** Se revela una carta del mazo de Clima. **(CRÍTICO PARA LA CLI: El sistema debe anunciar/imprimir en pantalla claramente el nombre de la carta, su modificador térmico y su efecto pasivo para que los jugadores puedan tomar decisiones).**
+* **Resolución del Clima:** Se revela una carta del mazo de Clima. **(CRÍTICO PARA EL CLIENTE: el sistema debe anunciar claramente el nombre de la carta, su modificador térmico y su efecto pasivo para que los jugadores puedan tomar decisiones — hoy lo cumple `InicioDiaModal.vue`, de descarte obligatorio).**
     * Se ajusta el termómetro en el tablero sumando o restando el Modificador Térmico a la base de 20°C.
     * Se sincroniza el "Ábaco de Fermentación" (20°C = 4 Pasos; 25°C = 5 Pasos; 30°C = 6 Pasos).
     * Se aplican Anomalías Biológicas instantáneamente (ej. +1 Vitalidad para todos) o Efectos Pasivos.

@@ -26,7 +26,7 @@ import random
 from dataclasses import dataclass, field
 from enum import Enum
 from types import MappingProxyType
-from typing import Any, Callable, Dict, List, Mapping, Optional, Set, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
 
 from events import EventoTipo, EventSink, GameEvent
 from exceptions import (
@@ -602,21 +602,18 @@ class Market:
 # SECCIÓN 3: MOTOR PRINCIPAL DEL JUEGO
 # ===========================================================================
 
-# Alias de tipo para el callback de turno de jugador (Fase II).
-TurnCallback = Callable[["GameEngine", Player], None]
-
 
 class Fase(str, Enum):
     """
     Fase actual del Día de Laboratorio, expuesta por ``GameEngine.fase_actual``.
 
-    Sostiene la máquina de estado de turno no bloqueante (``iniciar_dia``,
-    ``jugador_activo``, ``terminar_turno_actual``, ``pasar_turno``,
-    ``resolver_fase_III``) que coexiste con la ruta bloqueante original
-    (``ejecutar_dia_laboratorio`` con callback síncrono, usada por la CLI).
-    Ambas rutas comparten la misma implementación de ronda de turnos
-    (``_preparar_fase_II`` / ``_avanzar_a_siguiente_elegible``) para que no
-    puedan divergir en su comportamiento.
+    Sostiene la máquina de estado de turno (``iniciar_dia``, ``jugador_activo``,
+    ``terminar_turno_actual``, ``pasar_turno``, ``resolver_fase_III``), que es la
+    ÚNICA forma de conducir el motor. Hubo una segunda, bloqueante y con callback
+    síncrono (``ejecutar_dia_laboratorio``), que existía para darle a la CLI su
+    punto de pausa entre días; se retiró junto con la CLI, porque el servidor
+    nunca la usó y dos maneras de conducir el mismo bucle son dos maneras de
+    divergir.
     """
 
     PREPARACION = "preparacion"
@@ -655,7 +652,14 @@ class GameEngine:
         engine = GameEngine(players=players, environment=env, market=market)
 
         while not engine.partida_terminada:
-            fin = engine.ejecutar_dia_laboratorio(ejecutar_turno_jugador=mi_handler)
+            engine.iniciar_dia()
+            while (player := engine.jugador_activo) is not None:
+                mi_handler(engine, player)          # resuelve una visita
+                engine.terminar_turno_actual()      # ...si el handler no la cerró ya
+            fin = engine.resolver_fase_III()
+
+    (``tests/_bot.py:jugar_dia`` empaqueta ese bucle, con el matiz del nonce que
+    distingue al handler que cierra su propia visita del que no.)
     """
 
     def __init__(
@@ -857,72 +861,20 @@ class GameEngine:
     # BUCLE PRINCIPAL
     # ==================================================================
 
-    def ejecutar_dia_laboratorio(
-        self,
-        ejecutar_turno_jugador: Optional[TurnCallback] = None,
-        on_fase_i_complete: Optional[Callable[["GameEngine"], None]] = None,
-    ) -> bool:
-        """
-        Orquesta un Día de Laboratorio completo (ronda de juego).
-
-        Ejecuta las tres fases de forma secuencial y estricta:
-          1. :meth:`fase_I_ambiente`   — clima, jerarquía y refresco de mercado.
-          2. :meth:`fase_II_accion`    — turnos intercalados de jugadores (round-robin).
-          3. :meth:`resolver_fase_III` — cinética biológica, desgaste y evaluación de fin.
-
-        Este método SIEMPRE se detiene al final del día actual (no encadena
-        automáticamente al Día siguiente) para preservar el punto de pausa
-        que la CLI usa entre días (main.py: reporte + "Pulsa Enter…").
-
-        Incluso si se activa un gatillo de fin de partida durante la Fase II o III,
-        el día en curso se completa íntegramente antes de retornar ``True``
-        (regla de CORE_MECHANICS.md §3: «se termina el Día de Laboratorio en curso»).
-
-        Al final incrementa el contador de días del entorno.
-
-        Args:
-            ejecutar_turno_jugador: Callback opcional ``(engine, player) -> None``
-                invocado UNA VEZ por jugador por cada vuelta del round-robin de Fase II.
-                Cuando es ``None``, los turnos de los jugadores se omiten.
-            on_fase_i_complete: Callback opcional ``(engine) -> None`` invocado
-                justo después de que la Fase I concluye y antes de iniciar la Fase II.
-                Permite a la CLI mostrar el evento climático antes de pedir acciones.
-
-        Returns:
-            True si la partida termina al concluir este día, False si continúa.
-
-        Raises:
-            GameAlreadyOverError: Si se intenta ejecutar un día después de que
-                la partida ya haya terminado.
-        """
-        if self._partida_terminada:
-            raise GameAlreadyOverError(
-                f"La partida ya terminó en el Día {self._environment.dia_actual - 1}. "
-                "No se pueden ejecutar más Días de Laboratorio."
-            )
-
-        self.fase_I_ambiente()
-        if on_fase_i_complete is not None:
-            on_fase_i_complete(self)
-        self.fase_II_accion(ejecutar_turno_jugador)
-        return self.resolver_fase_III()
-
     def iniciar_dia(self) -> None:
         """
         Inicia el Día de Laboratorio actual sin bloquear a la espera de
         turnos: ejecuta la Fase I (automática) y deja el motor listo con el
         cursor de turno de Fase II posicionado en el primer jugador elegible.
 
-        Alternativa no bloqueante a ``ejecutar_dia_laboratorio`` para
-        llamadores externos (p. ej. un servidor) que necesitan resolver el
-        turno de cada jugador en una llamada independiente en vez de un
-        callback síncrono. Tras llamar a este método, se consulta
+        Punto de entrada del día para llamadores externos (``server/app.py``),
+        que resuelven el turno de cada jugador en una llamada HTTP
+        independiente. Tras llamar a este método, se consulta
         ``jugador_activo`` y se resuelven acciones hasta que sea ``None``,
         y luego se llama a ``resolver_fase_III()``.
 
-        Comparte ``_preparar_fase_II()`` con ``fase_II_accion()`` (la ruta
-        bloqueante) para que ambas rutas no puedan divergir en el reset de
-        PA/orden de turno ni en la condición de elegibilidad.
+        Delega en ``_preparar_fase_II()`` el reset de PA/flags, el orden de
+        turno y el posicionamiento del cursor.
 
         Raises:
             GameAlreadyOverError: Si la partida ya terminó.
@@ -1097,7 +1049,8 @@ class GameEngine:
         """
         # 1 + 2: Modificador térmico + efecto pasivo vigente para Fase III.
         #        Environment.aplicar_carta_clima() aplica ambos en un solo paso.
-        #        Adicionalmente se registra la carta para consulta de la CLI.
+        #        Adicionalmente se registra la carta para que los clientes puedan
+        #        mostrarla (server/views.py -> InicioDiaModal.vue).
         self._environment.ultima_carta_clima = carta
         self._environment.aplicar_carta_clima(carta)
 
@@ -1113,54 +1066,6 @@ class GameEngine:
     # FASE II: ACCIÓN
     # ==================================================================
 
-    def fase_II_accion(
-        self,
-        ejecutar_turno_jugador: Optional[TurnCallback] = None,
-    ) -> None:
-        """
-        Fase II: Acción — turnos intercalados (round-robin) hasta que ningún
-        jugador tenga PA ni acciones gratuitas pendientes (CORE_MECHANICS.md §2).
-
-        Flujo:
-          1. ``_preparar_fase_II()`` reinicia PA/flags y calcula el orden de
-             turno (delegado, compartido con la ruta no bloqueante).
-          2. Mientras exista un ``jugador_activo``, se invoca el callback UNA
-             SOLA VEZ; si el callback no cerró la visita él mismo (p. ej.
-             llamando a ``pasar_turno``), se cierra aquí con
-             ``terminar_turno_actual()`` — una invocación de callback por
-             vuelta como máximo, igual que el comportamiento original.
-          3. El bucle termina cuando ``jugador_activo`` es ``None``.
-
-        Un jugador con 0 PA conserva su elegibilidad mientras aún no haya
-        usado su Acción A u Horas Extras este día (ver ``jugador_activo``);
-        el callback puede usar esa visita para ejecutar la acción gratuita
-        pendiente. Este es el único cambio de comportamiento observable
-        frente a la implementación original: antes, un jugador sin PA nunca
-        volvía a ser visitado, y por lo tanto no podía alimentar su cultivo
-        ni usar Horas Extras una vez agotados sus PA por otras vías.
-
-        Args:
-            ejecutar_turno_jugador: Callback ``(engine, player) -> None`` invocado
-                una vez por jugador por vuelta del round-robin. ``None`` durante
-                pruebas de integración del bucle de fases (equivalente a una
-                Fase II sin jugadores: la ronda se da por agotada de inmediato).
-        """
-        self._preparar_fase_II()
-
-        if ejecutar_turno_jugador is None:
-            self._fase = Fase.FASE_III
-            return
-
-        while (player := self.jugador_activo) is not None:
-            nonce_antes = self._turno_nonce
-            ejecutar_turno_jugador(self, player)
-            # Si el callback ya cerró la visita él mismo (llamando a
-            # terminar_turno_actual()/pasar_turno() directamente -- p. ej.
-            # la Acción P de la CLI, ver main.py), el nonce ya cambió y no
-            # se debe cerrar una segunda vez.
-            if self._turno_nonce == nonce_antes:
-                self.terminar_turno_actual()
-
     # ==================================================================
     # MÁQUINA DE ESTADO DE TURNO (API no bloqueante, Fase II)
     # ==================================================================
@@ -1173,9 +1078,9 @@ class GameEngine:
         calcula el orden de turno del día (Investigador Jefe primero), y
         posiciona el cursor en el primer jugador elegible.
 
-        Compartido por ``fase_II_accion()`` (ruta bloqueante, usada por la
-        CLI) e ``iniciar_dia()`` (ruta de estado explícito) para que ambas
-        no puedan divergir en esta lógica.
+        Lo invoca ``iniciar_dia()``. Fue código compartido mientras existió una
+        segunda ruta con callback (retirada con la CLI); se mantiene como método
+        propio porque es un paso con nombre del día, no un detalle de aquella.
         """
         orden: List[Player] = self._orden_de_turno()
 
@@ -1285,8 +1190,10 @@ class GameEngine:
         Extras) que aún no haya usado este día — a diferencia de agotar los
         PA por otras vías, un pase explícito es una renuncia total al resto
         del día, no solo a las acciones de costo en PA (ver
-        ``_jugador_elegible``). Equivalente a la opción "P" de la CLI
-        (``main.py:_ejecutar_turno_jugador``).
+        ``_jugador_elegible``). Es lo que sirve ``POST /games/{id}/pass``, y el
+        patrón obligatorio para cualquier código que ceda un turno: ver
+        ``tests/_bot.py:heuristic_turn``, cuyo caso final llama aquí en vez de
+        asignar ``puntos_accion = 0``.
 
         Args:
             player: Debe ser el jugador actualmente activo
@@ -1306,10 +1213,10 @@ class GameEngine:
 
         Deja el motor en ``Fase.TERMINADA`` si la partida concluyó, o de
         vuelta en ``Fase.PREPARACION`` — listo para que un llamador externo
-        invoque ``iniciar_dia()`` (o ``ejecutar_dia_laboratorio``) para el
-        siguiente Día de Laboratorio. A propósito NO encadena
-        automáticamente la Fase I del día siguiente, para no romper la
-        pausa/reporte por día que usa la CLI entre días.
+        invoque ``iniciar_dia()`` para el siguiente Día de Laboratorio. A
+        propósito NO encadena automáticamente la Fase I del día siguiente: el
+        cliente tiene que poder mostrar el informe de Fase III antes de que el
+        estado avance bajo sus pies (``FermentationReportModal.vue``).
 
         Returns:
             True si la partida terminó con este día, False si el motor

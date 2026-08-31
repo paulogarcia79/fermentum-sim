@@ -19,7 +19,7 @@ import random
 
 from actions import ActionManager
 from engine import Fase, GameEngine
-from main import setup_game
+from bootstrap import create_game
 from models import Player
 
 from tests._bot import heuristic_turn
@@ -36,7 +36,7 @@ def _resolver_visita(engine: GameEngine, player: Player, manager: ActionManager)
 
 def test_headless_driver_plays_multiple_dias_sin_callback() -> None:
     random.seed(777)
-    engine = setup_game(["Ada", "Chen"])
+    engine = create_game(["Ada", "Chen"])
     manager = ActionManager(engine)
 
     for _ in range(3):
@@ -59,7 +59,7 @@ def test_jugador_sin_pa_conserva_elegibilidad_para_accion_gratuita() -> None:
     """Antes de la Milestone 1, un jugador con puntos_accion == 0 nunca
     volvia a ser visitado, aunque no hubiera usado Accion A ni Horas
     Extras -- quedaba bloqueado de alimentar su cultivo el resto del dia."""
-    engine = setup_game(["Ada", "Chen"])
+    engine = create_game(["Ada", "Chen"])
     engine.iniciar_dia()
 
     jugador = engine.jugador_activo
@@ -89,7 +89,7 @@ def test_pasar_turno_renuncia_tambien_a_acciones_gratuitas() -> None:
     """pasar_turno() debe ser una renuncia total al resto del dia, no solo
     a los PA -- a diferencia de simplemente quedarse sin PA por gastarlos
     en otras acciones."""
-    engine = setup_game(["Ada", "Chen"])
+    engine = create_game(["Ada", "Chen"])
     engine.iniciar_dia()
 
     jugador = engine.jugador_activo
@@ -110,7 +110,7 @@ def test_pasar_turno_renuncia_tambien_a_acciones_gratuitas() -> None:
 def test_turno_orden_expone_la_secuencia_del_dia_como_copia() -> None:
     """engine.turno_orden: indices en players, orden de juego, [0] = Jefe.
     Debe ser una copia defensiva (mutarla no afecta al motor)."""
-    engine = setup_game(["Ada", "Chen", "Bo"])
+    engine = create_game(["Ada", "Chen", "Bo"])
     engine.iniciar_dia()
 
     orden = engine.turno_orden

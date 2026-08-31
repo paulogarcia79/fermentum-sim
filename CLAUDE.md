@@ -5,14 +5,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 A simulation of **Fermentum**, a 1-4 player Eurogame about resource management and
-engine-building (fermenting bread), being ported from a single-process CLI to an online
-multiplayer web app: the Python rules engine is kept as-is and a thin HTTP layer + a Vue 3
-frontend are added on top, rather than porting the rules to another stack. The core simulation
+engine-building (fermenting bread). It began as a single-process CLI and **is now an online
+multiplayer web app**: the Python rules engine was kept as-is and a thin HTTP layer + a Vue 3
+frontend were added on top, rather than porting the rules to another stack. That port is
+finished, and **the CLI has been removed** — `main.py`, `GameEngine.ejecutar_dia_laboratorio`
+and `fase_II_accion` are gone, so `server/` is the only way to play and the turn state machine
+is the only way to drive the engine. The rules engine
 (`models.py`/`engine.py`/`actions.py`/`bootstrap.py`/`events.py`/`serialization.py`/
-`disponibilidad.py`/`main.py`) has zero external dependencies — everything is stdlib Python 3.12.
-The optional `server/` package (headless HTTP backend) needs `starlette`+`uvicorn`, kept in its
-own `pyproject.toml` dependency group so a CLI-only checkout never has to install a web
-framework. `pytest`+`httpx` are dev-only. `web/` (Vue 3 + TypeScript + Vite, see `web/README.md`)
+`disponibilidad.py`) still has zero external dependencies — everything is stdlib Python 3.12 —
+and still imports nothing from `server/`; the dependency goes one way. `server/` (Starlette +
+uvicorn) is now a **required** dependency rather than an optional group, since without it there
+is no application. `pytest`+`httpx` are dev-only. `web/` (Vue 3 + TypeScript + Vite, see `web/README.md`)
 is a fully separate npm project with its own dependencies — nothing in the Python side depends on
 it or on Node being installed.
 
@@ -74,14 +77,11 @@ already disagrees with the code on many points. Never treat it as the source of 
 ## Commands
 
 Core simulation has zero dependencies; dev (`pytest`, `httpx`) and `server` (`starlette`,
-`uvicorn`) are separate `pyproject.toml` optional-dependency groups. Use the project venv at
-`.venv/` (create with `python3 -m venv .venv && .venv/bin/pip install -e ".[dev,server]"` if it
-doesn't exist yet).
+`uvicorn`) is a required dependency; only `dev` (`pytest`, `httpx`) is an optional group. Use the project venv at
+`.venv/` (create with `python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"` if it
+doesn't exist yet — `starlette`/`uvicorn` come in as ordinary dependencies).
 
 ```bash
-# Run the interactive CLI game
-python3 main.py
-
 # Run the legacy integration suite (plain script, not pytest — asserts via print + sys.exit code)
 python3 test_actions_suite.py
 
@@ -102,10 +102,11 @@ cd web && npm run build
 
 `tests/test_golden_game.py` is a characterization test: it plays a fully deterministic game
 (seeded global RNG, two scripted "bot" players from `tests/_bot.py`) through several full
-Fase I/II/III cycles using the current `GameEngine.ejecutar_dia_laboratorio` blocking-callback
-API, and diffs the final state against `tests/golden/day4_2p_seed1234.json`. Its purpose is to
-give behavior-preserving refactors of `engine.py` (e.g. a turn-state-machine refactor) a
-regression baseline to check against, since none existed before. If a deliberate rules change
+Fase I/II/III cycles via `tests/_bot.py:jugar_dia`, and diffs the final state against
+`tests/golden/day4_2p_seed1234.json`. Its purpose is to give behavior-preserving refactors of
+`engine.py` a regression baseline to check against, since none existed before — and it has since
+earned that twice over: it is what proved the removal of the blocking-callback path neutral, by
+passing **unregenerated** after the migration. If a deliberate rules change
 alters this golden game's outcome, regenerate the snapshot rather than hand-editing it.
 
 `test_actions_suite.py` is a hand-rolled suite (`check()` / `xraises()` helpers) that exercises
@@ -207,17 +208,31 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
 - **`engine.py`** — turn/phase orchestration: `GameEngine` runs the three-phase Day of Lab loop,
   plus `Market` (recipe market with refresh protocol, the 3-track Bolsa de Harinas, and the
   Mercado de Tendencias deck — see the GDD v0.0.2 note above; there is no supply-lot market
-  anymore) and endgame/scoring (`resolver_horneado`, `calcular_ranking_final`). Two ways to drive
-  Phase II, sharing one
-  round-robin implementation (`_preparar_fase_II` / `_avanzar_a_siguiente_elegible`) so they can't
-  diverge:
-  - **Blocking-callback path** (used by the CLI): `ejecutar_dia_laboratorio(ejecutar_turno_jugador)`
-    → `fase_I_ambiente` → `fase_II_accion(callback)` → `resolver_fase_III()`. Runs exactly one day
-    and stops (does not auto-chain into the next day's Phase I), preserving `main.py`'s per-day
-    pause/report point.
-  - **Non-blocking state-machine path** (used by `server/app.py`): `iniciar_dia()` then poll
-    `jugador_activo` / call `terminar_turno_actual()` or `pasar_turno(player)` per visit, then
-    `resolver_fase_III()`. See `Fase` enum and `GameEngine.turno_nonce`.
+  anymore) and endgame/scoring (`resolver_horneado`, `calcular_ranking_final`).
+
+  **One way to drive Phase II**, the turn state machine (used by `server/app.py`):
+  `iniciar_dia()` then poll `jugador_activo` / call `terminar_turno_actual()` or
+  `pasar_turno(player)` per visit, then `resolver_fase_III()`. See the `Fase` enum and
+  `GameEngine.turno_nonce`. It runs exactly one day and stops — it does **not** auto-chain into
+  the next day's Phase I, so a client can show the Phase III report before state moves under it
+  (`FermentationReportModal.vue`).
+
+  There used to be a second, blocking path — `ejecutar_dia_laboratorio(callback)` →
+  `fase_I_ambiente` → `fase_II_accion(callback)` → `resolver_fase_III()` — which existed to give
+  the CLI its per-day pause point. It was **removed with the CLI**; `server/` never used it, and
+  two ways to drive one loop are two ways to drift. Worth knowing how that removal was made safe,
+  because the same trick applies next time: the two were exactly equivalent (both went through
+  `_preparar_fase_II` / `_avanzar_a_siguiente_elegible`), so the three tests that drove the
+  callback path were migrated onto the state machine **first**, and
+  `tests/test_golden_game.py` then passed against the **unmodified** snapshot. Passing without
+  regenerating is the proof; regenerating and eyeballing the diff would not have been.
+
+  The callback loop now lives once, in `tests/_bot.py:jugar_dia`, and **its nonce check is
+  load-bearing, not defensive**: free actions (Alimentar, Descarte, Horas Extras, Pedido de
+  Urgencia) don't end a visit and `heuristic_turn` returns as soon as one succeeds, so a driver
+  that always closes would rob a visit and one that never closes would spin forever. Comparing
+  `turno_nonce` across the callback is what tells the two apart — and getting it wrong fails
+  *only* the golden game, since the other two consumers pass turn themselves.
 
   **Turn-economy rule (deliberate, diverges from `ACTIONS_REGISTRY.md`'s literal CLI-original
   behavior)**: Acción A (Alimentar), Acción E (Pliegues), Horas Extras and Pedido de Urgencia do
@@ -226,11 +241,14 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   spent both PA elsewhere stays eligible for further visits solely to use an unused free action
   (`GameEngine._jugador_elegible`: `puntos_accion > 0 or not
   accion_alimentar_usada or not horas_extras_usadas or datos_investigacion >= 1 or ("E" not in
-  acciones_pa_usadas_hoy and monedas >= min(PRECIO_PLIEGUES.values()))`). An explicit pass is a full forfeiture of
+  acciones_pa_usadas_hoy and monedas >= min(PRECIO_PLIEGUES.values())) or ("descarte" not in
+  acciones_pa_usadas_hoy and (monedas >= min(PRECIO_DESCARTE.values()) or reserva_agua >=
+  min(COSTE_REFRESCO_AGUA.values())))` — note the Descarte clause checks **both** resources,
+  since its two directions are priced in different ones). An explicit pass is a full forfeiture of
   the rest of the day, including unused free actions — anything that ends a player's turn **must**
   call `engine.pasar_turno(player)`, never assign `player.puntos_accion = 0` directly, or that
-  player will be revisited forever (see `main.py`'s `"P"` branch and `tests/_bot.py`'s fallback for
-  the required pattern).
+  player will be revisited forever (see `tests/_bot.py:heuristic_turn`'s final fallback for the
+  required pattern).
 - **`actions.py`** — `ActionManager`, one `accion_X_*` method per action in
   `ACTIONS_REGISTRY.md` (A: Alimentar, B: Iniciar Receta, C: Visitar el Mercado, D: Implementar
   Mejora, E: Técnica/Pliegues, F: Hornear y Vender, G: Investigar Protocolo, H: Re-cultivo Manual, I:
@@ -468,12 +486,13 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
     the 5th *successful* bake ends the game.
   - **`Player.desglose_maestria` is now the single source of the formula.** `puntos_maestria_final`
     is `sum(desglose_maestria.values())`, and its **insertion order is the display order** for
-    every consumer. This was forced, not cosmetic: `main.py` had recomputed all six terms by hand,
-    and that duplicate had already drifted — it never printed Conversión de Riqueza, so the CLI
-    breakdown did not sum to its own TOTAL. `tests/test_variedad_recetas.py` pins the key list.
+    every consumer. This was forced, not cosmetic: the CLI had recomputed all six terms by hand,
+    and that duplicate had already drifted — it never printed Conversión de Riqueza, so its
+    breakdown did not sum to its own TOTAL. That duplication is a large part of why the CLI was
+    eventually deleted rather than maintained. `tests/test_variedad_recetas.py` pins the key list.
   - **Variedad is the *first* tiebreaker**, ahead of Vitalidad (`calcular_ranking_final`'s sort
-    tuple, `CORE_MECHANICS.md` §Desempate). `RankingView.vue` and `main.py`'s table therefore order
-    their columns PM → Tipos → Vitalidad → Datos, so a tie reads left to right.
+    tuple, `CORE_MECHANICS.md` §Desempate). `RankingView.vue` therefore orders
+    its columns PM → Tipos → Vitalidad → Datos, so a tie reads left to right.
 
   Everything new is a `@property`, so `dataclasses.asdict` skips it: the golden snapshot is
   untouched, nothing persisted changed, and **no `VERSION_FORMATO` bump**. `server/views.py` ships
@@ -549,10 +568,6 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   (`PatrocinioCard` changed shape and old pickles hold the pre-cut economy). The golden snapshot
   was regenerated; its diff is exactly 36×3 payouts + 2 vitalidades + 1 starting Dato, nothing
   else. Tests: `tests/test_renta_panaderia.py`.
-- **`main.py`** — CLI only: rendering (`mostrar_estado_jugador`, `mostrar_mercado`, colored
-  output helpers), prompting (`_pedir_int`, `_pedir_opcion`, `_params_accion_*`), and the
-  `main()` entrypoint / `setup_game()`. Contains no rules logic — it calls into `engine`/
-  `actions` and displays the result.
 - **`events.py`** — `GameEvent`/`EventoTipo`/`EventSink`: a structured log of automatic,
   no-player-input state changes (chief-researcher assignment, climate reveal, market refresh,
   end-of-day discard of the market's oldest recipe, mass advance, structural collapse, every
@@ -561,9 +576,9 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   `GameEngine` always keeps the full log (`engine.eventos`) and optionally forwards each event,
   at emission time, to an injected `event_sink` — this is what `server/sessions.py`'s
   `GameSession.difundir_evento` plugs into (Milestone 5) to push events to connected SSE clients
-  live, with no polling needed on the happy path. `main.py`'s `_reporte_fermentacion` is built
-  entirely from
-  `engine.eventos[since_index:]` — there's no before/after snapshot-diffing anywhere in the
+  live, with no polling needed on the happy path. The Phase III report is built entirely from
+  `engine.eventos[since_index:]` (`FermentationReportModal.vue`) — there's no before/after
+  snapshot-diffing anywhere in the
   codebase anymore; an automatic event (like a structural collapse costing a player several
   points with no action on their part) is always something the engine explicitly said happened,
   not something a caller has to infer from a state diff. When adding new automatic engine
@@ -571,9 +586,11 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   reconstruct it from before/after state.
 
 - **`bootstrap.py`** — `create_game(nombres: List[str]) -> GameEngine`: the actual game-construction
-  logic (shuffled basic-recipe assignment, player setup), with no CLI dependency, so `server/`
-  never has to import `main.py`. `main.py:setup_game` is a thin wrapper that only fills in
-  default player names for the CLI's convenience, then delegates here.
+  logic (shuffled basic-recipe assignment, Patrocinio deal, Day-1 turn order). The **only**
+  constructor of a `GameEngine` outside tests that deliberately want a degenerate board; used by
+  `server/sessions.py` and by every test that needs a real game. It was extracted here so the
+  server would not have to import the CLI, and it outlived the CLI unchanged — which was the
+  point: building a game never depended on who displayed it.
 - **`serialization.py`** — `snapshot(engine) -> dict`: the full, *unredacted* state via
   `dataclasses.asdict`, reused by both `tests/test_golden_game.py` and `server/views.py`. Works
   with no schema library because every domain dataclass already serializes cleanly and every
@@ -710,7 +727,7 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   `Last-Event-ID` handles the common disconnect case already, so the fallback poll is a safety net,
   not the primary path. `src/types.ts` hand-mirrors the `server/views.py` JSON shape — there's no
   shared schema, so a backend field rename needs a matching edit there. `src/components/acciones/`
-  has one component per player action, mirroring `main.py`'s `_params_accion_*` functions, reading
+  has one component per player action, reading
   `acciones_disponibles` from the state to decide what's clickable rather than reimplementing
   `ActionManager`'s rules. The Phase III report renders as a mandatory dismissible modal
   (`FermentationReportModal.vue`), not a log line — an automatic structural collapse can cost a
@@ -1013,8 +1030,6 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   changed" badge, since the state view is refetched wholesale and a per-panel diff would be a
   feature of its own.
 
-`agents.py` is currently an empty placeholder file.
-
 ### Error handling
 
 All game-rule failures raise semantic exceptions from `exceptions.py` (never bare `Exception`,
@@ -1026,7 +1041,7 @@ All game-rule failures raise semantic exceptions from `exceptions.py` (never bar
 - `InvalidActionError` — malformed/invalid call parameters
 - Engine-flow errors: `PhaseViolationError`, `GameAlreadyOverError`,
   `InsufficientPlayersError`, `MarketSlotEmptyError`, `NotYourTurnError` (server-layer turn
-  ownership; the CLI never raises it since its callback only fires for the correct player)
+  ownership — every route funnels through `GameSession.asiento_por_token`)
 
 `server/errors.py` holds a second, separate hierarchy (`RoomError` → `RoomNotFoundError`, etc.)
 for lobby/session problems that aren't game-rule violations — kept out of `exceptions.py` so that

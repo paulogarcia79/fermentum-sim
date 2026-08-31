@@ -1116,12 +1116,12 @@ class Player:
         presentación (CORE_MECHANICS.md §3).
 
         Única fuente de verdad de la fórmula: ``puntos_maestria_final`` no es
-        más que la suma de estos valores, y tanto el desglose del CLI
-        (``main.py``) como el de la pantalla de ranking web lo recorren en
-        lugar de recalcular los términos por su cuenta. Antes de existir este
-        mapa la aritmética estaba duplicada en ``main.py``, que llevaba
-        tiempo omitiendo «Conversión de Riqueza» y por tanto imprimiendo un
-        desglose que no sumaba su propio TOTAL.
+        más que la suma de estos valores, y la pantalla de ranking web recorre
+        el mapa en lugar de recalcular los términos por su cuenta. Antes de
+        existir, la aritmética estaba además duplicada a mano en la CLI, que
+        llevaba tiempo omitiendo «Conversión de Riqueza» y por tanto imprimía
+        un desglose que no sumaba su propio TOTAL. Esa duplicación es lo que
+        este mapa existe para impedir.
 
         El ORDEN DE INSERCIÓN es carga útil, no decoración: es el orden en
         que lo pintan todos los consumidores (positivos primero,

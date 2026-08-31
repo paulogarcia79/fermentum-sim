@@ -11,7 +11,7 @@ Contenido:
 Estándares aplicados (ARCHITECTURE.md):
   · Separación de Responsabilidades: este módulo solo resuelve acciones de
     jugador. La orquestación del bucle y la cinética biológica pertenecen al
-    engine.py. El motor inyecta ActionManager vía TurnCallback.
+    engine.py.
   · Strict Type Hinting (PEP 484) en todos los atributos y retornos.
   · Principio Fail-Fast: cada método de acción valida TODAS las precondiciones
     antes de modificar cualquier estado. Si alguna falla, se lanza una
@@ -25,11 +25,11 @@ Patrón de uso::
 
     manager = ActionManager(engine)
 
-    def turno_jugador(engine: GameEngine, player: Player) -> None:
+    engine.iniciar_dia()
+    while (player := engine.jugador_activo) is not None:
         manager.accion_A_alimentar(player, tipo_harina="Blanca")
-        manager.accion_F_hornear(player, slot_index=0)
-
-    engine.ejecutar_dia_laboratorio(ejecutar_turno_jugador=turno_jugador)
+        manager.accion_F_hornear(player, slot_index=0)   # cierra la visita
+    engine.resolver_fase_III()
 """
 
 from __future__ import annotations
