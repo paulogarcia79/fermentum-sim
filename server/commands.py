@@ -44,6 +44,7 @@ ACCIONES_QUE_TERMINAN_TURNO: Dict[str, bool] = {
     "F": True,
     "G": True,
     "simposio": True,
+    "jefatura": True,
     "H": True,
     "I": True,
     "horas_extras": False,
@@ -187,6 +188,11 @@ def _despachar(
             player,
             indice=_requerir_int(params, "indice"),
         )
+
+    if accion == "jefatura":
+        # Sin parámetros: el espacio es único en la mesa y su único efecto
+        # configurable es quién lo ocupa, que ya viene en `player`.
+        return manager.accion_reclamar_jefatura(player)
 
     if accion == "H":
         return manager.accion_H_recultivo_manual(player)

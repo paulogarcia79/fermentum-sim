@@ -45,8 +45,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 14
+VERSION_FORMATO = 15
 """
+Bumped a 15: `GameEngine` gana `_jefatura_reclamada_por`. La Jefatura ya no se
+deduce de la Vitalidad: se reclama con un espacio de accion y la reclamacion
+pendiente vive en el motor. Un pickle viejo trae motores sin ese atributo, y la
+primera Fase I tras restaurar lo leeria.
+
 Bumped a 14: `Player` gana `contrato_molino`, el Contrato con el Molino que produce
 harina cada Fase III. Un pickle viejo trae `Player`s sin el campo, y al restaurarse
 `_entregar_rendimiento_molino` leeria un atributo inexistente en la primera noche.

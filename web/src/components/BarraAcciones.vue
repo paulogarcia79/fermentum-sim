@@ -236,6 +236,13 @@ async function pasarDeVerdad() {
     <ModalG v-if="modalAbierto === 'G'" @cerrar="cerrar" />
     <ModalSimposio v-if="modalAbierto === 'simposio'" @cerrar="cerrar" />
     <ModalConfirmacion
+      v-if="modalAbierto === 'jefatura'"
+      titulo="Reclamar la Jefatura (1 PA)"
+      :descripcion="descripcionesAcciones.jefatura"
+      accion="jefatura"
+      @cerrar="cerrar"
+    />
+    <ModalConfirmacion
       v-if="modalAbierto === 'H'"
       titulo="Re-cultivo Manual (1 PA)"
       :descripcion="descripcionesAcciones.H"

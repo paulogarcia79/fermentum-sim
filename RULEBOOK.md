@@ -118,10 +118,11 @@ Fermentum usa dos recursos económicos independientes, que no se convierten entr
   Vender, y los **Ingresos de Panadería**, la renta que cada pan ya horneado sigue produciendo
   todas las noches (ver [9.4](#94-ingresos-de-panadería)). Se gastan comprando harina y agua en el
   Mercado, adquiriendo recetas y pagando Pliegues.
-- **Datos de Investigación:** la divisa técnica del laboratorio. Se ganan horneando en Zona
-  Óptima y sacrificando un pan del Archivo en el Simposio Técnico; algunos Patrocinios reparten
-  alguno al empezar. Se gastan en instalar Tecnologías, en Horas Extras, en el Pedido de Urgencia
-  y en el Inóculo de Emergencia.
+- **Datos de Investigación:** la divisa técnica del laboratorio. Se ganan **reclamando la
+  Jefatura** (1 por día, y solo se la lleva un jugador de la mesa), horneando en Zona Óptima y
+  sacrificando un pan del Archivo en el Simposio Técnico; algunos Patrocinios reparten alguno al
+  empezar. Se gastan en instalar Tecnologías, en Horas Extras, en el Pedido de Urgencia y en el
+  Inóculo de Emergencia.
 
 > **La panadería es un motor, no una caja registradora.** Un pan horneado no se cobra y se olvida:
 > se queda en tu Archivo produciendo Monedas cada noche. Por eso hornear pronto vale más que
@@ -222,15 +223,23 @@ Liderada por el Investigador Jefe, esta fase se resuelve en el siguiente orden:
 
 ### 5.1 Actualización de Jerarquía
 
-El token de Investigador Jefe se reasigna al jugador con el nivel de **Vitalidad más alto** en su
-cultivo base.
+El token de Investigador Jefe pasa a quien **reclamó la Jefatura** ayer, ocupando su espacio de
+acción (1 PA — ver [Reclamar la Jefatura](#7-catálogo-de-acciones)).
 
-- **Desempate:** mayor cantidad de Datos de Investigación.
-- **Empate persistente:** se mantiene el orden de turno del día anterior.
+- **Si nadie la reclamó, la ficha se queda donde está:** el Jefe de ayer sigue siéndolo hoy. No hay
+  rotación automática.
+- La reclamación **vale para un día y se consume**: quien reclamó el Día 3 abre el Día 4, y para
+  abrir también el Día 5 tiene que volver a reclamarla.
 - El Investigador Jefe actúa primero en la Fase II y tiene prioridad en la elección de recetas e
   insumos.
 - *Excepción:* en el Día 1, el orden lo determina la Iniciativa de las Cartas de Patrocinio (ver
-  [Preparación de la Partida](#3-preparación-de-la-partida)), no la Vitalidad.
+  [Preparación de la Partida](#3-preparación-de-la-partida)) — nadie ha podido reclamar todavía.
+
+> **La Jefatura ya no se hereda: se compra.** Antes la recibía automáticamente quien tuviera más
+> Vitalidad, lo que significaba que el orden de turno no lo decidía nadie: se leía del tablero. Ir
+> primero es ahora una jugada que cuesta un Punto de Acción entero, y quien la paga se lleva además
+> un Dato de Investigación — la única fuente de Datos de toda la partida que no depende de hornear
+> bien.
 
 ### 5.2 Resolución del Clima
 
@@ -291,7 +300,9 @@ Cada jugador dispone de **2 Puntos de Acción (PA)** por Día de Laboratorio.
   Día de Laboratorio, por jugador** — el investigador marca el espacio con su color en cuanto lo
   visita, bloqueándolo para él (no para el resto de jugadores) hasta el día siguiente. Con 2-3 PA
   (Horas Extras incluida) esto significa como máximo un uso de cada espacio distinto por día, nunca
-  el mismo espacio dos veces. El tope es una propiedad **del espacio**, no del coste. Alimentar el
+  el mismo espacio dos veces. El tope es una propiedad **del espacio**, no del coste. **Reclamar la
+  Jefatura es la excepción y va al revés:** ese espacio se agota para TODA la mesa en cuanto un
+  jugador lo visita, no solo para él. Alimentar el
   Cultivo y Horas Extras se limitan con su propio marcador de "ya usada", y Pedido de Urgencia no
   tiene límite alguno (ver sus entradas en el Catálogo de Acciones).
 - **Sin escasez de insumos:** a diferencia de las recetas del mercado (que sí ocupan un espacio
@@ -484,6 +495,27 @@ Es la **única forma de sacar un pan del Archivo**, y hacerlo cuesta, todo a la 
 Proyectos ni de una estación de fermentación. Para descartar de la Carpeta está la propia acción
 Investigar Protocolo cuando la carpeta está llena; y **abandonar una masa ya no es posible en
 absoluto** (ver [9.2](#92-colapso-estructural-sobre-fermentación)).
+
+#### Reclamar la Jefatura
+
+**Costo:** 1 PA. Ganas **1 Dato de Investigación** en el acto y abres la Fase II **de mañana** como
+Investigador Jefe.
+
+**Límite: uno por día en toda la mesa.** Este es el único espacio del tablero que no se agota por
+jugador sino para todos a la vez: en cuanto alguien coloca su peón aquí, nadie más puede reclamarla
+ese día. Ocuparlo no es solo usarlo — es quitárselo a los demás.
+
+El efecto llega mañana porque el orden de turno se fija una sola vez, en la Fase I, y no se
+rebaraja a media jornada: lo que compras es la salida de mañana, no la de hoy. **Reclamarla siendo
+ya el Jefe es legal** y cuesta lo mismo — es la única manera de retenerla, porque aunque sin
+reclamación la ficha se queda donde está, cualquiera puede venir a comprarla.
+
+> **Un Punto de Acción entero por salir primero es caro, y debe serlo.** A cambio te llevas el
+> Dato, y ahí está la otra mitad del asunto: es la única fuente de Datos de Investigación de la
+> partida que no pasa por hornear en Zona Óptima. Antes, quien horneaba bien primero acumulaba
+> también la divisa técnica y el resto de la mesa se quedaba sin combustible para Horas Extras y
+> Pedidos de Urgencia. Aquí entra **1 Dato por día en total**, repartido por rotación y no por
+> riqueza: lo limita la competencia, no el precio.
 
 ### Acciones auxiliares y de emergencia (Costo: 0 PA)
 

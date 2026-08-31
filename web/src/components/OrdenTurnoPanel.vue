@@ -19,6 +19,14 @@ const orden = computed(() =>
     ? estado.value.turno_orden
     : estado.value.players.map((_, i) => i),
 )
+
+// Quien ocupó hoy el espacio (global) de la Jefatura y abrirá mañana. El orden
+// de arriba es el de HOY y no se rebaraja a media jornada, así que esto se
+// muestra como nota aparte y nunca reordenando la lista.
+const reclamante = computed(() => {
+  const idx = estado.value.jefatura_reclamada_por
+  return idx === null ? null : estado.value.players[idx].nombre
+})
 </script>
 
 <template>
@@ -43,7 +51,14 @@ const orden = computed(() =>
       </li>
     </ol>
 
-    <p class="nota">Se recalcula cada Fase I · Vitalidad › Datos de Investigación</p>
+    <p v-if="reclamante" class="nota reclamada">
+      👑 Mañana abre <strong>{{ reclamante }}</strong
+      >: ya reclamó la Jefatura hoy.
+    </p>
+    <p v-else class="nota">
+      Jefatura libre hoy — se reclama con 1 PA (y paga 1 Dato). Si nadie la reclama, se queda donde
+      está.
+    </p>
   </section>
 </template>
 
@@ -131,5 +146,9 @@ const orden = computed(() =>
   margin: var(--e2) 0 0;
   font-size: var(--t-micro);
   color: var(--tinta-tenue);
+}
+
+.nota.reclamada {
+  color: var(--cobre);
 }
 </style>

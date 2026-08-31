@@ -61,6 +61,9 @@ export const SONIDOS_ACCION: Record<IdSonido, Sonido> = {
   D: principal(494), // Si4
   G: principal(587), // Re5
   simposio: principal(659), // Mi5
+  jefatura: principal(698.46), // Fa5 -- la nota mas alta de la familia: es el
+  // unico espacio global, y que suene por encima del resto ayuda a notar que
+  // acaban de quitarte algo de la mesa, no solo a jugar su turno.
 
   // Hornear y Vender: el momento de cobrar. Arpegio ascendente de tres
   // notas con cola larga -- el unico sonido "de premio" del juego.

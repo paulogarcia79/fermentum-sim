@@ -46,6 +46,7 @@ from actions import (
     HARINA_RECULTIVO_MANUAL,
 )
 from engine import (
+    DATOS_JEFATURA,
     DATOS_SIMPOSIO,
     PRECIO_AGUA,
     PRECIO_CONTRATO_MOLINO,
@@ -616,6 +617,30 @@ def test_cantidad_del_pedido_de_urgencia(docs, doc) -> None:
     )
     assert "(100%)" not in bloque, (
         f"{doc}: el Pedido de Urgencia sigue anunciando una bolsa entera"
+    )
+
+
+@AMBOS
+def test_la_jefatura_se_reclama_y_paga_datos(docs, doc) -> None:
+    """Las dos mitades de la regla nueva, y la vieja explicitamente ausente.
+
+    La asignacion automatica por Vitalidad no es una redaccion superada
+    cualquiera: es la regla que ESTA ocupaba, asi que si sobrevive en §5.1 el
+    reglamento se contradice a si mismo. Se comprueba en la seccion, no en todo
+    el documento, porque la nota que explica el cambio si la menciona a
+    proposito.
+    """
+    bloque = _seccion(docs[doc], "Actualización de Jerarquía", largo=1400)
+    assert "reclam" in bloque.lower(), (
+        f"{doc}: §5.1 no dice que la Jefatura se reclama"
+    )
+    assert not re.search(r"Vitalidad más alta|Vitalidad más alto", bloque), (
+        f"{doc}: §5.1 sigue asignando la Jefatura por Vitalidad"
+    )
+
+    accion = _seccion(docs[doc], "Reclamar la Jefatura", largo=900)
+    assert re.search(r"\b%d\b.{0,40}Dato" % DATOS_JEFATURA, accion), (
+        f"{doc}: la acción no declara que paga {DATOS_JEFATURA} Dato"
     )
 
 

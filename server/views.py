@@ -90,6 +90,10 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
     # Tras el fin de partida conserva el orden del último día — inofensivo:
     # el panel de orden solo se muestra mientras se juega.
     estado["turno_orden"] = engine.turno_orden
+    # Quién ocupó hoy el espacio (global) de la Jefatura, o None si sigue libre.
+    # Público: `disponibilidad` ya lo usa para apagar el espacio, y el panel de
+    # orden de turno lo muestra para explicar por qué está apagado.
+    estado["jefatura_reclamada_por"] = engine.jefatura_reclamada_por
     estado["acciones_disponibles"] = [
         acciones_disponibles(engine, jugador) for jugador in engine.players
     ]

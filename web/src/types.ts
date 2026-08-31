@@ -198,6 +198,11 @@ export interface GameStateView {
   /** Índices de jugador en orden de juego del día ([0] = Investigador Jefe).
    * Ver OrdenTurnoPanel.vue. Puede estar vacío antes del primer día. */
   turno_orden: number[]
+  /** Jugador que ocupó hoy el espacio (GLOBAL) de la Jefatura y abrirá mañana,
+   * o null si sigue libre. A diferencia del resto de espacios, uno por día en
+   * toda la mesa: por eso vive en el estado del motor y no en
+   * `acciones_pa_usadas_hoy` de cada jugador. Ver OrdenTurnoPanel.vue. */
+  jefatura_reclamada_por: number | null
   acciones_disponibles: AccionDisponible[][]
   ranking: { posicion: number; player_idx: number }[]
   /** Índices de jugador que confirmaron terminar la partida antes de

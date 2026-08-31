@@ -35,6 +35,7 @@ from exceptions import (
     InvalidActionError,
     MarketSlotEmptyError,
     PhaseViolationError,
+    RuleViolationError,
 )
 from models import (
     ClimateCard,
@@ -181,6 +182,23 @@ PRECIOS_HARINA: Dict[TipoHarina, Dict[str, Tuple[int, int, int, int, int]]] = {
 """
 Tabla de precios (en Monedas) de la Bolsa de Harinas, indexada por posición del
 visor (1-5, GDD v0.0.2 Módulo III §C). ``precios["compra"][posicion - 1]``.
+"""
+
+DATOS_JEFATURA: int = 1
+"""
+Datos de Investigación que cobra quien reclama la Jefatura (1 PA, uno por día en
+toda la mesa).
+
+Es la **fuente renovable de Datos** que al juego le faltaba. Hasta ahora los
+Datos salían de hornear en Zona Óptima, del Módulo Analítico (que es a su vez una
+compra en Datos) y de sacrificar un horneado en el Simposio — es decir, casi todo
+de la misma jugada, así que quien horneaba bien primero acumulaba también la
+divisa técnica, y las dos acciones que se pagan en Datos (Horas Extras y Pedido
+de Urgencia) se quedaban sin combustible en la mesa de los demás.
+
+Uno, y no dos, porque el espacio es único en la mesa: entra 1 Dato por día en
+total, repartido por rotación y no por riqueza. Está limitado por competencia,
+no por precio, que es lo que impide que se convierta en un grifo.
 """
 
 RENDIMIENTO_MOLINO_PCT: int = 20
@@ -777,6 +795,10 @@ class GameEngine:
 
         # Estado interno del turno actual
         self._jefe_investigador: Optional[Player] = None
+        # Reclamación PENDIENTE de la Jefatura: el índice del jugador que ocupó
+        # hoy el espacio «jefatura» y abrirá mañana, o None si nadie lo hizo.
+        # Se consume (y se vuelve a poner a None) en la Fase I siguiente.
+        self._jefatura_reclamada_por: Optional[int] = None
         self._partida_terminada: bool = False
 
         # Registro de eventos (ver events.py).
@@ -964,10 +986,11 @@ class GameEngine:
         Fase I: Ambiente — prepara el entorno global para el día (CORE_MECHANICS.md §2).
 
         Pasos (en orden):
-          1. **Actualización de Jerarquía**: asigna el Investigador Jefe al jugador
-             con mayor Vitalidad (desempate: Datos de Investigación) — salvo el
-             Día 1, donde la Carta de Patrocinio de menor Iniciativa decide
-             (ver ``orden_inicial`` en el constructor).
+          1. **Actualización de Jerarquía**: la Jefatura pasa a quien la reclamó
+             ayer ocupando su espacio de acción (``reclamar_jefatura``); si nadie
+             la reclamó, la conserva el Jefe del día anterior. El Día 1 la decide
+             la Carta de Patrocinio de menor Iniciativa (ver ``orden_inicial`` en
+             el constructor).
           2. **Reset de Entorno**: la temperatura vuelve a 20°C y el efecto pasivo
              se neutraliza antes de aplicar la carta del día.
           3. **Resolución del Clima**: roba la carta superior del mazo de clima,
@@ -987,8 +1010,17 @@ class GameEngine:
         # Paso 1: Determinar Investigador Jefe
         if self._environment.dia_actual == 1 and self._orden_inicial_iniciativa is not None:
             self._jefe_investigador = self._players[self._orden_inicial_iniciativa[0]]
-        else:
-            self._jefe_investigador = self._determinar_investigador_jefe()
+        elif self._jefatura_reclamada_por is not None:
+            self._jefe_investigador = self._players[self._jefatura_reclamada_por]
+        elif self._jefe_investigador is None:
+            # Sin reclamación y sin jefe previo (partida construida sin
+            # orden_inicial, p. ej. en tests): el primer inscrito abre.
+            self._jefe_investigador = self._players[0]
+        # Si nadie reclamó, la ficha se queda donde está: el Jefe de ayer sigue
+        # siéndolo hoy. Es semántica de ficha física — no hay una segunda regla
+        # de rotación automática que recordar — y deja la Jefatura sin dueño
+        # nuevo mientras a nadie le compense pagar 1 PA por ella.
+        self._jefatura_reclamada_por = None
         self._emit(
             EventoTipo.JEFE_ASIGNADO,
             jugador_idx=self._players.index(self._jefe_investigador),
@@ -1047,23 +1079,42 @@ class GameEngine:
             ),
         )
 
-    def _determinar_investigador_jefe(self) -> Player:
+    @property
+    def jefatura_reclamada_por(self) -> Optional[int]:
         """
-        Selecciona el Investigador Jefe para el turno actual.
+        Índice del jugador que ya reclamó hoy la Jefatura (acción «jefatura»), o
+        ``None`` si el espacio sigue libre.
 
-        Criterio de selección (CORE_MECHANICS.md §2, Fase I):
-          1. Mayor nivel de Vitalidad del cultivo base.
-          2. Desempate: mayor cantidad de Datos de Investigación.
-          3. Empate persistente: posición en la lista de jugadores (el primero
-             tiene prioridad — orden de inscripción a la partida).
-
-        Returns:
-            El jugador que actúa como Investigador Jefe este día.
+        Es información pública: el cliente la usa para apagar el espacio en cuanto
+        alguien lo ocupa. A diferencia del resto de espacios de acción, este es
+        **global** — lo ocupa un solo jugador por día, no uno por jugador — y por
+        eso vive en el motor y no en ``Player.acciones_pa_usadas_hoy``.
         """
-        return max(
-            self._players,
-            key=lambda p: (p.vitalidad, p.datos_investigacion),
-        )
+        return self._jefatura_reclamada_por
+
+    def reclamar_jefatura(self, player: Player) -> None:
+        """
+        Registra que ``player`` será el Investigador Jefe a partir de mañana.
+
+        La reclamación se cobra HOY (1 PA y +1 Dato, en
+        ``ActionManager.accion_reclamar_jefatura``) y surte efecto en la Fase I
+        del día siguiente: el orden de turno se calcula una vez al día y no se
+        rebaraja a media jornada, así que quien reclama compra la salida de
+        mañana, no la de hoy.
+
+        Args:
+            player: Jugador que reclama la Jefatura.
+
+        Raises:
+            RuleViolationError: Si otro jugador ya la reclamó hoy.
+        """
+        if self._jefatura_reclamada_por is not None:
+            ya = self._players[self._jefatura_reclamada_por]
+            raise RuleViolationError(
+                f"La Jefatura de Investigación ya la reclamó '{ya.nombre}' hoy. "
+                "Es un espacio único en la mesa: solo un jugador por día."
+            )
+        self._jefatura_reclamada_por = self._players.index(player)
 
     def _robar_carta_clima(self) -> Optional[ClimateCard]:
         """
@@ -1974,10 +2025,13 @@ class GameEngine:
 
         El Día 1, si se proporcionó ``orden_inicial`` al constructor (Iniciativa
         de la Carta de Patrocinio), ese orden es el que manda. A partir del Día
-        2, el Investigador Jefe (determinado por Vitalidad) actúa primero y el
-        resto sigue en su orden original de inscripción a la partida. Si el
-        Jefe no se ha determinado aún (antes del primer día), se usa el orden
-        original.
+        2, el Investigador Jefe actúa primero y el resto sigue en su orden
+        original de inscripción a la partida. Si el Jefe no se ha determinado
+        aún (antes del primer día), se usa el orden original.
+
+        La Jefatura ya no se deduce del estado (antes: mayor Vitalidad): se
+        **reclama** ocupando su espacio de acción, y si nadie la reclama la
+        conserva quien la tuviera. Ver ``reclamar_jefatura``.
 
         Returns:
             Lista ordenada de jugadores para la Fase II del día actual.

@@ -179,6 +179,22 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
             else "Sin horneados exitosos que sacrificar"
         ),
     )
+    # La Jefatura es el único espacio GLOBAL del tablero: lo ocupa un jugador por
+    # día en toda la mesa, así que no se consulta `usados` (que es por jugador)
+    # sino la marca del motor. El motivo nombra a quien lo ocupó, porque «ya usado»
+    # a secas se leería como el límite habitual de un espacio propio.
+    jefatura_de = engine.jefatura_reclamada_por
+    if jefatura_de is None:
+        motivo_jefatura = "Sin PA"
+    else:
+        motivo_jefatura = (
+            f"Ya la reclamó {engine.players[jefatura_de].nombre} hoy"
+        )
+    agregar(
+        "jefatura",
+        jefatura_de is None and tiene_pa,
+        motivo_jefatura,
+    )
     agregar(
         "H",
         "H" not in usados and contaminado and tiene_pa and harina_total >= HARINA_RECULTIVO_MANUAL,

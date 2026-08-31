@@ -46,6 +46,7 @@ from engine import (
     CANTIDAD_BOLSA_PCT,
     CANTIDAD_MEDIA_BOLSA_PCT,
     COSTE_REFRESCO_AGUA,
+    DATOS_JEFATURA,
     DATOS_SIMPOSIO,
     PRECIO_AGUA,
     PRECIO_CONTRATO_MOLINO,
@@ -1238,6 +1239,52 @@ class ActionManager:
         player.datos_investigacion += datos
         self._engine.market.descarte_recetas.append(record.recipe)
         return datos
+
+    def accion_reclamar_jefatura(self, player: Player) -> None:
+        """
+        Reclamar la Jefatura de Investigación (ACTIONS_REGISTRY.md §2 «Jefatura»).
+
+        Costo:   1 PA. Termina la visita, como toda acción principal.
+        Efecto:  +``DATOS_JEFATURA`` Datos de Investigación **ahora**, y el
+                 jugador abre la Fase II **de mañana** como Investigador Jefe.
+        Límite:  **Uno por día en toda la mesa** — no uno por jugador. Es el
+                 único espacio global del tablero.
+
+        El espacio es global porque el recurso también lo es: la primera
+        posición del orden de turno es una sola, y dos jugadores no pueden
+        comprarla el mismo día. Por eso la marca vive en el motor
+        (``GameEngine.jefatura_reclamada_por``) y no en
+        ``player.acciones_pa_usadas_hoy``, que es por jugador.
+
+        Sustituye a la regla automática que daba la Jefatura a quien tuviera más
+        Vitalidad. Aquella no era una decisión de nadie — el orden de turno se
+        deducía del estado — y dejaba al Investigador Jefe sin más contenido que
+        salir primero. Ahora ir primero se paga, y quien paga se lleva además el
+        Dato: es la fuente RENOVABLE de Datos que faltaba, la que sostiene a las
+        acciones que se pagan en Datos (Horas Extras, Pedido de Urgencia) sin
+        depender de hornear en Zona Óptima. Está limitada por rotación, no por
+        riqueza: un solo jugador la cobra cada día.
+
+        El efecto llega mañana porque el orden de turno se calcula una sola vez
+        al día, en la Fase I, y no se rebaraja a media jornada. Reclamar siendo
+        ya Jefe es legal: es la forma de retener la Jefatura, y cuesta lo mismo.
+
+        Args:
+            player: Jugador que reclama la Jefatura.
+
+        Raises:
+            NotEnoughActionPointsError: PA insuficientes.
+            RuleViolationError: Otro jugador ya la reclamó hoy.
+        """
+        # `reclamar_jefatura` valida y muta a la vez, así que va PRIMERO: es lo
+        # único que puede lanzar aquí, y detrás de ella solo quedan mutaciones
+        # que no fallan nunca. Al revés — cobrar el PA y descubrir después que
+        # el espacio estaba ocupado — sería aplicar la acción a medias.
+        self._require_pa(player, 1)
+        self._engine.reclamar_jefatura(player)
+
+        player.consumir_punto_accion("jefatura")
+        player.datos_investigacion += DATOS_JEFATURA
 
     # ==================================================================
     # ACCIONES AUXILIARES

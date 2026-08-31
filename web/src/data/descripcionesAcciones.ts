@@ -13,6 +13,7 @@ export type IdAccion =
   | 'F'
   | 'G'
   | 'simposio'
+  | 'jefatura'
   | 'H'
   | 'I'
   | 'horas_extras'
@@ -29,6 +30,8 @@ export const descripcionesAcciones: Record<IdAccion, string> = {
   F: 'Finaliza el protocolo de una masa y la vende de inmediato: obtiene Puntos de Maestría y Monedas según su zona (más Datos de Investigación si cae en Zona Óptima). El bono de Acidez, si la carta lo tiene sellado, suma puntos y +2 Monedas — salvo en un colapso.',
   G: 'Toma 1 carta de receta del Mercado Central y la guarda boca arriba en tu Carpeta de Proyectos (máximo 3; si está llena, debes descartar una previa). El espacio del mercado queda vacío hasta el reabastecimiento al inicio del día siguiente.',
   simposio: 'Sacrifica un horneado exitoso de tu Archivo para publicarlo y ganar Datos de Investigación según su grado (Básica 1, Intermedia 2, Avanzada 3). El registro sale del archivo para siempre: pierdes sus Puntos de Maestría, su renta diaria, su paso hacia el 5/5 y, si era el único de su tipo, un escalón de Variedad de Recetas. Es una palanca de emergencia, nunca una jugada eficiente.',
+  jefatura:
+    'Cuesta 1 PA y paga 1 Dato de Investigación al instante. Mañana abrirás la Fase II como Investigador Jefe: el orden de turno se calcula una sola vez al día, así que lo que compras es la salida de mañana, no la de hoy. Es el único espacio GLOBAL del tablero — lo ocupa un jugador por día en toda la mesa, no uno por jugador — así que reclamarla también se la quita a los demás. Si nadie la reclama, la Jefatura se queda donde está; reclamarla siendo ya Jefe es legal y es la única forma de retenerla.',
   H: 'Solo disponible con Vitalidad en 0 (penalización de -3 Puntos de Maestría). Costo: 3 tokens de Harina (30%, cualquier tipo), sin costo de Agua. Limpia la Contaminación y fija Vitalidad=1, Acidez=1.',
   I: 'Solo disponible con Vitalidad en 0 (penalización de -3 Puntos de Maestría). Costo: 1 Dato de Investigación. Limpia la Contaminación y fija Vitalidad=2, Acidez=2.',
   horas_extras:
@@ -88,6 +91,7 @@ export const GRUPOS_ACCION: readonly GrupoAccion[] = [
       { id: 'F', etiqueta: 'Hornear y Vender', costo: '1 PA' },
       { id: 'G', etiqueta: 'Investigar Protocolo', costo: '1 PA' },
       { id: 'simposio', etiqueta: 'Simposio Técnico', costo: '1 PA' },
+      { id: 'jefatura', etiqueta: 'Reclamar Jefatura', costo: '1 PA' },
     ],
   },
   {
