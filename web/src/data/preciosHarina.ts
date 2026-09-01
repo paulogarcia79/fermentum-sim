@@ -58,3 +58,19 @@ export function precioVentaHarina(
   const entero = PRECIOS_HARINA[tipo].venta[posicion - 1]
   return cantidad === CANTIDAD_BOLSA_PCT ? entero : Math.floor(entero / 2)
 }
+
+/** actions.py: DESCUENTO_COMERCIANTE. */
+export const DESCUENTO_COMERCIANTE = 1
+
+/**
+ * Precio final de UNA compra de la Accion C para un jugador que puede tener la
+ * tecnologia Comerciante (actions.py: ActionManager._precio_compra_efectivo).
+ *
+ * Se aplica a harina, agua y la firma del Molino, y a ninguna venta: descontar
+ * la compra Y mejorar la venta romperia el diferencial de la Bolsa (en Blanca la
+ * horquilla es de 1 sola Moneda). El suelo es 1 y no 0 para que ninguna compra
+ * mueva el visor gratis.
+ */
+export function precioCompraEfectivo(precio: number, tieneComerciante: boolean): number {
+  return tieneComerciante ? Math.max(1, precio - DESCUENTO_COMERCIANTE) : precio
+}

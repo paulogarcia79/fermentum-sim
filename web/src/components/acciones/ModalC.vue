@@ -18,6 +18,7 @@ import {
   CANTIDAD_MEDIA_BOLSA_PCT,
   LOTES_AGUA_VALIDOS,
   PRECIO_AGUA,
+  precioCompraEfectivo,
   precioCompraHarina,
   precioVentaHarina,
   type CantidadHarina,
@@ -72,11 +73,21 @@ const operacionHarina = reactive<Record<TipoHarina, '' | IdOperacion>>({
   Centeno: '',
 })
 
+// La tecnologia Comerciante descuenta 1 Moneda (suelo 1) de cada COMPRA de la
+// visita, y de ninguna venta (actions.py: DESCUENTO_COMERCIANTE). Las pistas de
+// precio de arriba -- PistaPrecioHarina y TablaPrecioAgua -- siguen mostrando el
+// precio IMPRESO a proposito: son el estado compartido de la mesa, igual para
+// todos, y el precio propio se lee en la opcion que se elige.
+const tieneComerciante = computed(() => yo.value.tecnologias.comerciante)
+
 /** Monedas que aporta (+) o cuesta (−) una operacion en la posicion actual. */
 function deltaMonedas(tipo: TipoHarina, op: OperacionHarina): number {
   const posicion = mercado.value.posiciones_harina[tipo]
   return op.direccion === 'comprar'
-    ? -precioCompraHarina(tipo, posicion, op.cantidad)
+    ? -precioCompraEfectivo(
+        precioCompraHarina(tipo, posicion, op.cantidad),
+        tieneComerciante.value,
+      )
     : precioVentaHarina(tipo, posicion, op.cantidad)
 }
 const operacionAgua = ref<'' | 'comprar'>('')
@@ -93,7 +104,12 @@ const enviando = ref(false)
 const error = ref<string | null>(null)
 
 function precioAgua(lote: LoteAguaPct): number {
-  return PRECIO_AGUA[temperatura.value]?.[lote] ?? 0
+  const impreso = PRECIO_AGUA[temperatura.value]?.[lote] ?? 0
+  return precioCompraEfectivo(impreso, tieneComerciante.value)
+}
+
+function precioMolino(tipo: TipoHarina): number {
+  return precioCompraEfectivo(PRECIO_CONTRATO_MOLINO[tipo], tieneComerciante.value)
 }
 
 const transacciones = computed(() => {
@@ -125,7 +141,7 @@ const saldoProyectado = computed(() => {
     if (elegida) monedas += deltaMonedas(tipo, elegida)
   }
   if (operacionAgua.value === 'comprar') monedas -= precioAgua(loteAgua.value)
-  if (harinaMolino.value) monedas -= PRECIO_CONTRATO_MOLINO[harinaMolino.value]
+  if (harinaMolino.value) monedas -= precioMolino(harinaMolino.value)
   return monedas
 })
 
@@ -146,6 +162,11 @@ async function confirmar() {
 <template>
   <ModalShell titulo="Visitar Mercado (1 PA)" :error="error" @cerrar="emit('cerrar')">
     <p class="info-linea">Máximo una transacción por tipo de recurso en esta visita.</p>
+    <p v-if="tieneComerciante" class="info-linea comerciante">
+      <strong>Comerciante</strong>: cada compra de esta visita te cuesta 1 Moneda menos (mínimo 1).
+      Los precios de las pistas son los de la mesa; los tuyos son los de cada opción. Las ventas
+      cobran lo mismo que a todos.
+    </p>
 
     <div v-for="tipo in TIPOS_HARINA" :key="tipo" class="campo">
       <PistaPrecioHarina :tipo="tipo" />
@@ -198,7 +219,7 @@ async function confirmar() {
         <select v-model="harinaMolino">
           <option value="">— sin contrato —</option>
           <option v-for="tipo in TIPOS_HARINA" :key="tipo" :value="tipo">
-            Contratar {{ tipo }} — {{ PRECIO_CONTRATO_MOLINO[tipo] }} Monedas
+            Contratar {{ tipo }} — {{ precioMolino(tipo) }} Monedas
           </option>
         </select>
       </template>
@@ -225,5 +246,9 @@ async function confirmar() {
 <style scoped>
 .error {
   color: var(--riesgo);
+}
+
+.comerciante {
+  color: var(--cobre);
 }
 </style>

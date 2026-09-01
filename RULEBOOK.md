@@ -86,7 +86,7 @@ días.
 - **Cartas de Patrocinio:** 8 cartas usadas una sola vez, al preparar la partida, para repartir el
   orden de turno inicial y los recursos de arranque.
 - **Dados de Inóculo:** 3 por jugador, sellan la velocidad de fermentación de cada masa iniciada.
-- **Cubos de Laboratorio:** 8 por jugador, marcan acciones usadas, acidez sellada y tecnologías
+- **Cubos de Laboratorio:** 9 por jugador, marcan acciones usadas, acidez sellada y tecnologías
   instaladas.
 - **Tokens de Recursos:** harina (Blanca, Integral, Centeno) y agua — ver [Las dos unidades de
   insumo](#las-dos-unidades-de-insumo) justo abajo.
@@ -140,7 +140,7 @@ Fermentum usa dos recursos económicos independientes, que no se convierten entr
 
 1. Colocar el Tablero Central con la temperatura en **20°C** y el Track de Orden de Turno al
    lado.
-2. Repartir a cada jugador un Tablero Individual, sus marcadores, 3 Dados de Inóculo y 8 Cubos de
+2. Repartir a cada jugador un Tablero Individual, sus marcadores, 3 Dados de Inóculo y 9 Cubos de
    Laboratorio. El track de Vitalidad inicia en **Nivel 2** y el de Acidez en **Nivel 1**. Colocar una Ficha de
    Bloqueo sobre la tercera ranura de fermentación (se libera al instalar la tecnología Cámara B).
 3. **Asignación de Patrocinios:** barajar el mazo de 8 Cartas de Patrocinio y repartir una carta
@@ -418,6 +418,19 @@ la **media bolsa**, que se deriva del entero con ⌈Compra/2⌉ y ⌊Venta/2⌋:
 | 20°C | 2 | 4 | 7 | 10 |
 | 15°C | 1 | 3 | 6 | 9 |
 | 10°C | 1 | 2 | 4 | 7 |
+
+> **Con la tecnología [Comerciante](#10-tecnologías-de-laboratorio) instalada**, cada transacción
+> de **compra** de tu visita — harina (bolsa o media), lote de agua y la firma del Molino — cuesta
+> **1 Moneda menos**, con un mínimo de 1: los precios de las tablas de arriba son los de la mesa, y
+> tú pagas uno menos por cada compra. **Ninguna venta mejora**, y tu compra **mueve el visor igual
+> que la de cualquiera**.
+>
+> Sí: con el descuento, comprar Blanca un día y venderla al siguiente te deja **+1 Moneda**
+> (comprar sube el visor, así que la venta cobra la casilla siguiente, y en Blanca eso empata justo
+> con la horquilla). No es un agujero, es una mala jugada: como no puedes comprar y vender la misma
+> harina en la misma visita y el espacio C se agota una vez al día, ese +1 te cuesta **dos días
+> enteros** de acceso al mercado. Vender una bolsa que te regaló el Molino paga 5 en un solo Punto
+> de Acción.
 
 #### D. Implementar Mejora de Laboratorio
 
@@ -838,7 +851,7 @@ barajado de nuevo, como mazo nuevo.
 
 ## 10. Tecnologías de Laboratorio
 
-Cada jugador puede instalar hasta 4 mejoras permanentes a lo largo de la partida (Acción D). Cada
+Cada jugador puede instalar hasta 5 mejoras permanentes a lo largo de la partida (Acción D). Cada
 una solo puede instalarse una vez, pero un jugador puede llegar a tener varias distintas.
 
 Además de su efecto en partida, **cada mejora instalada puntúa al final**, en curva creciente y sin
@@ -851,6 +864,7 @@ importar lo que costó: ver [Desarrollo Tecnológico](#112-cálculo-de-puntos-de
 | **Cámara B** | 4 Datos | Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas. |
 | **Módulo Analítico** | 4 Datos | **Ensancha la Zona Óptima 1 casilla por cada lado** — se come una casilla del Pre-fermento por abajo y una del Colapso por arriba, así que **también retrasa el colapso**. Además sube el rendimiento del horneado: **2 Datos** en cualquier punto de la Zona Óptima y **3** en el centro exacto. |
 | **Criopreservación** | 2 Datos | Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III. |
+| **Comerciante** | 3 Datos | Mejores condiciones de compra: **cada transacción de compra** de tu Acción C — bolsa o media bolsa de harina, lote de agua y la firma del Contrato con el Molino — te cuesta **1 Moneda menos**, con un mínimo de 1. **No mejora ninguna venta** y **no altera el movimiento del visor**: tu compra lo desplaza igual que la de cualquiera. |
 
 ---
 
@@ -905,11 +919,13 @@ sacrifica después con un Simposio Técnico, la partida termina igualmente esta 
 5. **Desarrollo Tecnológico:** puntos por la amplitud del laboratorio que construiste — cuenta
    cuántas **Tecnologías** tienes instaladas (§10), con la **misma curva** que Variedad de Recetas:
 
-   | Mejoras instaladas | 0 | 1 | 2 | 3 | 4 |
-   |:---|:---:|:---:|:---:|:---:|:---:|
-   | Puntos de Maestría | 0 | +1 | +3 | +6 | +10 |
+   | Mejoras instaladas | 0 | 1 | 2 | 3 | 4 | 5 |
+   |:---|:---:|:---:|:---:|:---:|:---:|:---:|
+   | Puntos de Maestría | 0 | +1 | +3 | +6 | +10 | +15 |
 
-   El tope es +10 en lugar de +15 sencillamente porque sólo hay cuatro mejoras. **Lo que cuenta es
+   Los dos términos de amplitud llegan al mismo tope, +15, por motivos distintos: aquí porque hay
+   cinco mejoras, arriba porque la partida termina al quinto horneado. Equiparte del todo cuesta
+   16 Datos, así que es una partida entera dedicada a ello y no un extra. **Lo que cuenta es
    cuántas tienes, no lo que pagaste:** la Criopreservación (2 Datos) puntúa igual que la Cámara B
    (4 Datos), del mismo modo que un pan Básico y uno Avanzado cuentan un tipo cada uno más arriba.
    Y como una mejora no se desinstala jamás, este término nunca baja — a diferencia de Variedad,

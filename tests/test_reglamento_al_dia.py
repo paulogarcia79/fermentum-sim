@@ -63,6 +63,7 @@ from models import (
     Player,
     RECIPE_CATALOG,
     puntos_triangulares,
+    TecnologiaID,
     TENDENCIA_MODIFICADORES,
     TipoHarina,
     VITALIDAD_INICIAL,
@@ -531,9 +532,18 @@ def test_todos_los_terminos_de_puntuacion_estan_en_el_reglamento(docs, doc) -> N
 # derivar del codigo»), no una politica, asi que entra con la de tecnologias.
 #
 # termino -> (rotulo de la primera celda de cabecera en el .md, n maximo)
+#
+# Los dos topes se DERIVAN, no se escriben: el de Variedad es el gatillo del
+# quinto horneado y el de Desarrollo es cuantas mejoras existen. Escribir el
+# segundo a mano es exactamente como se quedo obsoleto al anadir Comerciante --
+# el reglamento seguia imprimiendo una curva de cuatro escalones y el test la
+# daba por buena porque los dos decian «4».
 CURVAS_TRIANGULARES = {
+    # El 5 de Variedad sigue escrito porque el gatillo del quinto horneado es un
+    # literal en engine.py y no una constante con nombre; el de Desarrollo si se
+    # deriva, que es lo que lo mantiene al dia solo.
     "Variedad de Recetas": ("Recetas distintas", 5),
-    "Desarrollo Tecnológico": ("Mejoras instaladas", 4),
+    "Desarrollo Tecnológico": ("Mejoras instaladas", len(TecnologiaID)),
 }
 
 

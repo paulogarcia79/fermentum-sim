@@ -69,6 +69,7 @@ class TecnologiaID(str, Enum):
     CAMARA_B = "camara_b"
     MODULO_ANALITICO = "modulo_analitico"
     CRIOPRESERVACION = "criopreservacion"
+    COMERCIANTE = "comerciante"
 
     @property
     def nombre_legible(self) -> str:
@@ -84,6 +85,7 @@ class TecnologiaID(str, Enum):
             TecnologiaID.CAMARA_B: "Cámara B",
             TecnologiaID.MODULO_ANALITICO: "Módulo Analítico",
             TecnologiaID.CRIOPRESERVACION: "Criopreservación",
+            TecnologiaID.COMERCIANTE: "Comerciante",
         }[self]
 
 
@@ -672,12 +674,18 @@ class Technologies:
             habilita el inicio de recetas de grado Avanzado.
         criopreservacion: Efecto pasivo "Estasis Biológica" — durante la Fase III,
             el cultivo base ignora el desgaste metabólico normal (no resta Vitalidad).
+        comerciante: Mejores condiciones de compra en la Acción C: cada transacción
+            de COMPRA de la visita (bolsa o media bolsa de harina, lote de agua,
+            firma del Contrato con el Molino) cuesta ``DESCUENTO_COMERCIANTE``
+            Monedas menos, con suelo de 1. **No toca el lado de venta** y **no
+            altera el movimiento del visor** — ver ``actions.DESCUENTO_COMERCIANTE``.
     """
 
     incubadora: bool = False
     camara_b: bool = False
     modulo_analitico: bool = False
     criopreservacion: bool = False
+    comerciante: bool = False
 
     def esta_activa(self, tecnologia: TecnologiaID) -> bool:
         """Retorna True si la tecnología especificada está instalada."""
@@ -691,7 +699,13 @@ class Technologies:
     def cantidad_instaladas(self) -> int:
         """Número de mejoras actualmente instaladas (cada una, como máximo 1 vez por partida)."""
         return sum(
-            [self.incubadora, self.camara_b, self.modulo_analitico, self.criopreservacion]
+            [
+                self.incubadora,
+                self.camara_b,
+                self.modulo_analitico,
+                self.criopreservacion,
+                self.comerciante,
+            ]
         )
 
 
@@ -1140,12 +1154,14 @@ class Player:
         La misma curva triangular que «Variedad de Recetas», sobre las mejoras
         de laboratorio INSTALADAS (``Technologies.cantidad_instaladas``)::
 
-            n:   0   1   2   3   4
-            PM:  0   1   3   6  10
+            n:   0   1   2   3   4   5
+            PM:  0   1   3   6  10  15
 
-        El tope es 10 y no 15 porque sólo hay cuatro mejoras, igual que el de
-        Variedad es 15 porque la partida termina al quinto horneado: en los dos
-        casos la curva es la misma y lo que cambia es dónde se corta.
+        El tope es 15, igual que el de Variedad: hay cinco mejoras y la partida
+        termina al quinto horneado exitoso, así que las dos curvas se cortan en
+        el mismo sitio. La curva no se topa a mano en ningún caso — se acaba
+        donde se acaba el recuento, que es lo que permite añadir una quinta
+        mejora sin tocar la puntuación.
 
         **Sin ponderar por coste**: Criopreservación (2 Datos) cuenta
         exactamente igual que Cámara B (4), del mismo modo que una Básica y una

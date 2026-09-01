@@ -45,8 +45,12 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 15
+VERSION_FORMATO = 16
 """
+Bumped a 16: `Technologies` gana `comerciante`, la quinta mejora de laboratorio.
+Un pickle viejo trae `Technologies` sin ese campo, y la primera compra de la
+Accion C tras restaurar lo leeria (ademas de `cantidad_instaladas`, que puntua).
+
 Bumped a 15: `GameEngine` gana `_jefatura_reclamada_por`. La Jefatura ya no se
 deduce de la Vitalidad: se reclama con un espacio de accion y la reclamacion
 pendiente vive en el motor. Un pickle viejo trae motores sin ese atributo, y la

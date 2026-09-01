@@ -20,10 +20,13 @@ from models import Player, TecnologiaID, puntos_triangulares
 from server.sessions import RoomManager
 from server.views import game_state_view
 
-# n mejoras instaladas -> n*(n+1)//2 PM. El tope es 4: solo hay cuatro mejoras,
-# y a diferencia del tope de Variedad (5, por el gatillo del quinto horneado)
-# este lo impone la propia clase `Technologies`.
-TRIANGULARES = {0: 0, 1: 1, 2: 3, 3: 6, 4: 10}
+# n mejoras instaladas -> n*(n+1)//2 PM. El tope es 5, el mismo que el de
+# Variedad, pero por otro motivo: alli lo impone el gatillo del quinto horneado y
+# aqui cuantas mejoras existen. La curva no se topa a mano en ninguno de los dos
+# terminos -- se acaba donde se acaba el recuento, que es lo que permitio anadir
+# la quinta mejora (Comerciante) sin tocar la puntuacion.
+TRIANGULARES = {0: 0, 1: 1, 2: 3, 3: 6, 4: 10, 5: 15}
+TOPE = len(TecnologiaID)
 
 CLAVE = "Desarrollo Tecnológico"
 
@@ -45,7 +48,7 @@ def _sesion_iniciada():
 # La curva
 # ---------------------------------------------------------------------------
 
-def test_curva_triangular_de_cero_a_cuatro_mejoras() -> None:
+def test_curva_triangular_de_cero_a_todas_las_mejoras() -> None:
     jugador = _jugador()
 
     assert jugador.tecnologias.cantidad_instaladas == 0
@@ -56,11 +59,13 @@ def test_curva_triangular_de_cero_a_cuatro_mejoras() -> None:
         assert jugador.tecnologias.cantidad_instaladas == n
         assert jugador.puntos_desarrollo_tecnologico == TRIANGULARES[n]
 
+    assert jugador.tecnologias.cantidad_instaladas == TOPE
+
     # La escalada es el punto del termino, igual que en Variedad: cada mejora
-    # nueva vale mas que la anterior, asi que quedarse en tres renuncia al
-    # incremento mas grande del tablero (4 PM) y no a un promedio.
-    incrementos = [TRIANGULARES[n] - TRIANGULARES[n - 1] for n in range(1, 5)]
-    assert incrementos == [1, 2, 3, 4]
+    # nueva vale mas que la anterior, asi que quedarse en cuatro renuncia al
+    # incremento mas grande del tablero (5 PM) y no a un promedio.
+    incrementos = [TRIANGULARES[n] - TRIANGULARES[n - 1] for n in range(1, TOPE + 1)]
+    assert incrementos == [1, 2, 3, 4, 5]
 
 
 def test_es_literalmente_la_misma_curva_que_variedad() -> None:
@@ -74,11 +79,12 @@ def test_es_literalmente_la_misma_curva_que_variedad() -> None:
         equipado.tecnologias.activar(tecnologia)
         assert equipado.puntos_desarrollo_tecnologico == puntos_triangulares(n)
 
-    # El mismo n produce el mismo numero en los dos terminos: lo unico que los
-    # distingue es donde se corta la curva (4 mejoras frente a 5 horneados).
+    # El mismo n produce el mismo numero en los dos terminos, y desde que existe
+    # la quinta mejora hasta se cortan en el mismo sitio: 15 PM con las cinco
+    # mejoras y 15 con las cinco recetas distintas.
     variado = _jugador()
     assert variado.puntos_variedad == 0
-    assert [puntos_triangulares(n) for n in range(5)] == list(TRIANGULARES.values())
+    assert [puntos_triangulares(n) for n in range(TOPE + 1)] == list(TRIANGULARES.values())
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +95,7 @@ def test_solo_cuentan_las_mejoras_INSTALADAS_no_los_datos_ahorrados() -> None:
     """Tener con que comprarlas no es tenerlas: el termino premia el
     laboratorio construido, no la caja de Datos."""
     jugador = _jugador()
-    jugador.datos_investigacion = sum(COSTOS_TECNOLOGIA.values())  # 13, para las cuatro
+    jugador.datos_investigacion = sum(COSTOS_TECNOLOGIA.values())  # 16, para las cinco
 
     assert jugador.tecnologias.cantidad_instaladas == 0
     assert jugador.puntos_desarrollo_tecnologico == 0
@@ -155,7 +161,7 @@ def test_equiparse_puntua_frente_a_no_equiparse() -> None:
     for tecnologia in TecnologiaID:
         equipado.tecnologias.activar(tecnologia)
 
-    assert equipado.puntos_maestria_final - pelado.puntos_maestria_final == 10
+    assert equipado.puntos_maestria_final - pelado.puntos_maestria_final == TRIANGULARES[TOPE]
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +172,7 @@ def test_la_vista_envia_el_termino_y_el_recuento_es_derivable() -> None:
     """
     El termino viaja dentro del desglose; el RECUENTO no necesita campo propio,
     a diferencia de `recetas_distintas_horneadas`, porque `tecnologias` ya viaja
-    como cuatro booleanos y MiTablero.vue los cuenta.
+    como un booleano por mejora y MiTablero.vue los cuenta.
     """
     sesion = _sesion_iniciada()
     jugador = sesion.engine.players[0]

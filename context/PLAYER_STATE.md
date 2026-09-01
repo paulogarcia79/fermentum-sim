@@ -40,6 +40,7 @@ Ambos tipos de token cuentan **1:1** en la penalización por desperdicio del fin
     * `camara_B`: True/False.
     * `modulo_analitico`: True/False.
     * `criopreservacion`: True/False.
+    * `comerciante`: True/False.
 * `estaciones_fermentacion` (List[Dict o None]): Representa las 3 ranuras de la Zona 2. 
     * El índice 0 y 1 están siempre disponibles. 
     * El índice 2 (Estación 03) está bloqueado por defecto y requiere `camara_B == True` para utilizarse.

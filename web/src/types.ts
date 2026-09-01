@@ -10,7 +10,12 @@
 
 export type Grado = 'Básica' | 'Intermedia' | 'Avanzada'
 export type TipoHarina = 'Blanca' | 'Centeno' | 'Integral'
-export type TecnologiaID = 'incubadora' | 'camara_b' | 'modulo_analitico' | 'criopreservacion'
+export type TecnologiaID =
+  | 'incubadora'
+  | 'camara_b'
+  | 'modulo_analitico'
+  | 'criopreservacion'
+  | 'comerciante'
 export type FaseActual = 'preparacion' | 'fase_i' | 'fase_ii' | 'fase_iii' | 'terminada'
 
 export interface Recipe {
@@ -77,6 +82,7 @@ export interface Technologies {
   camara_b: boolean
   modulo_analitico: boolean
   criopreservacion: boolean
+  comerciante: boolean
 }
 
 export interface Player {

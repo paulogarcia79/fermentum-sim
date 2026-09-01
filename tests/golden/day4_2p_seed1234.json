@@ -26,7 +26,8 @@
         "incubadora": false,
         "camara_b": false,
         "modulo_analitico": false,
-        "criopreservacion": false
+        "criopreservacion": false,
+        "comerciante": false
       },
       "carpeta_proyectos": [
         {
@@ -180,7 +181,8 @@
         "incubadora": false,
         "camara_b": false,
         "modulo_analitico": false,
-        "criopreservacion": false
+        "criopreservacion": false,
+        "comerciante": false
       },
       "carpeta_proyectos": [
         {

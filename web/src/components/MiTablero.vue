@@ -41,6 +41,7 @@ const EMOJI_TECNOLOGIA: Record<TecnologiaID, string> = {
   camara_b: '🚪',
   modulo_analitico: '📊',
   criopreservacion: '❄',
+  comerciante: '🤝',
 }
 
 const tecAbierta = ref<TecnologiaID | null>(null)
@@ -80,8 +81,8 @@ const variedad = computed(() => {
  * `desglose_maestria` y el valor marginal de la proxima mejora es n+1.
  *
  * El recuento SI se deriva aqui, a diferencia de `recetas_distintas_horneadas`
- * que el servidor manda aparte: `tecnologias` ya llega como cuatro booleanos,
- * asi que contarlos no duplica ninguna regla. */
+ * que el servidor manda aparte: `tecnologias` ya llega como un booleano por
+ * mejora, asi que contarlos no duplica ninguna regla. */
 const desarrollo = computed(() => {
   const instaladas = TECNOLOGIAS.filter((t) => yo.value.tecnologias[t.id]).length
   return {

@@ -84,10 +84,65 @@ COSTOS_TECNOLOGIA: Dict[TecnologiaID, int] = {
     TecnologiaID.CAMARA_B: 4,
     TecnologiaID.MODULO_ANALITICO: 4,
     TecnologiaID.CRIOPRESERVACION: 2,
+    TecnologiaID.COMERCIANTE: 3,
 }
 """
 Coste en Datos de Investigación de cada mejora de laboratorio (Acción D).
 Fuente: ACTIONS_REGISTRY.md §2D.
+
+Comerciante vale 3 (el escalón de la Incubadora) porque su beneficio es un goteo:
+una visita al mercado toca entre una y tres compras, así que devuelve 1-3 Monedas
+por día de compras y se amortiza en dos o tres visitas si se compra pronto —
+claramente comprable en la apertura y bastante mediocre al final, que es la
+decisión de tempo que se quiere. No 2, porque a precio de Criopreservación sería
+la primera compra obvia de todas las partidas y aplanaría la elección; no 4,
+porque un goteo de -1 difícilmente amortiza el precio de las dos mejoras que
+tocan la puntuación directamente, y esa es exactamente la trampa aritmética que
+hubo que rescatar en el Módulo Analítico.
+"""
+
+DESCUENTO_COMERCIANTE: int = 1
+"""
+Monedas que la tecnología Comerciante descuenta de **cada transacción de compra**
+de la Acción C: bolsa y media bolsa de harina, lote de agua y la firma del
+Contrato con el Molino. Tres reglas la delimitan, y las tres son estructurales:
+
+  · **Sólo compras, nunca ventas.** Mejorar también la venta duplicaría el
+    problema de abajo en vez de dejarlo acotado, y no hay ninguna razón temática
+    para que un comprador cobre más al vender.
+
+    **Lo que el ciclo comprar→vender hace de verdad, medido y aceptado**, porque
+    es contraintuitivo y la primera versión de este comentario lo tenía mal:
+    comprar sube el visor una casilla, así que la venta posterior cobra el precio
+    de la casilla siguiente. En Blanca la horquilla compra/venta es de 1 Moneda
+    *y* el visor se mueve 1, de modo que los dos se cancelan **exactamente**: la
+    ida y vuelta en Blanca ya era de saldo CERO sin ninguna tecnología. Por eso
+    «no tocar la venta» no basta por sí solo para cerrar el arbitraje — con el
+    descuento, el ciclo de Blanca pasa a dar **+1 Moneda** (Integral queda en 0 y
+    Centeno sigue en -1; `tests/test_comerciante.py` recorre las 15 celdas).
+
+    Lo que sí lo acota es **el espacio de acción, no el precio**: la Regla de
+    Exclusividad prohíbe comprar y vender la misma harina en una visita, y el
+    espacio C se agota una vez al día, así que el ciclo completo cuesta **dos
+    días** de acceso al mercado para ganar 1 Moneda. Cualquier otra cosa que se
+    haga con esos dos PA rinde más — vender una bolsa que el Molino produjo
+    gratis paga 5 en un solo PA —, así que es una jugada estrictamente dominada,
+    no una bomba. Se acepta a ojos abiertos y queda medido en el test; si algún
+    día la Bolsa deja de moverse 1 casilla por transacción, o el espacio C deja
+    de ser único por día, hay que rehacer esta cuenta.
+  · **Suelo de 1 Moneda**, nunca 0. Una compra gratuita movería el visor sin
+    coste, y con media bolsa de Blanca en posición 1 eso sería un empujón
+    ilimitado del mercado con el que castigar a los demás. Que toda compra
+    cueste algo es lo que mantiene el visor ligado a un gasto real.
+  · **El visor se mueve exactamente igual.** Una transacción es una señal de
+    mercado con independencia de su precio — el mismo argumento por el que media
+    bolsa mueve el visor tanto como una entera.
+
+Nótese que en las tres filas de ``engine.PRECIOS_HARINA`` el precio de compra
+sube de 1 en 1 por posición, así que para una bolsa entera el descuento equivale
+a comprar una casilla más barata; se expresa como un descuento plano y no como
+un desplazamiento del visor porque así cubre también el agua y el molino, que no
+tienen visor, con una sola regla en vez de tres.
 """
 
 TIPOS_HARINA_VALIDOS: Dict[str, TipoHarina] = {t.value: t for t in TipoHarina}
@@ -344,6 +399,28 @@ class ActionManager:
                 f"'{player.nombre}' no está en estado de Contaminación. "
                 f"El {nombre_protocolo} solo puede ejecutarse cuando Vitalidad == 0."
             )
+
+    @staticmethod
+    def _precio_compra_efectivo(player: Player, precio: int) -> int:
+        """
+        Precio final (en Monedas) que paga `player` por UNA transacción de compra
+        de la Acción C, aplicando la tecnología Comerciante si la tiene instalada.
+
+        Se aplica a las tres compras de la visita — harina, agua y la firma del
+        Molino — y **a ninguna venta**; ver ``DESCUENTO_COMERCIANTE`` para por qué
+        el lado de venta queda fuera y por qué el suelo es 1 y no 0.
+
+        Existe como función y no como dos restas escritas en los dos bucles de
+        ``accion_C_visitar_mercado`` (simular saldos / aplicar) por la misma razón
+        que existe ``OPERACIONES_HARINA``: los dos bucles tienen que cobrar
+        exactamente lo mismo, y con un único sitio donde vive la cuenta no pueden
+        desviarse. Un descuento que sólo estuviera en el bucle de simulación
+        dejaría comprar sin Monedas suficientes; sólo en el de aplicación,
+        rechazaría compras que el jugador sí puede pagar.
+        """
+        if not player.tecnologias.comerciante:
+            return precio
+        return max(1, precio - DESCUENTO_COMERCIANTE)
 
     # ==================================================================
     # ACCIONES PRINCIPALES (Costo: 1 PA)
@@ -690,6 +767,13 @@ class ActionManager:
         temperatura actual y el tamaño de lote elegido, recibe los tokens de
         agua correspondientes (``AGUA_TOKENS_POR_LOTE``).
 
+        Tecnología **Comerciante**: si el jugador la tiene instalada, cada
+        transacción de COMPRA de la visita — harina (bolsa o media), agua y la
+        firma del Molino — cuesta ``DESCUENTO_COMERCIANTE`` Monedas menos, con
+        suelo de 1. Las ventas cobran exactamente lo mismo que sin la tecnología
+        y el visor se mueve igual en una compra con descuento que sin él; ver
+        ``DESCUENTO_COMERCIANTE`` para el razonamiento de las tres reglas.
+
         Toda la operación se valida en conjunto ANTES de aplicar ningún
         cambio (fail-fast): una venta puede financiar una compra en la misma
         visita, así que los saldos se simulan sobre una copia de las
@@ -787,16 +871,22 @@ class ActionManager:
 
             if tipo_recurso == RECURSO_MOLINO:
                 tipo = TIPOS_HARINA_VALIDOS[t["tipo_harina"]]
-                monedas_sim -= PRECIO_CONTRATO_MOLINO[tipo]
+                monedas_sim -= self._precio_compra_efectivo(
+                    player, PRECIO_CONTRATO_MOLINO[tipo]
+                )
             elif tipo_recurso == "agua":
                 lote_pct = t["lote_pct"]
-                costo = PRECIO_AGUA[temp_actual][lote_pct]
+                costo = self._precio_compra_efectivo(
+                    player, PRECIO_AGUA[temp_actual][lote_pct]
+                )
                 monedas_sim -= costo
             else:
                 tipo = TIPOS_HARINA_VALIDOS[tipo_recurso]
                 direccion, cantidad = OPERACIONES_HARINA[operacion]
                 if direccion == "comprar":
-                    monedas_sim -= market.precio_compra_harina(tipo, cantidad)
+                    monedas_sim -= self._precio_compra_efectivo(
+                        player, market.precio_compra_harina(tipo, cantidad)
+                    )
                 else:
                     harina_sim[tipo_recurso] -= cantidad
                     monedas_sim += market.precio_venta_harina(tipo, cantidad)
@@ -821,11 +911,15 @@ class ActionManager:
 
             if tipo_recurso == RECURSO_MOLINO:
                 tipo = TIPOS_HARINA_VALIDOS[t["tipo_harina"]]
-                player.monedas -= PRECIO_CONTRATO_MOLINO[tipo]
+                player.monedas -= self._precio_compra_efectivo(
+                    player, PRECIO_CONTRATO_MOLINO[tipo]
+                )
                 player.contrato_molino = tipo.value
             elif tipo_recurso == "agua":
                 lote_pct = t["lote_pct"]
-                costo = PRECIO_AGUA[temp_actual][lote_pct]
+                costo = self._precio_compra_efectivo(
+                    player, PRECIO_AGUA[temp_actual][lote_pct]
+                )
                 player.monedas -= costo
                 player.reserva_agua += AGUA_TOKENS_POR_LOTE[lote_pct]
             else:
@@ -833,7 +927,9 @@ class ActionManager:
                 direccion, cantidad = OPERACIONES_HARINA[operacion]
                 comprando = direccion == "comprar"
                 if comprando:
-                    player.monedas -= market.precio_compra_harina(tipo, cantidad)
+                    player.monedas -= self._precio_compra_efectivo(
+                        player, market.precio_compra_harina(tipo, cantidad)
+                    )
                     player.reserva_harina[tipo_recurso] += cantidad
                 else:
                     player.monedas += market.precio_venta_harina(tipo, cantidad)
@@ -860,6 +956,9 @@ class ActionManager:
                                          se borró `Recipe.req_tecnologico`.
           · Criopreservación: 2 Datos  → ignora el desgaste metabólico de
                                          Fase III (Estasis Biológica).
+          · Comerciante:      3 Datos  → -1 Moneda (suelo 1) en cada compra de
+                                         la Acción C; no toca las ventas ni el
+                                         movimiento del visor.
 
         Reglas (ACTIONS_REGISTRY.md §2D, GDD v0.0.2):
           · Cada mejora individual solo puede instalarse UNA vez por partida,
