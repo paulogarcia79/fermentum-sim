@@ -10,11 +10,13 @@
 // ya que environment.ultima_carta_clima y market.tendencia_pendiente siempre
 // reflejan lo de "hoy".
 //
-// La diferencia clave entre ambas cartas, y el motivo de la tabla de precios de
-// abajo: el clima rige HOY, la tendencia NO -- se aplica al final de este dia y
-// rige los precios de MAÑANA (ver engine.py: robar_tendencia /
-// aplicar_tendencia_pendiente). Por eso se muestra el antes/despues concreto en
-// monedas y no solo el modificador crudo.
+// La diferencia clave entre ambas cartas: el clima rige HOY, la tendencia NO
+// -- se aplica al final de este dia y rige los precios de MAÑANA (ver
+// engine.py: robar_tendencia / aplicar_tendencia_pendiente). Eso lo dice ahora
+// la MAQUETA, no solo un parrafo en negrita: dos columnas rotuladas "rige hoy"
+// / "rige mañana", una carta en cada una. La tabla de precios cruza las dos por
+// debajo porque es justamente donde se ve la consecuencia -- el antes/despues
+// concreto en monedas, no el modificador crudo.
 import { computed } from 'vue'
 import { reconocerInicioDia, store } from '../store'
 import { efectoBiologicoTexto as bioTexto, efectoPasivoTexto as pasivoTexto } from '../climaTexto'
@@ -23,6 +25,7 @@ import { precioCompraHarina, precioVentaHarina } from '../data/preciosHarina'
 import type { TipoHarina } from '../types'
 import CartaClima from './CartaClima.vue'
 import CartaTendencia from './CartaTendencia.vue'
+import ModalObligatorio from './ModalObligatorio.vue'
 
 const TIPOS: TipoHarina[] = ['Blanca', 'Integral', 'Centeno']
 const POSICION_MIN = 1
@@ -59,15 +62,19 @@ const preciosComparados = computed(() => {
 </script>
 
 <template>
-  <!-- A body: un overlay fixed no debe colgar del subarbol de una region
-       (GameView aplana lo que hay dentro con :deep, y los z-index de cada
-       region compiten entre si). El padre logico no cambia. -->
-  <Teleport to="body">
-    <div class="fondo-modal">
-      <div class="modal">
-        <h2>Inicio del Día {{ env.dia_actual }}</h2>
-
-        <h3 class="seccion">🌦️ Evento Climático — rige hoy</h3>
+  <ModalObligatorio
+    :ceja="`Fase I · Día ${env.dia_actual}`"
+    titulo="Inicio del Día"
+    ancho="l"
+    etiqueta-boton="Entendido"
+    @reconocer="reconocerInicioDia"
+  >
+    <div class="rejilla">
+      <section class="columna">
+        <header class="cabecera-columna hoy">
+          <p class="eyebrow">🌦️ Rige hoy</p>
+          <h3>Evento Climático</h3>
+        </header>
 
         <div class="carta-envoltorio">
           <CartaClima :carta="carta" />
@@ -75,21 +82,30 @@ const preciosComparados = computed(() => {
 
         <ul class="lista">
           <li>
-            Modificador térmico: {{ carta.modificador_termico >= 0 ? '+' : '' }}{{ carta.modificador_termico }}°C →
-            Temperatura hoy: {{ env.temperatura_actual }}°C
+            Modificador térmico
+            <span class="dato">{{ carta.modificador_termico >= 0 ? '+' : '' }}{{ carta.modificador_termico }}°C</span>
+            → temperatura hoy <span class="dato">{{ env.temperatura_actual }}°C</span>
           </li>
-          <li>Avance base de fermentación hoy: {{ avanceBase }} casillas (antes del dado de inóculo y la incubadora)</li>
+          <li>
+            Avance base de fermentación: <span class="dato">{{ avanceBase }}</span> casillas
+            <span class="matiz">(antes del dado de inóculo y la incubadora)</span>
+          </li>
           <li v-if="efectoBiologicoTexto">🧪 {{ efectoBiologicoTexto }}</li>
           <li>⚙️ Efecto pasivo vigente: {{ efectoPasivoTexto }}</li>
         </ul>
+      </section>
+
+      <section class="columna">
+        <header class="cabecera-columna manana">
+          <p class="eyebrow">📈 Rige mañana</p>
+          <h3>Tendencia de Mercado</h3>
+        </header>
+
+        <div class="carta-envoltorio">
+          <CartaTendencia :modificador="tendencia" />
+        </div>
 
         <template v-if="tendencia !== null">
-          <h3 class="seccion">📈 Tendencia de Mercado — rige mañana</h3>
-
-          <div class="carta-envoltorio">
-            <CartaTendencia :modificador="tendencia" />
-          </div>
-
           <p class="aviso-timing">
             <strong>Los precios de hoy NO cambian.</strong>
             Esta carta se aplica al <strong>final del día</strong>, así que fija los precios de la Bolsa de
@@ -100,89 +116,111 @@ const preciosComparados = computed(() => {
           <ul class="lista">
             <li>{{ textoTendencia(tendencia) }}</li>
           </ul>
-
-          <table class="tabla-precios">
-            <thead>
-              <tr>
-                <th>Harina</th>
-                <th colspan="2">Comprar</th>
-                <th colspan="2">Vender</th>
-              </tr>
-              <tr class="sub">
-                <th></th>
-                <th>hoy</th>
-                <th>mañana</th>
-                <th>hoy</th>
-                <th>mañana</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="fila in preciosComparados" :key="fila.tipo">
-                <td class="tipo">{{ fila.tipo }}</td>
-                <td>{{ fila.compraHoy }}</td>
-                <td :class="{ cambia: fila.cambia }">{{ fila.compraManana }}</td>
-                <td>{{ fila.ventaHoy }}</td>
-                <td :class="{ cambia: fila.cambia }">{{ fila.ventaManana }}</td>
-              </tr>
-            </tbody>
-          </table>
         </template>
 
-        <button class="primario" @click="reconocerInicioDia">Entendido</button>
-      </div>
+        <p v-else class="lista sin-tendencia">
+          Mazo de tendencias agotado — los precios de la Bolsa no se moverán esta noche.
+        </p>
+      </section>
+
+      <!-- Cruza las dos columnas: es donde el "hoy vs mañana" de arriba se
+           vuelve un numero que el jugador puede usar para decidir hoy. -->
+      <section v-if="tendencia !== null" class="bolsa">
+        <p class="eyebrow">Bolsa de Harinas — efecto de la tendencia</p>
+
+        <table class="tabla-precios">
+          <thead>
+            <tr>
+              <th>Harina</th>
+              <th colspan="2">Comprar</th>
+              <th colspan="2">Vender</th>
+            </tr>
+            <tr class="sub">
+              <th></th>
+              <th>hoy</th>
+              <th>mañana</th>
+              <th>hoy</th>
+              <th>mañana</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="fila in preciosComparados" :key="fila.tipo">
+              <td class="tipo">{{ fila.tipo }}</td>
+              <td class="dato">{{ fila.compraHoy }}</td>
+              <td class="dato" :class="{ cambia: fila.cambia }">{{ fila.compraManana }}</td>
+              <td class="dato">{{ fila.ventaHoy }}</td>
+              <td class="dato" :class="{ cambia: fila.cambia }">{{ fila.ventaManana }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
     </div>
-  </Teleport>
+  </ModalObligatorio>
 </template>
 
 <style scoped>
-.fondo-modal {
-  position: fixed;
-  inset: 0;
-  background: var(--velo-modal);
+.rejilla {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--e4) var(--e3);
+}
+
+.columna {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 50;
-  padding: var(--e4);
+  flex-direction: column;
+  gap: var(--e2);
+  min-width: 0;
 }
 
-.modal {
-  max-width: 480px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-}
-
-.modal h2 {
-  margin-top: 0;
-}
-
-.seccion {
-  font-size: var(--t-m);
-  margin: 0 0 var(--e2);
+/* La regla superior de color es lo que separa las dos columnas de un vistazo:
+   cobre = lo tuyo/lo activo (hoy), verdin = estado de mercado compartido
+   (mañana). Ver el sistema de acentos en App.vue. */
+.cabecera-columna {
+  border-top: 2px solid var(--borde);
   padding-top: var(--e2);
-  border-top: 1px solid var(--borde);
-  color: var(--tinta-tenue);
+}
+
+.cabecera-columna.hoy {
+  border-top-color: var(--cobre);
+}
+
+.cabecera-columna.manana {
+  border-top-color: var(--verdin);
+}
+
+.cabecera-columna h3 {
+  margin: var(--e1) 0 0;
+  font-size: var(--t-m);
 }
 
 .carta-envoltorio {
   display: flex;
   justify-content: center;
-  margin-bottom: var(--e3);
+  margin: var(--e2) 0;
 }
 
 .lista {
   list-style: none;
   padding: 0;
-  margin: 0 0 var(--e4);
+  margin: 0;
   display: flex;
   flex-direction: column;
   gap: var(--e2);
   font-size: var(--t-s);
+  line-height: 1.4;
+}
+
+.matiz {
+  color: var(--tinta-tenue);
+}
+
+.sin-tendencia {
+  color: var(--tinta-tenue);
+  font-style: italic;
 }
 
 .aviso-timing {
-  margin: 0 0 var(--e3);
+  margin: 0;
   padding: var(--e2) var(--e3);
   border: 1px solid var(--cobre);
   border-radius: var(--r-carta);
@@ -191,11 +229,17 @@ const preciosComparados = computed(() => {
   line-height: 1.45;
 }
 
+.bolsa {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--borde);
+  padding-top: var(--e3);
+}
+
 .tabla-precios {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--t-s);
-  margin-bottom: var(--e4);
+  margin-top: var(--e2);
 }
 
 .tabla-precios th,
@@ -203,6 +247,10 @@ const preciosComparados = computed(() => {
   padding: var(--e1) var(--e2);
   text-align: center;
   border-bottom: 1px solid var(--borde);
+}
+
+.tabla-precios tbody tr:last-child td {
+  border-bottom: none;
 }
 
 .tabla-precios thead th {
@@ -225,13 +273,11 @@ const preciosComparados = computed(() => {
   font-weight: 600;
 }
 
-button.primario {
-  width: 100%;
-  padding: var(--e2);
-  border-radius: var(--r-control);
-  border: 1px solid var(--cobre);
-  background: var(--cobre);
-  color: var(--tinta-sobre-acento);
-  font-weight: 600;
+/* Mismo punto de corte que el resto del sistema. Al apilar se recupera el
+   orden narrativo de siempre: clima -> tendencia -> precios. */
+@media (max-width: 720px) {
+  .rejilla {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
