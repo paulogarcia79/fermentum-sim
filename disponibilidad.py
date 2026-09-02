@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from actions import HARINA_RECULTIVO_MANUAL
+from actions import COSTOS_TECNOLOGIA, HARINA_RECULTIVO_MANUAL
 from engine import (
     COSTE_REFRESCO_AGUA,
     GameEngine,
@@ -95,10 +95,31 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         "C" not in usados and tiene_pa,
         "Ya usaste este espacio hoy" if "C" in usados else "Sin PA",
     )
+    # Coste de la mejora PENDIENTE más barata, no el mínimo del catálogo: es el
+    # mismo razonamiento que en la Acción G, donde se mira el precio de las recetas
+    # hoy VISIBLES y no el del catálogo entero. Quien ya instaló la Criopreservación
+    # (2 Datos) tiene el escalón más barato en 3, así que con 2 Datos el espacio
+    # debe apagarse aunque el catálogo siga conteniendo una mejora de 2.
+    # `None` = no queda nada por instalar, un motivo distinto de «no puedo pagarlo».
+    costo_mejora_minimo = min(
+        (COSTOS_TECNOLOGIA[t] for t in player.tecnologias.pendientes),
+        default=None,
+    )
+    if "D" in usados:
+        motivo_d = "Ya usaste este espacio hoy"
+    elif not tiene_pa:
+        motivo_d = "Sin PA"
+    elif costo_mejora_minimo is None:
+        motivo_d = "Todas las mejoras ya están instaladas"
+    else:
+        motivo_d = "Sin Datos para ninguna mejora pendiente"
     agregar(
         "D",
-        "D" not in usados and tiene_pa,
-        "Ya usaste este espacio hoy" if "D" in usados else "Sin PA",
+        "D" not in usados
+        and tiene_pa
+        and costo_mejora_minimo is not None
+        and player.datos_investigacion >= costo_mejora_minimo,
+        motivo_d,
     )
     # Acción E (Pliegues) se paga en Monedas, no en PA: no consulta `tiene_pa`.
     # Con Cámara B la variante 'recuperar_vitalidad' es legal SIN masas activas,

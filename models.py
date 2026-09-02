@@ -708,6 +708,22 @@ class Technologies:
             ]
         )
 
+    @property
+    def pendientes(self) -> Tuple[TecnologiaID, ...]:
+        """
+        Mejoras que este jugador todavía NO tiene instaladas, es decir, las
+        únicas que la Acción D puede comprar ahora mismo.
+
+        Recorre ``TecnologiaID`` en vez de enumerar los cinco atributos a mano
+        (como sí hace ``cantidad_instaladas``, que ya existía) para que una
+        sexta tecnología entre aquí sola: quien la añada solo tiene que declarar
+        el miembro del enum y su precio en ``actions.COSTOS_TECNOLOGIA``.
+
+        Es un ``@property``, así que ``dataclasses.asdict`` no lo serializa y ni
+        el snapshot dorado ni los pickles persistidos cambian de forma.
+        """
+        return tuple(t for t in TecnologiaID if not self.esta_activa(t))
+
 
 @dataclass
 class Player:

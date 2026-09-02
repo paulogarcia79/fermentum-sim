@@ -675,6 +675,35 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   `ActionManager`'s rules. Not authoritative — an action reported "enabled" can still fail at
   submit time for reasons this module doesn't check (e.g. exact recipe resource cost);
   `ActionManager` remains the only real validation.
+
+  **Acción D greys out against the cheapest *pending* technology.** D used to check only "space
+  unused today" and PA, so the tile stayed lit with 0 Datos and the only feedback was the server's
+  rejection after Confirmar — and the pass-advice modal, which lists every still-`habilitada`
+  action, nagged that you could still install something when nothing was buyable. It now needs
+  `datos_investigacion >= min(COSTOS_TECNOLOGIA[t] for t in player.tecnologias.pendientes)`,
+  joining E, G and Descarte as a space that prices itself. Three things carry weight:
+  - **Pending, not the catalog** — the same reason G reads the four *visible* recipes rather than
+    the global minimum. Criopreservación is the catalog's cheapest at 2 Datos, so a player who
+    already owns it faces a 3-Dato floor and 2 Datos must grey the space out. A `min` over
+    `COSTOS_TECNOLOGIA.values()` looks identical and is wrong exactly there;
+    `test_D_mide_contra_la_mejora_pendiente_mas_barata_no_contra_el_catalogo` is the guardrail,
+    verified by mutation.
+  - **Two motivos, because they are different situations.** "Sin Datos para ninguna mejora
+    pendiente" is actionable, "Todas las mejoras ya están instaladas" is permanent, and the
+    tooltip is the only place a player learns which. The ladder keeps `"Sin PA"` ahead of both,
+    like G's.
+  - **`Technologies.pendientes` iterates `TecnologiaID`**, unlike the older `cantidad_instaladas`
+    which enumerates the five attributes by hand, so a sixth technology joins the check by
+    declaring its enum member and its price. Being a `@property` it is invisible to
+    `dataclasses.asdict`: golden snapshot untouched, no `VERSION_FORMATO` bump. `tests/_bot.py`
+    never reads `acciones_disponibles`, so the golden game is unaffected either way.
+
+  `ModalD.vue` mirrors it from `web/src/data/tecnologias.ts` by **disabling Confirmar only**
+  (the `ModalG.vue` `puedePagar` precedent, with the same "Cuesta X · tienes Y" line): unaffordable
+  pending upgrades stay selectable so their descriptions can still be read and saved for, and the
+  initial selection is the first pending upgrade you can actually afford. This is **not a rules
+  change** — `accion_D_implementar_mejora` is untouched and the action's legality is identical —
+  so the rulebooks and `context/*.md` are deliberately not edited.
 - **`server/`** — the headless HTTP backend (Starlette + uvicorn; see `server/app.py`'s module
   docstring for the transport/concurrency reasoning). `sessions.py` holds `RoomManager`/
   `GameSession`/`Seat` — in-memory rooms, no accounts, a room code + a per-player secret token is
