@@ -458,11 +458,19 @@ export async function refrescarEstado(): Promise<void> {
 export async function refrescarEventos(): Promise<void> {
   if (!store.sesion) return
   try {
-    const r = await api.obtenerEventos(store.sesion.roomId, store.sesion.token, store.ultimoSeqVisto)
-    if (r.eventos.length > 0) {
-      store.eventos.push(...r.eventos)
-      store.ultimoSeqVisto = r.seq
-    }
+    // `desde` se congela aqui: mientras vuela la peticion, el SSE puede
+    // empujar eventos y adelantar ultimoSeqVisto, y entonces la respuesta
+    // (que arranca en `desde`) solapa con lo ya recibido. Sin recortar ese
+    // solape se duplicaban filas en el Registro y en el informe de Fase III.
+    // Importa mas que antes: RegistroEventos.vue intercala acciones y eventos
+    // usando el INDICE de cada evento, asi que un duplicado desalinearia todo
+    // lo que viene detras, no solo se veria repetido.
+    const desde = store.ultimoSeqVisto
+    const r = await api.obtenerEventos(store.sesion.roomId, store.sesion.token, desde)
+    const yaVistos = Math.max(0, store.ultimoSeqVisto - desde)
+    const nuevos = r.eventos.slice(yaVistos)
+    if (nuevos.length > 0) store.eventos.push(...nuevos)
+    store.ultimoSeqVisto = Math.max(store.ultimoSeqVisto, r.seq)
   } catch {
     // El polling de eventos es secundario: un fallo aqui no debe tapar el
     // error (mas importante) del polling de estado.
@@ -519,8 +527,15 @@ function iniciarEventSource(): void {
   es.onmessage = (mensaje) => {
     try {
       const evento = JSON.parse(mensaje.data)
-      store.eventos.push(evento)
+      // `id:` es 1-based (el evento de indice i llega con id i+1), asi que
+      // ultimoSeqVisto es "cuantos eventos llevo" y store.eventos[i] es el
+      // evento i del motor. Mantener esa alineacion es lo que permite que
+      // RegistroEventos.vue ordene por `pos_eventos`; un frame ya visto
+      // (reconexion que reenvia backlog, carrera con refrescarEventos) se
+      // descarta en vez de desplazar todo el hilo.
       const seq = Number(mensaje.lastEventId)
+      if (!Number.isNaN(seq) && seq <= store.ultimoSeqVisto) return
+      store.eventos.push(evento)
       if (!Number.isNaN(seq)) store.ultimoSeqVisto = seq
     } catch {
       return

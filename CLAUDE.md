@@ -1161,6 +1161,59 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   last case is the guardrail for the invariant above (a free action + an undo must leave
   `len(engine.eventos)` unchanged).
 
+  **Registro de acciones — the log the aviso channel could not be.** `AvisoAccion` fixed the
+  *sound* and the board lag, but a sound is not a record: 13 of the 14 actions still left no trace
+  (only F, via its `HORNEADO`), so `RegistroEventos.vue` showed the weather and the market and
+  almost nothing any player actually did. The log is now `GameSession.registro_acciones`, a list of
+  `EntradaRegistro` (`seq`, `accion`, `jugador_idx`, `dia`, `pos_eventos`, `mensaje`, `deshecha`).
+  Five things carry weight:
+  - **It lives on the session, not in `engine.eventos`, for the reason `AvisoAccion` already
+    documents** — free actions sit inside the undo window and `restaurar_checkpoint` does
+    `pickle.loads` of the whole engine, so an entry in the engine's log would make `len(eventos)`
+    *shrink* on an undo. Being outside that pickle is also what makes the next point possible.
+  - **It is append-only, and an undo marks rather than deletes.** `restaurar_checkpoint` flags
+    every entry above `checkpoint_registro_len` (captured in `tomar_checkpoint`) as `deshecha`, and
+    the route appends a "Deshizo su visita" line. The board reverting with no trace is worse than a
+    struck-through line, especially for opponents who already heard the action's sound. Length, not
+    a visit key, is enough: the checkpoint is taken before the visit's *first* free action and
+    re-taken after an undo with the new length, so a second undo only reaches the newer entries.
+    The flagging is in `sessions.py`, not the route, so it is testable without HTTP.
+  - **The sentence is written server-side, in `commands.py:describir_accion`** — the one place
+    where the wire params are already resolved *and* the `ActionManager` return value is in hand
+    (F's `HorneadoRecord`, B's slot, the `int` the Simposio pays). Same reasoning as `engine.py`
+    writing `GameEvent.mensaje` at the point of mutation. It is called after `resolver_comando`
+    succeeded and before `_avanzar_fase_si_corresponde`; the actor's name is deliberately omitted,
+    since the client prefixes it in the seat colour.
+  - **`pos_eventos` is captured *before* the mutation**, which is what interleaves the two streams
+    with no timestamps: an entry sorts after event `pos_eventos - 1` and before event
+    `pos_eventos`, so "Horneó X" reads immediately above the `HORNEADO` it caused. It is written
+    into `/actions` **before** the `ACCIONES_QUE_REVELAN` re-take, so a revealing action's entry
+    falls inside the frozen length and a later undo can never strike it out.
+  - **A force-pass has its own id here and not on the aviso channel.** The `AvisoAccion` stays
+    `"pasar"` — it is the sound channel, and a forced pass sounds the same — while the entry is
+    `pase_forzado` and names who forced it, which is the only place that information survives
+    (`jugador_idx` holds who *was* passed). `forzar_pase` therefore keeps the requester's `Seat`,
+    which it used to discard.
+
+  Transport is the whole log inside `game_state_view`, no new route: an undo **mutates** old
+  entries, which a `?since=N` delta cannot express without client-side delta logic the store
+  deliberately avoids, and the `accion` frame already triggers `refrescarEstado()`, so live
+  updates, reconnect and the undo flags all arrive for free. Cost is ~150–215 B/entry, roughly
+  30–45 KB by the end of a 4-player game; `GZipMiddleware` is the lever if it ever matters.
+  `VERSION_FORMATO` went to 17. This forced a real fix in `store.ts`: `onmessage` and
+  `refrescarEventos` both pushed into `store.eventos` with no seq guard, and the merge indexes
+  events by position, so a duplicate would no longer merely repeat a row — it would shift
+  everything after it. Both paths now dedupe by seq (which also fixes duplicated rows in the Fase
+  III report). Client side, `RegistroEventos.vue` drops its 12-entry cap and reversal for the full
+  history newest-at-bottom with sticky auto-scroll (it follows only if you were already at the
+  bottom), day separators, seat-coloured actor names, own lines washed in `--cobre`, and an
+  exhaustive `Record<IdMovimiento, string>` icon map so a new action without an icon fails to
+  compile. `IdMovimiento` lives next to `IdAccion`, following the `GRUPOS_ACCION` precedent. Two
+  `test_undo.py` cases asserted whole-view equality across an undo and now compare the view minus
+  `registro_acciones`, asserting the log's append-only shape separately — a pin, not a loosening.
+  Not a rules change, so the rulebooks and `context/*.md` are deliberately untouched. Tests:
+  `tests/test_registro_acciones.py`.
+
   **Show/hide panels (floating dock)**: the nine persistent modules `GameView.vue` renders —
   `MazoClimaPanel`, `MercadoPanel`, `BolsaHarinasPanel`, `MazoTendenciasPanel`, the "Espacios de
   Acción" panel, `MiTablero`, `OrdenTurnoPanel`, `TablerosOponentes`, `RegistroEventos` — can each

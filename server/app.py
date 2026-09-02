@@ -60,7 +60,13 @@ from exceptions import (
     RuleViolationError,
 )
 from server import persistence
-from server.commands import ACCIONES_QUE_REVELAN, ACCIONES_QUE_TERMINAN_TURNO, resolver_comando
+from server.commands import (
+    ACCIONES_QUE_REVELAN,
+    ACCIONES_QUE_TERMINAN_TURNO,
+    MENSAJES_MOVIMIENTO,
+    describir_accion,
+    resolver_comando,
+)
 from server.errors import (
     CapacidadInvalidaError,
     ColorInvalidoError,
@@ -495,6 +501,10 @@ def crear_app() -> Starlette:
                     )
                 jugador = engine.players[asiento.player_index]
                 manager = ActionManager(engine)
+                # Antes de mutar: la Acción F emite su HORNEADO durante el
+                # propio despacho, y la línea "Horneó X" del registro debe
+                # leerse por delante de ese evento, no detrás.
+                pos_eventos = len(engine.eventos)
                 # Checkpoint de deshacer. Una acción gratuita deja la visita
                 # abierta, así que el estado PRE-acción se fotografía la
                 # primera vez (las siguientes gratuitas de la misma visita
@@ -509,13 +519,23 @@ def crear_app() -> Starlette:
                 if checkpoint_nuevo:
                     sesion.tomar_checkpoint()
                 try:
-                    resolver_comando(engine, manager, jugador, accion, params)
+                    resultado = resolver_comando(engine, manager, jugador, accion, params)
                 except FermentumError:
                     if checkpoint_nuevo:
                         sesion.limpiar_checkpoint()
                     raise
                 if not es_gratuita:
                     sesion.limpiar_checkpoint()  # la visita terminó: nada deshacible
+                # Antes de re-tomar el checkpoint de una acción reveladora:
+                # así su entrada queda DENTRO de la longitud congelada y un
+                # deshacer posterior no la tacha (lo revelado no se
+                # des-revela).
+                sesion.registrar_accion(
+                    accion,
+                    asiento.player_index,
+                    describir_accion(engine, jugador, accion, params, resultado),
+                    pos_eventos,
+                )
                 # Contrato de ACCIONES_QUE_REVELAN (hoy todas False): lo
                 # revelado no se des-revela -- el checkpoint se re-toma
                 # DESPUÉS de resolver, y ese es el nuevo piso del deshacer.
@@ -546,7 +566,14 @@ def crear_app() -> Starlette:
                 _requerir_turno_del_jugador(engine, asiento)
                 jugador = engine.players[asiento.player_index]
                 sesion.limpiar_checkpoint()  # el pase cierra la visita
+                pos_eventos = len(engine.eventos)
                 engine.pasar_turno(jugador)
+                sesion.registrar_accion(
+                    "pasar",
+                    asiento.player_index,
+                    MENSAJES_MOVIMIENTO["pasar"],
+                    pos_eventos,
+                )
                 sesion.difundir_accion("pasar", asiento.player_index)
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
@@ -581,6 +608,15 @@ def crear_app() -> Starlette:
                         "acción en esta visita."
                     )
                 sesion.restaurar_checkpoint()
+                # `sesion.engine` y no `engine`: el local apunta al motor
+                # recién descartado. (Las longitudes coinciden por el
+                # invariante, pero leer el objeto muerto es una trampa.)
+                sesion.registrar_accion(
+                    "deshacer",
+                    asiento.player_index,
+                    MENSAJES_MOVIMIENTO["deshacer"],
+                    len(sesion.engine.eventos),
+                )
                 sesion.difundir_accion("deshacer", asiento.player_index)
                 salas.guardar(sesion)
                 vista = game_state_view(sesion)
@@ -600,14 +636,25 @@ def crear_app() -> Starlette:
         try:
             token = _requerir_token(request)
             sesion = salas.obtener(room_id)
-            sesion.asiento_por_token(token)  # valida que quien pide sea un jugador de la sala
+            # Valida que quien pide sea un jugador de la sala, y se conserva:
+            # el registro nombra a quién forzó el pase.
+            solicitante = sesion.asiento_por_token(token)
             engine = _requerir_partida_iniciada(sesion)
 
             async with sesion.lock:
+                pos_eventos = len(engine.eventos)
                 idx_pasado = sesion.forzar_pase_por_inactividad()
                 # Después (no antes): si el pase forzado se rechaza (jugador
                 # aún activo), su checkpoint de visita debe sobrevivir.
                 sesion.limpiar_checkpoint()
+                sesion.registrar_accion(
+                    "pase_forzado",
+                    idx_pasado,
+                    MENSAJES_MOVIMIENTO["pase_forzado"].format(nombre=solicitante.nombre),
+                    pos_eventos,
+                )
+                # El aviso sigue siendo "pasar": es el canal de sonido, y un
+                # pase forzado suena igual. Solo el registro los distingue.
                 sesion.difundir_accion("pasar", idx_pasado)
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)

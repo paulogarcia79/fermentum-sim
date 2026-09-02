@@ -21,6 +21,19 @@ export type IdAccion =
   | 'horas_extras'
   | 'pedido_urgencia'
 
+/**
+ * Todo lo que puede aparecer como una linea del registro de la partida: las
+ * 14 acciones mas los tres movimientos que no pasan por /actions. Vive aqui,
+ * junto al IdAccion que extiende, por el mismo motivo que GRUPOS_ACCION: la
+ * tabla al lado del tipo que indexa. Espejo de los ids que
+ * server/sessions.py:EntradaRegistro.accion puede tomar.
+ *
+ * Ojo: NO es IdSonido (data/sonidosAccion.ts). Un pase forzado suena como un
+ * pase normal, asi que el canal de sonido no lo distingue; el registro si,
+ * porque solo el necesita decir quien lo forzo.
+ */
+export type IdMovimiento = IdAccion | 'pasar' | 'deshacer' | 'pase_forzado'
+
 export const descripcionesAcciones: Record<IdAccion, string> = {
   A: 'Gratis, una vez por día. Resta 1 token de Harina (10%, cualquier tipo) por +1 Vitalidad (máx. 6). Repone exactamente el -1 que el desgaste metabólico quita cada noche. Ya no toca la Acidez: eso es ahora la acción «Descarte».',
   B: 'Consume 10 tokens de Harina de un tipo (100%, una bolsa entera) + los tokens de Agua exactos que pida la receta (1 token = 5% de hidratación). Sella tu Vitalidad (dado de inóculo) y, si tu Acidez cae en el rango de bono de la receta, también tu Acidez.',

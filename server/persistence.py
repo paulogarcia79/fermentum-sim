@@ -45,8 +45,14 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 16
+VERSION_FORMATO = 17
 """
+Bumped a 17: `GameSession` gana `registro_acciones` (el log append-only de los
+movimientos de jugador) y `checkpoint_registro_len`. Un pickle viejo trae
+sesiones sin ambos atributos, y el primer `restaurar_checkpoint` tras cargarlo
+leeria `checkpoint_registro_len`, ademas de que `game_state_view` serializa el
+registro en cada respuesta.
+
 Bumped a 16: `Technologies` gana `comerciante`, la quinta mejora de laboratorio.
 Un pickle viejo trae `Technologies` sin ese campo, y la primera compra de la
 Accion C tras restaurar lo leeria (ademas de `cantidad_instaladas`, que puntua).

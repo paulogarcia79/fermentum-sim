@@ -148,6 +148,66 @@ class AvisoAccion:
 
 
 @dataclass
+class EntradaRegistro:
+    """
+    Una línea del registro de movimientos de la partida: qué hizo cada
+    jugador, en orden, para que el panel "Registro" del cliente sea un log
+    de la mesa y no solo de los cambios automáticos del motor.
+
+    Deliberadamente NO es un ``GameEvent`` y vive en la sesión, no en el
+    motor, por la misma razón que ``AvisoAccion`` (ver su docstring): las
+    acciones gratuitas ocurren dentro de la ventana de deshacer, y
+    ``restaurar_checkpoint`` hace ``pickle.loads`` del motor entero, así que
+    un evento por acción gratuita haría ENCOGER ``len(engine.eventos)`` tras
+    un deshacer y dejaría el puntero ``since``/``Last-Event-ID`` de cada
+    cliente por delante del servidor para siempre (pinchado por
+    ``tests/test_avisos_accion.py::test_accion_gratuita_y_deshacer_no_alteran_el_log_de_eventos``).
+    Al colgar de ``GameSession`` — fuera del pickle del motor — un deshacer
+    no lo toca, y por eso puede ser *append-only*: una entrada deshecha se
+    marca, no se borra.
+
+    A diferencia de ``AvisoAccion`` (efímero, sin backlog, "un sonido ya
+    sonado no es estado") esto SÍ es estado: se persiste con la sala y se
+    envía entero en cada ``game_state_view``.
+
+    No es ``frozen`` a propósito: ``deshecha`` se voltea en
+    ``restaurar_checkpoint``.
+    """
+
+    seq: int
+    """Correlativo 1-based dentro de la sesión. Es el orden de anexado, que
+    desempata a las entradas que comparten ``pos_eventos``."""
+    accion: str
+    """Id de ``ACCIONES_QUE_TERMINAN_TURNO``, o ``"pasar"`` / ``"deshacer"``
+    / ``"pase_forzado"``. Nótese que el pase por inactividad tiene id propio
+    aquí aunque su ``AvisoAccion`` siga siendo ``"pasar"``: el aviso es el
+    canal de sonido y la entrada es el registro, y solo esta última necesita
+    distinguir quién forzó el pase."""
+    jugador_idx: int
+    """Quién hizo el movimiento. Para ``"pase_forzado"``, a quién se lo
+    pasaron (quién lo forzó va en el mensaje)."""
+    dia: int
+    """``environment.dia_actual`` al anexar -- separa el registro por días
+    en el cliente sin que este tenga que deducirlo."""
+    pos_eventos: int
+    """``len(engine.eventos)`` ANTES de la mutación: la entrada va después
+    del evento ``pos_eventos - 1`` y antes del evento ``pos_eventos``. Es lo
+    que permite intercalar acciones y eventos en un solo hilo cronológico
+    sin marcas de tiempo. Se toma antes y no después porque Acción F emite
+    su ``HORNEADO`` durante el propio despacho, y "Horneó X" debe leerse
+    por delante de él."""
+    mensaje: str
+    """Frase en español ya construida por el servidor (ver
+    ``server/commands.py:describir_accion``), sin el nombre del actor: el
+    cliente lo antepone con el color del asiento."""
+    deshecha: bool = False
+    """True si un deshacer revirtió esta entrada. El registro es
+    append-only: la línea se queda tachada y se anexa un "Deshizo su
+    visita", en vez de desaparecer sin dejar rastro de que el tablero
+    revirtió."""
+
+
+@dataclass
 class GameSession:
     """
     Una sala/partida en memoria.
@@ -204,6 +264,19 @@ class GameSession:
     nonce solo cambia al TERMINAR un turno, así que por sí solo no
     distingue visitas (varias acciones gratuitas comparten nonce), y el
     día lo desambigua a través de reinicios de partida."""
+    registro_acciones: List[EntradaRegistro] = field(default_factory=list)
+    """Log append-only de todos los movimientos de jugador de esta partida
+    (ver ``EntradaRegistro``). Se vacía en ``reiniciar_a_lobby``: pertenece
+    a la partida que se descarta, igual que el motor."""
+    checkpoint_registro_len: Optional[int] = None
+    """``len(registro_acciones)`` en el momento de ``tomar_checkpoint``, es
+    decir "todo lo anterior a la visita en curso". Al deshacer, lo que esté
+    por encima de esta marca es exactamente lo que la visita anexó, y se
+    marca ``deshecha``. Basta la longitud (sin comparar claves de visita)
+    porque el checkpoint se toma antes de la PRIMERA acción gratuita de la
+    visita, y tras un deshacer se re-toma con la longitud nueva -- que ya
+    incluye las entradas tachadas y la línea del propio deshacer -- así que
+    un segundo deshacer solo alcanza a las entradas nuevas."""
 
     def __getstate__(self) -> Dict[str, Any]:
         """
@@ -263,6 +336,28 @@ class GameSession:
         for cola in self.suscriptores:
             cola.put_nowait(aviso)
 
+    def registrar_accion(
+        self, accion: str, jugador_idx: int, mensaje: str, pos_eventos: int
+    ) -> EntradaRegistro:
+        """
+        Anexa un movimiento al registro de la partida (ver
+        ``EntradaRegistro``). Lo llama ``server/app.py`` en el mismo punto
+        que ``difundir_accion`` -- después de que la mutación tuvo éxito,
+        para que una acción rechazada por fail-fast no deje línea -- y con
+        el ``pos_eventos`` capturado ANTES de la mutación.
+        """
+        assert self.engine is not None
+        entrada = EntradaRegistro(
+            seq=len(self.registro_acciones) + 1,
+            accion=accion,
+            jugador_idx=jugador_idx,
+            dia=self.engine.environment.dia_actual,
+            pos_eventos=pos_eventos,
+            mensaje=mensaje,
+        )
+        self.registro_acciones.append(entrada)
+        return entrada
+
     # ------------------------------------------------------------------
     # Checkpoint de visita (deshacer)
     # ------------------------------------------------------------------
@@ -306,6 +401,7 @@ class GameSession:
         finally:
             self.engine._event_sink = sink
         self.checkpoint_clave = self._clave_visita_actual()
+        self.checkpoint_registro_len = len(self.registro_acciones)
 
     def restaurar_checkpoint(self) -> None:
         """
@@ -319,11 +415,20 @@ class GameSession:
         restaurado: GameEngine = pickle.loads(self.checkpoint_visita)
         restaurado._event_sink = self.difundir_evento
         self.engine = restaurado
+        # El registro es append-only: lo que anexó esta visita se tacha, no
+        # se borra. Un tablero que "des-ocurre" sin dejar rastro es peor que
+        # una línea tachada, sobre todo para los rivales que ya oyeron el
+        # sonido de la acción. Se marca aquí y no en la ruta para poder
+        # probarlo sin HTTP.
+        if self.checkpoint_registro_len is not None:
+            for entrada in self.registro_acciones[self.checkpoint_registro_len:]:
+                entrada.deshecha = True
         self.limpiar_checkpoint()
 
     def limpiar_checkpoint(self) -> None:
         self.checkpoint_visita = None
         self.checkpoint_clave = None
+        self.checkpoint_registro_len = None
 
     def puede_deshacer(self) -> bool:
         """True si hay un checkpoint restaurable para la visita EN CURSO."""
@@ -407,6 +512,7 @@ class GameSession:
         self.status = RoomStatus.LOBBY
         self.engine = None
         self.votos_fin_anticipado = set()
+        self.registro_acciones = []  # el registro pertenecía a la partida descartada
         self.limpiar_checkpoint()  # el checkpoint apuntaba al motor recién descartado
 
 

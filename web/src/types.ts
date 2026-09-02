@@ -218,6 +218,38 @@ export interface GameStateView {
    * alguna accion gratuita esta visita) -- ver POST /games/{id}/undo y el
    * boton Deshacer en BarraAcciones.vue. */
   puede_deshacer: boolean
+  /** Registro append-only de los movimientos de la partida -- espejo de
+   * server/sessions.py:EntradaRegistro. Llega entero en cada snapshot (no por
+   * delta) porque un deshacer MUTA entradas viejas marcandolas `deshecha`.
+   * Ver RegistroEventos.vue, que lo intercala con `store.eventos`. */
+  registro_acciones: RegistroAccionView[]
+}
+
+/**
+ * Una linea del registro de movimientos -- espejo de
+ * server/sessions.py:EntradaRegistro.
+ *
+ * No es un GameEventView y no vive en el log de eventos del motor: las
+ * acciones gratuitas ocurren dentro de la ventana de deshacer, donde
+ * `engine.eventos` tiene que quedar byte a byte identico. Ver el docstring
+ * de EntradaRegistro para el porque completo.
+ */
+export interface RegistroAccionView {
+  /** Correlativo 1-based; desempata a las entradas con igual `pos_eventos`. */
+  seq: number
+  /** Un IdMovimiento (ver data/descripcionesAcciones.ts). */
+  accion: string
+  /** Quien movio. Para 'pase_forzado', a quien se lo pasaron. */
+  jugador_idx: number
+  dia: number
+  /** `len(engine.eventos)` antes de la mutacion: la entrada va despues del
+   * evento `pos_eventos - 1` y antes del evento `pos_eventos`. Es la clave
+   * de ordenacion que permite un solo hilo cronologico sin marcas de tiempo. */
+  pos_eventos: number
+  /** Frase ya redactada por el servidor, sin el nombre del actor. */
+  mensaje: string
+  /** True si un deshacer la revirtio: se tacha, no se borra. */
+  deshecha: boolean
 }
 
 export interface GameEventView {
@@ -245,7 +277,9 @@ export interface ApiError {
  * Ver data/sonidosAccion.ts.
  */
 export interface AvisoAccionView {
-  /** Id de accion, o 'pasar' / 'deshacer'. */
+  /** Id de accion, o 'pasar' / 'deshacer'. Un pase forzado llega como
+   * 'pasar': el aviso es el canal de sonido y suena igual. Solo el registro
+   * (RegistroAccionView) lo distingue como 'pase_forzado'. */
   accion: string
   jugador_idx: number
 }

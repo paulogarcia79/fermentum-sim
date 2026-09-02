@@ -52,6 +52,21 @@ def _alimentar(cliente, room_id, token):
     return r
 
 
+def _sin_registro(vista):
+    """
+    La vista menos `registro_acciones`, para comparar "el motor volvio a
+    estar como antes".
+
+    El registro de movimientos es deliberadamente append-only: un deshacer
+    NO borra las lineas de la visita, las tacha (`deshecha`) y anexa la suya
+    (ver server/sessions.py:EntradaRegistro). Asi que es el unico campo de
+    la vista que legitimamente difiere tras deshacer, y cada test que usa
+    este helper comprueba aparte que el registro quedo como debe -- separar
+    las dos afirmaciones es lo contrario de aflojar la comparacion.
+    """
+    return {k: v for k, v in vista.items() if k != "registro_acciones"}
+
+
 def test_deshacer_restaura_el_estado_previo_a_la_visita() -> None:
     cliente, room_id, token, _, antes = _partida_2p()
     assert antes["puede_deshacer"] is False
@@ -69,7 +84,12 @@ def test_deshacer_restaura_el_estado_previo_a_la_visita() -> None:
     restaurado = r.json()
     # Restauracion completa: la vista entera vuelve a ser la de antes de la
     # accion (mismo dia, mismo nonce, mismos recursos, marcador de A limpio).
-    assert restaurado == antes
+    assert _sin_registro(restaurado) == _sin_registro(antes)
+    # ...salvo el registro, que es append-only: la A queda tachada y el
+    # deshacer deja su propia linea.
+    registro = restaurado["registro_acciones"]
+    assert [e["accion"] for e in registro] == ["A", "deshacer"]
+    assert [e["deshecha"] for e in registro] == [True, False]
 
 
 def test_deshacer_sin_nada_hecho_es_409() -> None:
@@ -89,11 +109,17 @@ def test_deshacer_por_jugador_no_activo_es_409() -> None:
 
 def test_deshacer_es_ilimitado_al_mismo_punto() -> None:
     cliente, room_id, token, _, antes = _partida_2p()
-    for _ in range(2):
+    for vuelta in range(2):
         assert _alimentar(cliente, room_id, token).status_code == 200
         r = cliente.post(f"/games/{room_id}/undo", headers={"X-Player-Token": token})
         assert r.status_code == 200, r.text
-        assert r.json() == antes
+        restaurado = r.json()
+        assert _sin_registro(restaurado) == _sin_registro(antes)
+        # El registro sigue creciendo aunque el motor vuelva al mismo punto:
+        # dos vueltas dejan A/deshacer/A/deshacer, todas las A tachadas.
+        registro = restaurado["registro_acciones"]
+        assert [e["accion"] for e in registro] == ["A", "deshacer"] * (vuelta + 1)
+        assert all(e["deshecha"] for e in registro if e["accion"] == "A")
 
 
 def test_accion_que_termina_turno_cierra_la_ventana() -> None:

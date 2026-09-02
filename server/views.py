@@ -50,9 +50,15 @@ Construye el dict JSON que se envía a los clientes HTTP a partir de
      (``server/sessions.py``), no en el ``Player``/``GameEngine`` de
      dominio — así que ``game_state_view`` recibe la ``GameSession``
      completa (no solo el ``engine``) para poder anexar ambos a la vista.
+  7. **Registro de movimientos**: ``GameSession.registro_acciones``, el log
+     append-only de qué hizo cada jugador (ver ``EntradaRegistro``) — otra
+     cosa que vive en la sala y no en el motor, y por eso llega por la misma
+     puerta que el punto 6. Va entero en cada respuesta, no por delta,
+     porque un deshacer MUTA entradas antiguas (las marca deshechas).
 """
 from __future__ import annotations
 
+from dataclasses import asdict
 from typing import TYPE_CHECKING, Any, Dict
 
 from disponibilidad import acciones_disponibles
@@ -177,5 +183,15 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
     # Es informacion publica inofensiva: solo dice "el jugador activo ya
     # hizo algo gratuito esta visita", que de todas formas se ve en el tablero.
     estado["puede_deshacer"] = sesion.puede_deshacer()
+    # Registro completo de movimientos de jugador (ver
+    # server/sessions.py:EntradaRegistro). Vive en la sesion, no en el motor,
+    # asi que -- como `color` y los votos -- solo esta vista, que recibe la
+    # GameSession entera, puede adjuntarlo. Va completo y no por delta: un
+    # deshacer MUTA entradas viejas (marca `deshecha`), cosa que un protocolo
+    # `?since=N` no sabria expresar sin logica de deltas en el cliente, que es
+    # justo lo que este proyecto evita (store.ts siempre reemplaza el snapshot
+    # entero). Y como el cliente ya refresca el estado con cada aviso de
+    # accion, llega en vivo sin ninguna ruta nueva.
+    estado["registro_acciones"] = [asdict(entrada) for entrada in sesion.registro_acciones]
 
     return estado
