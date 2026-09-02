@@ -115,3 +115,50 @@ export function reproducirNotificacionTurno(retraso = 0): void {
     { frecuencia: 1108.73, retraso: retraso + 0.11, duracion: 0.16, onda: 'sine', ganancia: 0.22 },
   ])
 }
+
+/*
+ * FIN DE PARTIDA -- los dos unicos sonidos que NO suenan igual en todas las
+ * pestañas. Cada sonido de accion viaja por el canal `accion` del SSE, que es
+ * un broadcast con una unica carga util identica para todos; "una fanfarria
+ * para el ganador y otra cosa para los demas" no cabe ahi. Lo decide cada
+ * cliente en `store.ts:aplicarEstado()`, que es donde la pestaña ya sabe cual
+ * es su propio asiento. Viven aqui y no en `data/sonidosAccion.ts` porque esa
+ * tabla es un `Record<IdSonido, Sonido>` exhaustivo sobre los ids de accion
+ * del protocolo, y estos dos no son acciones de nadie.
+ */
+
+/**
+ * Fanfarria de victoria: triada mayor ascendente C5-E5-G5, octava C6 y un
+ * acorde final sostenido.
+ *
+ * Deliberadamente mas larga, mas aguda y mas rica que el arpegio de la Accion F
+ * (`SONIDOS_ACCION.F`, el otro sonido «de premio» del juego): si sonaran
+ * parecido, ganar la partida se confundiria con que alguien acaba de hornear.
+ */
+export function reproducirFanfarriaVictoria(): void {
+  tocarTonos([
+    { frecuencia: 523.25, retraso: 0, duracion: 0.16, onda: 'sine', ganancia: 0.22 },
+    { frecuencia: 659.25, retraso: 0.13, duracion: 0.16, onda: 'sine', ganancia: 0.22 },
+    { frecuencia: 783.99, retraso: 0.26, duracion: 0.16, onda: 'sine', ganancia: 0.24 },
+    { frecuencia: 1046.5, retraso: 0.39, duracion: 0.75, onda: 'sine', ganancia: 0.26 },
+    // El acorde debajo de la nota larga: la deja sonar a triada, no a pitido.
+    { frecuencia: 659.25, retraso: 0.42, duracion: 0.7, onda: 'sine', ganancia: 0.14 },
+    { frecuencia: 783.99, retraso: 0.42, duracion: 0.7, onda: 'sine', ganancia: 0.12 },
+  ])
+}
+
+/**
+ * Cierre para quien no gana: tres tonos descendentes, cortos y bajos de
+ * ganancia.
+ *
+ * Es un punto final, no una burla -- y es `sine` a proposito: el `sawtooth`
+ * descendente esta reservado al timbre de los Protocolos de Emergencia
+ * (`data/sonidosAccion.ts`), y reutilizarlo aqui diria "algo ha fallado".
+ */
+export function reproducirCierreDerrota(): void {
+  tocarTonos([
+    { frecuencia: 659.25, retraso: 0, duracion: 0.16, onda: 'sine', ganancia: 0.16 },
+    { frecuencia: 523.25, retraso: 0.15, duracion: 0.16, onda: 'sine', ganancia: 0.15 },
+    { frecuencia: 440.0, retraso: 0.3, duracion: 0.34, onda: 'sine', ganancia: 0.14 },
+  ])
+}

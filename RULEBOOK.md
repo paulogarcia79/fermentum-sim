@@ -965,6 +965,8 @@ En caso de empate en Puntos de Maestría:
    alimenta Variedad de Recetas).
 2. Si persiste el empate, gana quien tenga el mayor Nivel de Vitalidad en su cultivo base.
 3. Si persiste el empate, gana quien tenga más Datos de Investigación.
+4. Si persiste el empate, los investigadores empatados **comparten el puesto**: si es el
+   primero, comparten la victoria y el siguiente ocupa el tercer puesto.
 
 ---
 

@@ -1,11 +1,25 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { cerrarSesion, crearSalaNueva, store } from '../store'
+import ConfetiPanes from './ConfetiPanes.vue'
 
 const estado = computed(() => store.estado!)
 const filas = computed(() =>
   estado.value.ranking.map((r) => ({ ...r, jugador: estado.value.players[r.player_idx] })),
 )
+
+const miIndice = computed(() => store.sesion!.playerIndex)
+
+// Puede haber mas de un ganador: un empate en los cuatro criterios comparte la
+// posicion 1 (engine.calcular_ranking_final, CORE_MECHANICS.md §Desempate).
+const ganadores = computed(() => filas.value.filter((f) => f.posicion === 1))
+const soyGanador = computed(() => ganadores.value.some((f) => f.player_idx === miIndice.value))
+const nombresGanadores = computed(() => ganadores.value.map((f) => f.jugador.nombre))
+
+// El confeti vive aqui y no en el store a proposito: es parte de la pantalla de
+// resultados, no del instante en que la partida termina, asi que recargar la
+// pestaña vuelve a mostrarlo. Los sonidos hacen lo contrario -- suenan una sola
+// vez, en la transicion en vivo (ver `finDePartidaSonado` en store.ts).
 
 const creandoSala = ref(false)
 async function onCrearSalaNueva() {
@@ -20,7 +34,21 @@ async function onCrearSalaNueva() {
 
 <template>
   <section class="panel ranking">
+    <ConfetiPanes v-if="soyGanador" />
+
     <h2>🏁 Resultados Finales</h2>
+
+    <p class="veredicto" :class="{ mio: soyGanador }">
+      <template v-if="soyGanador && ganadores.length > 1">
+        ¡Victoria compartida! Empatas en lo más alto con
+        {{ nombresGanadores.filter((n) => n !== store.estado!.players[miIndice].nombre).join(', ') }}.
+      </template>
+      <template v-else-if="soyGanador">¡Has ganado la partida!</template>
+      <template v-else-if="ganadores.length > 1">
+        Victoria compartida: {{ nombresGanadores.join(' y ') }}.
+      </template>
+      <template v-else>Gana {{ nombresGanadores[0] }}.</template>
+    </p>
     <table>
       <thead>
         <tr>
@@ -98,6 +126,17 @@ th {
 tr.ganador td {
   color: var(--cobre);
   font-weight: 600;
+}
+
+.veredicto {
+  margin: 0 0 var(--e4);
+  color: var(--tinta-tenue);
+}
+
+.veredicto.mio {
+  color: var(--cobre);
+  font-family: var(--fuente-titulo);
+  font-size: var(--t-l);
 }
 
 .desglose {

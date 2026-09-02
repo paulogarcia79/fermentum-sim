@@ -9,7 +9,12 @@
 import { reactive } from 'vue'
 import * as api from './api'
 import type { AvisoAccionView, GameEventView, GameStateView, HorneadoRecord } from './types'
-import { reproducirNotificacionTurno, reproducirSonido } from './sonido'
+import {
+  reproducirCierreDerrota,
+  reproducirFanfarriaVictoria,
+  reproducirNotificacionTurno,
+  reproducirSonido,
+} from './sonido'
 import { SONIDOS_ACCION, type IdSonido } from './data/sonidosAccion'
 import type { IdPanel } from './data/panelesTablero'
 
@@ -134,10 +139,28 @@ let finAnticipadoDescartadoEnConteo = -1
  */
 let jugadorEnTurnoAnterior: number | null = null
 
-/** Ver el comentario de `jugadorEnTurnoAnterior`. Solo debe usarse antes de
- * la primerísima `aplicarEstado()` de una sesión reconectada. */
-function sembrarTurnoSinSonido(idx: number | null): void {
-  jugadorEnTurnoAnterior = idx
+/**
+ * Si esta pestaña ya sonó el final de la partida. No reactivo -- solo lo lee
+ * aplicarEstado() para que la fanfarria (o el cierre de derrota) suene UNA vez,
+ * en la transición en vivo a `fase_actual === 'terminada'`, y no en cada
+ * refresco posterior del estado, que en la pantalla de ranking siguen llegando
+ * por el poll de respaldo.
+ *
+ * Igual que con el aviso de turno, recargar la pestaña sobre una partida ya
+ * terminada NO es una transición en vivo: `sembrarEstadoSinSonido()` lo deja en
+ * `true` antes de la primera aplicación. El confeti sí vuelve a salir en ese
+ * caso, porque vive en RankingView.vue y no depende de este flag -- es parte de
+ * la pantalla, no del instante.
+ */
+let finDePartidaSonado = false
+
+/** Ver los comentarios de `jugadorEnTurnoAnterior` y `finDePartidaSonado`. Solo
+ * debe usarse antes de la primerísima `aplicarEstado()` de una sesión
+ * reconectada, para que ese estado inicial no dispare sonidos que describen
+ * transiciones que este cliente no ha presenciado. */
+function sembrarEstadoSinSonido(estado: GameStateView): void {
+  jugadorEnTurnoAnterior = estado.jugador_en_turno_idx
+  finDePartidaSonado = estado.fase_actual === 'terminada'
 }
 
 let manejadorEstado: number | undefined
@@ -260,6 +283,7 @@ export function cerrarSesion(): void {
   ultimaCartaClimaId = undefined
   finAnticipadoDescartadoEnConteo = -1
   jugadorEnTurnoAnterior = null
+  finDePartidaSonado = false
   borrarSesionLocal()
 }
 
@@ -292,7 +316,7 @@ export async function intentarReconectar(): Promise<void> {
     // turno de este jugador, no es una entrega EN VIVO, es solo el estado
     // actual. Sembrar el indice actual antes de aplicarEstado() evita que
     // esa primera aplicación dispare el sonido.
-    sembrarTurnoSinSonido(estadoRemoto.jugador_en_turno_idx)
+    sembrarEstadoSinSonido(estadoRemoto)
     aplicarEstado(estadoRemoto)
     iniciarPolling()
   } catch {
@@ -331,6 +355,30 @@ export function aplicarEstado(nuevo: GameStateView): void {
     if (store.preferencias.sonido) reproducirNotificacionTurno(0.35)
   }
   jugadorEnTurnoAnterior = nuevo.jugador_en_turno_idx
+
+  // Fin de partida: la fanfarria para quien gana, un cierre corto para el
+  // resto. Es el unico sonido del juego que NO es el mismo en todas las
+  // pestañas, y por eso no puede viajar por el canal `accion` del SSE (un
+  // broadcast con una sola carga util); se decide aqui, donde cada cliente ya
+  // sabe cual es su asiento.
+  //
+  // La condicion es la FASE y no `partida_terminada`: ese flag se enciende en
+  // cuanto alguien hornea su quinta receta y todavia queda la jornada entera
+  // por jugar (ver GameView.vue). `ranking` tampoco sirve de señal -- viaja en
+  // todos los snapshots, tambien a mitad de partida, con resultados parciales.
+  if (nuevo.fase_actual === 'terminada' && !finDePartidaSonado) {
+    finDePartidaSonado = true
+    if (store.preferencias.sonido) {
+      // Puede haber mas de un ganador: un empate en los cuatro criterios
+      // comparte la posicion 1 (engine.calcular_ranking_final).
+      const ganadores = nuevo.ranking.filter((r) => r.posicion === 1).map((r) => r.player_idx)
+      if (miIndice !== undefined && ganadores.includes(miIndice)) {
+        reproducirFanfarriaVictoria()
+      } else {
+        reproducirCierreDerrota()
+      }
+    }
+  }
 
   // Otro jugador pidió terminar la partida antes de tiempo: si yo todavía no
   // voté (ni descarté el aviso a este conteo), mostrar el modal de confirmación.
@@ -388,6 +436,7 @@ function volverAVistaDeLobby(): void {
   ultimaCartaClimaId = undefined
   finAnticipadoDescartadoEnConteo = -1
   jugadorEnTurnoAnterior = null
+  finDePartidaSonado = false
 }
 
 export async function refrescarEstado(): Promise<void> {

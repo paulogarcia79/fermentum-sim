@@ -2008,26 +2008,50 @@ class GameEngine:
              quién gana un empate.
           3. Desempate 2: mayor Vitalidad actual del cultivo base.
           4. Desempate 3: mayor cantidad de Datos de Investigación.
-          5. Si persiste empate: orden de inscripción (posición en la lista).
+          5. Si persiste el empate: **comparten el puesto**. Dos jugadores
+             idénticos en los cuatro criterios salen ambos como posición 1 y
+             el siguiente ocupa la 3 (ranking «de competición»: se comparte el
+             puesto y se saltan los que quedan cubiertos).
+
+        Compartir el puesto es lo que hace que el empate sea *visible*. Antes
+        el orden de inscripción rompía el empate en silencio -- ``sorted`` es
+        estable, así que el jugador con el asiento más bajo se llevaba la
+        posición 1 sin que nada en la partida lo justificara y sin que el
+        cliente pudiera detectarlo (la vista solo envía posiciones). Ningún
+        reglamento documentaba esa regla porque no era una regla, era un
+        detalle de implementación.
 
         Se puede llamar en cualquier momento (resultados parciales si la partida
         aún no ha terminado).
 
         Returns:
             Lista de tuplas ``(posición_1based, player)`` ordenada de mayor
-            a menor puntaje. El primero es el ganador.
+            a menor puntaje. Los primeros son los ganadores (puede haber más
+            de uno con posición 1).
         """
-        ranking: List[Player] = sorted(
-            self._players,
-            key=lambda p: (
+        def criterio(p: Player) -> Tuple[int, int, int, int]:
+            return (
                 p.puntos_maestria_final,
                 p.recetas_distintas_horneadas,
                 p.vitalidad,
                 p.datos_investigacion,
-            ),
-            reverse=True,
-        )
-        return [(pos + 1, player) for pos, player in enumerate(ranking)]
+            )
+
+        ordenados: List[Player] = sorted(self._players, key=criterio, reverse=True)
+
+        ranking: List[Tuple[int, Player]] = []
+        posicion_anterior = 0
+        criterio_anterior: Optional[Tuple[int, int, int, int]] = None
+        for indice, jugador in enumerate(ordenados):
+            actual = criterio(jugador)
+            if actual == criterio_anterior:
+                posicion = posicion_anterior
+            else:
+                posicion = indice + 1
+            ranking.append((posicion, jugador))
+            posicion_anterior = posicion
+            criterio_anterior = actual
+        return ranking
 
     # ==================================================================
     # UTILIDADES INTERNAS

@@ -1057,6 +1057,46 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   now takes a delay argument and fires 0.35 s late so it doesn't collide with the action sound of
   the opponent who just ceded the turn.
 
+  **Endgame celebration — the only sound that differs per player, and the tie it exposed.**
+  The ranking screen was a bare table: nothing marked the winner and nothing sounded. Now the
+  winner's tab rains bread confetti and hears a fanfare while everyone else hears a short
+  descending close. Four things carry weight:
+  - **It cannot ride the `accion` SSE channel.** Every sound in the game until now was a
+    server broadcast with one identical payload, so "a different sound per player" has no home
+    there. Detection is client-side in `store.ts:aplicarEstado()`, where each tab already knows
+    its own seat — gated on `fase_actual === 'terminada'`, **not** `partida_terminada` (that
+    latches mid-last-day) and **not** a non-empty `ranking` (it ships in every snapshot,
+    mid-game included, with partial results). `reproducirFanfarriaVictoria` /
+    `reproducirCierreDerrota` live in `sonido.ts` next to the turn chime rather than in
+    `sonidosAccion.ts`, whose exhaustive `Record<IdSonido, Sonido>` is keyed by wire action ids
+    these two are not. The fanfare is deliberately longer, higher and chorded so it cannot be
+    mistaken for Acción F's arpeggio, the game's other reward sound; the loser close is `sine`,
+    since descending `sawtooth` is the Emergencia timbre and would read as "something failed".
+  - **Confetti replays on reload, sound does not.** The confetti is mounted by `RankingView.vue`
+    on `soyGanador`, so it is part of the screen; the sounds are one-shot on the live transition,
+    guarded by a new non-reactive `finDePartidaSonado` seeded on reconnect. That seeding
+    generalized `sembrarTurnoSinSonido(idx)` into `sembrarEstadoSinSonido(estado)`, which now
+    seeds both guards from the first snapshot — the same "a reconnect is not a live transition"
+    rule the turn chime already followed. The flag is reset in **both** `cerrarSesion()` and
+    `volverAVistaDeLobby()`, like the other three.
+  - **A perfect tie now shares the puesto, and that is a rules change.** `calcular_ranking_final`
+    sorted with four criteria and let Python's stable `sorted` break what remained by seat order,
+    then `enumerate`d distinct positions — so a genuine tie was decided by registration order,
+    which no rulebook documented because it was not a rule, and which the client could not even
+    detect (the view ships only `{posicion, player_idx}`). Tied players now share a position,
+    competition-style (1, 1, 3). This is what lets the client keep asking `posicion === 1` and
+    get co-winners right with no extra data on the wire. All four rule surfaces gained the new
+    item; no test pinned position numbers, so nothing loosened. Tests:
+    `tests/test_ranking_empate.py`.
+  - **CSS keyframes, not canvas.** `ConfetiPanes.vue` is the first `@keyframes` in the repo: ~40
+    teleported `IconoPan` pieces with randomized delay, drift, spin and size, one pass of ~7 s,
+    then it unmounts itself. The global `prefers-reduced-motion` rule in `App.vue` clamps
+    `animation-duration`, so it degrades for free — a rAF loop would sit outside that net and
+    need its own `matchMedia` check. It cycles only the **8** recipe ids with distinct silhouettes;
+    the other four hit `IconoPan`'s generic ellipse. `pointer-events: none` and `z-index: 30`
+    keep it under the modal scale, so a last-night `FermentationReportModal` still sits on top.
+    Nothing persisted changed: no `VERSION_FORMATO` bump, and `types.ts` was untouched.
+
   **Action broadcast (`AvisoAccion`) — why it is not a `GameEvent`**: the engine's event log only
   covers automatic, no-player-input changes, so of the 12 actions only F emitted anything
   (`HORNEADO`, via `resolver_horneado`). The other 11 produced no SSE frame at all — opponents'

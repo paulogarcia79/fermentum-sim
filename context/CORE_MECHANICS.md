@@ -103,3 +103,4 @@ En caso de empate en Puntos de Maestría, el ganador se determina por:
 1. El investigador con más recetas **distintas** horneadas con éxito (el mismo recuento que alimenta «Variedad de Recetas»).
 2. Si persiste el empate, el investigador con el mayor Nivel de Vitalidad en su cultivo base.
 3. Si persiste el empate, el jugador con más Datos de Investigación.
+4. Si persiste el empate, los investigadores empatados **comparten el puesto**: si es el primero, comparten la victoria y el siguiente jugador ocupa el tercer puesto. No hay un quinto criterio — el orden de inscripción no decide nada, porque no es una decisión de nadie.
