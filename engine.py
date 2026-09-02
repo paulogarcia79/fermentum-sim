@@ -1624,6 +1624,24 @@ class GameEngine:
         """
         return AMPLIACION_OPTIMA_MODULO if player.tecnologias.modulo_analitico else 0
 
+    def agua_requerida(self, receta: Recipe) -> int:
+        """
+        Tokens de agua que cuesta iniciar ``receta`` HOY (CLIMATE_LOGIC.md §2).
+
+        Fuente única del descuento climático, por el mismo motivo que
+        ``ampliacion_zona_optima``: lo necesitan dos consumidores — la Acción B,
+        que lo cobra de verdad, y ``disponibilidad.insumos_receta``, que se lo
+        enseña al jugador antes de que decida — y un segundo cálculo sería una
+        deriva silenciosa exactamente en el día en que el descuento importa.
+
+        Returns:
+            ``receta.tokens_agua``, o uno menos si el efecto pasivo vigente es
+            Alta Humedad. Nunca baja de 0.
+        """
+        if self._environment.efecto_pasivo_activo == EfectoClimatico.ALTA_HUMEDAD:
+            return max(0, receta.tokens_agua - 1)
+        return receta.tokens_agua
+
     def _delta_desgaste(self, player: Player) -> int:
         """
         Desgaste de Vitalidad que ``player`` sufrirá en la Fase III de HOY.

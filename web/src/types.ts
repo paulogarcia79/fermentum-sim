@@ -51,6 +51,31 @@ export interface Recipe {
     [number, number],
     [number, number],
   ]
+  // Harina y agua que le faltan a ESTA carta para poder iniciarse hoy. Igual que
+  // `zonas_efectivas` lo inyecta server/views.py, pero solo en `carpeta_proyectos`:
+  // las del mercado no son de nadie y las de estaciones/archivos ya estan pagadas.
+  // Ver web/src/data/insumosReceta.ts.
+  insumos?: InsumosReceta
+}
+
+/**
+ * Espejo de `disponibilidad.insumos_receta`.
+ *
+ * Mide SOLO los insumos de la carta, nunca los bloqueos del jugador (PA, dado de
+ * inoculo, estacion libre, contaminacion): esos ya viajan una sola vez en el
+ * `motivo` de la Accion B dentro de `acciones_disponibles`. O sea que
+ * `completos: true` NO promete que Confirmar vaya a funcionar, promete que lo que
+ * falte, si falta algo, no es la despensa.
+ *
+ * Las cantidades llegan en la unidad del dominio -- harina en PORCENTAJE, agua en
+ * TOKENS -- y se les da formato con web/src/data/unidades.ts, como en todas partes.
+ */
+export interface InsumosReceta {
+  harinas: { tipo: TipoHarina; necesita: number; tiene: number; falta: boolean }[]
+  // `necesita` ya lleva aplicado el descuento de Alta Humedad: lo calcula
+  // engine.agua_requerida, el mismo metodo que le cobra a la Accion B.
+  agua: { necesita: number; tiene: number; falta: boolean }
+  completos: boolean
 }
 
 export interface FermentationSlot {

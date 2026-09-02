@@ -21,6 +21,8 @@ import {
   type IdAccion,
 } from '../data/descripcionesAcciones'
 import { hexDeColor } from '../data/coloresJugador'
+import { fmtLineaReceta } from '../data/insumosReceta'
+import IconoPan from './IconoPan.vue'
 import type { Player } from '../types'
 
 /** Los 12 espacios en plano, sin zonas -- para el modal de confirmación de
@@ -63,6 +65,25 @@ const pasando = ref(false)
 const confirmandoPase = ref(false)
 
 const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
+
+/**
+ * Las recetas de la Carpeta de Proyectos, con si sus insumos alcanzan hoy.
+ *
+ * Existe por un fallo de partida real: teniendo dos recetas en mano, el jugador
+ * se olvido de la comprada el dia anterior y gasto un Dato en un Pedido de
+ * Urgencia para conseguir algo que ya podia pagar. La carpeta esta en el tablero
+ * propio, que a 1366x768 queda por debajo del pliegue de scroll de su region, asi
+ * que el recordatorio se pone donde el jugador mira cuando decide: el espacio de
+ * accion. `insumos` lo calcula el servidor carta por carta (ver types.ts).
+ */
+const recetasEnMano = computed(() =>
+  yo.value.carpeta_proyectos.map((r) => ({
+    id: r.id,
+    nombre: r.nombre,
+    lista: r.insumos?.completos ?? false,
+    linea: fmtLineaReceta(r.nombre, r.insumos),
+  })),
+)
 
 /** Pasar es una renuncia TOTAL al resto del día: cede los PA restantes y
  * también las acciones gratuitas sin usar (ver engine.pasar_turno). Antes de
@@ -155,6 +176,19 @@ async function pasarDeVerdad() {
                 :title="`${p.nombre} ya visitó este espacio hoy`"
               />
             </div>
+            <!-- Las recetas que ya tienes en mano, encendidas si sus insumos
+                 alcanzan. Ocupan la esquina libre: los peones de quien ya visito
+                 el espacio viven en la de la derecha. -->
+            <div v-if="b.id === 'B' && recetasEnMano.length > 0" class="recetas-en-mano">
+              <span
+                v-for="(r, i) in recetasEnMano"
+                :key="i"
+                class="pan-en-mano ico-xs"
+                :class="{ lista: r.lista }"
+              >
+                <IconoPan :id="r.id" />
+              </span>
+            </div>
             <!-- Sin `title`: el motivo ya sale en la caja de abajo, y el
                  tooltip nativo del navegador se le montaba encima. -->
             <button :disabled="!estado(b.id).habilitada" @click="abrir(b.id)">
@@ -163,6 +197,14 @@ async function pasarDeVerdad() {
 
             <template #contenido>
               <p>{{ descripcionesAcciones[b.id] }}</p>
+              <p
+                v-for="(r, i) in b.id === 'B' ? recetasEnMano : []"
+                :key="i"
+                class="tooltip-receta"
+                :class="{ lista: r.lista }"
+              >
+                {{ r.linea }}
+              </p>
               <p v-if="ACCIONES_QUE_REVELAN.has(b.id)" class="tooltip-motivo">
                 ⚠ Revela información oculta: ese paso no se puede deshacer.
               </p>
@@ -204,7 +246,14 @@ async function pasarDeVerdad() {
             <span class="titulo-restante">
               {{ b.etiqueta }} <span class="costo">[{{ b.costo }}]</span>
             </span>
-            <span class="blurb-restante">{{ descripcionesAcciones[b.id] }}</span>
+            <!-- Pasar tambien renuncia a las recetas que ya tienes en mano, asi
+                 que la fila de B las nombra en vez de repetir las reglas. -->
+            <span v-if="b.id === 'B' && recetasEnMano.length > 0" class="blurb-restante">
+              <span v-for="(r, i) in recetasEnMano" :key="i" class="linea-receta" :class="{ lista: r.lista }">
+                {{ r.linea }}
+              </span>
+            </span>
+            <span v-else class="blurb-restante">{{ descripcionesAcciones[b.id] }}</span>
           </button>
         </li>
       </ul>
@@ -413,6 +462,52 @@ async function pasarDeVerdad() {
    el scope de ESTE componente. */
 .tooltip-motivo {
   color: var(--riesgo);
+}
+
+/* Recetas en mano, en la esquina libre de la casilla «Iniciar Receta».
+   Apagadas si les faltan insumos: la carta sigue estando, que es la mitad del
+   aviso, pero no invita a pulsar. `pointer-events: none` para que el clic
+   siga siendo del boton que hay debajo. */
+.recetas-en-mano {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  display: flex;
+  gap: 1px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* IconoPan trae sus propios rellenos (no usa currentColor), asi que los dos
+   estados se distinguen por saturacion, no por color: la receta que puedes
+   iniciar sale a todo color con su aro de «tuyo», y la que no, en gris. */
+.pan-en-mano {
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+
+.pan-en-mano.lista {
+  filter: none;
+  opacity: 1;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--cobre);
+}
+
+.tooltip-receta {
+  color: var(--tinta-tenue);
+  font-size: var(--t-micro);
+}
+
+.tooltip-receta.lista {
+  color: var(--cobre);
+}
+
+.linea-receta {
+  display: block;
+}
+
+.linea-receta.lista {
+  color: var(--cobre);
 }
 
 /* --- Controles de turno -------------------------------------------------- */

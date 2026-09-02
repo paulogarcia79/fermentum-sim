@@ -61,7 +61,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any, Dict
 
-from disponibilidad import acciones_disponibles
+from disponibilidad import acciones_disponibles, insumos_receta
 from models import Recipe
 from engine import PRECIO_RENTA
 from serialization import snapshot
@@ -163,6 +163,15 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
                 receta = item if isinstance(item, Recipe) else item.recipe
                 destino = datos_item if isinstance(item, Recipe) else datos_item["recipe"]
                 destino["zonas_efectivas"] = receta.zonas_efectivas(ampliacion)
+                # Harina y agua que le faltan a ESTA carta, SOLO en la carpeta.
+                # Las del mercado no son de nadie todavía y las de estaciones y
+                # archivos ya están pagadas: en ambos casos la cuenta no
+                # significaría nada. El descuento de Alta Humedad lo aplica
+                # `engine.agua_requerida`, así que se calcula en el servidor por
+                # el mismo criterio que `vitalidad_prevista` — es una regla de
+                # CLIMATE_LOGIC.md y duplicarla en TypeScript sería deriva.
+                if clave == "carpeta_proyectos":
+                    destino["insumos"] = insumos_receta(engine, jugador, receta)
         # Los HorneadoRecord del archivo llevan dos @property que asdict no
         # incluye y que el cliente no debe recalcular (la zona en particular
         # es lógica de reglas): se inyectan aquí, registro por registro.

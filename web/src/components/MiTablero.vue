@@ -14,6 +14,7 @@ import { hexDeColor } from '../data/coloresJugador'
 import { TECNOLOGIAS } from '../data/tecnologias'
 import { ACIDEZ_EQUILIBRIO_CENTRO, puntosEquilibrio } from '../data/preciosAcidez'
 import { RENDIMIENTO_MOLINO_PCT } from '../data/preciosMolino'
+import { fmtFaltantes } from '../data/insumosReceta'
 
 // La «Madurez del Cultivo» ya no premia la acidez cruda sino el equilibrio, con
 // el pico en el centro de la pista y 0 puntos en ambos extremos. La banda se
@@ -30,6 +31,12 @@ import type { HorneadoRecord, TecnologiaID, TipoHarina } from '../types'
 const TIPOS_HARINA: TipoHarina[] = ['Blanca', 'Centeno', 'Integral']
 
 const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
+
+/** Cuantas recetas de la carpeta se pueden pagar hoy (ver types.ts: `insumos`
+ *  mide la despensa, no los bloqueos del jugador). */
+const recetasListas = computed(
+  () => yo.value.carpeta_proyectos.filter((r) => r.insumos?.completos).length,
+)
 const colorHex = computed(() => hexDeColor(yo.value.color))
 
 // Espejo de la penalizacion por desperdicio de models.py
@@ -255,9 +262,24 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
       </section>
 
       <section class="sub-zona zona-carpeta">
-        <h3 class="eyebrow">Carpeta de Proyectos ({{ yo.carpeta_proyectos.length }}/3)</h3>
+        <h3 class="eyebrow">
+          Carpeta de Proyectos ({{ yo.carpeta_proyectos.length }}/3)
+          <span v-if="recetasListas > 0" class="termino-pm">
+            · <span class="dato">{{ recetasListas }}</span>
+            {{ recetasListas === 1 ? 'lista' : 'listas' }} para iniciar
+          </span>
+        </h3>
         <div class="carpeta">
-          <RecetaCard v-for="(receta, i) in yo.carpeta_proyectos" :key="i" :receta="receta" />
+          <!-- La etiqueta contesta la pregunta que trae al jugador hasta aquí
+               desde el espacio «Iniciar Receta»: ¿me alcanza para ESTA? Va en el
+               tablero y no en RecetaCard porque la misma carta se usa en el
+               mercado y en las estaciones, donde la despensa no significa nada. -->
+          <div v-for="(receta, i) in yo.carpeta_proyectos" :key="i" class="proyecto">
+            <p class="tag-insumos" :class="{ lista: receta.insumos?.completos }">
+              {{ receta.insumos?.completos ? '✓ Insumos completos' : fmtFaltantes(receta.insumos!) }}
+            </p>
+            <RecetaCard :receta="receta" />
+          </div>
           <p v-if="yo.carpeta_proyectos.length === 0" class="vacio">— vacía —</p>
         </div>
       </section>
@@ -523,6 +545,23 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
   display: flex;
   flex-wrap: wrap;
   gap: var(--e2);
+}
+
+.proyecto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  flex: 1 1 14rem;
+}
+
+.tag-insumos {
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
+}
+
+.tag-insumos.lista {
+  color: var(--cobre);
 }
 
 .carpeta > :deep(.receta-card) {

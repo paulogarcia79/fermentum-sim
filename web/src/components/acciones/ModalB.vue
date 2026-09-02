@@ -14,22 +14,13 @@ const error = ref<string | null>(null)
 
 const recetaSeleccionada = computed(() => yo.value.carpeta_proyectos[carpetaIndex.value])
 
-// Una fila por harina impresa: con una Intermedia (media bolsa de dos tipos)
-// saber que "falta harina" no dice cual comprar, asi que cada tipo lleva su
-// propio tienes/necesitas. La autoridad sigue siendo ActionManager -- esto solo
-// evita mandar una accion que se sabe que va a fallar.
-const requisitosHarina = computed(() =>
-  (recetaSeleccionada.value?.harinas ?? []).map(([tipo, pct]) => ({
-    tipo,
-    pct,
-    disponible: yo.value.reserva_harina[tipo] ?? 0,
-    suficiente: (yo.value.reserva_harina[tipo] ?? 0) >= pct,
-  })),
-)
-
-const aguaSuficiente = computed(
-  () => !recetaSeleccionada.value || yo.value.reserva_agua >= recetaSeleccionada.value.tokens_agua,
-)
+// La cuenta la hace el servidor (`disponibilidad.insumos_receta`) y viaja en la
+// carta. Antes se calculaba aqui, y se calculaba MAL: leia `receta.tokens_agua`
+// tal cual, sin el descuento de un token de Alta Humedad que la Accion B si
+// aplica, asi que en un dia humedo esta lista tachaba con una cruz un agua que
+// el servidor aceptaba. Una regla de CLIMATE_LOGIC.md no se reimplementa en
+// TypeScript; aqui solo se dibuja lo que llega.
+const insumos = computed(() => recetaSeleccionada.value?.insumos)
 
 async function confirmar() {
   error.value = null
@@ -54,24 +45,30 @@ async function confirmar() {
     <label class="campo">
       Receta de la Carpeta de Proyectos
       <select v-model.number="carpetaIndex">
-        <option v-for="(r, i) in yo.carpeta_proyectos" :key="i" :value="i">{{ r.nombre }} ({{ r.grado }})</option>
+        <option v-for="(r, i) in yo.carpeta_proyectos" :key="i" :value="i">
+          {{ r.insumos?.completos ? '✓' : '✗' }} {{ r.nombre }} ({{ r.grado }})
+        </option>
       </select>
     </label>
 
-    <template v-if="recetaSeleccionada">
+    <template v-if="recetaSeleccionada && insumos">
       <div class="eyebrow">Insumos requeridos</div>
       <ul class="requisitos">
-        <li v-for="req in requisitosHarina" :key="req.tipo" :class="{ falta: !req.suficiente }">
-          <span class="marca">{{ req.suficiente ? '✓' : '✗' }}</span>
-          {{ fmtTokensHarina(req.pct) }} de Harina {{ req.tipo }}
-          <span class="unidad-secundaria">({{ req.pct }}%)</span>
-          <span class="tienes">tienes {{ fmtHarina(req.disponible) }}</span>
+        <li v-for="req in insumos.harinas" :key="req.tipo" :class="{ falta: req.falta }">
+          <span class="marca">{{ req.falta ? '✗' : '✓' }}</span>
+          {{ fmtTokensHarina(req.necesita) }} de Harina {{ req.tipo }}
+          <span class="unidad-secundaria">({{ req.necesita }}%)</span>
+          <span class="tienes">tienes {{ fmtHarina(req.tiene) }}</span>
         </li>
-        <li :class="{ falta: !aguaSuficiente }">
-          <span class="marca">{{ aguaSuficiente ? '✓' : '✗' }}</span>
-          {{ recetaSeleccionada.tokens_agua }} tokens de Agua
+        <li :class="{ falta: insumos.agua.falta }">
+          <span class="marca">{{ insumos.agua.falta ? '✗' : '✓' }}</span>
+          {{ insumos.agua.necesita }} tokens de Agua
           <span class="unidad-secundaria">({{ recetaSeleccionada.hidratacion_pct }}% de hidratación)</span>
           <span class="tienes">tienes {{ fmtAgua(yo.reserva_agua) }}</span>
+        </li>
+        <li v-if="insumos.agua.necesita < recetaSeleccionada.tokens_agua" class="descuento">
+          Alta Humedad: 1 token de Agua menos que los
+          {{ recetaSeleccionada.tokens_agua }} impresos en la carta.
         </li>
       </ul>
       <p class="info-linea">
@@ -123,6 +120,11 @@ async function confirmar() {
 
 .falta {
   color: var(--riesgo);
+}
+
+.descuento {
+  color: var(--verdin);
+  font-size: var(--t-micro);
 }
 
 .tienes {

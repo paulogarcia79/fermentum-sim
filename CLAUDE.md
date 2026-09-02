@@ -704,6 +704,41 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   initial selection is the first pending upgrade you can actually afford. This is **not a rules
   change** — `accion_D_implementar_mejora` is untouched and the action's legality is identical —
   so the rulebooks and `context/*.md` are deliberately not edited.
+
+  **`insumos_receta` — the one thing this module counts per *card*, and why it is not a `motivo`.**
+  A playtester held two recipes, forgot the one bought the day before, and spent a Dato on a
+  Pedido de Urgencia for something already affordable. The carpeta is `MiTablero.vue`'s third
+  sub-zone and at 1366×768 it wraps below `.region-tablero`'s internal scroll fold, so the fix is
+  not layout: the reminder moved to where the eyes are when choosing, the «Iniciar Receta» tile,
+  which shows one `IconoPan` per held recipe — full colour with a `--cobre` ring when its supplies
+  are complete, greyscale when not. Four things carry weight:
+  - **It is the deliberate exception to this module's own docstring.** Everything else here is a
+    cheap per-*player* check feeding one `habilitada`/`motivo` pair; `insumos_receta` does the full
+    flour-and-water arithmetic per carpeta card. That is a different question — "can I press the
+    button?" versus "does it stretch to *this* card?" — and folding it into Acción B's `motivo`
+    would give one string for N recipes, useless exactly when you hold two and only one is viable.
+  - **Supplies only, never player-level blockers.** PA, free station, inóculo die and contamination
+    stay in `acciones_disponibles`, so `completos: true` does **not** promise Confirmar will
+    succeed; it promises that what's missing, if anything, is not the pantry. Verified live: a
+    contaminated player sees the tile lit *and* the tooltip's `⚠ Cultivo contaminado`, each
+    blocker stated once.
+  - **It forced the water rule into one place, and that closed a real drift.**
+    `GameEngine.agua_requerida` now owns the Alta Humedad −1, read by both `accion_B_iniciar_receta`
+    (which charges it) and this function (which shows it). `ModalB.vue` had been computing the
+    water check in TypeScript off the printed `tokens_agua`, so on a humid day it drew a ✗ against
+    a cost the server would have accepted. The modal now renders the shipped rows and does no
+    arithmetic; `test_lo_que_se_ensena_es_lo_que_la_accion_B_cobra` pins the two to one number.
+  - **Every row ships, not just the shortfalls.** ModalB draws the full ✓/✗ list, so returning
+    only failures would force it to rebuild the rest. Quantities stay in domain units (flour in
+    percent, water in tokens); `web/src/data/insumosReceta.ts` formats them and holds no rules.
+
+  `server/views.py` injects it **only** on `carpeta_proyectos`, beside `zonas_efectivas` — market
+  cards belong to nobody and station/archive recipes are already paid for. Everything added is
+  view-layer, so the golden snapshot is untouched and there is **no `VERSION_FORMATO` bump**. Not
+  a rules change, so the rulebooks and `context/*.md` are deliberately not edited. One trap the
+  tests sprang: `iniciar_dia()` draws a climate card, so any test asserting a water figure must
+  pin `efecto_pasivo_activo` or it passes and fails by shuffle. Tests:
+  `tests/test_insumos_receta.py`.
 - **`server/`** — the headless HTTP backend (Starlette + uvicorn; see `server/app.py`'s module
   docstring for the transport/concurrency reasoning). `sessions.py` holds `RoomManager`/
   `GameSession`/`Seat` — in-memory rooms, no accounts, a room code + a per-player secret token is

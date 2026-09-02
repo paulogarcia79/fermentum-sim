@@ -12,8 +12,15 @@ fuente de verdad al enviar una acción (fail-fast, ``ARCHITECTURE.md`` §3).
 Una acción "habilitada" aquí puede seguir fallando al enviarse de verdad
 (p. ej. Acción B habilitada porque hay una receta en carpeta y una estación
 libre, pero el jugador no tiene la harina exacta que esa receta requiere) —
-este módulo solo evita los casos obvios y baratos de comprobar, no repite
-el cálculo completo de recursos por receta.
+``acciones_disponibles`` solo evita los casos obvios y baratos de comprobar.
+
+``insumos_receta`` es la excepción deliberada a esa frase: SÍ hace la cuenta
+completa de harina y agua, pero **carta por carta** y para *enseñarla*, no
+para decidir si el espacio se enciende. Son dos preguntas distintas —
+"¿puedo pulsar el botón?" (del jugador, una vez) y "¿me alcanza para ESTA
+receta?" (de cada carta de la carpeta) — y meter la segunda en el ``motivo``
+de la Acción B daría una sola cadena para N recetas, que es justo lo que no
+sirve cuando tienes dos en mano y solo una es viable.
 
 Diseñado para incluirse en cada snapshot de estado que ``server/views.py``
 construye, así el cliente nunca necesita duplicar estas reglas en
@@ -32,7 +39,7 @@ from engine import (
     PRECIO_PLIEGUES_VITALIDAD,
     PRECIO_RECETA,
 )
-from models import Player
+from models import Player, Recipe
 
 
 def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, Any]]:
@@ -233,6 +240,56 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     )
 
     return resultados
+
+
+def insumos_receta(engine: GameEngine, player: Player, receta: Recipe) -> Dict[str, Any]:
+    """
+    Cuenta, insumo a insumo, si ``player`` puede pagar HOY el coste de ``receta``.
+
+    Solo mide los INSUMOS de la carta (las harinas impresas y el agua), nunca los
+    bloqueos del jugador — PA, espacio ya usado, estación libre, dado de inóculo o
+    contaminación. Esa mitad ya la dice ``acciones_disponibles`` una sola vez para
+    la Acción B entera, y repetirla aquí por carta escribiría el mismo bloqueo en
+    dos sitios: la carta diría "Sin PA" tres veces mientras el espacio ya está
+    apagado por ese mismo motivo. Consecuencia buscada: "insumos completos" NO
+    significa "Confirmar va a funcionar", significa "lo que falta, si falta algo,
+    no es la despensa".
+
+    El agua se pide a ``engine.agua_requerida`` en vez de leer ``receta.tokens_agua``
+    para que el descuento de Alta Humedad salga aquí y en el cobro real de la
+    Acción B por el mismo camino.
+
+    Returns:
+        ``{"harinas": [{"tipo", "necesita", "tiene", "falta"}, ...],
+           "agua": {"necesita", "tiene", "falta"},
+           "completos": bool}``
+
+        Una fila por harina impresa (una si es Básica/Avanzada, dos si es
+        Intermedia) y siempre una de agua, incluidas las que SÍ se pueden pagar:
+        el cliente dibuja la lista entera con sus ✓ y sus ✗, así que devolver
+        solo los faltantes obligaría a recomponer las demás. Las cantidades van
+        en la unidad del dominio (harina en porcentaje, agua en tokens); darles
+        formato es cosa de ``web/src/data/unidades.ts``.
+    """
+    harinas: List[Dict[str, Any]] = []
+    for tipo, pct in receta.requisito_harina.items():
+        tiene = player.reserva_harina.get(tipo, 0)
+        harinas.append(
+            {"tipo": tipo, "necesita": pct, "tiene": tiene, "falta": tiene < pct}
+        )
+
+    agua_necesaria = engine.agua_requerida(receta)
+    agua = {
+        "necesita": agua_necesaria,
+        "tiene": player.reserva_agua,
+        "falta": player.reserva_agua < agua_necesaria,
+    }
+
+    return {
+        "harinas": harinas,
+        "agua": agua,
+        "completos": not agua["falta"] and not any(h["falta"] for h in harinas),
+    }
 
 
 def _motivo_B(

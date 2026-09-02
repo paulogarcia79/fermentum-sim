@@ -66,7 +66,6 @@ from exceptions import (
     StationBlockedError,
 )
 from models import (
-    EfectoClimatico,
     FermentationSlot,
     HorneadoRecord,
     Player,
@@ -681,9 +680,10 @@ class ActionManager:
                 "Hornea una masa activa para recuperar un dado."
             )
 
-        tokens_agua_requeridos = receta.tokens_agua
-        if self._engine.environment.efecto_pasivo_activo == EfectoClimatico.ALTA_HUMEDAD:
-            tokens_agua_requeridos -= 1
+        # El descuento de Alta Humedad lo aplica el engine, no esta línea: la
+        # UI enseña el coste antes de decidir (`disponibilidad.insumos_receta`)
+        # y debe salir el mismo número que aquí se cobra.
+        tokens_agua_requeridos = self._engine.agua_requerida(receta)
 
         self._require_harinas(player, receta)
         self._require_agua(player, tokens_agua_requeridos)
