@@ -599,16 +599,28 @@ mismo día. Solo puede activarse **una vez por Día de Laboratorio** por jugador
 #### Pedido de Urgencia
 
 **Costo:** 1 Dato de Investigación. Ignora el Mercado por completo — sin importar el precio
-vigente — y obtiene directamente de la reserva general **un** tipo de recurso a elección: **media
-bolsa — 5 (50%)** de un tipo de harina, o los tokens de agua que el jugador desee (5% cada
-uno). Media bolsa, y no una entera, porque el Pedido era también el mejor arbitraje de la partida:
+vigente — y entrega de la reserva general **una** parcela fija a elección: **media bolsa — 5
+(50%)** de un tipo de harina, o **6 (30%)** de agua. Eliges el recurso, nunca la cantidad.
+
+Media bolsa, y no una entera, porque el Pedido era también el mejor arbitraje de la partida:
 1 Dato entregaba una bolsa completa de cualquier harina, y una bolsa de Centeno en posición 5 se
 revende en el acto por 7 Monedas. La emergencia se conserva (dos Pedidos completan una bolsa, y una
 receta Intermedia sólo pide media de cada harina), pero la reventa se hunde — la venta de media
-bolsa redondea hacia **abajo**, así que ese mismo Centeno pasa a pagar 3. A diferencia de Horas
-Extras, no tiene límite de usos por día — se autolimita únicamente por los Datos de Investigación
-disponibles. Al no costar PA, queda exento de la regla "1 vez por día por espacio de acción" de la
-[Fase II](#6-fase-ii-acción) — es intencional, no un descuido.
+bolsa redondea hacia **abajo**, así que ese mismo Centeno pasa a pagar 3.
+
+El agua también es una cantidad fija, y por un motivo paralelo: una receta pide entre 10 y 17
+tokens y un lote del 100% cuesta de 7 a 14 Monedas, así que pedir «los que quieras» convertía 1
+Dato en toda el agua de la partida. El agua no se revende, de modo que no había arbitraje en
+Monedas, pero el único freno era la penalización por desperdicio del recuento final (−1 punto por
+cada 3 tokens sin usar), un precio ridículo por saltarse el Suministro Hídrico durante toda la
+partida. Se entrega el equivalente al lote del 30%, que cuesta entre 2 y 6 Monedas según la
+temperatura: lo mismo, más o menos, que la media bolsa de harina, de modo que el Dato compra el
+mismo valor elijas lo que elijas. Y sostiene la misma historia — igual que dos Pedidos completan
+una bolsa, dos Pedidos cubren aproximadamente el agua de una receta.
+
+A diferencia de Horas Extras, no tiene límite de usos por día — se autolimita únicamente por los
+Datos de Investigación disponibles. Al no costar PA, queda exento de la regla "1 vez por día por
+espacio de acción" de la [Fase II](#6-fase-ii-acción) — es intencional, no un descuido.
 
 #### Protocolos de Emergencia (Rescate de Cultivo)
 

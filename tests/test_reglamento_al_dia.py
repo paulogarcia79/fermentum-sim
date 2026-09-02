@@ -42,6 +42,7 @@ import pytest
 
 from actions import (
     COSTOS_TECNOLOGIA,
+    AGUA_PEDIDO_URGENCIA,
     HARINA_PEDIDO_URGENCIA,
     HARINA_RECULTIVO_MANUAL,
 )
@@ -616,17 +617,37 @@ def test_coste_del_protocolo_h(docs, doc) -> None:
     )
 
 
+# PLAYER_STATE.md: cada token de agua vale un 5% de hidratacion. No hay
+# constante en Python (`reserva_agua` ya cuenta tokens), pero los reglamentos
+# imprimen SIEMPRE la notacion canonica `N (P%)`, asi que el test necesita el
+# factor para construir la cifra que deberia leerse.
+PCT_POR_TOKEN_AGUA = 5
+
+
 @AMBOS
 def test_cantidad_del_pedido_de_urgencia(docs, doc) -> None:
-    """Media bolsa, no una entera: la cantidad ES la regla de balance (el
-    arbitraje de 1 Dato -> bolsa entera -> reventa), no un detalle de formato."""
-    bloque = _seccion(docs[doc], "Pedido de Urgencia", largo=900)
+    """Las dos parcelas son FIJAS, y ambas cantidades son reglas de balance.
+
+    La harina: media bolsa y no una entera, por el arbitraje de 1 Dato ->
+    bolsa entera -> reventa. El agua: una cantidad fija y no la que el jugador
+    escriba, porque una receta pide 10-17 tokens y un lote del 100% cuesta
+    7-14 Monedas, de modo que 1 Dato compraba toda el agua de la partida.
+    Ninguna de las dos es un detalle de formato.
+    """
+    bloque = _normalizar(_seccion(docs[doc], "Pedido de Urgencia", largo=2000))
+
     assert f"{HARINA_PEDIDO_URGENCIA}%" in bloque, (
         f"{doc}: el Pedido de Urgencia deberia entregar "
         f"{HARINA_PEDIDO_URGENCIA}% de harina"
     )
     assert "(100%)" not in bloque, (
         f"{doc}: el Pedido de Urgencia sigue anunciando una bolsa entera"
+    )
+
+    agua = f"{AGUA_PEDIDO_URGENCIA} ({AGUA_PEDIDO_URGENCIA * PCT_POR_TOKEN_AGUA}%)"
+    assert agua in bloque, (
+        f"{doc}: el Pedido de Urgencia deberia entregar {agua} de agua, "
+        "en la notacion canonica `N (P%)`"
     )
 
 

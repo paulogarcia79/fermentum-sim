@@ -204,13 +204,16 @@ def _despachar(
         return manager.accion_auxiliar_horas_extras(player)
 
     if accion == "pedido_urgencia":
-        harina_urgencia = params.get("harina_urgencia")
+        recurso = params.get("recurso")
+        if not isinstance(recurso, str):
+            raise InvalidActionError(
+                f"'recurso' debe ser 'harina' o 'agua'. Recibido: {recurso!r}."
+            )
+        harina = params.get("harina")
         return manager.accion_auxiliar_pedido_urgencia(
             player,
-            harina_urgencia=(
-                _resolver_tipo_harina(harina_urgencia) if harina_urgencia is not None else None
-            ),
-            agua_tokens_urgencia=params.get("agua_tokens_urgencia", 0),
+            recurso=recurso,
+            harina=(_resolver_tipo_harina(harina) if harina is not None else None),
         )
 
     raise AssertionError(f"accion {accion!r} pasó la validación pero no tiene despacho")  # inalcanzable

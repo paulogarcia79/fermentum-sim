@@ -11,7 +11,7 @@ from models import (
     Grado, RECIPE_CATALOG, Environment,
 )
 from engine import GameEngine, Market
-from actions import ActionManager, HARINA_PEDIDO_URGENCIA
+from actions import ActionManager, AGUA_PEDIDO_URGENCIA, HARINA_PEDIDO_URGENCIA
 from exceptions import (
     NotEnoughActionPointsError, MissingResourceError,
     StationBlockedError, CarpetaFullError,
@@ -280,13 +280,18 @@ xraises(MissingResourceError, "C monedas insuficientes", lambda: manager.accion_
 print("--- Pedido de Urgencia ---")
 ph = p1.reserva_harina["Blanca"]
 p1.datos_investigacion = 5
-manager.accion_auxiliar_pedido_urgencia(p1, harina_urgencia=TipoHarina.BLANCA)
+manager.accion_auxiliar_pedido_urgencia(p1, recurso="harina", harina=TipoHarina.BLANCA)
 check("Pedido Urgencia: +media bolsa Blanca", lambda: None if p1.reserva_harina["Blanca"] == ph + HARINA_PEDIDO_URGENCIA else (_ for _ in ()).throw(AssertionError()))
 check("Pedido Urgencia: -1 dato", lambda: None if p1.datos_investigacion == 4 else (_ for _ in ()).throw(AssertionError()))
 check("Pedido Urgencia: no consume PA", lambda: None if p1.puntos_accion == 2 else (_ for _ in ()).throw(AssertionError()))
 
-xraises(InvalidActionError, "Pedido Urgencia sin recurso", lambda: manager.accion_auxiliar_pedido_urgencia(p1))
-xraises(InvalidActionError, "Pedido Urgencia doble recurso", lambda: manager.accion_auxiliar_pedido_urgencia(p1, harina_urgencia=TipoHarina.BLANCA, agua_tokens_urgencia=10))
+pa_agua = p1.reserva_agua
+manager.accion_auxiliar_pedido_urgencia(p1, recurso="agua")
+check("Pedido Urgencia: +lote fijo de agua", lambda: None if p1.reserva_agua == pa_agua + AGUA_PEDIDO_URGENCIA else (_ for _ in ()).throw(AssertionError()))
+
+xraises(InvalidActionError, "Pedido Urgencia recurso invalido", lambda: manager.accion_auxiliar_pedido_urgencia(p1, recurso="datos"))
+xraises(InvalidActionError, "Pedido Urgencia harina sin tipo", lambda: manager.accion_auxiliar_pedido_urgencia(p1, recurso="harina"))
+xraises(InvalidActionError, "Pedido Urgencia doble recurso", lambda: manager.accion_auxiliar_pedido_urgencia(p1, recurso="agua", harina=TipoHarina.BLANCA))
 
 # ========================================================================
 print("--- D: Implementar Mejora ---")

@@ -472,6 +472,37 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   modal in `web/src/data/preciosPliegues.ts`, following the `preciosHarina.ts` precedent. Tests:
   `tests/test_pliegues_monedas.py`.
 
+  **Pedido de Urgencia — both parcels are fixed, and the water one wasn't.** The action took
+  `agua_tokens_urgencia: int` with no upper bound, forwarded verbatim by `server/commands.py` from
+  a bare `<input type="number" min="1">`. Flour had been pinned at `HARINA_PEDIDO_URGENCIA = 50`
+  for an explicit arbitrage reason; water was left open, and a recipe needs 10–17 tokens while a
+  100% market lot costs 7–14 Monedas, so **1 Dato bought a whole game's water**. Water can't be
+  resold, so there was no Monedas loop like flour's — the only brake was the −1 PM per 3 unused
+  tokens at scoring, a ridiculous price for skipping the Suministro Hídrico all game. Now
+  `actions.AGUA_PEDIDO_URGENCIA = 6` (30%), and the player picks *which* resource, never how much.
+  Three things carry weight:
+  - **The wire lost the quantity entirely.** Params are `{recurso: "harina", harina: "Centeno"}`
+    or `{recurso: "agua"}`, and the signature is `(player, recurso, harina=None)` — the old
+    `harina_urgencia` XOR `agua_tokens_urgencia > 0` pair is gone. Validating an int against the
+    constant would have left a number on the wire that the rules say nobody chooses; a discriminator
+    makes the illegal state unrepresentable instead.
+  - **6 equals `AGUA_TOKENS_POR_LOTE[30]` and is deliberately not derived from it** — the
+    `DATOS_SIMPOSIO`-vs-`PRECIO_RENTA` precedent again. It is chosen because the 30% lot costs 2–6
+    Monedas, the same order as the flour half-bag's 1–3, so the Dato buys comparable value either
+    way, and because two Pedidos then cover roughly one recipe's water, mirroring "two Pedidos make
+    a bag". Resizing the market's lots must not silently rebalance a rescue action.
+  - **Still no `GameEvent`, still no `VERSION_FORMATO` bump.** It is a 0-PA action inside the undo
+    window, so emitting anything would shrink `engine.eventos` on a restore — the invariant
+    `AvisoAccion` exists to protect, pinned here by `test_el_pedido_no_emite_eventos`. No persisted
+    field changed shape, and the golden bot never calls the Pedido, so the snapshot passed
+    unregenerated.
+
+  `web/src/data/pedidoUrgencia.ts` mirrors both quantities for the modal and for
+  `descripcionesAcciones.ts` (which now interpolates them instead of repeating "50" in prose),
+  following the `preciosReceta.ts` precedent. Tests: `tests/test_pedido_urgencia.py`, plus
+  `test_reglamento_al_dia.py::test_cantidad_del_pedido_de_urgencia` extended to demand the water
+  figure in the canonical `N (P%)` notation in both rulebooks — verified by mutation.
+
   **Variedad de Recetas — the 7th scoring term, and the breakdown it forced.** Endgame scoring
   rewarded *how well* you bake and was indifferent to *what* you bake, so with duplicate copies of
   every card in the deck (`COPIAS_POR_GRADO`) the optimal line was to find one recipe whose flour

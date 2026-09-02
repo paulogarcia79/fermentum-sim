@@ -2,6 +2,8 @@
 // fuente única de verdad, adaptada de context/ACTIONS_REGISTRY.md. También
 // se reutilizan como el texto de los ModalConfirmacion de H/I/horas_extras
 // en vez de mantener una segunda copia escrita a mano.
+import { AGUA_PEDIDO_URGENCIA_TOKENS, HARINA_PEDIDO_URGENCIA_PCT } from './pedidoUrgencia'
+import { fmtAgua, fmtHarina } from './unidades'
 
 export type IdAccion =
   | 'A'
@@ -36,8 +38,7 @@ export const descripcionesAcciones: Record<IdAccion, string> = {
   I: 'Solo disponible con Vitalidad en 0 (penalización de -3 Puntos de Maestría). Costo: 1 Dato de Investigación. Limpia la Contaminación y fija Vitalidad=2, Acidez=2.',
   horas_extras:
     'Gratis, en cualquier momento de tu turno, una vez por día. Costo: 1 Dato de Investigación. Otorga inmediatamente +1 Punto de Acción.',
-  pedido_urgencia:
-    'Gratis, sin límite por ronda. Costo: 1 Dato de Investigación. Ignora el mercado y obtiene directamente 5 tokens de un tipo de Harina (50%, media bolsa), o los tokens de Agua que elijas (5% cada uno) — uno de los dos, no ambos. Es media bolsa y no una entera para que revender lo pedido deje de ser el mejor negocio de la partida.',
+  pedido_urgencia: `Gratis, sin límite por ronda. Costo: 1 Dato de Investigación. Ignora el mercado y entrega una parcela FIJA: ${fmtHarina(HARINA_PEDIDO_URGENCIA_PCT)} de un tipo de Harina (media bolsa) o ${fmtAgua(AGUA_PEDIDO_URGENCIA_TOKENS)} de Agua — uno de los dos, no ambos, y tú solo eliges cuál. Las cantidades son fijas porque el Pedido es un rescate, no un atajo para saltarse el mercado: media bolsa y no una entera para que revender lo pedido deje de ser el mejor negocio de la partida, y un lote de agua y no los que quieras porque 1 Dato llegaba a cubrir toda el agua de la partida.`,
 }
 
 /**

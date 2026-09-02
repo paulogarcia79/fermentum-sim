@@ -234,6 +234,31 @@ No añade estado persistido: sigue siendo un número que la acción entrega.
 """
 
 
+AGUA_PEDIDO_URGENCIA: int = 6
+"""
+Tokens de agua (5% c/u, o sea un 30%) que entrega el Pedido de Urgencia.
+
+Es una cantidad FIJA, y ese es el arreglo: antes el jugador escribía cuántos tokens
+quería y nada acotaba el número. Una receta pide entre 10 y 17 tokens y un lote del
+100% cuesta de 7 a 14 Monedas en el mercado, así que 1 Dato compraba toda el agua de
+la partida entera. El agua no se puede revender, de modo que no había arbitraje en
+Monedas como con la harina, pero el único freno real era la penalización por
+desperdicio del final (-1 PM por cada 3 tokens sin usar), que es un precio ridículo
+por saltarse el Suministro Hídrico durante toda la partida.
+
+Por qué 6 y no otro número: es el tamaño del lote del 30%, que cuesta entre 2 y 6
+Monedas según la temperatura — el mismo orden de magnitud que la media bolsa de
+harina (1 a 3 Monedas), de modo que el Dato compra lo mismo elijas lo que elijas. Y
+mantiene la historia que ya cuenta la harina: igual que dos Pedidos completan una
+bolsa, dos Pedidos cubren aproximadamente el agua de una receta.
+
+Coincide hoy con ``engine.AGUA_TOKENS_POR_LOTE[30]`` pero NO se deriva de él a
+propósito, por el mismo motivo que ``DATOS_SIMPOSIO`` no se deriva de
+``PRECIO_RENTA`` pese a valer lo mismo: son dos reglas distintas, y redimensionar
+los lotes del mercado no debería rebalancear en silencio una acción de rescate.
+"""
+
+
 class ActionManager:
     """
     Gestiona todas las acciones disponibles durante la Fase II de Fermentum.
@@ -1424,8 +1449,8 @@ class ActionManager:
     def accion_auxiliar_pedido_urgencia(
         self,
         player: Player,
-        harina_urgencia: Optional[TipoHarina] = None,
-        agua_tokens_urgencia: int = 0,
+        recurso: str,
+        harina: Optional[TipoHarina] = None,
     ) -> None:
         """
         Acción Auxiliar: Pedido de Urgencia (GDD v0.0.2, Módulo V §2 «Logística»).
@@ -1433,37 +1458,47 @@ class ActionManager:
         Tipo:    Acción gratuita (0 PA) — no consume un Punto de Acción y no
                  termina el turno del jugador.
         Costo:   1 Dato de Investigación.
-        Efecto:  Ignora el mercado y el precio vigente por completo: obtiene
-                 directamente un recurso de la reserva general.
+        Efecto:  Ignora el mercado y el precio vigente por completo: entrega
+                 directamente de la reserva general UNA de estas dos parcelas
+                 FIJAS, a elección del jugador:
+                   · ``recurso="harina"`` → ``HARINA_PEDIDO_URGENCIA`` (50%,
+                     media bolsa) del tipo indicado en ``harina``.
+                   · ``recurso="agua"``   → ``AGUA_PEDIDO_URGENCIA`` tokens
+                     de agua (6, o sea un 30%).
         Límite:  Ninguno (a diferencia de Horas Extras, el GDD no impone un
                  tope por ronda; se autolimita por Datos de Investigación
                  disponibles).
 
-        Requiere: ``harina_urgencia`` (tipo de harina, otorga
-                  ``HARINA_PEDIDO_URGENCIA`` = media bolsa) XOR
-                  ``agua_tokens_urgencia > 0`` (tokens de agua, 5% c/u).
+        Las dos cantidades son fijas y el jugador no elige ninguna: lo único
+        que decide es CUÁL de los dos recursos quiere. El agua tuvo durante un
+        tiempo una cantidad libre y era un agujero — ver la docstring de
+        ``AGUA_PEDIDO_URGENCIA``.
 
         Args:
             player: Jugador que activa el Pedido de Urgencia.
-            harina_urgencia: Tipo de harina a obtener (media bolsa directa).
-            agua_tokens_urgencia: Tokens de agua a obtener.
+            recurso: ``"harina"`` o ``"agua"``.
+            harina: Tipo de harina, obligatorio si ``recurso == "harina"`` y
+                prohibido en caso contrario.
 
         Raises:
-            InvalidActionError: Ni harina ni agua especificadas, o ambas a la vez.
+            InvalidActionError: ``recurso`` desconocido, harina sin tipo, o un
+                tipo de harina en un pedido de agua.
             MissingResourceError: Datos de Investigación insuficientes.
         """
-        tiene_harina = harina_urgencia is not None
-        tiene_agua = agua_tokens_urgencia > 0
-
-        if not tiene_harina and not tiene_agua:
+        if recurso not in ("harina", "agua"):
             raise InvalidActionError(
-                "Pedido de Urgencia: especifica harina_urgencia "
-                "o agua_tokens_urgencia > 0 para indicar el recurso deseado."
+                f"Pedido de Urgencia: recurso {recurso!r} inválido. "
+                "Debe ser 'harina' o 'agua'."
             )
-        if tiene_harina and tiene_agua:
+        if recurso == "harina" and harina is None:
+            raise InvalidActionError(
+                "Pedido de Urgencia: un pedido de harina necesita el tipo "
+                f"('harina'). Debe ser uno de {[t.value for t in TipoHarina]}."
+            )
+        if recurso == "agua" and harina is not None:
             raise InvalidActionError(
                 "Pedido de Urgencia: elige UN solo tipo de recurso. "
-                "No puedes pedir harina y agua en el mismo pedido."
+                "Un pedido de agua no lleva tipo de harina."
             )
 
         self._require_datos(player, 1)
@@ -1471,10 +1506,11 @@ class ActionManager:
         # Aplicar (0 PA — no se consume punto de acción)
         player.datos_investigacion -= 1
 
-        if harina_urgencia is not None:
-            player.reserva_harina[harina_urgencia.value] += HARINA_PEDIDO_URGENCIA
+        if recurso == "harina":
+            assert harina is not None  # garantizado por la validación de arriba
+            player.reserva_harina[harina.value] += HARINA_PEDIDO_URGENCIA
         else:
-            player.reserva_agua += agua_tokens_urgencia
+            player.reserva_agua += AGUA_PEDIDO_URGENCIA
 
     # ==================================================================
     # PROTOCOLOS DE EMERGENCIA (solo cuando Vitalidad == 0)
