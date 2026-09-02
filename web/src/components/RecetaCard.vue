@@ -23,6 +23,7 @@ import TablaRendimiento from './TablaRendimiento.vue'
 import { PRECIO_RECETA } from '../data/preciosReceta'
 import { tieneZonaAmpliada, zonasDe } from '../data/zonasReceta'
 import PistaMedida, { type BandaPista } from './PistaMedida.vue'
+import Tooltip from './Tooltip.vue'
 
 // Que imprime cada grado. El grado no se elige: lo deriva models.py del reparto
 // de harinas (`_grado_desde_harinas`), y las dos formas legales -- 100% y 50+50 --
@@ -116,132 +117,138 @@ const detalleAbierto = ref(false)
 </script>
 
 <template>
-  <div class="receta-card" :class="{ compacta, completa: !compacta, abierta: detalleAbierto }">
-    <template v-if="compacta">
-      <div class="cabecera">
-        <div class="ico-m icono-pan-envoltorio"><IconoPan :id="receta.id" /></div>
-        <div class="titulo">
-          <span class="nombre">{{ receta.nombre }}</span>
-          <span class="grado" :class="`grado-${receta.grado.toLowerCase()}`">{{ receta.grado }}</span>
-        </div>
+  <!-- Dos raices en vez de una: la carta compacta tiene tooltip y por tanto ES
+       el ancla (Tooltip.vue detecta el hover sobre su propia raiz); la completa
+       no tiene, y se queda como un div normal. -->
+  <Tooltip
+    v-if="compacta"
+    class="receta-card compacta"
+    :fijado="detalleAbierto"
+    @cerrar="detalleAbierto = false"
+  >
+    <div class="cabecera">
+      <div class="ico-m icono-pan-envoltorio"><IconoPan :id="receta.id" /></div>
+      <div class="titulo">
+        <span class="nombre">{{ receta.nombre }}</span>
+        <span class="grado" :class="`grado-${receta.grado.toLowerCase()}`">{{ receta.grado }}</span>
+      </div>
+      <span class="precio-carta" :title="tituloPrecio">
+        <span class="ico-xs"><IconoMonedas /></span><span class="dato">{{ precioAdquisicion }}</span>
+      </span>
+      <button
+        type="button"
+        class="boton-info"
+        :aria-expanded="detalleAbierto"
+        aria-label="Ver todos los detalles"
+        @click="detalleAbierto = !detalleAbierto"
+      >
+        ⓘ
+      </button>
+    </div>
+
+    <div class="requisitos">
+      <span
+        v-for="[tipo, pct] in receta.harinas"
+        :key="tipo"
+        class="req"
+        :title="`${fmtTokensHarina(pct)} de Harina ${tipo} del ${PCT_POR_TOKEN_HARINA}% = ${pct}% (${etiquetaBolsa(pct)})`"
+      >
+        <span class="ico-xs"><IconoHarina :tipo="tipo" /></span> {{ tokensHarina(pct) }}
+        <span class="unidad-secundaria">({{ pct }}%)</span>
+      </span>
+      <span class="req" :title="`${receta.tokens_agua} tokens de Agua = ${receta.hidratacion_pct}% de hidratación`">
+        <span class="ico-xs"><IconoAgua /></span> {{ receta.tokens_agua }}
+        <span class="unidad-secundaria">({{ receta.hidratacion_pct }}%)</span>
+      </span>
+    </div>
+
+    <div class="escala-puntos">
+      <PistaMedida :valor="null" :max="TRACK_MAX" :bandas="bandas" modo="posicion" lectura="" compacta />
+      <div class="etiquetas-puntos">
+        <span class="pts baja dato">{{ receta.puntos_pre_fermento }}</span>
+        <span class="pts optima dato">{{ receta.puntos_optimos }}</span>
+        <span class="pts sobre dato">{{ receta.penalizacion_colapso }}</span>
+      </div>
+    </div>
+
+    <template #contenido>
+      <p>
+        Requiere: {{ textoHarinas }} +
+        {{ receta.tokens_agua }} tokens de Agua ({{ receta.hidratacion_pct }}% hidratación)
+      </p>
+      <p>Bono de sabor: Acidez ∈ {{ receta.acidez_diana.join(', ') }} al iniciar → +{{ receta.bono_sabor_pts }} pts</p>
+      <p>
+        Zona Óptima {{ zonas.optima[0] }}–{{ zonas.optima[1] }}: +1 Dato (+1 más con Módulo
+        Analítico, y +1 más en el centro exacto {{ centroExacto }})
+      </p>
+      <p>
+        Colapso desde {{ zonas.colapso[0] }}: horneado automático con penalización. Crecimiento 1–{{ zonas.crecimiento[1] }}: la masa aún no es pan, no se puede hornear.<template v-if="ampliada">
+          Zona ensanchada por tu Módulo Analítico.</template
+        >
+      </p>
+    </template>
+  </Tooltip>
+
+  <div v-else class="receta-card completa">
+    <div class="cabecera-completa">
+      <h4 class="titulo-completo">Receta de Protocolo: <strong>{{ receta.nombre }}</strong></h4>
+      <span class="esquina-carta">
         <span class="precio-carta" :title="tituloPrecio">
           <span class="ico-xs"><IconoMonedas /></span><span class="dato">{{ precioAdquisicion }}</span>
         </span>
-        <button
-          type="button"
-          class="boton-info"
-          :aria-expanded="detalleAbierto"
-          title="Ver todos los detalles"
-          @click="detalleAbierto = !detalleAbierto"
-        >
-          ⓘ
-        </button>
-      </div>
-
-      <div class="requisitos">
-        <span
-          v-for="[tipo, pct] in receta.harinas"
-          :key="tipo"
-          class="req"
-          :title="`${fmtTokensHarina(pct)} de Harina ${tipo} del ${PCT_POR_TOKEN_HARINA}% = ${pct}% (${etiquetaBolsa(pct)})`"
-        >
-          <span class="ico-xs"><IconoHarina :tipo="tipo" /></span> {{ tokensHarina(pct) }}
-          <span class="unidad-secundaria">({{ pct }}%)</span>
+        <span class="harinas-cabecera">
+          <span v-for="[tipo] in receta.harinas" :key="tipo" class="ico-s"><IconoHarina :tipo="tipo" /></span>
         </span>
-        <span class="req" :title="`${receta.tokens_agua} tokens de Agua = ${receta.hidratacion_pct}% de hidratación`">
-          <span class="ico-xs"><IconoAgua /></span> {{ receta.tokens_agua }}
-          <span class="unidad-secundaria">({{ receta.hidratacion_pct }}%)</span>
-        </span>
-      </div>
+      </span>
+    </div>
+    <p class="grado-linea">
+      Grado: <span class="grado" :class="`grado-${receta.grado.toLowerCase()}`">{{ receta.grado }}</span>
+      <span class="unidad-secundaria"> · {{ REGLA_GRADO[receta.grado] }}</span>
+    </p>
 
-      <div class="escala-puntos">
-        <PistaMedida :valor="null" :max="TRACK_MAX" :bandas="bandas" modo="posicion" lectura="" compacta />
-        <div class="etiquetas-puntos">
-          <span class="pts baja dato">{{ receta.puntos_pre_fermento }}</span>
-          <span class="pts optima dato">{{ receta.puntos_optimos }}</span>
-          <span class="pts sobre dato">{{ receta.penalizacion_colapso }}</span>
-        </div>
-      </div>
-
-      <div class="tooltip" role="tooltip">
-        <p>
-          Requiere: {{ textoHarinas }} +
-          {{ receta.tokens_agua }} tokens de Agua ({{ receta.hidratacion_pct }}% hidratación)
-        </p>
-        <p>Bono de sabor: Acidez ∈ {{ receta.acidez_diana.join(', ') }} al iniciar → +{{ receta.bono_sabor_pts }} pts</p>
-        <p>
-          Zona Óptima {{ zonas.optima[0] }}–{{ zonas.optima[1] }}: +1 Dato (+1 más con Módulo
-          Analítico, y +1 más en el centro exacto {{ centroExacto }})
-        </p>
-        <p>
-          Colapso desde {{ zonas.colapso[0] }}: horneado automático con penalización. Crecimiento 1–{{ zonas.crecimiento[1] }}: la masa aún no es pan, no se puede hornear.<template v-if="ampliada">
-            Zona ensanchada por tu Módulo Analítico.</template
-          >
-        </p>
-      </div>
-    </template>
-
-    <template v-else>
-      <div class="cabecera-completa">
-        <h4 class="titulo-completo">Receta de Protocolo: <strong>{{ receta.nombre }}</strong></h4>
-        <span class="esquina-carta">
-          <span class="precio-carta" :title="tituloPrecio">
-            <span class="ico-xs"><IconoMonedas /></span><span class="dato">{{ precioAdquisicion }}</span>
-          </span>
-          <span class="harinas-cabecera">
-            <span v-for="[tipo] in receta.harinas" :key="tipo" class="ico-s"><IconoHarina :tipo="tipo" /></span>
-          </span>
-        </span>
-      </div>
-      <p class="grado-linea">
-        Grado: <span class="grado" :class="`grado-${receta.grado.toLowerCase()}`">{{ receta.grado }}</span>
-        <span class="unidad-secundaria"> · {{ REGLA_GRADO[receta.grado] }}</span>
-      </p>
-
-      <div class="formula-base">
-        <div class="eyebrow">Fórmula Base</div>
-        <div class="formula-cuerpo">
-          <div class="ico-l"><IconoPan :id="receta.id" /></div>
-          <div class="formula-datos">
-            <div v-for="[tipo, pct] in receta.harinas" :key="tipo" class="dato-formula">
-              <span class="ico-xs"><IconoHarina :tipo="tipo" /></span>
-              {{ fmtTokensHarina(pct) }} de Harina {{ tipo }}
-              <span class="unidad-secundaria">({{ pct }}% — {{ etiquetaBolsa(pct) }})</span>
-            </div>
-            <div class="dato-formula">
-              <span class="ico-xs"><IconoAgua /></span>
-              {{ receta.tokens_agua }} tokens de Agua
-              <span class="unidad-secundaria">({{ receta.hidratacion_pct }}% de hidratación)</span>
-            </div>
-            <div class="pips-agua">
-              <span v-for="n in receta.tokens_agua" :key="n" class="pip-agua" />
-            </div>
+    <div class="formula-base">
+      <div class="eyebrow">Fórmula Base</div>
+      <div class="formula-cuerpo">
+        <div class="ico-l"><IconoPan :id="receta.id" /></div>
+        <div class="formula-datos">
+          <div v-for="[tipo, pct] in receta.harinas" :key="tipo" class="dato-formula">
+            <span class="ico-xs"><IconoHarina :tipo="tipo" /></span>
+            {{ fmtTokensHarina(pct) }} de Harina {{ tipo }}
+            <span class="unidad-secundaria">({{ pct }}% — {{ etiquetaBolsa(pct) }})</span>
+          </div>
+          <div class="dato-formula">
+            <span class="ico-xs"><IconoAgua /></span>
+            {{ receta.tokens_agua }} tokens de Agua
+            <span class="unidad-secundaria">({{ receta.hidratacion_pct }}% de hidratación)</span>
+          </div>
+          <div class="pips-agua">
+            <span v-for="n in receta.tokens_agua" :key="n" class="pip-agua" />
           </div>
         </div>
       </div>
+    </div>
 
-      <div class="seccion">
-        <div class="eyebrow">Perfil de Acidez Requerido</div>
-        <EscalaAcidez
-          :diana="[...receta.acidez_diana]"
-          :bono-pts="receta.bono_sabor_pts"
-          :registrada="acidezInicial"
-          :bono-sellado="bonoSellado"
-        />
-      </div>
+    <div class="seccion">
+      <div class="eyebrow">Perfil de Acidez Requerido</div>
+      <EscalaAcidez
+        :diana="[...receta.acidez_diana]"
+        :bono-pts="receta.bono_sabor_pts"
+        :registrada="acidezInicial"
+        :bono-sellado="bonoSellado"
+      />
+    </div>
 
-      <div class="seccion">
-        <div class="eyebrow">Track Biológico (Fermentación)</div>
-        <div class="escala-puntos">
-          <PistaMedida :valor="null" :max="TRACK_MAX" :bandas="bandas" modo="posicion" lectura="" />
-        </div>
+    <div class="seccion">
+      <div class="eyebrow">Track Biológico (Fermentación)</div>
+      <div class="escala-puntos">
+        <PistaMedida :valor="null" :max="TRACK_MAX" :bandas="bandas" modo="posicion" lectura="" />
       </div>
+    </div>
 
-      <div class="seccion">
-        <div class="eyebrow">Rendimiento</div>
-        <TablaRendimiento :receta="receta" />
-      </div>
-    </template>
+    <div class="seccion">
+      <div class="eyebrow">Rendimiento</div>
+      <TablaRendimiento :receta="receta" />
+    </div>
   </div>
 </template>
 
@@ -476,39 +483,4 @@ const detalleAbierto = ref(false)
   color: var(--riesgo);
 }
 
-.tooltip {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  bottom: calc(100% + var(--e1));
-  left: 50%;
-  transform: translateX(-50%);
-  width: 16rem;
-  max-width: 70vw;
-  background: var(--zona);
-  border: 1px solid var(--borde);
-  border-radius: var(--r-carta);
-  padding: var(--e2);
-  font-size: var(--t-xs);
-  line-height: 1.35;
-  color: var(--tinta);
-  box-shadow: var(--sombra-flotante);
-  z-index: 30;
-  transition: opacity var(--transicion);
-}
-
-.tooltip p {
-  margin: 0 0 var(--e1);
-}
-
-.tooltip p:last-child {
-  margin-bottom: 0;
-}
-
-.receta-card.compacta:hover .tooltip,
-.receta-card.compacta:focus-within .tooltip,
-.receta-card.compacta.abierta .tooltip {
-  visibility: visible;
-  opacity: 1;
-}
 </style>

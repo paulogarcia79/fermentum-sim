@@ -9,6 +9,7 @@ import IconoDatos from './IconoDatos.vue'
 import IconoMonedas from './IconoMonedas.vue'
 import IconoMaestria from './IconoMaestria.vue'
 import PistaMedida, { type BandaPista } from './PistaMedida.vue'
+import Tooltip from './Tooltip.vue'
 import { hexDeColor } from '../data/coloresJugador'
 import { TECNOLOGIAS } from '../data/tecnologias'
 import { ACIDEZ_EQUILIBRIO_CENTRO, puntosEquilibrio } from '../data/preciosAcidez'
@@ -226,27 +227,30 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
           </span>
         </h3>
         <div class="mejoras-grid">
-          <div
+          <Tooltip
             v-for="tec in TECNOLOGIAS"
             :key="tec.id"
             class="mejora-slot"
-            :class="{ activa: yo.tecnologias[tec.id], abierta: tecAbierta === tec.id }"
+            :class="{ activa: yo.tecnologias[tec.id] }"
+            :fijado="tecAbierta === tec.id"
+            @cerrar="tecAbierta = null"
           >
             {{ EMOJI_TECNOLOGIA[tec.id] }} {{ tec.nombre }}
             <button
               type="button"
               class="boton-info"
               :aria-expanded="tecAbierta === tec.id"
-              title="Ver detalles"
+              aria-label="Ver detalles"
               @click="tecAbierta = tecAbierta === tec.id ? null : tec.id"
             >
               ⓘ
             </button>
-            <div class="tooltip" role="tooltip">
+
+            <template #contenido>
               <p>{{ tec.descripcion }}</p>
               <p v-if="!yo.tecnologias[tec.id]">Costo: {{ tec.costo }} Datos</p>
-            </div>
-          </div>
+            </template>
+          </Tooltip>
         </div>
       </section>
 
@@ -505,43 +509,6 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
 }
 
 .mejora-slot .boton-info:hover {
-  opacity: 1;
-}
-
-.mejora-slot .tooltip {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  bottom: calc(100% + var(--e1));
-  left: 50%;
-  transform: translateX(-50%);
-  width: 14rem;
-  max-width: 70vw;
-  background: var(--zona);
-  border: 1px solid var(--borde);
-  border-radius: var(--r-carta);
-  padding: var(--e2);
-  font-size: var(--t-xs);
-  line-height: 1.35;
-  color: var(--tinta);
-  box-shadow: var(--sombra-flotante);
-  z-index: 30;
-  transition: opacity var(--transicion);
-  white-space: normal;
-}
-
-.mejora-slot .tooltip p {
-  margin: 0 0 var(--e1);
-}
-
-.mejora-slot .tooltip p:last-child {
-  margin-bottom: 0;
-}
-
-.mejora-slot:hover .tooltip,
-.mejora-slot:focus-within .tooltip,
-.mejora-slot.abierta .tooltip {
-  visibility: visible;
   opacity: 1;
 }
 

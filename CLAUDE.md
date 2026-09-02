@@ -747,6 +747,28 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
     `PilaDescarte*Modal`) was flattened to a transparent, padding-less box you could read the
     board through — and teleporting also puts every modal's `z-index` on one body-level scale
     instead of competing inside each region's subtree.
+  - **`Tooltip.vue` — the second body-level overlay, for the same reason and a different one.**
+    Three components each hand-rolled the same ~35 lines of `position: absolute` tooltip CSS
+    (`BarraAcciones`'s action spaces, `RecetaCard`'s compact card, `MiTablero`'s `.mejora-slot`),
+    and all three were **unreadable**: every `.region` is a scroll container (`overflow-y: auto`,
+    and `.region-acciones` additionally `max-height: 40vh`), so a box opening *upward* from its
+    anchor was clipped at the region's edge. Note the difference from the modal case — there the
+    teleport fixes *flattening* by `:deep(.panel)`, here it fixes **clipping**, which no
+    `z-index` can touch. One wrapper component now owns all three: the anchor goes in the default
+    slot (so hover is read off the whole block — a `disabled` button fires no mouse events of its
+    own) and the box in `#contenido`. It is `position: fixed`, teleported, and placed from
+    `getBoundingClientRect()`: above the anchor when it fits, flipped below when it doesn't, and
+    clamped horizontally against the viewport. Chosen over the Popover API + CSS anchor
+    positioning, which needs no JS but has no Firefox support for the anchor half.
+    Four details are load-bearing. The box renders at `opacity: 0` until measured, so there is no
+    one-frame jump from the origin. It **hides on any scroll or resize**, because a `fixed` box
+    goes stale the instant its anchor moves and the regions scroll independently. The `fijado`
+    prop drives the `ⓘ` tap-toggle (touch has no hover) and pairs with a `cerrar` emit, since a
+    body-level box must also close on outside-pointerdown and Escape — hunting for the same tiny
+    `ⓘ` is not a dismissal path. And `pointer-events` is `none` unless pinned, so a hover box
+    never swallows a click meant for the board underneath. **No component should write its own
+    `.tooltip` rule again**; the native `title` attribute was also dropped from anything that
+    opens one, since the browser's own box was rendering on top of it.
   - **Two accents with meaning**: `--cobre` = yours / interactive / active turn, `--verdin` =
     shared market state. Everything else (`--vital`, `--riesgo`, `--calido`, `--frio`) is game
     state and is never used decoratively. `--lavado-*` gives one alpha per color;

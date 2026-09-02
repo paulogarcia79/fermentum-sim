@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { deshacer, pasar, store } from '../store'
 import ModalShell from './ModalShell.vue'
+import Tooltip from './Tooltip.vue'
 import ModalA from './acciones/ModalA.vue'
 import ModalB from './acciones/ModalB.vue'
 import ModalC from './acciones/ModalC.vue'
@@ -143,7 +144,7 @@ async function pasarDeVerdad() {
         </header>
 
         <div class="grid-botones">
-          <div v-for="b in g.acciones" :key="b.id" class="envoltorio-boton">
+          <Tooltip v-for="b in g.acciones" :key="b.id" class="envoltorio-boton">
             <div v-if="jugadoresQueUsaron(b.id).length > 0" class="marcadores-jugador">
               <span
                 v-for="p in jugadoresQueUsaron(b.id)"
@@ -154,14 +155,13 @@ async function pasarDeVerdad() {
                 :title="`${p.nombre} ya visitó este espacio hoy`"
               />
             </div>
-            <button
-              :disabled="!estado(b.id).habilitada"
-              :title="estado(b.id).motivo"
-              @click="abrir(b.id)"
-            >
+            <!-- Sin `title`: el motivo ya sale en la caja de abajo, y el
+                 tooltip nativo del navegador se le montaba encima. -->
+            <button :disabled="!estado(b.id).habilitada" @click="abrir(b.id)">
               {{ b.etiqueta }}
             </button>
-            <div class="tooltip" role="tooltip">
+
+            <template #contenido>
               <p>{{ descripcionesAcciones[b.id] }}</p>
               <p v-if="ACCIONES_QUE_REVELAN.has(b.id)" class="tooltip-motivo">
                 ⚠ Revela información oculta: ese paso no se puede deshacer.
@@ -169,8 +169,8 @@ async function pasarDeVerdad() {
               <p v-if="!estado(b.id).habilitada && estado(b.id).motivo" class="tooltip-motivo">
                 ⚠ {{ estado(b.id).motivo }}
               </p>
-            </div>
-          </div>
+            </template>
+          </Tooltip>
         </div>
       </section>
     </div>
@@ -408,39 +408,10 @@ async function pasarDeVerdad() {
   box-shadow: none;
 }
 
-.tooltip {
-  visibility: hidden;
-  opacity: 0;
-  position: absolute;
-  bottom: calc(100% + var(--e1));
-  left: 50%;
-  transform: translateX(-50%);
-  width: 15rem;
-  max-width: 60vw;
-  background: var(--zona);
-  border: 1px solid var(--borde);
-  border-radius: var(--r-carta);
-  padding: var(--e2);
-  font-size: var(--t-xs);
-  line-height: 1.35;
-  color: var(--tinta);
-  box-shadow: var(--sombra-flotante);
-  z-index: 30;
-  transition: opacity var(--transicion);
-}
-
-.envoltorio-boton:hover .tooltip,
-.envoltorio-boton:focus-within .tooltip {
-  visibility: visible;
-  opacity: 1;
-}
-
-.tooltip p {
-  margin: 0;
-}
-
+/* La caja la dibuja Tooltip.vue (teleportada al body). Aqui solo queda el
+   color de las lineas de aviso, que son contenido de slot y por tanto llevan
+   el scope de ESTE componente. */
 .tooltip-motivo {
-  margin-top: var(--e1);
   color: var(--riesgo);
 }
 
