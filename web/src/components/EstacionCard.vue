@@ -1,17 +1,25 @@
 <script setup lang="ts">
 // Tarjeta de una estación de fermentación: dibuja el track 1-20 con sus
-// tres bandas de zona y un marcador en la posición actual. `mostrarFantasma`
+// cuatro bandas de zona y un marcador en la posición actual. `mostrarFantasma`
 // añade un segundo marcador semitransparente en la posición proyectada tras
-// la próxima Fase III (temp//5 + dado_inoculo + modificador_incubadora) --
-// aritmética pura del lado del cliente sobre datos que ya vienen en el
-// snapshot, sin duplicar ninguna regla de negocio.
+// la próxima Fase III (temp//5 + dado_inoculo + modificador_incubadora).
+// Esa aritmética vive en `data/proyeccionMasa.ts` y no aquí, porque
+// ModalIncubadora dibuja exactamente la misma proyección mientras el jugador
+// mueve el dial: dos copias podrían discrepar, y el jugador estaría eligiendo
+// contra una cifra que su propio tablero desmiente.
 import { computed, ref } from 'vue'
 import type { FermentationSlot } from '../types'
 import { store } from '../store'
 import RecetaCard from './RecetaCard.vue'
 import DetalleRecetaModal from './DetalleRecetaModal.vue'
 import { zonasDe } from '../data/zonasReceta'
-import PistaMedida, { type BandaPista } from './PistaMedida.vue'
+import {
+  TRACK_MAX,
+  bandasDe,
+  posicionProyectada,
+  tonoProyectado,
+} from '../data/proyeccionMasa'
+import PistaMedida from './PistaMedida.vue'
 
 const props = defineProps<{
   slot: FermentationSlot | null
@@ -20,29 +28,12 @@ const props = defineProps<{
   mostrarFantasma?: boolean
 }>()
 
-const TRACK_MAX = 20
-
-// Las bandas van en unidades del track (1-20), no en %: PistaMedida hace la
-// conversion. Se restan 0.5 casillas en los bordes por lo mismo que el
-// marcador se centra en su celda (ver abajo).
 // Zonas ya ampliadas por el Modulo Analitico del propietario (zonasDe): esta es
 // la superficie donde de verdad importa, porque es la que muestra el umbral de
 // colapso contra el que el jugador decide si hornear esta noche.
 const zonas = computed(() => (props.slot ? zonasDe(props.slot.recipe) : null))
 
-const bandas = computed<BandaPista[]>(() => {
-  const z = zonas.value
-  if (!z) return []
-  return [
-    // Crecimiento va con trama, no con un tono mas palido: es una zona de otra clase
-    // (no se puede hornear ahi). Sin etiquetas: aqui la masa tiene su propio marcador
-    // y la tarjeta compacta no tiene sitio para una fila de nombres.
-    { desde: z.crecimiento[0] - 1, hasta: z.crecimiento[1], tono: 'crecimiento' },
-    { desde: z.preFermento[0] - 1, hasta: z.preFermento[1], tono: 'baja' },
-    { desde: z.optima[0] - 1, hasta: z.optima[1], tono: 'optima' },
-    { desde: z.colapso[0] - 1, hasta: TRACK_MAX, tono: 'sobre' },
-  ]
-})
+const bandas = computed(() => (zonas.value ? bandasDe(zonas.value) : []))
 
 // El marcador se dibuja en el CENTRO de su celda del track (pos - 0.5), no en el
 // borde derecho: así una masa en `zona_optima[0] - 1` (que el motor puntúa como zona
@@ -52,17 +43,17 @@ const posicionActual = computed(() => (props.slot ? props.slot.posicion_track - 
 
 const posicionFantasma = computed(() => {
   if (!props.slot || !store.estado) return null
-  const avanceBase = Math.floor(store.estado.environment.temperatura_actual / 5)
-  const proyectada = props.slot.posicion_track + avanceBase + props.slot.dado_inoculo + props.slot.modificador_incubadora
-  return Math.min(proyectada, TRACK_MAX + 4) // deja ver que se sale del track sin romper el layout
+  return posicionProyectada(
+    props.slot,
+    store.estado.environment.temperatura_actual,
+    props.slot.modificador_incubadora,
+  )
 })
 
-const tonoProyectado = computed<'riesgo' | 'vital' | 'cobre' | null>(() => {
+const tonoFantasma = computed<'riesgo' | 'vital' | 'cobre' | null>(() => {
   const z = zonas.value
-  if (!props.slot || posicionFantasma.value === null || !z) return null
-  if (posicionFantasma.value >= z.colapso[0]) return 'riesgo'
-  if (posicionFantasma.value >= z.optima[0] && posicionFantasma.value <= z.optima[1]) return 'vital'
-  return 'cobre'
+  if (posicionFantasma.value === null || !z) return null
+  return tonoProyectado(z, posicionFantasma.value)
 })
 
 const detalleAbierto = ref(false)
@@ -87,13 +78,20 @@ const detalleAbierto = ref(false)
         :min="0"
         :max="TRACK_MAX"
         :previsto="mostrarFantasma && posicionFantasma !== null ? posicionFantasma - 0.5 : null"
-        :tono-previsto="tonoProyectado"
+        :tono-previsto="tonoFantasma"
         :bandas="bandas"
         modo="posicion"
         lectura=""
       />
       <div class="detalle-fila">
         <span>dado <span class="dato">{{ slot.dado_inoculo }}</span></span>
+        <!-- El dial de la Incubadora se ve en el tablero, no solo dentro de su
+             modal: es un ajuste que dura una noche y hay que poder comprobarlo
+             de un vistazo antes de pasar el turno. -->
+        <span v-if="slot.modificador_incubadora" class="dial">
+          🌡 <span class="dato">{{ slot.modificador_incubadora > 0 ? '+' : ''
+          }}{{ slot.modificador_incubadora }}</span>
+        </span>
         <span v-if="mostrarFantasma && posicionFantasma !== null">
           esta noche → <span class="dato">{{ posicionFantasma }}</span>
         </span>
@@ -127,6 +125,10 @@ const detalleAbierto = ref(false)
 
 .estacion.bloqueada {
   opacity: 0.5;
+}
+
+.dial {
+  color: var(--cobre);
 }
 
 .boton-tarjeta {

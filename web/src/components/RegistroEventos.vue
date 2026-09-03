@@ -59,6 +59,7 @@ const ICONOS_ACCION: Record<IdMovimiento, string> = {
   horas_extras: '⏳',
   pedido_urgencia: '📦',
   estasis: '❄',
+  incubadora: '🌡',
   pasar: '⏭',
   deshacer: '↩',
   pase_forzado: '⏱',

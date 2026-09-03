@@ -35,7 +35,7 @@ Durante la Fase III (Fermentación), todas las masas activas en las estaciones d
 
 * **`temperatura_actual / 5`**: Representa la inercia térmica global (Ábaco de Fermentación).
 * **`valor_dado_inoculo`**: Es el valor numérico (del 1 al 6) que se selló en la masa al momento de ejecutar la Acción B (Iniciar Receta).
-* **`modificador_incubadora`**: Si el jugador posee la tecnología "Incubadora", puede inyectar un valor de `+1`, `-1` o `0` a esta masa específica para mitigar el clima.
+* **`modificador_incubadora`**: Si el jugador posee la tecnología "Incubadora", puede inyectar un valor de `+1`, `-1` o `0` a esta masa específica para mitigar el clima. Es un **dial que se fija cada noche**, masa por masa, con la acción gratuita `incubadora` durante la Fase II (ACTIONS_REGISTRY.md §3 «Incubadora») — no un valor sellado al iniciar la receta. La Fase III lo aplica y lo **devuelve a 0** (`GameEngine._avanzar_masas_jugador`), de modo que el ajuste dura una sola noche y un dial olvidado no puede empujar una masa al colapso al día siguiente. Que sea un ajuste vivo y no sellado es lo que permite rescatar una masa que ya estaba fermentando cuando se instaló la mejora, igual que hace el Módulo Analítico con la zona óptima; mientras se elegía en la Acción B, instalar la Incubadora con masas en marcha no servía absolutamente de nada.
 
 ### Reglas de Ejecución del Algoritmo
 1. **Independencia del Cultivo:** El cálculo utiliza el valor del `dado_inoculo` guardado en la carta de la masa, NO el nivel de Vitalidad actual del frasco base del jugador.

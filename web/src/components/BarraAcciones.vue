@@ -15,6 +15,7 @@ import ModalSimposio from './acciones/ModalSimposio.vue'
 import ModalConfirmacion from './acciones/ModalConfirmacion.vue'
 import ModalPedidoUrgencia from './acciones/ModalPedidoUrgencia.vue'
 import ModalEstasis from './acciones/ModalEstasis.vue'
+import ModalIncubadora from './acciones/ModalIncubadora.vue'
 import {
   ACCIONES_QUE_REVELAN,
   GRUPOS_ACCION,
@@ -55,6 +56,12 @@ function jugadoresQueUsaron(id: IdAccion): Player[] {
   // y se limpia solo en la Fase III. Por eso tampoco está en
   // ESPACIOS_GRATIS_UNA_VEZ_POR_DIA -- se puede accionar en los dos sentidos.
   if (id === 'estasis') return store.estado!.players.filter((p) => p.estasis_suspendida)
+  // Igual que la Estasis: la marca no dice "ya lo uso" sino "tiene un dial puesto
+  // para ESTA noche". La Fase III lo devuelve a 0, asi que la marca se limpia sola.
+  if (id === 'incubadora')
+    return store.estado!.players.filter((p) =>
+      p.estaciones_fermentacion.some((slot) => slot !== null && slot.modificador_incubadora !== 0),
+    )
   return store.estado!.players.filter((p) => p.acciones_pa_usadas_hoy.includes(id))
 }
 
@@ -320,6 +327,7 @@ async function pasarDeVerdad() {
     />
     <ModalPedidoUrgencia v-if="modalAbierto === 'pedido_urgencia'" @cerrar="cerrar" />
     <ModalEstasis v-if="modalAbierto === 'estasis'" @cerrar="cerrar" />
+    <ModalIncubadora v-if="modalAbierto === 'incubadora'" @cerrar="cerrar" />
   </section>
 </template>
 

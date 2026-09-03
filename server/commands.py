@@ -44,9 +44,9 @@ from exceptions import InvalidActionError
 from models import FermentationSlot, HorneadoRecord, Player, TecnologiaID, TipoHarina
 
 # Acciones que terminan la visita del jugador al completarse con éxito.
-# Ver Milestone 1 (engine.py): Acciones A y E, Horas Extras, Pedido de Urgencia y
-# Estasis Biológica son gratuitas (0 PA) y NO terminan el turno por sí mismas;
-# todas las demás sí.
+# Ver Milestone 1 (engine.py): Acciones A y E, Horas Extras, Pedido de Urgencia,
+# Estasis Biológica e Incubadora son gratuitas (0 PA) y NO terminan el turno por
+# sí mismas; todas las demás sí.
 # La Acción E es gratuita en PA pero se paga en Monedas, y aun así conserva la
 # regla "un espacio, una visita por día" (ACTIONS_REGISTRY.md §1).
 ACCIONES_QUE_TERMINAN_TURNO: Dict[str, bool] = {
@@ -65,6 +65,7 @@ ACCIONES_QUE_TERMINAN_TURNO: Dict[str, bool] = {
     "horas_extras": False,
     "pedido_urgencia": False,
     "estasis": False,
+    "incubadora": False,
 }
 
 # Acciones que REVELAN información oculta al resolverse (robar de un mazo
@@ -162,9 +163,7 @@ def _despachar(
                 f"carpeta_index={carpeta_index} ya no es {receta_id_esperado!r} "
                 f"(ahora es {receta.id!r})."
             )
-        return manager.accion_B_iniciar_receta(
-            player, receta, modificador_incubadora=params.get("modificador_incubadora", 0)
-        )
+        return manager.accion_B_iniciar_receta(player, receta)
 
     if accion == "C":
         transacciones = params.get("transacciones")
@@ -226,6 +225,24 @@ def _despachar(
                 f"'suspender' debe ser un booleano. Recibido: {suspender!r}."
             )
         return manager.accion_auxiliar_estasis(player, suspender=suspender)
+
+    if accion == "incubadora":
+        slot_index = params.get("slot_index")
+        modificador = params.get("modificador")
+        # `isinstance(True, int)` es cierto en Python, así que un booleano colado
+        # en cualquiera de los dos se rechaza explícitamente: un `true` en el JSON
+        # no debe pasar por un 1.
+        if not isinstance(slot_index, int) or isinstance(slot_index, bool):
+            raise InvalidActionError(
+                f"'slot_index' debe ser un entero. Recibido: {slot_index!r}."
+            )
+        if not isinstance(modificador, int) or isinstance(modificador, bool):
+            raise InvalidActionError(
+                f"'modificador' debe ser un entero. Recibido: {modificador!r}."
+            )
+        return manager.accion_auxiliar_incubadora(
+            player, slot_index=slot_index, modificador=modificador
+        )
 
     if accion == "pedido_urgencia":
         recurso = params.get("recurso")
@@ -434,6 +451,22 @@ def describir_accion(
         if params.get("suspender"):
             return "Suspendió la Estasis Biológica por esta noche"
         return "Reactivó la Estasis Biológica"
+
+    if accion == "incubadora":
+        # El dial ya está escrito en la masa cuando esto se llama (va después de
+        # `resolver_comando`), así que el nombre de la receta sale del propio slot
+        # en vez de repetirse en los params.
+        idx = params.get("slot_index")
+        modificador = params.get("modificador")
+        nombre_masa = ""
+        if isinstance(idx, int) and 0 <= idx <= 2:
+            slot = player.estaciones_fermentacion[idx]
+            if slot is not None:
+                nombre_masa = f" ({slot.recipe.nombre})"
+        estacion = f"Est-{(idx + 1):02d}" if isinstance(idx, int) else "una estación"
+        if modificador:
+            return f"Incubadora: {estacion}{nombre_masa} a {modificador:+d} esta noche"
+        return f"Incubadora: {estacion}{nombre_masa} sin ajuste"
 
     if accion == "pedido_urgencia":
         if params.get("recurso") == "agua":

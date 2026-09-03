@@ -37,7 +37,7 @@ Ambos tipos de token cuentan **1:1** en la penalización por desperdicio del fin
 
 ### Atributos de Infraestructura
 * `tecnologias_activas` (Dict[String, Boolean]): Registro de módulos de la Zona 4.
-    * `incubadora`: True/False.
+    * `incubadora`: True/False. Habilita la acción gratuita `incubadora`, que fija el dial `-1/0/+1` de avance de una masa concreta para esta noche (ACTIONS_REGISTRY.md §3). El valor vive en `FermentationSlot.modificador_incubadora`, no en el jugador, y la Fase III lo devuelve a 0 tras aplicarlo.
     * `camara_B`: True/False.
     * `modulo_analitico`: True/False.
     * `criopreservacion`: True/False.

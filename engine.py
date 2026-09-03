@@ -1223,6 +1223,12 @@ class GameEngine:
             # para que "falsa al empezar toda Fase II" sea visible en el mismo
             # sitio que el resto de banderas de día.
             player.estasis_suspendida = False
+            # Mismo caso para el dial de la Incubadora: la Fase III lo devuelve a
+            # 0 al aplicarlo masa por masa, y se repite aquí para que "toda Fase II
+            # empieza sin ajustes pendientes" se lea junto al resto.
+            for slot in player.estaciones_fermentacion:
+                if slot is not None:
+                    slot.modificador_incubadora = 0
         for player in orden:
             player.resetear_puntos_accion()
 
@@ -1563,8 +1569,15 @@ class GameEngine:
         Donde:
           · ``temperatura_actual // 5`` = Ábaco de Fermentación (inercia térmica).
           · ``dado_inoculo`` = valor sellado al iniciar la receta (≡ Vitalidad del día B).
-          · ``modificador_incubadora`` = ajuste local -1/0/+1 si el jugador tiene
-            la tecnología Incubadora activa.
+          · ``modificador_incubadora`` = el dial -1/0/+1 que el dueño de la
+            tecnología Incubadora fijó para ESTA noche sobre ESTA masa con la
+            acción gratuita ``incubadora``. Se aplica y **se devuelve a 0** aquí
+            mismo: el ajuste dura una sola noche, igual que la suspensión de la
+            Estasis Biológica, así que un dial olvidado no puede empujar una masa
+            al colapso la noche siguiente. Ese reseteo, y el hecho de que el
+            evento ``MASA_AVANZO`` informe del valor aplicado, son el único rastro
+            permanente del ajuste — la acción en sí no emite ningún ``GameEvent``,
+            por vivir dentro de la ventana de deshacer.
 
         Si tras el avance la posición ≥ ``zona_colapso[0]``, se activa
         el Colapso Estructural (horneado automático de emergencia, 0 PA).
@@ -1592,8 +1605,16 @@ class GameEngine:
 
             # Calcular el avance de esta masa usando la fórmula de cinética.
             posicion_antes: int = slot.posicion_track
+            # El dial de la Incubadora se lee ANTES de avanzar y se limpia justo
+            # después: es el ajuste de esta noche, no un valor sellado en la masa.
+            modificador: int = slot.modificador_incubadora
             avance: int = slot.calcular_avance(self._environment.temperatura_actual)
             slot.posicion_track += avance
+            slot.modificador_incubadora = 0
+
+            sufijo: str = (
+                f" (Incubadora {modificador:+d})" if modificador else ""
+            )
             self._emit(
                 EventoTipo.MASA_AVANZO,
                 jugador_idx=jugador_idx,
@@ -1603,9 +1624,10 @@ class GameEngine:
                     "posicion_antes": posicion_antes,
                     "posicion_despues": slot.posicion_track,
                     "avance": avance,
+                    "modificador_incubadora": modificador,
                 },
                 mensaje=f"'{slot.recipe.nombre}' avanzó {posicion_antes} → "
-                        f"{slot.posicion_track} (+{avance}).",
+                        f"{slot.posicion_track} (+{avance}){sufijo}.",
             )
 
             # Evaluar gatillo de Colapso Estructural (CLIMATE_LOGIC.md §3 regla 2).

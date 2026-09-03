@@ -597,7 +597,6 @@ class ActionManager:
         self,
         player: Player,
         receta: Recipe,
-        modificador_incubadora: int = 0,
     ) -> FermentationSlot:
         """
         Acción B: Iniciar Receta (ACTIONS_REGISTRY.md §2B).
@@ -615,13 +614,20 @@ class ActionManager:
           · Cubo de Acidez  ← True si player.acidez ∈ receta.acidez_diana.
             El Cubo activa el Bono de Sabor al hornear.
 
+        Lo que NO se sella aquí: el ``modificador_incubadora`` de la masa nace en 0
+        y se fija noche a noche con la acción gratuita ``incubadora``
+        (``accion_auxiliar_incubadora``). Antes se elegía en esta misma acción y
+        quedaba clavado para siempre, de modo que instalar la Incubadora con una
+        masa ya fermentando no servía de nada: el dial de esa masa era un 0 que
+        nadie podía tocar. Un solo escritor para el campo, y ese escritor es la
+        acción gratuita.
+
         Precondiciones:
           · La receta debe estar en player.carpeta_proyectos.
           · player.vitalidad >= 1 (dado_inoculo no puede ser 0).
           · player.dados_inoculo >= 1 (hay dados disponibles para sellar).
           · Debe existir una estación de fermentación libre.
             (Estación 03 solo con Cámara B activa.)
-          · modificador_incubadora ≠ 0 solo si Incubadora está instalada.
 
         Efectos sobre el estado:
           1. Consume 1 PA, las harinas impresas en la carta, tokens_agua exactos.
@@ -632,8 +638,6 @@ class ActionManager:
         Args:
             player: Jugador que inicia la fermentación.
             receta: Carta a iniciar; debe estar en player.carpeta_proyectos.
-            modificador_incubadora: Ajuste local de avance (-1, 0 o +1).
-                Solo válido si player.tecnologias.incubadora == True.
 
         Returns:
             El FermentationSlot creado con la memoria biológica sellada.
@@ -646,7 +650,6 @@ class ActionManager:
             StationBlockedError: Todas las estaciones están ocupadas o
                 la única libre (03) requiere Cámara B.
             MissingResourceError: Harina, agua o dados de inóculo insuficientes.
-            InvalidActionError: modificador_incubadora inválido o usado sin Incubadora.
         """
         # --- Bloque de validaciones completo (Fail-Fast) ---
 
@@ -688,17 +691,6 @@ class ActionManager:
         self._require_harinas(player, receta)
         self._require_agua(player, tokens_agua_requeridos)
 
-        if modificador_incubadora not in (-1, 0, 1):
-            raise InvalidActionError(
-                f"modificador_incubadora debe ser -1, 0 o 1. "
-                f"Recibido: {modificador_incubadora}"
-            )
-        if modificador_incubadora != 0 and not player.tecnologias.incubadora:
-            raise InvalidActionError(
-                f"No se puede usar modificador_incubadora={modificador_incubadora} "
-                "sin tener la tecnología Incubadora instalada."
-            )
-
         # --- Todas las validaciones pasaron; aplicar efectos ---
 
         player.consumir_punto_accion("B")
@@ -721,7 +713,6 @@ class ActionManager:
             dado_inoculo=dado_inoculo,
             posicion_track=0,
             bono_sabor=bono_sabor,
-            modificador_incubadora=modificador_incubadora,
             acidez_inicial=player.acidez,
         )
 
@@ -971,7 +962,8 @@ class ActionManager:
         Acción D: Implementar Mejora de Laboratorio (ACTIONS_REGISTRY.md §2D).
 
         Costos por tecnología:
-          · Incubadora:       3 Datos  → ajuste ±5°C local en Fase III.
+          · Incubadora:       3 Datos  → dial ±1 casilla por masa y por noche
+                                           (acción gratuita ``incubadora``).
           · Cámara B:         4 Datos  → desbloquea Estación 03 y mejora Acción E.
           · Módulo Analítico: 4 Datos  → ensancha la zona óptima ±1 casilla (y
                                          retrasa el colapso con ella) y sube los
@@ -1506,6 +1498,87 @@ class ActionManager:
             )
 
         player.estasis_suspendida = suspender
+
+    def accion_auxiliar_incubadora(
+        self,
+        player: Player,
+        slot_index: int,
+        modificador: int,
+    ) -> None:
+        """
+        Acción Auxiliar: Incubadora (ACTIONS_REGISTRY.md §3 «Incubadora»).
+
+        Tipo:    Acción gratuita (0 PA). No ocupa espacio de acción.
+        Costo:   Ninguno.
+        Requiere: Tecnología Incubadora instalada y una masa en ``slot_index``.
+        Efecto:  Fija ``FermentationSlot.modificador_incubadora`` de ESA masa
+                 para la Fase III de esta noche: -1 frena una casilla, +1
+                 acelera una, 0 deja la cinética limpia.
+        Límite:  Ninguno — la Fase III devuelve el dial a 0 tras aplicarlo
+                 (``GameEngine._avanzar_masas_jugador``), así que el ajuste
+                 dura una sola noche y se decide masa por masa.
+
+        Notas de diseño (las cuatro decisiones que sostienen esta acción):
+
+        · **Por qué existe.** El modificador se elegía en la Acción B y quedaba
+          sellado en la masa para siempre. Instalar la Incubadora con una masa ya
+          fermentando no servía absolutamente de nada: su dial era un 0 que
+          ninguna acción del juego podía tocar, así que la mejora que se acababa
+          de pagar en Datos veía colapsar esa masa sin poder frenarla. El
+          reglamento ya prometía un ajuste «masa por masa» en la Fase III; esto
+          es lo que lo cumple.
+        · **Es un dial de dos sentidos, no un consumo.** Puede accionarse cuantas
+          veces se quiera durante cualquier visita que el jugador ya tenga; por
+          eso NO llama a ``ocupar_espacio_accion`` ni marca ninguna bandera de "ya
+          usada", y por eso NO aparece en ``GameEngine._jugador_elegible``: no
+          otorga visitas. Un ajuste no es un recurso. Mismo criterio que la
+          Estasis Biológica.
+        · **Por defecto el dial está en 0.** Una masa nace sin ajuste y la Fase III
+          lo devuelve a 0 cada noche, así que quien ignore la acción juega
+          exactamente como antes y un ajuste olvidado no puede arrastrar a nadie a
+          un colapso la noche siguiente.
+        · **No emite ``GameEvent``.** Es una acción de 0 PA, es decir que ocurre
+          dentro de la ventana de deshacer, y ``GameSession.restaurar_checkpoint``
+          hace ``pickle.loads`` del motor entero: un evento aquí encogería
+          ``engine.eventos`` al deshacer y dejaría colgados los punteros ``since``
+          de los clientes — el invariante que existe para proteger ``AvisoAccion``.
+          El rastro permanente lo deja el evento ``MASA_AVANZO`` de la Fase III,
+          que informa del modificador aplicado.
+
+        Args:
+            player: Jugador que ajusta el dial.
+            slot_index: Estación (0, 1 o 2) cuya masa se ajusta.
+            modificador: -1, 0 o +1 casillas de avance para esta noche.
+
+        Raises:
+            InvalidActionError: ``modificador`` fuera de (-1, 0, 1).
+            RuleViolationError: El jugador no tiene la Incubadora instalada,
+                ``slot_index`` está fuera de [0, 2], o la estación está vacía.
+        """
+        if modificador not in (-1, 0, 1):
+            raise InvalidActionError(
+                f"modificador debe ser -1, 0 o 1. Recibido: {modificador}"
+            )
+
+        if not player.tecnologias.incubadora:
+            raise RuleViolationError(
+                f"'{player.nombre}' no puede ajustar el avance de una masa sin la "
+                "tecnología Incubadora instalada."
+            )
+
+        if not (0 <= slot_index <= 2):
+            raise RuleViolationError(
+                f"slot_index debe estar en [0, 2]. Recibido: {slot_index}"
+            )
+
+        slot: Optional[FermentationSlot] = player.estaciones_fermentacion[slot_index]
+        if slot is None:
+            raise RuleViolationError(
+                f"La estación {slot_index} de '{player.nombre}' está vacía. "
+                "No hay ninguna masa cuyo avance ajustar."
+            )
+
+        slot.modificador_incubadora = modificador
 
     def accion_auxiliar_pedido_urgencia(
         self,

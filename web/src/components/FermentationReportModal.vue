@@ -70,7 +70,10 @@ function porJugador(idx: number, tipos: string[]): GameEventView[] {
 
         <li v-for="(ev, i) in porJugador(idx, ['masa_avanzo'])" :key="'m' + i">
           Est-{{ (ev.datos.estacion_idx as number) + 1 }}: '{{ ev.datos.receta_nombre }}' pos
-          {{ ev.datos.posicion_antes }} → {{ ev.datos.posicion_despues }} (avanzó +{{ ev.datos.avance }})
+          {{ ev.datos.posicion_antes }} → {{ ev.datos.posicion_despues }} (avanzó +{{ ev.datos.avance }}<template
+            v-if="ev.datos.modificador_incubadora"
+          >, Incubadora {{ (ev.datos.modificador_incubadora as number) > 0 ? '+' : ''
+          }}{{ ev.datos.modificador_incubadora }}</template>)
         </li>
       </ul>
     </div>

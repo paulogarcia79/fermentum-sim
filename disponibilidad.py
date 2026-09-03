@@ -248,6 +248,19 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         player.tecnologias.criopreservacion,
         "Requiere Criopreservación",
     )
+    # Incubadora: el otro ajuste-no-consumo del juego, con la misma forma que la
+    # Estasis salvo por una puerta más — el dial se fija SOBRE una masa, así que
+    # sin masas activas no hay nada que ajustar. Los dos motivos van en escalera
+    # porque son situaciones distintas: no tener la mejora es permanente, no tener
+    # masas se arregla con una Acción B el mismo día.
+    if not player.tecnologias.incubadora:
+        agregar("incubadora", False, "Requiere Incubadora")
+    else:
+        agregar(
+            "incubadora",
+            any(slot is not None for slot in player.estaciones_fermentacion),
+            "Sin masas en fermentación",
+        )
 
     return resultados
 

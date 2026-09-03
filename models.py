@@ -196,10 +196,12 @@ que el pre-fermento de una carta no se vacíe al ampliarse, y ``models`` no pued
 importar ``engine`` (la dependencia va en un solo sentido). Su sitio natural es junto
 a ``Recipe.zonas_efectivas``, donde ya vive toda la aritmética del ensanchado.
 
-Es un efecto EN VIVO, no sellado en la masa como ``modificador_incubadora``: se
-recalcula en cada resolución a partir de las tecnologías del propietario, así que
-instalar el Módulo salva una masa que ya está fermentando. Como la ampliación se come
-la zona de colapso por arriba, **también retrasa el umbral de colapso**.
+Es un efecto EN VIVO: se recalcula en cada resolución a partir de las tecnologías del
+propietario, así que instalar el Módulo salva una masa que ya está fermentando. Como
+la ampliación se come la zona de colapso por arriba, **también retrasa el umbral de
+colapso**. El dial de la Incubadora llegó al mismo sitio por otro camino — lo fija su
+dueño noche a noche en la Fase II en vez de recalcularse solo —, de modo que ninguna
+de las dos mejoras deja ya fuera a una masa que empezó antes de comprarlas.
 """
 
 ANCHO_MINIMO_PRE_FERMENTO: int = AMPLIACION_OPTIMA_MODULO + 1
@@ -538,8 +540,14 @@ class FermentationSlot:
         posicion_track: Posición acumulada en el track de fermentación (inicia en 0).
         bono_sabor: True si la acidez al iniciar estaba dentro de acidez_diana.
             Se sella el Cubo de Laboratorio en la carta si es True.
-        modificador_incubadora: Ajuste de avance local (-1 / 0 / +1).
-            Solo aplicable si el jugador tiene la tecnología Incubadora instalada.
+        modificador_incubadora: Ajuste de avance de ESTA NOCHE (-1 / 0 / +1).
+            Lo fija su dueño durante la Fase II con la acción gratuita
+            ``incubadora`` (requiere la tecnología del mismo nombre), masa por
+            masa, y la Fase III lo pone de nuevo a 0 tras aplicarlo
+            (``GameEngine._avanzar_masas_jugador``). **No se sella al iniciar la
+            receta**: una masa que ya estaba fermentando cuando se instaló la
+            Incubadora también se puede ajustar, que es justo el caso en el que
+            un modificador sellado dejaba la mejora sin efecto.
         acidez_inicial: Acidez del jugador en el momento de sellar esta masa
             (Registro de pH de la carta). Solo informativo para la UI —
             `bono_sabor` ya es el booleano autoritativo que engine.py usa al
@@ -575,6 +583,10 @@ class FermentationSlot:
 
         Fórmula (CLIMATE_LOGIC.md §3):
             Avance_Final = (temperatura_actual // 5) + dado_inoculo + modificador_incubadora
+
+        El ``dado_inoculo`` está sellado desde la Acción B; el
+        ``modificador_incubadora`` es el ajuste que su dueño fijó para esta
+        noche concreta y que la Fase III limpia después de aplicarlo.
 
         Args:
             temperatura_actual: Temperatura del laboratorio en el turno actual (°C).
@@ -666,7 +678,12 @@ class Technologies:
 
     Attributes:
         incubadora: Permite ajuste local de temperatura ±5°C en la Fase III
-            para una masa específica (modificador_incubadora = ±1).
+            para una masa específica (``FermentationSlot.modificador_incubadora``
+            = ±1). Es un **dial que se fija cada noche** con la acción gratuita
+            ``incubadora`` durante la Fase II, no un valor sellado al iniciar la
+            receta: instalarla salva una masa que ya está fermentando, igual que
+            el Módulo Analítico. La Fase III devuelve el dial a 0 tras aplicarlo,
+            así que un ajuste olvidado no arrastra a la noche siguiente.
         camara_b: Desbloquea la Estación 03 (índice 2) y mejora la Acción E (Pliegues):
             permite repartir los espacios comprados entre dos masas (no aumenta
             cuántos se compran) y habilita la variante de recuperar +1 Vitalidad.

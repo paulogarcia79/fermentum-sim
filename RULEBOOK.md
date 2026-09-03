@@ -306,9 +306,9 @@ Cada jugador dispone de **2 Puntos de Acción (PA)** por Día de Laboratorio.
   Jefatura es la excepción y va al revés:** ese espacio se agota para TODA la mesa en cuanto un
   jugador lo visita, no solo para él. Alimentar el
   Cultivo y Horas Extras se limitan con su propio marcador de "ya usada", y ni Pedido de Urgencia ni
-  Estasis Biológica tienen límite alguno — la segunda porque es un **ajuste y no un consumo**: un
-  interruptor de dos sentidos que puedes accionar las veces que quieras y que, por lo mismo, tampoco
-  te mantiene en la rotación de visitas (ver sus entradas en el Catálogo de Acciones).
+  Estasis Biológica ni Incubadora tienen límite alguno — las dos últimas porque son **ajustes y no
+  consumos**: diales de dos sentidos que puedes accionar las veces que quieras y que, por lo mismo,
+  tampoco te mantienen en la rotación de visitas (ver sus entradas en el Catálogo de Acciones).
 - **Sin escasez de insumos:** a diferencia de las recetas del mercado (que sí ocupan un espacio
   limitado), la harina y el agua ya no se agotan por turno — son un precio compartido (Bolsa de
   Harinas) y una tabla de precio por temperatura (Suministro Hídrico Global) que cualquier jugador
@@ -624,6 +624,30 @@ día y si hay Aletargamiento.
 Contaminación: −3 Puntos de Maestría y no puedes iniciar recetas hasta ejecutar un Protocolo de
 Emergencia. El juego te enseña la cifra resultante antes de confirmar, pero no te lo impide.
 
+#### Incubadora
+
+**Costo:** ninguno. **Requiere la tecnología Incubadora** y al menos una masa fermentando. No ocupa
+espacio de acción, no termina tu turno y no tiene límite de usos.
+
+Fija, **masa por masa**, cuánto avanzará cada una **esta noche**: −1 la frena una casilla, +1 la
+acelera una, 0 la deja con su cinética limpia. Con varias estaciones ocupadas puedes frenar una
+mientras empujas otra — el dial es de cada masa, no del laboratorio.
+
+Se decide en la Fase II, con la carta de clima ya sobre la mesa: eliges sabiendo la temperatura del
+día, es decir sabiendo cuánto va a correr cada masa. El ajuste **dura una sola noche**: la Fase III
+lo aplica y devuelve el dial a 0, así que un ajuste olvidado no puede seguir empujando una masa
+noche tras noche.
+
+> **Por qué el dial no se elige al iniciar la receta.** Antes se fijaba al mezclar y quedaba clavado
+> en la masa para siempre. Quien compraba la Incubadora con una masa ya fermentando descubría que no
+> podía tocarla: veía cómo se pasaba de la Zona Óptima sin poder frenarla, con la mejora recién
+> pagada delante. Ahora el ajuste es de cada noche, así que instalar la Incubadora rescata lo que ya
+> tienes en marcha — igual que hace el Módulo Analítico con la Zona Óptima.
+
+**Ojo:** un +1 puede meter la masa en **Colapso**, y entonces se hornea sola esta noche con la
+penalización de esa zona. El juego te enseña dónde caerá la masa antes de confirmar, pero no te lo
+impide: a veces adelantar un colapso es la jugada.
+
 #### Pedido de Urgencia
 
 **Costo:** 1 Dato de Investigación. Ignora el Mercado por completo — sin importar el precio
@@ -771,12 +795,16 @@ Cada masa activa en una estación de fermentación avanza en su track según:
 - El Dado de Inóculo es el valor que quedó **sellado** al iniciar esa masa concreta — no cambia
   aunque la Vitalidad actual del cultivo base cambie después.
 - El Modificador de Incubadora (−1, 0 o +1) solo está disponible si el jugador tiene esa
-  tecnología instalada, y se aplica masa por masa.
+  tecnología instalada. **Lo fija su dueño durante la Fase II**, masa por masa, con la acción
+  gratuita «Incubadora» (§7), y esta fase lo **devuelve a 0** después de aplicarlo: el ajuste dura
+  una sola noche. A diferencia del Dado de Inóculo, no queda sellado al iniciar la receta, así que
+  instalar la Incubadora sirve también para las masas que ya tenías fermentando.
 
 **Principio de Memoria Biológica:** una vez iniciada, una masa es un ecosistema independiente. Si
 el cultivo base del jugador llega a Vitalidad 0 o se contamina después de haber iniciado la
 receta, esa masa en curso **no se ve afectada** — sigue avanzando con el valor de dado que quedó
-sellado en el momento de la mezcla original.
+sellado en el momento de la mezcla original. Lo sellado es el **Dado de Inóculo**; el Modificador de
+Incubadora no lo está, y por eso puedes moverlo cada noche.
 
 ### 9.2 Colapso Estructural (Sobre-fermentación)
 
@@ -903,7 +931,7 @@ importar lo que costó: ver [Desarrollo Tecnológico](#112-cálculo-de-puntos-de
 
 | Tecnología | Costo | Efecto |
 |:---|:---:|:---|
-| **Incubadora** | 3 Datos | Permite ajustar la temperatura local ±5°C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima. |
+| **Incubadora** | 3 Datos | Permite ajustar la temperatura local ±5°C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima. El dial se fija **cada noche y masa por masa** con la acción gratuita del mismo nombre (§7), así que también sirve en masas que ya estaban fermentando cuando la instalaste. |
 | **Cámara B** | 4 Datos | Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas. |
 | **Módulo Analítico** | 4 Datos | **Ensancha la Zona Óptima 1 casilla por cada lado** — se come una casilla del Pre-fermento por abajo y una del Colapso por arriba, así que **también retrasa el colapso**. Además sube el rendimiento del horneado: **2 Datos** en cualquier punto de la Zona Óptima y **3** en el centro exacto. |
 | **Criopreservación** | 2 Datos | Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III. Puedes **suspenderla noche a noche** con la acción gratuita del mismo nombre (§7) para dejar bajar tu Vitalidad cuando te convenga un Dado de Inóculo más bajo. |

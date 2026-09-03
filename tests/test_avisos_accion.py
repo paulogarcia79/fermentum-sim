@@ -28,7 +28,7 @@ from typing import Any, Dict, List, Tuple
 from starlette.testclient import TestClient
 
 from events import EventoTipo, GameEvent
-from models import HorneadoRecord
+from models import RECIPE_CATALOG, FermentationSlot, HorneadoRecord
 from server.app import _formatear_sse, _formatear_sse_aviso, crear_app
 from server.sessions import AvisoAccion
 
@@ -275,6 +275,79 @@ def test_estasis_y_deshacer_no_alteran_el_log_de_eventos() -> None:
 
     cliente.post(f"/games/{room_id}/undo", headers={"X-Player-Token": token})
     assert len(sesion.engine.eventos) == antes
+
+
+def test_incubadora_y_deshacer_no_alteran_el_log_de_eventos() -> None:
+    """
+    Mismo invariante para el dial de la Incubadora, y por el mismo motivo que la
+    Estasis: escribe un campo que la Fase III LEE esa misma noche, asi que la
+    tentacion de anunciarlo con un GameEvent es real. No lo hace -- al ser 0 PA
+    vive dentro de la ventana de deshacer, y `restaurar_checkpoint` repone el
+    motor desde un pickle, de modo que un evento suyo haria ENCOGER
+    `engine.eventos`. El rastro lo deja el MASA_AVANZO de la Fase III.
+    """
+    cliente, room_id, tokens, sesion = _partida_iniciada()
+    idx = _indice_del_jugador_en_turno(cliente, room_id, tokens)
+    token = _token_del_jugador_en_turno(cliente, room_id, tokens)
+    jugador = sesion.engine.players[idx]
+    jugador.tecnologias.incubadora = True
+    jugador.estaciones_fermentacion[0] = FermentationSlot(
+        recipe=RECIPE_CATALOG["pan_de_molde"],
+        dado_inoculo=1,
+        posicion_track=3,
+        bono_sabor=False,
+        acidez_inicial=1,
+    )
+    antes = len(sesion.engine.eventos)
+
+    r = cliente.post(
+        f"/games/{room_id}/actions",
+        headers={"X-Player-Token": token},
+        json={"accion": "incubadora", "params": {"slot_index": 0, "modificador": -1}},
+    )
+    assert r.status_code == 200, r.text
+    estaciones = r.json()["players"][idx]["estaciones_fermentacion"]
+    assert estaciones[0]["modificador_incubadora"] == -1
+    assert len(sesion.engine.eventos) == antes
+
+    cliente.post(f"/games/{room_id}/undo", headers={"X-Player-Token": token})
+    assert len(sesion.engine.eventos) == antes
+
+
+def test_incubadora_emite_su_aviso_y_lo_rechazado_no_suena() -> None:
+    """El canal efimero: la accion suena en todas las pestañas, pero una
+    rechazada (sin la mejora instalada) no emite ningun aviso."""
+    cliente, room_id, tokens, sesion = _partida_iniciada()
+    idx = _indice_del_jugador_en_turno(cliente, room_id, tokens)
+    token = _token_del_jugador_en_turno(cliente, room_id, tokens)
+    jugador = sesion.engine.players[idx]
+    jugador.estaciones_fermentacion[0] = FermentationSlot(
+        recipe=RECIPE_CATALOG["pan_de_molde"],
+        dado_inoculo=1,
+        posicion_track=3,
+        bono_sabor=False,
+        acidez_inicial=1,
+    )
+    cola = _ColaFalsa()
+    sesion.suscriptores.append(cola)
+
+    # Sin la Incubadora: rechazada, y por tanto muda.
+    r = cliente.post(
+        f"/games/{room_id}/actions",
+        headers={"X-Player-Token": token},
+        json={"accion": "incubadora", "params": {"slot_index": 0, "modificador": -1}},
+    )
+    assert r.status_code >= 400
+    assert "incubadora" not in cola.acciones()
+
+    jugador.tecnologias.incubadora = True
+    r = cliente.post(
+        f"/games/{room_id}/actions",
+        headers={"X-Player-Token": token},
+        json={"accion": "incubadora", "params": {"slot_index": 0, "modificador": -1}},
+    )
+    assert r.status_code == 200, r.text
+    assert cola.acciones() == ["incubadora"]
 
 
 def test_estasis_emite_su_aviso_y_lo_rechazado_no_suena() -> None:

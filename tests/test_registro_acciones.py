@@ -36,7 +36,7 @@ from starlette.testclient import TestClient
 from actions import ActionManager
 from bootstrap import create_game
 from events import EventoTipo
-from models import FermentationSlot, TecnologiaID, TipoHarina
+from models import RECIPE_CATALOG, FermentationSlot, TecnologiaID, TipoHarina
 from server import persistence
 from server.app import crear_app
 from server.commands import describir_accion, resolver_comando
@@ -396,6 +396,34 @@ def test_mensaje_de_la_estasis_en_sus_dos_sentidos() -> None:
 
     reactivar = _describir(engine, manager, jugador, "estasis", {"suspender": False})
     assert reactivar == "Reactivó la Estasis Biológica"
+
+
+def test_mensaje_de_la_incubadora_nombra_la_masa_y_el_sentido() -> None:
+    """
+    El dial es por masa, asi que la linea tiene que decir SOBRE CUAL se movio:
+    con dos o tres estaciones ocupadas, "ajusto la Incubadora" no le dice nada a
+    un oponente que solo ve el registro. Y el 0 se redacta aparte porque quitar
+    un ajuste es un movimiento distinto de ponerlo.
+    """
+    engine, manager, jugador = _motor_y_jugador()
+    jugador.tecnologias.incubadora = True
+    jugador.estaciones_fermentacion[1] = FermentationSlot(
+        recipe=RECIPE_CATALOG["pan_de_molde"],
+        dado_inoculo=1,
+        posicion_track=3,
+        bono_sabor=False,
+        acidez_inicial=1,
+    )
+
+    frena = _describir(
+        engine, manager, jugador, "incubadora", {"slot_index": 1, "modificador": -1}
+    )
+    assert frena == "Incubadora: Est-02 (Pan de Molde) a -1 esta noche"
+
+    quita = _describir(
+        engine, manager, jugador, "incubadora", {"slot_index": 1, "modificador": 0}
+    )
+    assert quita == "Incubadora: Est-02 (Pan de Molde) sin ajuste"
 
 
 def test_mensaje_del_pedido_de_urgencia_en_sus_dos_ramas() -> None:

@@ -227,8 +227,10 @@ def test_el_centro_exacto_no_paga_extra_sin_el_modulo() -> None:
 
 def test_instalar_el_modulo_afecta_a_una_masa_ya_en_marcha() -> None:
     """
-    La ampliacion NO se sella en la masa como `modificador_incubadora`: se recalcula
-    en cada resolucion, asi que comprar la mejora rescata lo que ya esta dentro.
+    La ampliacion no se sella en la masa: se recalcula en cada resolucion, asi que
+    comprar la mejora rescata lo que ya esta dentro. El dial de la Incubadora tiene
+    hoy la misma propiedad por otra via (lo fija su dueno cada noche), que es
+    justo el agujero que se cerro al dejar de sellarlo en la Accion B.
     """
     engine, manager, player = _motor()
     _masa(player, "focaccia", 10)  # acaba en 15 y colapsaria esta noche

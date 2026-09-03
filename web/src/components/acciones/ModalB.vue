@@ -8,7 +8,6 @@ const emit = defineEmits<{ cerrar: [] }>()
 
 const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
 const carpetaIndex = ref(0)
-const modificadorIncubadora = ref(0)
 const enviando = ref(false)
 const error = ref<string | null>(null)
 
@@ -29,7 +28,6 @@ async function confirmar() {
     await despacharAccion('B', {
       carpeta_index: carpetaIndex.value,
       receta_id: recetaSeleccionada.value?.id,
-      modificador_incubadora: yo.value.tecnologias.incubadora ? modificadorIncubadora.value : 0,
     })
     emit('cerrar')
   } catch (e) {
@@ -75,15 +73,6 @@ async function confirmar() {
         Bono de sabor si tu Acidez ∈ {{ recetaSeleccionada.acidez_diana.join(', ') }} (actual: {{ yo.acidez }}).
       </p>
     </template>
-
-    <label v-if="yo.tecnologias.incubadora" class="campo">
-      Modificador Incubadora
-      <select v-model.number="modificadorIncubadora">
-        <option :value="-1">-1</option>
-        <option :value="0">0</option>
-        <option :value="1">+1</option>
-      </select>
-    </label>
 
     <template #acciones>
       <button class="secundario" @click="emit('cerrar')">Cancelar</button>

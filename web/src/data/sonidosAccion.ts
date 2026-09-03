@@ -90,6 +90,11 @@ export const SONIDOS_ACCION: Record<IdSonido, Sonido> = {
   // no gasta nada -- solo mueve un interruptor -- y bajar la nota es lo que la
   // separa de oido de las otras cuatro sin sacarla del timbre de su zona.
   estasis: gratuita(932.33), // La#5
+  // Incubadora: el otro ajuste-que-no-consume, a un semitono de la Estasis. Las
+  // dos gratuitas que solo mueven un dial quedan juntas y por debajo de las que
+  // si gastan algo, asi que la familia se sigue oyendo pero "no me ha costado
+  // nada" tiene su propio registro.
+  incubadora: gratuita(987.77), // Si5
 
   // --- Protocolos de emergencia ------------------------------------------
   H: emergencia(220, 164.81), // La3 -> Mi3

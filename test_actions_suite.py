@@ -504,6 +504,37 @@ xraises(InvalidActionError, "Estasis con parametro no booleano", lambda: manager
 p1.tecnologias.criopreservacion = False
 
 # ========================================================================
+print("--- Incubadora (dial de avance) ---")
+p1.tecnologias.incubadora = False
+_slot_inc = FermentationSlot(
+    recipe=RECIPE_CATALOG["pan_de_molde"],
+    dado_inoculo=1,
+    posicion_track=3,
+    bono_sabor=False,
+    acidez_inicial=1,
+)
+p1.estaciones_fermentacion[0] = _slot_inc
+xraises(RuleViolationError, "Incubadora sin la tecnologia", lambda: manager.accion_auxiliar_incubadora(p1, slot_index=0, modificador=-1))
+
+p1.tecnologias.incubadora = True
+pa_inc = p1.puntos_accion
+espacios_inc = list(p1.acciones_pa_usadas_hoy)
+
+manager.accion_auxiliar_incubadora(p1, slot_index=0, modificador=-1)
+check("Incubadora: dial escrito en la masa", lambda: None if _slot_inc.modificador_incubadora == -1 else (_ for _ in ()).throw(AssertionError()))
+check("Incubadora: no gasta PA", lambda: None if p1.puntos_accion == pa_inc else (_ for _ in ()).throw(AssertionError()))
+check("Incubadora: no ocupa espacio", lambda: None if p1.acciones_pa_usadas_hoy == espacios_inc else (_ for _ in ()).throw(AssertionError()))
+
+manager.accion_auxiliar_incubadora(p1, slot_index=0, modificador=0)
+check("Incubadora: dial de dos sentidos", lambda: None if _slot_inc.modificador_incubadora == 0 else (_ for _ in ()).throw(AssertionError()))
+
+xraises(InvalidActionError, "Incubadora con modificador fuera de rango", lambda: manager.accion_auxiliar_incubadora(p1, slot_index=0, modificador=2))
+xraises(RuleViolationError, "Incubadora sobre estacion vacia", lambda: manager.accion_auxiliar_incubadora(p1, slot_index=1, modificador=-1))
+
+p1.estaciones_fermentacion[0] = None
+p1.tecnologias.incubadora = False
+
+# ========================================================================
 print("--- Protocolo H: Re-cultivo Manual ---")
 p1.vitalidad = 0
 p1.acidez = 0
