@@ -140,6 +140,24 @@ carta lo deja en 1, y la contaminación vuelve a castigar lo que debe castigar, 
 descuidar el mantenimiento. Ver CLIMATE_LOGIC.md.
 """
 
+DATOS_HORAS_EXTRAS: int = 1
+"""
+Datos de Investigación que cuesta la acción auxiliar «Horas Extras» (ACTIONS_REGISTRY.md
+§Horas Extras).
+
+Estaba escrito a mano en tres sitios (la comprobación y el cobro en ``actions.py``, y el
+encendido del espacio en ``disponibilidad.py``), que es exactamente la forma en que un
+precio se desincroniza. Tiene nombre propio para que ``tests/test_reglamento_al_dia.py``
+pueda contrastarlo contra los dos reglamentos.
+
+El precio NO cambió al añadirse el marcador neutral, y es deliberado: el juego ya ancla
+1 Dato en 1 Punto de Maestría (``engine.PRECIO_DATO_SIMPOSIO`` = 5 Monedas = la tasa de
+Conversión de Riqueza), y Reclamar la Jefatura es el trueque inverso — 1 PA por 1 Dato
+*más* el orden de turno. Lo que estaba mal no era el precio sino lo que compraba: el 3er
+PA valía menos que los dos primeros porque la regla "un espacio, una visita" le dejaba
+solo espacios distintos y sin usar. Ver ``Player.marcador_neutral_disponible``.
+"""
+
 ACIDEZ_EQUILIBRIO_CENTRO: int = 3
 """
 Nivel de Acidez que corona el término «Madurez del Cultivo» (CORE_MECHANICS.md §3.3).
@@ -901,6 +919,11 @@ class Player:
     """
     Indica si ya se usó la acción auxiliar 'Horas Extras' en el día actual.
     Solo se puede usar una vez por día. Se resetea en resetear_puntos_accion().
+
+    Marca dos cosas a la vez: el +1 PA ya cobrado y el **marcador neutral** que las
+    Horas Extras entregan con él. Que el marcador siga sin gastar se lee en
+    ``marcador_neutral_disponible``, que combina esta bandera con
+    ``espacio_repetido_hoy``.
     """
 
     estasis_suspendida: bool = False
@@ -922,13 +945,24 @@ class Player:
 
     acciones_pa_usadas_hoy: List[str] = field(default_factory=list)
     """
-    Ids de espacios de acción con costo de PA (B, C, D, E, F, G, H, I,
-    'simposio') que este jugador ya visitó en el Día de Laboratorio actual
-    -- cada espacio solo puede visitarse una vez por día. Se llena en
+    Una entrada por VISITA a un espacio de acción con costo de PA (B, C, D, E, F,
+    G, H, I, 'simposio') en el Día de Laboratorio actual. Se llena en
     Player.consumir_punto_accion() y se reinicia a [] al inicio de cada
     Fase II (engine.py:_preparar_fase_II). Pedido de Urgencia (0 PA) y las
     acciones gratuitas (Alimentar, Horas Extras) no participan de esta
     lista -- tienen sus propias banderas de una vez por día.
+
+    **Un id puede aparecer dos veces, y sólo uno:** es el marcador neutral de las
+    Horas Extras (ACTIONS_REGISTRY.md §1), que permite repetir un espacio ya
+    visitado. Guardarlo como entrada duplicada en esta lista, y no como un campo
+    propio, es lo que evita tocar el formato persistido -- el mismo argumento que
+    decidió los Pliegues y el Mostrador. Ningún otro camino puede duplicar una
+    entrada: ``ocupar_espacio_accion`` (Acción E, Descarte) conserva su
+    precondición de "no estar ya en la lista", y esos dos espacios quedan fuera de
+    ``actions.ESPACIOS_CON_MARCADOR_NEUTRAL``.
+
+    Se consulta con ``in`` en todas partes menos en las dos propiedades de abajo,
+    así que el duplicado es invisible para el resto del código.
     """
 
     # ------------------------------------------------------------------
@@ -1093,7 +1127,12 @@ class Player:
         Decrementa 1 PA del jugador y registra `espacio_accion_id` en
         acciones_pa_usadas_hoy, bloqueando ese espacio para el resto del día.
         Precondición: el llamador debe verificar puntos_accion >= 1 y que
-        espacio_accion_id no esté ya en acciones_pa_usadas_hoy ANTES de llamar.
+        espacio_accion_id no esté ya en acciones_pa_usadas_hoy ANTES de llamar
+        --- o, si ya lo está, que el jugador conserve su marcador neutral y el
+        espacio lo admita. Eso es exactamente lo que comprueba
+        `ActionManager._require_espacio_disponible`, el único llamador legítimo,
+        de modo que aquí no hay rama alguna: una repetición se limita a añadir la
+        entrada duplicada que `espacio_repetido_hoy` sabe leer.
 
         `ocupa_espacio=False` gasta el PA SIN marcar espacio, de modo que la
         acción puede repetirse el mismo día. Es el caso inverso y simétrico de
@@ -1110,9 +1149,14 @@ class Player:
 
     def otorgar_punto_accion_extra(self) -> None:
         """
-        Aplica el efecto de la acción auxiliar 'Horas Extras' (+1 PA).
+        Aplica el efecto de la acción auxiliar 'Horas Extras' (+1 PA y el
+        marcador neutral, que es la misma bandera).
         Precondición: el engine debe verificar que horas_extras_usadas == False
-        y que datos_investigacion >= 1 antes de llamar.
+        y que datos_investigacion >= DATOS_HORAS_EXTRAS antes de llamar.
+
+        No hay tope de PA escrito en ninguna parte: el techo de 3 es emergente,
+        porque este método sólo se llama desde `accion_auxiliar_horas_extras` y
+        la bandera lo cierra hasta el día siguiente.
         """
         self.puntos_accion += 1
         self.horas_extras_usadas = True
@@ -1120,6 +1164,39 @@ class Player:
     # ==================================================================
     # PROPIEDADES DE CONSULTA DE ESTADO (solo lectura)
     # ==================================================================
+
+    @property
+    def espacio_repetido_hoy(self) -> Optional[str]:
+        """
+        Id del espacio de acción en el que este jugador gastó hoy su marcador
+        neutral de Horas Extras, o ``None`` si aún no lo gastó (o no lo tiene).
+
+        Se deriva de la única entrada duplicada que puede haber en
+        ``acciones_pa_usadas_hoy`` (ver su docstring). Es un ``@property``, así
+        que ``dataclasses.asdict`` no lo trae y el snapshot dorado no se mueve;
+        ``server/views.py`` lo inyecta para que el tablero pueda dibujar el peón
+        gris en la casilla correcta.
+        """
+        for espacio in self.acciones_pa_usadas_hoy:
+            if self.acciones_pa_usadas_hoy.count(espacio) > 1:
+                return espacio
+        return None
+
+    @property
+    def marcador_neutral_disponible(self) -> bool:
+        """
+        True si el jugador usó hoy las Horas Extras y todavía no gastó el
+        marcador neutral que vino con ellas.
+
+        Es lo que consulta ``ActionManager._require_espacio_disponible`` para
+        dejar pasar una segunda visita a un espacio ya marcado, y lo que
+        ``disponibilidad.py`` consulta para mantener encendida esa casilla. El
+        marcador se gasta SOLO en una repetición: si el PA extra va a un espacio
+        libre, el jugador pone su color como siempre y conserva el marcador para
+        más tarde ese mismo día. Por eso el orden en que se activan las Horas
+        Extras dentro del turno es indiferente.
+        """
+        return self.horas_extras_usadas and self.espacio_repetido_hoy is None
 
     @property
     def indice_estacion_disponible(self) -> Optional[int]:

@@ -517,6 +517,8 @@ manager.accion_auxiliar_horas_extras(p1)
 check("HE: +1 PA", lambda: None if p1.puntos_accion == pa_he + 1 else (_ for _ in ()).throw(AssertionError()))
 check("HE: -1 dato", lambda: None if p1.datos_investigacion == 4 else (_ for _ in ()).throw(AssertionError()))
 check("HE: flag seteado", lambda: None if p1.horas_extras_usadas else (_ for _ in ()).throw(AssertionError()))
+check("HE: entrega el marcador neutral", lambda: None if p1.marcador_neutral_disponible else (_ for _ in ()).throw(AssertionError()))
+check("HE: el marcador nace sin gastar", lambda: None if p1.espacio_repetido_hoy is None else (_ for _ in ()).throw(AssertionError()))
 xraises(InvalidActionError, "HE doble uso en mismo dia", lambda: manager.accion_auxiliar_horas_extras(p1))
 
 p1.datos_investigacion = 0

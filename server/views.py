@@ -141,6 +141,16 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
         datos_jugador["renta_diaria"] = sum(
             PRECIO_RENTA[r.recipe.grado] for r in jugador.archivo_horneado_exitoso
         )
+        # Marcador neutral de las Horas Extras: si le queda sin gastar, y en qué
+        # casilla lo puso si ya lo gastó. Ambos son @property derivados de la
+        # entrada duplicada de `acciones_pa_usadas_hoy`, así que `asdict` no los
+        # trae. Van aquí y no en el cliente por el mismo motivo que el resto de
+        # esta lista: qué espacios admiten el marcador es una regla del motor
+        # (`actions.ESPACIOS_CON_MARCADOR_NEUTRAL`) y reimplementarla en
+        # TypeScript sería un punto de deriva. Es información pública — el peón
+        # gris se ve en el tablero de todos.
+        datos_jugador["espacio_repetido_hoy"] = jugador.espacio_repetido_hoy
+        datos_jugador["marcador_neutral_disponible"] = jugador.marcador_neutral_disponible
         datos_jugador["vitalidad_prevista"] = engine.vitalidad_prevista(jugador)
         # La misma proyección con la Estasis Biológica en el ajuste contrario:
         # es lo que ModalEstasis.vue enseña para que la decisión se tome viendo

@@ -143,10 +143,17 @@ export interface Player {
    * desgaste, así que la Estasis se reactiva sola cada día. Inerte en quien no
    * tiene la mejora. Ver ModalEstasis.vue. */
   estasis_suspendida: boolean
-  /** Ids de espacios de acción con costo de PA (B, C, D, E, F, G, H, I,
-   * 'simposio') que este jugador ya visitó hoy -- cada uno solo puede
-   * usarse una vez por Día de Laboratorio. Ver BarraAcciones.vue. */
+  /** Una entrada por VISITA a un espacio de acción con costo de PA (B, C, D,
+   * E, F, G, H, I, 'simposio') hoy. Un id puede aparecer dos veces, y sólo
+   * uno: es el marcador neutral de las Horas Extras. Ver BarraAcciones.vue. */
   acciones_pa_usadas_hoy: string[]
+  /** Espacio en el que este jugador gastó hoy su marcador neutral de Horas
+   * Extras, o null si no lo gastó (o no lo tiene). Inyectado por
+   * server/views.py; dibuja el peón gris de BarraAcciones.vue. */
+  espacio_repetido_hoy: string | null
+  /** True si usó las Horas Extras hoy y aún conserva el marcador neutral, es
+   * decir, si todavía puede repetir un espacio ya visitado. */
+  marcador_neutral_disponible: boolean
   contador_contaminaciones: number
   puntos_maestria_final: number
   /** Puntos acumulados por horneados (exitosos + colapsos, base + bono) hasta

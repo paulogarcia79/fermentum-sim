@@ -38,10 +38,23 @@ function estado(id: IdAccion) {
   return disponibilidad.value.find((a) => a.id === id) ?? { habilitada: false, motivo: '' }
 }
 
+const jugadorLocal = computed<Player>(() => store.estado!.players[store.sesion!.playerIndex])
+
 /** Espacios de acción gratuitos (0 PA) que igual solo se pueden visitar una
  * vez por día -- se marcan visualmente distinto (aro hueco) de los espacios
  * con costo de PA (punto sólido), ver .marcador-jugador.gratis más abajo. */
 const ESPACIOS_GRATIS_UNA_VEZ_POR_DIA: IdAccion[] = ['A', 'E', 'horas_extras']
+
+/** Jugadores que gastaron HOY su marcador neutral de Horas Extras en el espacio
+ * `id`. Se dibujan como un peón gris junto a los de color: el espacio se visitó
+ * dos veces, y el segundo peón no es de nadie.
+ *
+ * No se deriva del registro de movimientos (como los peones del Mostrador) sino
+ * del campo que el servidor ya envía: qué espacios admiten el marcador es una
+ * regla del motor, y `espacio_repetido_hoy` llega ya calculado. */
+function jugadoresConMarcadorNeutral(id: IdAccion): Player[] {
+  return store.estado!.players.filter((p) => p.espacio_repetido_hoy === id)
+}
 
 /** Espacios que SÍ se marcan al visitarlos pero NO se agotan: el peón dice
  * "estuve aquí", no "está cerrado". Llevan por eso una insignia ∞, porque sin
@@ -224,9 +237,17 @@ async function pasarDeVerdad() {
 
         <div class="grid-botones">
           <Tooltip v-for="b in g.acciones" :key="b.id" class="envoltorio-boton">
-            <div v-if="jugadoresQueUsaron(b.id).length > 0" class="marcadores-jugador">
+            <div
+              v-if="
+                jugadoresQueUsaron(b.id).length > 0 ||
+                jugadoresConMarcadorNeutral(b.id).length > 0
+              "
+              class="marcadores-jugador"
+            >
               <!-- Clave por indice y no por nombre: en un espacio repetible el
-                   mismo jugador aparece varias veces y `p.nombre` chocaria. -->
+                   mismo jugador aparece varias veces y `p.nombre` chocaria.
+                   Ahora tambien puede aparecer dos veces en un espacio normal:
+                   su color mas el peon gris de la repeticion. -->
               <span
                 v-for="(p, i) in jugadoresQueUsaron(b.id)"
                 :key="i"
@@ -235,7 +256,24 @@ async function pasarDeVerdad() {
                 :style="{ '--color-marcador': hexDeColor(p.color) }"
                 :title="tituloPeon(b.id, i)"
               />
+              <!-- El peon neutral: gris y sin color de asiento a proposito. La
+                   segunda visita no la firma un jugador, la firma el marcador. -->
+              <span
+                v-for="(p, i) in jugadoresConMarcadorNeutral(b.id)"
+                :key="`n${i}`"
+                class="marcador-jugador neutral"
+                :title="`${p.nombre} repitió este espacio hoy con su marcador neutral de Horas Extras`"
+              />
             </div>
+            <!-- Marcador neutral aun sin gastar: vive en la casilla de Horas
+                 Extras, que es donde se compro, para que su dueno recuerde que
+                 lo tiene. Ocupa la esquina izquierda libre; Horas Extras no esta
+                 en ESPACIOS_REPETIBLES, asi que no choca con la insignia ∞. -->
+            <span
+              v-if="b.id === 'horas_extras' && jugadorLocal.marcador_neutral_disponible"
+              class="insignia-marcador-neutral"
+              aria-hidden="true"
+            />
             <!-- ∞: este espacio se marca pero no se agota. Va en la esquina
                  izquierda, la que dejan libres los peones; solo la casilla B
                  la disputa, y B no es repetible. -->
@@ -276,6 +314,13 @@ async function pasarDeVerdad() {
               </p>
               <p v-if="ESPACIOS_REPETIBLES.includes(b.id)" class="tooltip-repetible">
                 ∞ No se agota: puedes volver mientras te queden PA.
+              </p>
+              <p
+                v-if="b.id === 'horas_extras' && jugadorLocal.marcador_neutral_disponible"
+                class="tooltip-repetible"
+              >
+                Tienes un marcador neutral sin usar: hoy puedes repetir un espacio
+                ya visitado (B, C, D, F, G, Simposio, H o I).
               </p>
               <p v-if="ACCIONES_QUE_REVELAN.has(b.id)" class="tooltip-motivo">
                 ⚠ Revela información oculta: ese paso no se puede deshacer.
@@ -543,6 +588,28 @@ async function pasarDeVerdad() {
   background: none;
   border: 2px solid var(--color-marcador);
   box-shadow: none;
+}
+
+/* El peon del marcador neutral: gris, sin color de asiento. Dice "aqui se
+   repitio", no "aqui estuvo fulano", que es justo lo que lo distingue. */
+.marcador-jugador.neutral {
+  background: var(--tinta-tenue);
+  box-shadow: 0 0 0 1px var(--borde-fuerte);
+}
+
+/* Marcador neutral comprado y aun sin gastar, en la casilla de Horas Extras.
+   Mismo sitio y misma discrecion que la insignia ∞ del Mostrador. */
+.insignia-marcador-neutral {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 10;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tinta-tenue);
+  box-shadow: 0 0 0 1px var(--borde-fuerte);
+  pointer-events: none;
 }
 
 /* Insignia de espacio que no se agota. Deliberadamente discreta: acompana al

@@ -71,6 +71,7 @@ from exceptions import (
     StationBlockedError,
 )
 from models import (
+    DATOS_HORAS_EXTRAS,
     FermentationSlot,
     HorneadoRecord,
     Player,
@@ -264,6 +265,31 @@ los lotes del mercado no debería rebalancear en silencio una acción de rescate
 """
 
 
+ESPACIOS_CON_MARCADOR_NEUTRAL: frozenset = frozenset(
+    {"B", "C", "D", "F", "G", "simposio", "H", "I"}
+)
+"""
+Espacios de acción que el marcador neutral de las Horas Extras puede repetir
+(ACTIONS_REGISTRY.md §1 y §Horas Extras).
+
+Son exactamente los espacios **por jugador y con costo de PA**. Las tres ausencias
+son deliberadas y cada una por un motivo distinto:
+
+· **Jefatura** — su bloqueo es de la mesa, no de tu color: en cuanto un jugador la
+  reclama se agota para todos. Un marcador que sólo sabe sobrescribir tu propia
+  marca no tiene ahí nada que sobrescribir. Y pagaría un segundo Dato por cobrar
+  uno, que es el bucle que ``engine.MONEDAS_MOSTRADOR`` ya documenta.
+· **E (Pliegues) y Descarte** — cuestan 0 PA. El marcador viaja con una acción de
+  PA, de modo que no hay dónde gastarlo; dejarlos entrar convertiría 1 Dato en una
+  segunda escalera de Pliegues (hasta 6 casillas más de pista) el mismo día.
+· **Mostrador** — nunca se marca (``ocupa_espacio=False``), así que ya se repite
+  gratis mientras queden PA.
+
+Se consulta en ``ActionManager._require_espacio_disponible`` y, con el mismo
+criterio, en ``disponibilidad.acciones_disponibles``.
+"""
+
+
 class ActionManager:
     """
     Gestiona todas las acciones disponibles durante la Fase II de Fermentum.
@@ -326,14 +352,36 @@ class ActionManager:
         hoy -- cada espacio con costo de PA solo puede usarse una vez por
         Día de Laboratorio (PLAYER_STATE.md, acciones_pa_usadas_hoy).
 
+        La excepción es el **marcador neutral** de las Horas Extras: quien lo
+        conserva sin gastar puede repetir UNA vez uno de los espacios de
+        ``ESPACIOS_CON_MARCADOR_NEUTRAL``. Se gasta solo al repetir, así que este
+        método no lo consume — lo consume la entrada duplicada que
+        ``consumir_punto_accion`` añade después, y que ``espacio_repetido_hoy``
+        lee. Consecuencia deliberada del orden fail-fast: un intento de repetir
+        que falle más tarde (sin harina, sin masa horneable) deja el marcador
+        intacto.
+
         Raises:
             EspacioAccionYaUsadoError: Si ``accion_id`` ya está en
-                ``player.acciones_pa_usadas_hoy``.
+                ``player.acciones_pa_usadas_hoy`` y el jugador no puede repetirlo
+                con el marcador neutral.
         """
-        if accion_id in player.acciones_pa_usadas_hoy:
+        if accion_id not in player.acciones_pa_usadas_hoy:
+            return
+        if (
+            accion_id in ESPACIOS_CON_MARCADOR_NEUTRAL
+            and player.marcador_neutral_disponible
+        ):
+            return
+        if player.horas_extras_usadas and accion_id in ESPACIOS_CON_MARCADOR_NEUTRAL:
             raise EspacioAccionYaUsadoError(
-                f"'{player.nombre}' ya usó el espacio de acción '{accion_id}' hoy."
+                f"'{player.nombre}' ya usó el espacio de acción '{accion_id}' hoy "
+                f"y ya gastó su marcador neutral de Horas Extras en "
+                f"'{player.espacio_repetido_hoy}'."
             )
+        raise EspacioAccionYaUsadoError(
+            f"'{player.nombre}' ya usó el espacio de acción '{accion_id}' hoy."
+        )
 
     def _require_harinas(self, player: Player, receta: Recipe) -> None:
         """
@@ -1619,10 +1667,18 @@ class ActionManager:
         Acción Auxiliar: Horas Extras (ACTIONS_REGISTRY.md §3 «Horas Extras»).
 
         Tipo:    Acción gratuita (0 PA).
-        Costo:   1 Dato de Investigación.
-        Efecto:  +1 Punto de Acción inmediato al jugador.
+        Costo:   ``DATOS_HORAS_EXTRAS`` Datos de Investigación.
+        Efecto:  +1 Punto de Acción inmediato **y** un marcador neutral: una de las
+                 acciones de PA de hoy podrá caer en un espacio que este jugador ya
+                 visitó (ver ``ESPACIOS_CON_MARCADOR_NEUTRAL``).
         Límite:  Solo 1 vez por ronda (por jugador). ``player.horas_extras_usadas``
                  se resetea automáticamente al inicio de cada Fase II.
+
+        El marcador es lo que hace que valga la pena comprarlas. Sin él, el 3er PA
+        valía menos que los dos primeros: la regla "un espacio, una visita" lo
+        limitaba a un espacio distinto y sin usar, que muchos días era el Mostrador
+        (1 Moneda) o nada — frente a un Dato que el juego valora en 1 Punto de
+        Maestría. El precio no se tocó al añadirlo (ver ``DATOS_HORAS_EXTRAS``).
 
         Args:
             player: Jugador que activa las Horas Extras.
@@ -1637,10 +1693,11 @@ class ActionManager:
                 "Solo está permitido una vez por ronda."
             )
 
-        self._require_datos(player, 1)
+        self._require_datos(player, DATOS_HORAS_EXTRAS)
 
-        # Aplicar: consumir dato y otorgar PA extra (Player marca horas_extras_usadas)
-        player.datos_investigacion -= 1
+        # Aplicar: consumir dato y otorgar PA extra + marcador neutral (Player marca
+        # horas_extras_usadas, que es la bandera de ambos).
+        player.datos_investigacion -= DATOS_HORAS_EXTRAS
         player.otorgar_punto_accion_extra()
 
     def accion_auxiliar_estasis(self, player: Player, suspender: bool) -> None:

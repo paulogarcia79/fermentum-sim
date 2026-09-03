@@ -30,7 +30,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from actions import COSTOS_TECNOLOGIA, HARINA_RECULTIVO_MANUAL
+from actions import (
+    COSTOS_TECNOLOGIA,
+    ESPACIOS_CON_MARCADOR_NEUTRAL,
+    HARINA_RECULTIVO_MANUAL,
+)
 from engine import (
     COSTE_REFRESCO_AGUA,
     GameEngine,
@@ -40,7 +44,7 @@ from engine import (
     PRECIO_RECETA,
     PRECIO_RECETA_MAZO,
 )
-from models import Player, Recipe
+from models import DATOS_HORAS_EXTRAS, Player, Recipe
 
 
 def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, Any]]:
@@ -82,6 +86,25 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     puede_pagar_mazo = hay_carta_en_mazo and player.monedas >= PRECIO_RECETA_MAZO
     usados = player.acciones_pa_usadas_hoy
 
+    def espacio_cerrado(id_: str) -> bool:
+        """
+        True si el espacio ``id_`` ya está agotado HOY para este jugador.
+
+        No es lo mismo que "está en ``usados``": quien conserva el marcador
+        neutral de las Horas Extras sin gastar puede volver una vez a cualquiera
+        de los espacios de ``ESPACIOS_CON_MARCADOR_NEUTRAL``, así que esa casilla
+        debe seguir encendida. Es el mismo criterio que aplica
+        ``ActionManager._require_espacio_disponible``, que es quien manda; aquí
+        se replica sólo para que el botón no mienta. Los Pliegues y el Descarte
+        siguen midiéndose con el ``in`` crudo: cuestan 0 PA y quedan fuera del
+        conjunto.
+        """
+        if id_ not in usados:
+            return False
+        return not (
+            id_ in ESPACIOS_CON_MARCADOR_NEUTRAL and player.marcador_neutral_disponible
+        )
+
     resultados: List[Dict[str, Any]] = []
 
     def agregar(id_: str, habilitada: bool, motivo_si_no: str) -> None:
@@ -97,18 +120,18 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
 
     agregar(
         "B",
-        "B" not in usados
+        not espacio_cerrado("B")
         and tiene_pa
         and not contaminado
         and bool(player.carpeta_proyectos)
         and hay_estacion_libre
         and player.dados_inoculo >= 1,
-        _motivo_B(player, tiene_pa, contaminado, hay_estacion_libre, "B" in usados),
+        _motivo_B(player, tiene_pa, contaminado, hay_estacion_libre, espacio_cerrado("B")),
     )
     agregar(
         "C",
-        "C" not in usados and tiene_pa,
-        "Ya usaste este espacio hoy" if "C" in usados else "Sin PA",
+        not espacio_cerrado("C") and tiene_pa,
+        "Ya usaste este espacio hoy" if espacio_cerrado("C") else "Sin PA",
     )
     # Coste de la mejora PENDIENTE más barata, no el mínimo del catálogo: es el
     # mismo razonamiento que en la Acción G, donde se mira el precio de las recetas
@@ -120,7 +143,7 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         (COSTOS_TECNOLOGIA[t] for t in player.tecnologias.pendientes),
         default=None,
     )
-    if "D" in usados:
+    if espacio_cerrado("D"):
         motivo_d = "Ya usaste este espacio hoy"
     elif not tiene_pa:
         motivo_d = "Sin PA"
@@ -130,7 +153,7 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         motivo_d = "Sin Datos para ninguna mejora pendiente"
     agregar(
         "D",
-        "D" not in usados
+        not espacio_cerrado("D")
         and tiene_pa
         and costo_mejora_minimo is not None
         and player.datos_investigacion >= costo_mejora_minimo,
@@ -170,7 +193,7 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         "descarte" not in usados and (puede_subir_acidez or puede_bajar_acidez),
         motivo_descarte,
     )
-    if "F" in usados:
+    if espacio_cerrado("F"):
         motivo_f = "Ya usaste este espacio hoy"
     elif not tiene_pa:
         motivo_f = "Sin PA"
@@ -180,10 +203,10 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         motivo_f = "La masa aún está creciendo"
     agregar(
         "F",
-        "F" not in usados and tiene_pa and hay_estacion_activa and hay_masa_horneable,
+        not espacio_cerrado("F") and tiene_pa and hay_estacion_activa and hay_masa_horneable,
         motivo_f,
     )
-    if "G" in usados:
+    if espacio_cerrado("G"):
         motivo_g = "Ya usaste este espacio hoy"
     elif not tiene_pa:
         motivo_g = "Sin PA"
@@ -200,7 +223,7 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         )
     agregar(
         "G",
-        "G" not in usados and tiene_pa and (puede_pagar_visible or puede_pagar_mazo),
+        not espacio_cerrado("G") and tiene_pa and (puede_pagar_visible or puede_pagar_mazo),
         motivo_g,
     )
     agregar(
@@ -210,9 +233,11 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     )
     agregar(
         "simposio",
-        "simposio" not in usados and tiene_pa and bool(player.archivo_horneado_exitoso),
+        not espacio_cerrado("simposio")
+        and tiene_pa
+        and bool(player.archivo_horneado_exitoso),
         "Ya usaste este espacio hoy"
-        if "simposio" in usados
+        if espacio_cerrado("simposio")
         else (
             "Sin PA"
             if not tiene_pa
@@ -243,17 +268,31 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     agregar("mostrador", tiene_pa, "Sin PA")
     agregar(
         "H",
-        "H" not in usados and contaminado and tiene_pa and harina_total >= HARINA_RECULTIVO_MANUAL,
-        _motivo_emergencia(contaminado, tiene_pa, harina_total >= HARINA_RECULTIVO_MANUAL, "H" in usados),
+        not espacio_cerrado("H")
+        and contaminado
+        and tiene_pa
+        and harina_total >= HARINA_RECULTIVO_MANUAL,
+        _motivo_emergencia(
+            contaminado,
+            tiene_pa,
+            harina_total >= HARINA_RECULTIVO_MANUAL,
+            espacio_cerrado("H"),
+        ),
     )
     agregar(
         "I",
-        "I" not in usados and contaminado and tiene_pa and player.datos_investigacion >= 1,
-        _motivo_emergencia(contaminado, tiene_pa, player.datos_investigacion >= 1, "I" in usados),
+        not espacio_cerrado("I")
+        and contaminado
+        and tiene_pa
+        and player.datos_investigacion >= 1,
+        _motivo_emergencia(
+            contaminado, tiene_pa, player.datos_investigacion >= 1, espacio_cerrado("I")
+        ),
     )
     agregar(
         "horas_extras",
-        not player.horas_extras_usadas and player.datos_investigacion >= 1,
+        not player.horas_extras_usadas
+        and player.datos_investigacion >= DATOS_HORAS_EXTRAS,
         "Ya se usó hoy" if player.horas_extras_usadas else "Sin Datos de Investigación",
     )
     # Estasis Biológica: interruptor, no consumo. Se lista SIEMPRE (como H e I)

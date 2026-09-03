@@ -306,9 +306,14 @@ Cada jugador dispone de **2 Puntos de Acción (PA)** por Día de Laboratorio.
 - **Un espacio de acción, una visita por día:** cada espacio de acción (B a G, Simposio Técnico,
   H, I y también **E** y **Descarte**, que no cuestan PA pero sí ocupan espacio) solo puede visitarse **una vez por
   Día de Laboratorio, por jugador** — el investigador marca el espacio con su color en cuanto lo
-  visita, bloqueándolo para él (no para el resto de jugadores) hasta el día siguiente. Con 2-3 PA
-  (Horas Extras incluida) esto significa como máximo un uso de cada espacio distinto por día, nunca
-  el mismo espacio dos veces. El tope es una propiedad **del espacio**, no del coste. Hay dos
+  visita, bloqueándolo para él (no para el resto de jugadores) hasta el día siguiente. Con 2 PA esto
+  significa como máximo un uso de cada espacio distinto por día, nunca el mismo espacio dos veces.
+  La **única** forma de repetir un espacio es el **marcador neutral** que entregan las Horas Extras
+  (ver su entrada en el Catálogo de Acciones): permite volver una vez ese día a uno de los ocho
+  espacios propios con costo de PA — B, C, D, F, G, Simposio Técnico, H e I. Es un marcador que no
+  es de nadie: se coloca sobre el espacio junto a tu peón de color, así que ni lo abre para los
+  demás ni te deja repetirlo una tercera vez. El tope es una propiedad **del espacio**, no del
+  coste. Hay dos
   excepciones, y van en direcciones opuestas: **Reclamar la Jefatura** se agota para TODA la mesa en
   cuanto un jugador la visita, no solo para él; y el **Turno de Mostrador** no se agota nunca —
   cuesta PA pero no ocupa espacio, así que puedes repetirlo mientras te queden Puntos de Acción (es
@@ -660,7 +665,24 @@ penalización. Ese riesgo es el contrapeso del escalón caro: el juego avisa, pe
 #### Horas Extras
 
 **Costo:** 1 Dato de Investigación. Otorga de inmediato +1 Punto de Acción adicional para usar ese
-mismo día. Solo puede activarse **una vez por Día de Laboratorio** por jugador.
+mismo día, **y un marcador neutral**. Solo puede activarse **una vez por Día de Laboratorio** por
+jugador, así que el marcador es también uno por día como máximo.
+
+El marcador neutral es la única excepción a «un espacio, una visita por día»: una de tus acciones
+con costo de PA de hoy puede caer en un espacio que **ya visitaste**, y el marcador se coloca allí
+en lugar de un segundo peón de tu color. Vale para los ocho espacios propios con costo de PA —
+**B, C, D, F, G, Simposio Técnico, H e I** —, y no vale para **Reclamar la Jefatura** (que se agota
+para toda la mesa, no solo para ti) ni para **Pliegues** o **Descarte** (que cuestan 0 PA). El
+Turno de Mostrador no lo necesita: ya se repite mientras te queden Puntos de Acción.
+
+**Se gasta sólo al repetir.** Si el Punto de Acción extra lo usas en un espacio libre, marcas con
+tu color como siempre y **te guardas el marcador** para más tarde ese mismo día. Por eso da igual
+en qué momento del turno pidas las Horas Extras: adelantarlas nunca desperdicia el marcador.
+
+**Por qué está aquí.** Sin el marcador, ese tercer Punto de Acción valía menos que los dos
+primeros: sólo podía comprar un espacio distinto y sin estrenar, que muchos días era el Mostrador
+(1 Moneda) o nada — a cambio de un Dato, que al final de la partida vale 1 Punto de Maestría.
+El precio no ha cambiado; lo que ha cambiado es lo que compra.
 
 #### Estasis Biológica
 

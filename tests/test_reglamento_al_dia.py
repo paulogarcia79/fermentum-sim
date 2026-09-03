@@ -43,6 +43,7 @@ import pytest
 from actions import (
     COSTOS_TECNOLOGIA,
     AGUA_PEDIDO_URGENCIA,
+    ESPACIOS_CON_MARCADOR_NEUTRAL,
     HARINA_PEDIDO_URGENCIA,
     HARINA_RECULTIVO_MANUAL,
 )
@@ -63,6 +64,7 @@ from engine import (
 from models import (
     CLIMATE_CATALOG,
     COPIAS_POR_GRADO,
+    DATOS_HORAS_EXTRAS,
     Grado,
     PATROCINIO_CATALOG,
     Player,
@@ -653,6 +655,34 @@ def test_cantidad_del_pedido_de_urgencia(docs, doc) -> None:
         f"{doc}: el Pedido de Urgencia deberia entregar {agua} de agua, "
         "en la notacion canonica `N (P%)`"
     )
+
+
+@AMBOS
+def test_las_horas_extras_cuestan_un_dato(docs, doc) -> None:
+    """El precio, y que la seccion siga anunciando el marcador neutral.
+
+    El precio es lo unico derivable del codigo aqui, y estaba escrito a mano en
+    tres sitios antes de tener nombre (`DATOS_HORAS_EXTRAS`). El marcador se
+    comprueba por presencia de la palabra y de los ocho espacios, no por su
+    prosa: la politica de este fichero es no coleccionar redacciones.
+
+    Los espacios se piden por separado porque la lista es la mitad de la regla
+    que un jugador puede aplicar mal — repetir la Jefatura o los Pliegues es
+    exactamente el error que la ausencia de un id provocaria.
+    """
+    bloque = _normalizar(_seccion(docs[doc], "Horas Extras", largo=2600))
+
+    assert f"{DATOS_HORAS_EXTRAS} Dato" in bloque, (
+        f"{doc}: las Horas Extras deberian costar {DATOS_HORAS_EXTRAS} Dato"
+    )
+    assert "marcador neutral" in bloque.lower(), (
+        f"{doc}: la seccion de Horas Extras no menciona el marcador neutral"
+    )
+    for espacio in sorted(ESPACIOS_CON_MARCADOR_NEUTRAL):
+        etiqueta = "Simposio" if espacio == "simposio" else espacio
+        assert etiqueta in bloque, (
+            f"{doc}: el marcador neutral no nombra el espacio {etiqueta!r}"
+        )
 
 
 @AMBOS

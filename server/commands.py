@@ -47,7 +47,14 @@ from engine import (
     GameEngine,
 )
 from exceptions import InvalidActionError
-from models import FermentationSlot, HorneadoRecord, Player, TecnologiaID, TipoHarina
+from models import (
+    DATOS_HORAS_EXTRAS,
+    FermentationSlot,
+    HorneadoRecord,
+    Player,
+    TecnologiaID,
+    TipoHarina,
+)
 
 # Acciones que terminan la visita del jugador al completarse con éxito.
 # Ver Milestone 1 (engine.py): Acciones A y E, Horas Extras, Pedido de Urgencia,
@@ -419,6 +426,29 @@ def describir_accion(
     resultado: Any,
 ) -> str:
     """
+    Redacta la línea del registro para una acción ya ejecutada con éxito, y le
+    añade la coletilla del marcador neutral cuando la acción fue una repetición.
+
+    El reconocimiento es exacto y no necesita estado extra: sólo puede existir
+    una entrada duplicada en ``acciones_pa_usadas_hoy`` (ver su docstring), así
+    que si justo después de la acción el id aparece dos veces, la repetición es
+    ESTA. Se comprueba aquí y no en cada rama porque afecta por igual a los ocho
+    espacios de ``ESPACIOS_CON_MARCADOR_NEUTRAL``.
+    """
+    frase = _frase_accion(engine, player, accion, params, resultado)
+    if player.acciones_pa_usadas_hoy.count(accion) > 1:
+        frase += " · repitió el espacio con el marcador neutral de Horas Extras"
+    return frase
+
+
+def _frase_accion(
+    engine: GameEngine,
+    player: Player,
+    accion: str,
+    params: Dict[str, Any],
+    resultado: Any,
+) -> str:
+    """
     Redacta la línea del registro para una acción ya ejecutada con éxito.
 
     Contrato: llamar DESPUÉS de que ``resolver_comando`` haya devuelto sin
@@ -527,7 +557,10 @@ def describir_accion(
         return "Inóculo de Emergencia: limpió la Contaminación"
 
     if accion == "horas_extras":
-        return "Horas Extras: +1 PA (−1 Dato)"
+        return (
+            f"Horas Extras: +1 PA y un marcador neutral "
+            f"(−{DATOS_HORAS_EXTRAS} Dato)"
+        )
 
     if accion == "estasis":
         if params.get("suspender"):
