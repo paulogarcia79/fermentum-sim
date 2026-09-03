@@ -35,6 +35,7 @@ from exceptions import (
     InvalidActionError,
     MarketSlotEmptyError,
     PhaseViolationError,
+    RecipeDeckEmptyError,
     RuleViolationError,
 )
 from models import (
@@ -97,6 +98,24 @@ El precio se indexa por GRADO y no por carta, igual que ``COPIAS_POR_GRADO`` y
 puede contradecir a la carta ni hace falta un campo nuevo en ``Recipe``.
 
 Es aditivo sobre el 1 PA de la Acción G, que sigue siendo la escasez real.
+"""
+
+PRECIO_RECETA_MAZO: int = 2
+"""
+Coste en Monedas de la «Investigación a ciegas»: robar la carta SUPERIOR del mazo
+de recetas (Acción G con ``origen="mazo"``), sin verla antes de pagar.
+
+Es plano y sustituye al precio por grado: la carta se paga antes de conocerse, así
+que no hay grado que indexar. Vale lo mismo que ``PRECIO_RECETA[Grado.INTERMEDIA]``
+pero **no se deriva de él** a propósito, por la misma razón que ``DATOS_SIMPOSIO``
+no se deriva de ``PRECIO_RENTA``: reajustar el precio de las cartas visibles no debe
+reajustar en silencio lo que cuesta la apuesta.
+
+El 2 está elegido, no calculado. El mazo es una sola baraja desigualmente poblada
+(``COPIAS_POR_GRADO``: 16 Básicas / 12 Intermedias / 8 Avanzadas), así que el precio
+esperado de la carta de arriba si se comprara visible es (16·1 + 12·2 + 8·3)/36 ≈ 1,78:
+a 2 Monedas la ciega es una apuesta ligeramente cara, no un descuento — y es la única
+forma de llevarse una Avanzada por 2.
 """
 
 PRECIO_RENTA: Mapping[Grado, int] = MappingProxyType({
@@ -553,6 +572,26 @@ class Market:
     # Protocolo de Refresco
     # ------------------------------------------------------------------
 
+    def _rebarajar_descarte_si_agotado(self) -> bool:
+        """
+        Si el mazo de recetas está vacío, baraja el descarte como mazo nuevo.
+
+        Lo comparten los dos caminos que roban del mazo: el ``protocolo_refresco``
+        de la Fase I y la «Investigación a ciegas» de la Acción G
+        (``robar_receta_del_mazo``). Estaba en línea dentro del refresco; se
+        extrajo cuando apareció el segundo consumidor, para que "cuándo se
+        rebaraja" sea una sola regla y no dos que puedan divergir.
+
+        Returns:
+            True si hubo rebaraje (había descarte que convertir en mazo).
+        """
+        if self.mazo_recetas or not self.descarte_recetas:
+            return False
+        self.mazo_recetas = self.descarte_recetas[:]
+        self.descarte_recetas = []
+        random.shuffle(self.mazo_recetas)
+        return True
+
     def protocolo_refresco(self) -> int:
         """
         Reabastece el mercado de recetas al inicio del día (Fase I).
@@ -576,10 +615,7 @@ class Market:
 
         nuevas: List[Recipe] = []
         for _ in range(NUM_RECIPE_SLOTS - len(supervivientes)):
-            if not self.mazo_recetas and self.descarte_recetas:
-                self.mazo_recetas = self.descarte_recetas[:]
-                self.descarte_recetas = []
-                random.shuffle(self.mazo_recetas)
+            self._rebarajar_descarte_si_agotado()
             if not self.mazo_recetas:
                 break
             nuevas.append(self.mazo_recetas.pop(0))
@@ -616,6 +652,51 @@ class Market:
     # ------------------------------------------------------------------
     # Operaciones del Mercado (consumidas por actions.py)
     # ------------------------------------------------------------------
+
+    @property
+    def mazo_recetas_agotado(self) -> bool:
+        """
+        True si no queda ninguna carta que robar: mazo Y descarte vacíos.
+
+        No basta con ``not self.mazo_recetas``: un mazo vacío con descarte se
+        rebaraja al robar (``_rebarajar_descarte_si_agotado``), así que sigue
+        habiendo carta. Lo consultan ``actions.py`` (fail-fast de la Acción G en
+        modo mazo) y ``disponibilidad.py`` (para apagar el espacio).
+
+        Es ``@property``, no campo: ``dataclasses.asdict`` lo ignora, así que ni
+        el snapshot dorado ni la vista del cliente cambian de forma.
+        """
+        return not self.mazo_recetas and not self.descarte_recetas
+
+    def robar_receta_del_mazo(self) -> Recipe:
+        """
+        Roba la carta SUPERIOR del mazo (Acción G, «Investigación a ciegas»).
+
+        Índice 0 es la cima, igual que en ``crear_inicial``, ``protocolo_refresco``,
+        ``robar_tendencia`` y ``_robar_carta_clima``: es exactamente la carta que
+        se habría revelado en el refresco de mañana.
+
+        Si el mazo está agotado pero queda descarte, lo baraja antes de robar.
+
+        **Los dos pasos son irreversibles** — el ``pop`` retira la carta para todos
+        y el rebaraje consume el RNG global —, así que quien llame debe haber
+        terminado ya todas sus comprobaciones fail-fast (PA, espacio, carpeta,
+        Monedas). Ver ``ActionManager.accion_G_investigar_protocolo``.
+
+        Returns:
+            La carta robada de la cima del mazo.
+
+        Raises:
+            RecipeDeckEmptyError: Si mazo y descarte están ambos vacíos.
+        """
+        self._rebarajar_descarte_si_agotado()
+        if not self.mazo_recetas:
+            raise RecipeDeckEmptyError(
+                "No quedan cartas de receta: el mazo y su descarte están vacíos. "
+                "Solo vuelven a entrar cartas al descarte al cambiar una carta de "
+                "la Carpeta de Proyectos o al sacrificar un horneado en el Simposio."
+            )
+        return self.mazo_recetas.pop(0)
 
     def tomar_receta(self, indice: int) -> Recipe:
         """

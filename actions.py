@@ -57,6 +57,7 @@ from engine import (
     PRECIO_PLIEGUES,
     PRECIO_PLIEGUES_VITALIDAD,
     PRECIO_RECETA,
+    PRECIO_RECETA_MAZO,
 )
 from exceptions import (
     CarpetaFullError,
@@ -65,6 +66,7 @@ from exceptions import (
     MarketSlotEmptyError,
     MissingResourceError,
     NotEnoughActionPointsError,
+    RecipeDeckEmptyError,
     RuleViolationError,
     StationBlockedError,
 )
@@ -1213,54 +1215,25 @@ class ActionManager:
             player, slot_index, fue_colapso=False
         )
 
-    def accion_G_investigar_protocolo(
-        self,
-        player: Player,
-        indice_mercado: int,
-        indice_descartar: Optional[int] = None,
-    ) -> None:
+    ORIGENES_INVESTIGACION: Tuple[str, ...] = ("mercado", "mazo")
+
+    def _require_hueco_en_carpeta(
+        self, player: Player, indice_descartar: Optional[int]
+    ) -> bool:
         """
-        Acción G: Investigar Protocolo (ACTIONS_REGISTRY.md §2G).
+        Comprueba que la nueva receta cabe en la Carpeta de Proyectos.
 
-        Costo:   1 PA + ``PRECIO_RECETA[receta.grado]`` Monedas (Básica 1,
-                 Intermedia 2, Avanzada 3). El precio es aditivo: el PA y el
-                 espacio de acción siguen siendo la escasez real.
-        Efecto:  Toma una carta de receta del mercado central y la coloca en
-                 estado inactivo («boca arriba») en la Carpeta de Proyectos.
-                 El slot del mercado queda vacío hasta el próximo Protocolo
-                 de Refresco (CORE_MECHANICS.md §2, Fase I).
+        Límite 3 (PLAYER_STATE.md §1): con hueco se añade sin más; llena, hay
+        que nombrar la carta que sale. Lo comparten los dos orígenes de la
+        Acción G — mercado y mazo — para que la regla de la carpeta sea
+        literalmente la misma en ambos y no dos copias que puedan divergir.
 
-        Límite de carpeta: máximo 3 recetas (PLAYER_STATE.md §1).
-          · Si hay espacio (< 3): la receta se añade directamente.
-          · Si está llena (== 3): se DEBE especificar ``indice_descartar``
-            para reemplazar una receta existente.
-
-        Args:
-            player: Jugador que investiga.
-            indice_mercado: Posición en ``market.recetas_visibles`` (0 = más nueva).
-            indice_descartar: Índice en ``player.carpeta_proyectos`` a eliminar
-                antes de añadir la nueva. Requerido si la carpeta está llena.
+        Returns:
+            True si la carpeta está llena (y por tanto hay que descartar).
 
         Raises:
-            NotEnoughActionPointsError: PA insuficientes.
-            MissingResourceError: Monedas insuficientes para esa receta.
-            CarpetaFullError: Carpeta llena y sin especificar descarte, o
-                ``indice_descartar`` fuera de rango.
-            InvalidActionError: ``indice_mercado`` fuera de rango.
-            MarketSlotEmptyError: El slot de mercado está vacío (ya fue tomado).
+            CarpetaFullError: Carpeta llena sin descarte, o índice fuera de rango.
         """
-        self._require_pa(player, 1)
-        self._require_espacio_disponible(player, "G")
-
-        # Validar índice de mercado (semántico; el mercado también valida)
-        num_slots = len(self._engine.market.recetas_visibles)
-        if not (0 <= indice_mercado < num_slots):
-            raise InvalidActionError(
-                f"indice_mercado={indice_mercado} fuera de rango. "
-                f"El mercado tiene {num_slots} slots (0 a {num_slots - 1})."
-            )
-
-        # Validar estado de carpeta antes de tomar la receta
         carpeta_llena: bool = len(player.carpeta_proyectos) >= 3
         if carpeta_llena:
             if indice_descartar is None:
@@ -1275,23 +1248,123 @@ class ActionManager:
                     f"La carpeta tiene {len(player.carpeta_proyectos)} recetas "
                     f"(índices 0-{len(player.carpeta_proyectos) - 1})."
                 )
+        return carpeta_llena
 
-        # Validar el precio ANTES de tomar la carta. `tomar_receta` la RETIRA del
-        # mercado, así que cobrar después significaría que un jugador sin Monedas
-        # destruye una carta al fallar: fail-fast obliga a mirar sin tocar primero.
-        en_slot: Optional[Recipe] = self._engine.market.recetas_visibles[indice_mercado]
-        if en_slot is None:
-            raise MarketSlotEmptyError(
-                f"El slot {indice_mercado} del mercado está vacío. "
-                "Se repone en el Protocolo de Refresco del día siguiente."
+    def accion_G_investigar_protocolo(
+        self,
+        player: Player,
+        indice_mercado: Optional[int] = None,
+        indice_descartar: Optional[int] = None,
+        *,
+        origen: str = "mercado",
+    ) -> None:
+        """
+        Acción G: Investigar Protocolo (ACTIONS_REGISTRY.md §2G).
+
+        Dos orígenes para la misma carta, el mismo espacio y el mismo 1 PA:
+
+        · ``origen="mercado"`` (por defecto): toma una de las 4 cartas visibles
+          del Mercado Central por ``PRECIO_RECETA[receta.grado]`` Monedas
+          (Básica 1, Intermedia 2, Avanzada 3). El slot queda vacío hasta el
+          próximo Protocolo de Refresco (CORE_MECHANICS.md §2, Fase I).
+        · ``origen="mazo"`` — «Investigación a ciegas»: roba la carta SUPERIOR
+          del mazo, sin verla, por ``PRECIO_RECETA_MAZO`` Monedas fijas, salga
+          el grado que salga. Es exactamente la carta que se habría revelado en
+          el refresco de mañana; las 4 visibles no se mueven. Si el mazo está
+          vacío se baraja el descarte antes de robar; solo con mazo y descarte
+          vacíos la opción no existe.
+
+        El precio es aditivo en ambos casos: el PA y el espacio de acción siguen
+        siendo la escasez real.
+
+        Límite de carpeta: máximo 3 recetas (PLAYER_STATE.md §1), idéntico en los
+        dos orígenes.
+          · Si hay espacio (< 3): la receta se añade directamente.
+          · Si está llena (== 3): se DEBE especificar ``indice_descartar``
+            para reemplazar una receta existente.
+
+        Args:
+            player: Jugador que investiga.
+            indice_mercado: Posición en ``market.recetas_visibles`` (0 = más nueva).
+                Obligatorio con ``origen="mercado"``; prohibido con ``origen="mazo"``,
+                donde la carta no se elige.
+            indice_descartar: Índice en ``player.carpeta_proyectos`` a eliminar
+                antes de añadir la nueva. Requerido si la carpeta está llena.
+            origen: ``"mercado"`` (por defecto) o ``"mazo"``.
+
+        Raises:
+            NotEnoughActionPointsError: PA insuficientes.
+            MissingResourceError: Monedas insuficientes para esa receta.
+            CarpetaFullError: Carpeta llena y sin especificar descarte, o
+                ``indice_descartar`` fuera de rango.
+            InvalidActionError: ``origen`` desconocido, combinación de parámetros
+                que no corresponde al origen elegido, o ``indice_mercado``
+                fuera de rango.
+            MarketSlotEmptyError: El slot de mercado está vacío (ya fue tomado).
+            RecipeDeckEmptyError: Mazo y descarte vacíos (solo en modo mazo).
+        """
+        # 1. Forma de la llamada. Se valida antes que nada porque no depende del
+        # estado: un origen mal escrito es un error del cliente, no del juego.
+        if origen not in self.ORIGENES_INVESTIGACION:
+            raise InvalidActionError(
+                f"origen={origen!r} inválido para la Acción G. "
+                f"Valores válidos: {', '.join(self.ORIGENES_INVESTIGACION)}."
             )
-        precio: int = PRECIO_RECETA[en_slot.grado]
-        self._require_monedas(player, precio)
+        if origen == "mazo" and indice_mercado is not None:
+            raise InvalidActionError(
+                "La Investigación a ciegas no elige carta: sobra "
+                f"indice_mercado={indice_mercado}. Roba siempre la de arriba del mazo."
+            )
+        if origen == "mercado" and indice_mercado is None:
+            raise InvalidActionError(
+                "Falta indice_mercado: hay que decir qué carta visible se toma "
+                "(o pedir origen='mazo' para robar a ciegas)."
+            )
 
-        # Tomar receta del mercado (puede lanzar MarketSlotEmptyError)
-        receta: Recipe = self._engine.market.tomar_receta(indice_mercado)
+        # 2. Coste del espacio, común a los dos orígenes.
+        self._require_pa(player, 1)
+        self._require_espacio_disponible(player, "G")
 
-        # Aplicar efectos
+        # 3. Validar TODO antes de mover una sola carta. El orden es
+        # load-bearing en los dos orígenes y por motivos distintos:
+        #   · mercado: `tomar_receta` RETIRA la carta de la mesa, así que cobrar
+        #     después significaría que un jugador sin Monedas destruye una carta
+        #     para todos al fallar.
+        #   · mazo: `robar_receta_del_mazo` hace `pop(0)` y además puede consumir
+        #     el RNG global al rebarajar el descarte. Un intento fallido no debe
+        #     ni gastar la carta de arriba ni barajar el mazo de nadie.
+        receta: Recipe
+        precio: int
+        if origen == "mercado":
+            assert indice_mercado is not None  # garantizado por el paso 1
+            num_slots = len(self._engine.market.recetas_visibles)
+            if not (0 <= indice_mercado < num_slots):
+                raise InvalidActionError(
+                    f"indice_mercado={indice_mercado} fuera de rango. "
+                    f"El mercado tiene {num_slots} slots (0 a {num_slots - 1})."
+                )
+            carpeta_llena: bool = self._require_hueco_en_carpeta(player, indice_descartar)
+            en_slot: Optional[Recipe] = self._engine.market.recetas_visibles[indice_mercado]
+            if en_slot is None:
+                raise MarketSlotEmptyError(
+                    f"El slot {indice_mercado} del mercado está vacío. "
+                    "Se repone en el Protocolo de Refresco del día siguiente."
+                )
+            precio = PRECIO_RECETA[en_slot.grado]
+            self._require_monedas(player, precio)
+            receta = self._engine.market.tomar_receta(indice_mercado)
+        else:
+            carpeta_llena = self._require_hueco_en_carpeta(player, indice_descartar)
+            precio = PRECIO_RECETA_MAZO
+            self._require_monedas(player, precio)
+            if self._engine.market.mazo_recetas_agotado:
+                raise RecipeDeckEmptyError(
+                    "No se puede investigar a ciegas: el mazo de recetas y su "
+                    "descarte están vacíos, así que no hay carta que robar."
+                )
+            receta = self._engine.market.robar_receta_del_mazo()
+
+        # 4. Aplicar efectos. A partir de aquí ya nada puede fallar.
         player.consumir_punto_accion("G")
         player.monedas -= precio
 

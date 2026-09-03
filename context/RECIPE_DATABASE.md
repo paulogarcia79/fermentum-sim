@@ -90,6 +90,7 @@ principio elegido.
 Un **colapso no rinde renta**: va a `archivo_colapsos`, y provocarlo es gratis.
 
 * **Adquisición (Acción G):** Tomar una receta del mercado cuesta 1 PA **más Monedas según su grado** (`engine.PRECIO_RECETA`: Básica 1, Intermedia 2, Avanzada 3). El precio se valida **antes** de retirar la carta del mercado: `Market.tomar_receta` la quita, así que cobrar después significaría que un jugador sin Monedas destruye una carta al fallar.
+* **Adquisición a ciegas (Acción G, `origen="mazo"`):** la carta superior del mazo cuesta `engine.PRECIO_RECETA_MAZO` = 2 Monedas planas, **al margen de esta tabla** — el grado no se conoce al pagar. Es la única vía por la que una Avanzada sale por 2 Monedas, y también la única por la que se pagan 2 por una Básica.
 
 ---
 

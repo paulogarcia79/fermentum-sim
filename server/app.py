@@ -54,6 +54,7 @@ from exceptions import (
     InsufficientPlayersError,
     InvalidActionError,
     MarketSlotEmptyError,
+    RecipeDeckEmptyError,
     NotYourTurnError,
     PhaseViolationError,
     ResourceDeficitError,
@@ -109,6 +110,7 @@ _MAPEO_ERRORES: List[Tuple[Type[Exception], int, str]] = [
     (GameAlreadyOverError, 410, "partida_terminada"),
     (InsufficientPlayersError, 400, "jugadores_insuficientes"),
     (MarketSlotEmptyError, 409, "slot_mercado_ocupado"),
+    (RecipeDeckEmptyError, 409, "mazo_recetas_agotado"),
     (FermentumError, 400, "error_de_reglas"),  # respaldo genérico
     (RoomNotFoundError, 404, "sala_no_encontrada"),
     (RoomFullError, 409, "sala_llena"),

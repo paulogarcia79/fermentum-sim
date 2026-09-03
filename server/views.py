@@ -14,7 +14,10 @@ Construye el dict JSON que se envía a los clientes HTTP a partir de
      boca arriba). Enviar ``snapshot()`` sin este paso le daría a cualquier
      jugador conocimiento perfecto de las próximas cartas de clima y
      recetas — la única forma en que "serializar todo" es activamente
-     incorrecta aquí.
+     incorrecta aquí. La longitud del mazo de recetas no es solo informativa:
+     es lo que le dice al cliente si la «Investigación a ciegas» (Acción G en
+     modo mazo) tiene carta que robar — y con 0, ``descarte_recetas``, que
+     viaja sin redactar por ser público, dice si aún hay descarte que rebarajar.
   2. **Campos de turno/fase**: añade lo que un cliente necesita para saber
      de quién es el turno y si su propia solicitud podría estar basada en
      un estado obsoleto (``fase_actual``, ``turno_nonce``,

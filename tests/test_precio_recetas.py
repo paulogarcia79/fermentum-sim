@@ -24,7 +24,7 @@ import pytest
 from actions import ActionManager
 from bootstrap import create_game
 from disponibilidad import acciones_disponibles
-from engine import PRECIO_RECETA, GameEngine, Market
+from engine import PRECIO_RECETA, PRECIO_RECETA_MAZO, GameEngine, Market
 from exceptions import MissingResourceError
 from models import Environment, Grado, Player, RECIPE_CATALOG, get_recetas_basicas
 
@@ -145,15 +145,55 @@ def test_la_receta_repartida_en_el_setup_no_cuesta_monedas() -> None:
 # ===========================================================================
 
 
+def _vaciar_mazo(engine: GameEngine) -> None:
+    """Deja el mazo Y su descarte vacios: sin Investigacion a ciegas posible."""
+    engine.market.mazo_recetas = []
+    engine.market.descarte_recetas = []
+
+
 def test_G_se_apaga_sin_monedas_para_la_mas_barata_visible() -> None:
+    """
+    El mazo vacio es lo que aisla este escalon: con cartas en el mazo la
+    Investigacion a ciegas rescataria el espacio por 2 Monedas y el motivo
+    seria otro (ver el test siguiente).
+    """
     engine, _, player = _motor()
     for slot in range(len(engine.market.recetas_visibles)):
         _colocar(engine, slot, "pumpernickel")
+    _vaciar_mazo(engine)
     player.monedas = PRECIO_RECETA[Grado.AVANZADA] - 1
 
     entrada = _disponibilidad_g(engine, player)
     assert entrada["habilitada"] is False
     assert entrada["motivo"] == "Sin Monedas para ninguna receta visible"
+
+
+def test_G_se_apaga_sin_monedas_para_lo_visible_ni_para_la_ciega() -> None:
+    engine, _, player = _motor()
+    for slot in range(len(engine.market.recetas_visibles)):
+        _colocar(engine, slot, "pumpernickel")
+    player.monedas = PRECIO_RECETA_MAZO - 1
+
+    entrada = _disponibilidad_g(engine, player)
+    assert entrada["habilitada"] is False
+    assert entrada["motivo"] == (
+        "Sin Monedas para ninguna receta visible ni para investigar a ciegas "
+        f"({PRECIO_RECETA_MAZO})"
+    )
+
+
+def test_G_sigue_encendida_si_alcanza_para_la_ciega_aunque_no_para_lo_visible() -> None:
+    """
+    El mazo es el segundo suelo de la Accion G: con solo Avanzadas a la vista y
+    2 Monedas el espacio sigue siendo jugable, robando a ciegas.
+    """
+    engine, _, player = _motor()
+    for slot in range(len(engine.market.recetas_visibles)):
+        _colocar(engine, slot, "pumpernickel")
+    player.monedas = PRECIO_RECETA_MAZO
+
+    assert PRECIO_RECETA_MAZO < PRECIO_RECETA[Grado.AVANZADA]
+    assert _disponibilidad_g(engine, player)["habilitada"] is True
 
 
 def test_G_sigue_encendida_si_alcanza_para_la_mas_barata() -> None:

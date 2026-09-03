@@ -55,6 +55,7 @@ from engine import (
     PRECIO_AGUA,
     PRECIO_CONTRATO_MOLINO,
     PRECIO_RECETA,
+    PRECIO_RECETA_MAZO,
     PRECIO_RENTA,
     PRECIOS_HARINA,
     RENDIMIENTO_MOLINO_PCT,
@@ -720,6 +721,28 @@ def test_la_ponencia_cuesta_monedas(docs, doc) -> None:
     )
     assert re.search(r"de 1 a \b%d\b Datos" % MAX_DATOS_PONENCIA, bloque), (
         f"{doc}: la ponencia no declara el tope de {MAX_DATOS_PONENCIA} Datos por visita"
+    )
+
+
+@AMBOS
+def test_la_investigacion_a_ciegas_cuesta_monedas(docs, doc) -> None:
+    """El segundo origen de la Accion G: robar del mazo por un precio PLANO.
+
+    La cifra es de equilibrio, no de formato: es lo unico que separa la apuesta
+    de un descuento (el precio esperado de la carta de arriba, comprada visible,
+    es ~1,78). Un reglamento que la contradiga miente sobre el balance.
+
+    El patron esta anclado en "a ciegas" y con una ventana corta a proposito: la
+    seccion abre con la tabla de precios por grado (1/2/3), asi que un
+    `\b2\b Monedas` suelto pasaria con el parrafo de la ciega entero borrado.
+    La ventana no puede pasar de la frase que declara el precio.
+    """
+    bloque = _normalizar(_seccion(docs[doc], "Investigar Protocolo", largo=2500))
+    assert "a ciegas" in bloque.lower(), (
+        f"{doc}: la Accion G no menciona la Investigacion a ciegas"
+    )
+    assert re.search(r"a ciegas.{0,150}?\b%d\b Monedas" % PRECIO_RECETA_MAZO, bloque), (
+        f"{doc}: la Investigacion a ciegas no declara {PRECIO_RECETA_MAZO} Monedas fijas"
     )
 
 

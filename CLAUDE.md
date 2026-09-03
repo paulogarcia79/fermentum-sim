@@ -132,6 +132,15 @@ any frontend" proof, kept as a permanent regression test rather than a throwaway
 0-PA disabling costed actions but not free ones, emergency-protocol availability by resource, and
 already-used actions reporting disabled.
 
+`tests/test_investigacion_a_ciegas.py` covers the Acción G deck draw (`origen="mazo"`): the flat
+price and that it does not vary with the grade drawn, that it takes `mazo_recetas[0]` and leaves
+the four exposed cards alone, the fail-fast matrix with the deck **and** the discard asserted
+untouched (including the ordering case where checking the deck before the Monedas would shuffle
+everyone's discard for a doomed attempt), the on-demand reshuffle, both-empty raising
+`RecipeDeckEmptyError`, card conservation across the whole system, the illegal parameter
+combinations, the six availability rungs, the wire shapes through `resolver_comando`, and two
+end-to-end HTTP cases (a successful blind draw with its registro sentence, and the 409).
+
 `tests/test_reglamento_al_dia.py` is the guardrail for the rule below ("Every rules change MUST
 update the rulebooks"): it parses `RULEBOOK.md` and `RULEBOOK.html` into normalized tables and
 diffs them against the code — all 12 recipes cell by cell (grade, acquisition cost, water,
@@ -323,10 +332,14 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   One trap this change sprang, worth knowing about before adding a grade or a card:
   `Market.crear_inicial` built its deck as `get_recetas_avanzadas() + get_recetas_basicas()`, so
   the moment Pizza/Brioche/Panettone stopped being Avanzadas the **entire Intermedia tier fell out
-  of the market** — unreachable, with every test still green. The deck is now
-  `avanzadas + intermedias` shuffled together (the cards you go shopping for) with Básicas
-  shuffled at the bottom as the fallback, and *not* a strict three-tier ladder: Intermedias below
-  every Avanzada would surface the middle rung exactly when a player no longer needs it. A grade
+  of the market** — unreachable, with every test still green. The deck is now built by
+  `build_recipe_deck()` and shuffled as **one single deck**, all three grades mixed: a Básica can
+  surface in the market exactly like an Avanzada. Scarcity is real but it comes from
+  `COPIAS_POR_GRADO` (2 copies of an Avanzada against 4 of a Básica), **not from a stratum** — the
+  deck is unevenly populated, not ordered. That matters beyond setup: the Investigación a ciegas
+  buys the top card unseen, and a stratified deck would have made that a knowable early discount
+  and a late rip-off instead of a bet. (An earlier revision did stack `avanzadas + intermedias`
+  over the Básicas; that ordering is gone, and any prose still claiming it is stale.) A grade
   that isn't named in `crear_inicial` is invisible, so `tests/test_recetas_grado.py` asserts the
   deck contains every catalog card and all three grades.
 
@@ -358,8 +371,9 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   **before** taking. Charging afterwards would mean every attempt by a broke player destroys a
   market card for everyone — a fail-fast violation that leaves no trace. `disponibilidad.py`'s
   `"G"` clause greys the space out against the cheapest **visible** recipe, not the global minimum:
-  Básicas sit at the bottom of the deck, so an all-Intermedia/Avanzada market is the normal early
-  state, exactly when a player is poorest.
+  what a player can pay depends on the four cards actually on the table, and an all-Intermedia/
+  Avanzada market is an ordinary draw from a deck that mixes the grades. (Since «Investigación a
+  ciegas», that clause has a second, deck-side floor — see below.)
 
   **The Módulo Analítico had to be rebuilt**, because deleting the gate deleted its job. Its only
   other effect was `DATOS_BAKE_CENTRO_EXACTO_BONUS`, and the arithmetic made it a trap: with a
@@ -758,6 +772,65 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   Tests: `tests/test_mostrador.py`, plus
   `test_reglamento_al_dia.py::test_el_mostrador_paga_monedas` (verified by mutation on both
   documents).
+
+  **Investigación a ciegas — la Acción G aprende a robar del mazo, y es la primera acción que
+  toca información oculta.** G only knew how to buy one of the 4 exposed cards, so a player with
+  PA, coins and a market holding nothing they could use had no way to spend the space — and
+  `disponibilidad.py` greyed it out precisely then. `origen="mazo"` takes the **top card of
+  `mazo_recetas`** (index 0, the one tomorrow's refresh would reveal) for a flat
+  `engine.PRECIO_RECETA_MAZO = 2` Monedas, unseen. Six things carry weight:
+  - **Flat, and deliberately not derived.** It equals `PRECIO_RECETA[INTERMEDIA]` but is its own
+    constant, the `DATOS_SIMPOSIO`-vs-`PRECIO_RENTA` and `AGUA_PEDIDO_URGENCIA`-vs-
+    `AGUA_TOKENS_POR_LOTE[30]` precedent: repricing the visible table must not silently reprice
+    the gamble. The card is paid for before it is known, so there is no grade to index. The 2 is
+    chosen against the deck's own mix — (16·1 + 12·2 + 8·3)/36 ≈ 1.78 — so the blind card is a
+    slightly **expensive** bet, not a discount, and it is the only route to an Avanzada for 2.
+    This is also why the deck being **one uniformly shuffled deck** is load-bearing here and not
+    just a setup detail: a stratified deck would make the same price a knowable early bargain and
+    a late rip-off.
+  - **Two irreversible steps, not one, and that reorders the fail-fast checks.** The existing
+    comment only had to protect `tomar_receta` removing a card. The deck arm adds a second hazard:
+    `robar_receta_del_mazo` may `random.shuffle` the discard into a new deck. So Monedas are
+    checked **before** the deck is even consulted — otherwise a broke player's failed attempt
+    would shuffle everyone's deck. `test_sin_monedas_no_se_rebaraja_el_descarte` is the guardrail,
+    and it is the test that would catch the obvious "check the deck first" ordering.
+  - **The reshuffle is one rule in one place.** `Market._rebarajar_descarte_si_agotado` was
+    extracted verbatim from `protocolo_refresco`'s inline block when the second consumer appeared,
+    keeping the RNG call sequence identical on the refresh path — which is what let the golden
+    snapshot pass **unregenerated**. `actions.py` still imports no `random`; the shuffle lives in
+    `engine`, pinned by `test_actions_no_importa_random`.
+  - **`ACCIONES_QUE_REVELAN["G"]` stays False, and the audit comment it invalidated was
+    rewritten.** That comment claimed no action touches `mazo_recetas`; now one does. The flag
+    stays False for a structural reason, not an oversight: G is turn-ending, so `app.py` runs
+    `limpiar_checkpoint()` for it and the draw is outside the undo window by construction. Marking
+    it True would be actively broken — the revealing re-take runs *after* that clear, resurrecting
+    a checkpoint for a closed visit. A module-level assert in `commands.py` now makes that
+    combination impossible to introduce, so the contract only ever applies to **free** actions.
+  - **The wire discriminator has a default, unlike Simposio's `modo`.** `origen: str = "mercado"`
+    on both sides. The Simposio forced every caller to name its mode because a positional `0`
+    would otherwise have silently become a mode; here nothing changes meaning, so an old call
+    still says what it said — which is exactly what kept `tests/_bot.py` and the golden game
+    untouched. Cross combinations are `InvalidActionError` rather than interpreted: the blind card
+    is not chosen, so `indice_mercado` alongside `origen="mazo"` is an illegal state, not a hint.
+  - **`RecipeDeckEmptyError` is new rather than a reused `MarketSlotEmptyError`.** The slot error's
+    message promises the card comes back at the next Protocolo de Refresco. An exhausted
+    mazo-plus-descarte does not come back with time — only a carpeta swap or a Simposio sacrifice
+    refills the discard — so reusing it would have shipped a message that lies. `app.py` maps it
+    to 409 `mazo_recetas_agotado`.
+
+  `disponibilidad.py`'s `"G"` clause now has two floors (cheapest visible **or** 2 for the deck)
+  and a six-rung motivo ladder, because "no visible recipes" and "can't afford the blind one" are
+  different situations and the tooltip is the only place a player learns which. Client side,
+  `MercadoPanel.vue` draws the deck as a face-down card beside the four slots (it must look
+  buyable, not like a counter), `ModalG.vue` gains a "Del mercado / Del mazo" radio whose
+  **initial** value flips to mazo when the table holds nothing affordable — a `ref`, not a
+  `computed`, or it would fight the player's toggle — and `preciosReceta.ts` mirrors the new
+  constant. The log line is its own sentence ("Investigó a ciegas … (robado del mazo)"): the card
+  is public the moment it lands in the carpeta, but *where it came from* survives nowhere else.
+  Everything added on the engine side is a method or a `@property`, so no persisted shape changed
+  and there is **no `VERSION_FORMATO` bump**. Tests: `tests/test_investigacion_a_ciegas.py`, plus
+  `test_reglamento_al_dia.py::test_la_investigacion_a_ciegas_cuesta_monedas` (verified by mutation
+  on both documents, deleting the paragraph and changing the figure).
 - **`events.py`** — `GameEvent`/`EventoTipo`/`EventSink`: a structured log of automatic,
   no-player-input state changes (chief-researcher assignment, climate reveal, market refresh,
   end-of-day discard of the market's oldest recipe, mass advance, structural collapse, every
@@ -1111,10 +1184,13 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   `(dia_actual, turno_nonce, player_index)` because the nonce alone doesn't mark visit boundaries
   (free actions don't bump it). Snapshot-restore was chosen over inverse commands because several
   mutations are lossy at their clamps (`mover_visor_harina`'s [1,5], `dados_inoculo`'s `min(3,…)`)
-  — an "inverse action" would be wrong exactly at the boundaries. It is safe because every Fase II
-  action is deterministic over public information (`actions.py` imports no `random` and never
-  touches a hidden deck; all reveals live in `fase_I_ambiente`), and inside the undo window only
-  free actions occur, **none of which emit events** — so `engine.eventos` is byte-identical across
+  — an "inverse action" would be wrong exactly at the boundaries. It is safe because every action
+  that can occur **inside the window** is deterministic over public information: the window holds
+  only free actions, and none of them touches a hidden deck (`actions.py` imports no `random` —
+  the one shuffle it can reach, the blind draw's, lives in `engine.Market`). Note the claim had to
+  be narrowed once: Acción G in `origen="mazo"` does draw face-down, but it is a PA action, so it
+  closes the visit and can never be inside the window. Inside that window only free actions occur,
+  **none of which emit events** — so `engine.eventos` is byte-identical across
   an undo and client `since` pointers never dangle (no epoch counter needed). The hidden-info rule
   ("revealed information can never be un-revealed; undo restores from the reveal point") is
   vacuously true today but wired for the future: `server/commands.py:ACCIONES_QUE_REVELAN` (all
@@ -1409,7 +1485,8 @@ All game-rule failures raise semantic exceptions from `exceptions.py` (never bar
 - `RuleViolationError` → `StationBlockedError`, `CarpetaFullError`
 - `InvalidActionError` — malformed/invalid call parameters
 - Engine-flow errors: `PhaseViolationError`, `GameAlreadyOverError`,
-  `InsufficientPlayersError`, `MarketSlotEmptyError`, `NotYourTurnError` (server-layer turn
+  `InsufficientPlayersError`, `MarketSlotEmptyError`, `RecipeDeckEmptyError`,
+  `NotYourTurnError` (server-layer turn
   ownership — every route funnels through `GameSession.asiento_por_token`)
 
 `server/errors.py` holds a second, separate hierarchy (`RoomError` → `RoomNotFoundError`, etc.)

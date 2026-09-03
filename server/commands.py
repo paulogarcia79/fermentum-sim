@@ -76,16 +76,34 @@ ACCIONES_QUE_TERMINAN_TURNO: Dict[str, bool] = {
 }
 
 # Acciones que REVELAN información oculta al resolverse (robar de un mazo
-# boca abajo, tirar un dado, ...). Hoy NINGUNA lo hace -- se verificó por
-# auditoría: actions.py no importa random ni toca mazo_recetas/mazo_clima/
-# mazo_tendencias; todos los robos ocultos viven en fase_I_ambiente,
-# automáticos, fuera de la ventana de deshacer. El contrato para el futuro:
-# una acción marcada True aquí obliga a RE-TOMAR el checkpoint de visita
-# justo después de resolverse (server/app.py) -- lo revelado se convierte en
-# el nuevo piso del deshacer, nunca se des-revela -- y su modal en la UI
-# debe avisar de antemano que ese paso no se puede deshacer (ver
-# ACCIONES_QUE_REVELAN en web/src/data/descripcionesAcciones.ts, el espejo).
+# boca abajo, tirar un dado, ...). Hoy ninguna está marcada, pero el motivo ya
+# no es que nadie toque información oculta: la Acción G en modo «mazo»
+# (Investigación a ciegas) roba la carta de arriba de `mazo_recetas` y puede
+# rebarajar el descarte. La marca sigue en False porque G TERMINA LA VISITA:
+# `app.py` limpia el checkpoint al cerrarla, así que el robo queda fuera de la
+# ventana de deshacer por construcción, no por suerte. Lo que sí se mantiene es
+# que ninguna acción DENTRO de la ventana (las gratuitas) toca nada oculto:
+# actions.py no importa random y sus caminos gratuitos no rozan los mazos.
+#
+# El contrato para el futuro, que solo aplica a acciones GRATUITAS: una acción
+# marcada True aquí obliga a RE-TOMAR el checkpoint de visita justo después de
+# resolverse (server/app.py) -- lo revelado se convierte en el nuevo piso del
+# deshacer, nunca se des-revela -- y su modal en la UI debe avisar de antemano
+# de que ese paso no se puede deshacer (ver ACCIONES_QUE_REVELAN en
+# web/src/data/descripcionesAcciones.ts, el espejo).
 ACCIONES_QUE_REVELAN: Dict[str, bool] = {accion: False for accion in ACCIONES_QUE_TERMINAN_TURNO}
+
+# Marcar como reveladora una acción que termina el turno sería contradictorio y
+# además roto: en `app.py` el `limpiar_checkpoint()` del cierre de visita ocurre
+# ANTES de la re-toma reveladora, así que la marca resucitaría un checkpoint de
+# una visita ya cerrada y devolvería un "Deshacer" que no debería existir.
+assert not any(
+    ACCIONES_QUE_REVELAN[accion] and ACCIONES_QUE_TERMINAN_TURNO[accion]
+    for accion in ACCIONES_QUE_TERMINAN_TURNO
+), (
+    "una acción que termina la visita no puede marcarse como reveladora: "
+    "app.py limpia el checkpoint al cerrar el turno y la re-toma lo resucitaría"
+)
 
 ACCIONES_VALIDAS = frozenset(ACCIONES_QUE_TERMINAN_TURNO)
 
@@ -197,10 +215,29 @@ def _despachar(
         return manager.accion_F_hornear(player, slot_index=_requerir_int(params, "slot_index"))
 
     if accion == "G":
+        # Dos orígenes bajo un mismo espacio, discriminados por `origen` igual
+        # que el Simposio lo hace con `modo`. La diferencia deliberada: aquí el
+        # discriminador SÍ tiene valor por defecto ("mercado"). Ningún parámetro
+        # cambia de significado al añadir el modo nuevo, así que un cliente
+        # antiguo sigue diciendo exactamente lo que decía; la única forma que
+        # cambia el comportamiento (`origen="mazo"`) hay que pedirla a propósito.
+        # Como en el Simposio, solo se comprueba el TIPO del parámetro del
+        # origen elegido: el del contrario se reenvía tal cual para que sea
+        # `ActionManager` —la única autoridad de reglas— quien lo rechace.
+        origen = params.get("origen", "mercado")
+        if not isinstance(origen, str):
+            raise InvalidActionError(
+                f"'origen' debe ser 'mercado' o 'mazo'. Recibido: {origen!r}."
+            )
         return manager.accion_G_investigar_protocolo(
             player,
-            indice_mercado=_requerir_int(params, "indice_mercado"),
+            indice_mercado=(
+                _requerir_int(params, "indice_mercado")
+                if origen == "mercado"
+                else params.get("indice_mercado")
+            ),
             indice_descartar=params.get("indice_descartar"),
+            origen=origen,
         )
 
     if accion == "simposio":
@@ -457,6 +494,11 @@ def describir_accion(
     if accion == "G":
         # La receta investigada es la última que entró en la carpeta.
         nombre = player.carpeta_proyectos[-1].nombre if player.carpeta_proyectos else "una receta"
+        if params.get("origen") == "mazo":
+            # El registro nombra la carta porque ya es pública (la carpeta lo es),
+            # pero deja constancia de que salió del mazo: es el único sitio donde
+            # se ve que alguien pagó a ciegas en vez de elegir de la mesa.
+            return f"Investigó a ciegas el protocolo {nombre} (robado del mazo)"
         return f"Investigó el protocolo {nombre}"
 
     if accion == "simposio":

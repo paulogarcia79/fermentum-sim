@@ -279,6 +279,10 @@ completar de nuevo las 4 estaciones. Si el mazo de recetas se agota, se baraja s
 mazo nuevo; si mazo y descarte quedan vacíos, el mercado puede quedar temporalmente por debajo de
 4 cartas.
 
+El mazo también mengua **durante el día**: cada Investigación a ciegas (Acción G) se lleva su
+carta superior, así que el rebarajado del descarte puede ocurrir igualmente en plena Fase II, en
+el momento de robar.
+
 ---
 
 ## 6. Fase II: Acción
@@ -489,6 +493,13 @@ Selecciona una carta de receta de cualquiera de las 4 estaciones visibles del Me
 coloca boca arriba, en estado inactivo, en la Carpeta de Proyectos propia. El espacio del mercado
 que se libera queda vacío hasta el reabastecimiento del Protocolo de Refresco al inicio del día
 siguiente.
+
+**Investigación a ciegas.** En lugar de una carta expuesta puedes llevarte la **carta superior del
+mazo**, sin verla, por **2 Monedas** fijas — salga el grado que salga. Es exactamente la carta que
+se revelaría mañana en el Protocolo de Refresco, y las 4 estaciones no se mueven. Si el mazo está
+vacío se baraja el descarte antes de robar; solo con el mazo **y** su descarte vacíos la opción
+deja de existir. Mismo Punto de Acción, mismo espacio (una cosa u otra por día) y mismo límite de
+3 cartas en la Carpeta, con el mismo descarte previo si está llena.
 
 #### Simposio Técnico
 
@@ -824,7 +835,8 @@ zonas sí pagan, y sus valores son las columnas de Puntos y Monedas.*
 
 *La columna **Coste** es lo que cuesta llevarse la carta del Mercado Central con la
 [Acción G](#7-catálogo-de-acciones); va impresa en la carta. No confundir con la harina y el agua,
-que son lo que cuesta **iniciarla** después con la Acción B.*
+que son lo que cuesta **iniciarla** después con la Acción B. La Investigación a ciegas ignora esta
+columna: robar del mazo cuesta 2 Monedas fijas, sea cual sea la carta que salga.*
 
 *El número entre paréntesis junto a la Acidez Diana es el bono de Puntos de Maestría del Bono de
 Sabor (ver [Acción F](#7-catálogo-de-acciones)); el Bono de Sabor también otorga siempre +2

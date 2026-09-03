@@ -12,3 +12,9 @@ export const PRECIO_RECETA: Record<Grado, number> = {
   'Intermedia': 2,
   'Avanzada': 3,
 }
+
+// Espejo de engine.PRECIO_RECETA_MAZO: coste PLANO de la «Investigacion a ciegas»
+// (Accion G con origen="mazo"), robando la carta de arriba del mazo sin verla.
+// Vale lo mismo que PRECIO_RECETA['Intermedia'] pero NO se deriva de el, igual
+// que en el servidor: reajustar la tabla visible no debe reajustar la apuesta.
+export const PRECIO_RECETA_MAZO = 2

@@ -520,3 +520,18 @@ def test_mensaje_de_investigar_nombra_la_receta_tomada() -> None:
     mensaje = _describir(engine, manager, jugador, "G", {"indice_mercado": 0})
 
     assert mensaje == f"Investigó el protocolo {esperada.nombre}"
+
+
+def test_mensaje_de_investigar_a_ciegas_dice_que_salio_del_mazo() -> None:
+    """
+    La carta robada es publica en cuanto entra en la carpeta, pero de donde
+    salio no se ve en ningun otro sitio: el registro es el unico rastro de que
+    alguien pago a ciegas en vez de elegir de la mesa.
+    """
+    engine, manager, jugador = _motor_y_jugador()
+    jugador.monedas = 40
+    esperada = engine.market.mazo_recetas[0]
+
+    mensaje = _describir(engine, manager, jugador, "G", {"origen": "mazo"})
+
+    assert mensaje == f"Investigó a ciegas el protocolo {esperada.nombre} (robado del mazo)"

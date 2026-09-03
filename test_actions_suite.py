@@ -10,7 +10,7 @@ from models import (
     Player, FermentationSlot, HorneadoRecord, TecnologiaID, TipoHarina,
     Grado, RECIPE_CATALOG, Environment,
 )
-from engine import GameEngine, Market, MAX_DATOS_PONENCIA, MONEDAS_MOSTRADOR, PRECIO_DATO_SIMPOSIO
+from engine import GameEngine, Market, MAX_DATOS_PONENCIA, MONEDAS_MOSTRADOR, PRECIO_DATO_SIMPOSIO, PRECIO_RECETA_MAZO
 from actions import ActionManager, AGUA_PEDIDO_URGENCIA, HARINA_PEDIDO_URGENCIA
 from exceptions import (
     NotEnoughActionPointsError, MissingResourceError,
@@ -417,6 +417,25 @@ if idx_r2 is not None:
 p1.puntos_accion = 1
 p1.acciones_pa_usadas_hoy = []
 xraises(InvalidActionError, "G indice mercado invalido", lambda: manager.accion_G_investigar_protocolo(p1, 99))
+
+# Investigacion a ciegas: la carta de arriba del mazo por PRECIO_RECETA_MAZO.
+p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
+p1.carpeta_proyectos = []
+p1.monedas = 10
+_cima = market.mazo_recetas[0]
+_mazo_antes = len(market.mazo_recetas)
+_monedas_antes = p1.monedas
+manager.accion_G_investigar_protocolo(p1, origen="mazo")
+check("G ciegas: roba la cima del mazo", lambda: None if p1.carpeta_proyectos == [_cima] else (_ for _ in ()).throw(AssertionError()))
+check("G ciegas: el mazo baja una carta", lambda: None if len(market.mazo_recetas) == _mazo_antes - 1 else (_ for _ in ()).throw(AssertionError()))
+check("G ciegas: cuesta el precio plano", lambda: None if _monedas_antes - p1.monedas == PRECIO_RECETA_MAZO else (_ for _ in ()).throw(AssertionError()))
+
+p1.puntos_accion = 2
+p1.acciones_pa_usadas_hoy = []
+xraises(InvalidActionError, "G origen invalido", lambda: manager.accion_G_investigar_protocolo(p1, origen="ciegas"))
+xraises(InvalidActionError, "G ciegas con indice de mercado", lambda: manager.accion_G_investigar_protocolo(p1, 0, origen="mazo"))
+xraises(InvalidActionError, "G mercado sin indice", lambda: manager.accion_G_investigar_protocolo(p1))
 
 # ========================================================================
 print("--- Simposio Tecnico ---")

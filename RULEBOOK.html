@@ -728,7 +728,8 @@
         <p>Se roba la carta superior del mazo de Tendencias de Mercado (21 cartas) y su modificador desplaza <strong>simultáneamente</strong> los 3 visores de la Bolsa de Harinas. Cada visor tiene tope independiente entre la posición 1 (barata) y la 5 (cara): si el desplazamiento excede el límite, se detiene ahí, sin arrastre. Si el mazo se agota, su descarte se baraja como mazo nuevo.</p>
 
         <h3 class="sub">5.4 · Protocolo de Refresco del mercado de recetas</h3>
-        <p>Se descarta la carta de la estación más a la derecha (la más antigua). Las restantes se desplazan a la derecha para cubrir huecos, y se revela una nueva carta para el extremo izquierdo. Si el mazo se agota, se baraja su descarte.</p>
+        <p>Este paso <strong>reabastece</strong>, no descarta (el descarte de la carta más antigua ocurre al final de la Fase III del día anterior — ver <a href="#s9">§9</a>). Las cartas supervivientes se desplazan hacia la derecha para cubrir los espacios vacíos (los huecos dejados por jugadores con la Acción G y el hueco que dejó el descarte de fin de día), y se revelan cartas nuevas del mazo por el extremo izquierdo hasta completar de nuevo las 4 estaciones. Si el mazo de recetas se agota, se baraja su descarte como mazo nuevo; si mazo y descarte quedan vacíos, el mercado puede quedar temporalmente por debajo de 4 cartas.</p>
+        <p>El mazo también mengua <strong>durante el día</strong>: cada Investigación a ciegas (Acción G) se lleva su carta superior, así que el rebarajado del descarte puede ocurrir igualmente en plena Fase II, en el momento de robar.</p>
       </section>
 
       <section class="rule" id="s6">
@@ -845,6 +846,7 @@
 
         <h3 class="sub">G · Investigar Protocolo</h3>
         <p><strong>Costo:</strong> 1 PA + <strong>Monedas según el grado de la carta</strong> — Básica <strong>1</strong>, Intermedia <strong>2</strong>, Avanzada <strong>3</strong>. El precio es <em>aditivo</em>: el Punto de Acción y el espacio siguen siendo el límite real, y las Monedas hacen del mercado una economía en lugar de una cola. <strong>Límites:</strong> máximo 3 cartas en la Carpeta de Proyectos (si está llena, hay que descartar una antes de investigar otra); además, 1 vez por día (por espacio de acción). Toma una carta de receta de cualquiera de las 4 estaciones del Mercado Central y la coloca inactiva en la Carpeta de Proyectos propia. El espacio del mercado queda vacío hasta el Protocolo de Refresco del día siguiente.</p>
+        <p><strong>Investigación a ciegas.</strong> En lugar de una carta expuesta puedes llevarte la <strong>carta superior del mazo</strong>, sin verla, por <strong>2</strong> Monedas fijas — salga el grado que salga. Es exactamente la carta que se revelaría mañana en el Protocolo de Refresco, y las 4 estaciones no se mueven. Si el mazo está vacío se baraja el descarte antes de robar; solo con el mazo <strong>y</strong> su descarte vacíos la opción deja de existir. Mismo Punto de Acción, mismo espacio (una cosa u otra por día) y mismo límite de 3 cartas en la Carpeta, con el mismo descarte previo si está llena.</p>
 
         <h3 class="sub">Simposio Técnico</h3>
         <p><strong>Costo:</strong> 1 PA + <strong>o bien un pan horneado con éxito de tu Archivo, o bien 5 Monedas por cada Dato</strong>. <strong>Límite:</strong> 1 vez por día (por espacio de acción), así que <strong>eliges un modo por visita</strong>.</p>
@@ -985,7 +987,7 @@
           </table>
         </div>
         <p class="callout"><strong>La columna de Monedas es solo el pago del momento de hornear.</strong> Cada pan que entra en tu Archivo sigue produciendo Monedas <strong>todas las noches</strong> mientras siga allí — Básica 1, Intermedia 2, Avanzada 3 (ver <a href="#s9">Ingresos de Panadería</a>). Los números de la tabla ya están ajustados a la baja para dejarle sitio a esa renta: <strong>cualquier carta recupera al tercer día lo que pagaba antes de golpe</strong>, y a partir de ahí gana más. Por eso el pan barato horneado el Día 3 puede rendir más que el pan caro horneado el Día 8.</p>
-        <p class="wrap" style="font-size:0.86rem;color:var(--ink-muted);max-width:68ch;">La columna <strong>Coste</strong> es lo que cuesta llevarse la carta del Mercado Central con la <a href="#s7">Acción G</a>; va impresa en la carta. No confundir con la harina y el agua, que son lo que cuesta <strong>iniciarla</strong> después con la Acción B.</p>
+        <p class="wrap" style="font-size:0.86rem;color:var(--ink-muted);max-width:68ch;">La columna <strong>Coste</strong> es lo que cuesta llevarse la carta del Mercado Central con la <a href="#s7">Acción G</a>; va impresa en la carta. No confundir con la harina y el agua, que son lo que cuesta <strong>iniciarla</strong> después con la Acción B. La Investigación a ciegas ignora esta columna: robar del mazo cuesta <strong>2</strong> Monedas fijas, sea cual sea la carta que salga.</p>
         <p class="wrap" style="font-size:0.86rem;color:var(--ink-muted);max-width:68ch;">El número entre paréntesis junto a la Acidez Diana es el bono de Puntos de Maestría del Bono de Sabor (ver <a href="#s7">Acción F</a>); el Bono de Sabor también otorga siempre +2 Monedas adicionales, sin importar la receta.</p>
       </section>
 

@@ -294,7 +294,7 @@ async function pasarDeVerdad() {
         v-if="store.estado!.puede_deshacer"
         class="deshacer"
         :disabled="deshaciendo || pasando"
-        title="Restaura el estado al inicio de tu visita, deshaciendo las acciones gratuitas que hiciste. La información oculta revelada nunca se restaura (hoy ninguna acción revela nada)."
+        title="Restaura el estado al inicio de tu visita, deshaciendo las acciones gratuitas que hiciste. Lo que ya se reveló —una carta robada a ciegas del mazo, por ejemplo— nunca se restaura: esas acciones cierran la visita, así que quedan fuera de esta ventana."
         @click="onDeshacer"
       >
         ↩ Deshacer

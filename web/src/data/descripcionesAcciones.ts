@@ -4,6 +4,7 @@
 // en vez de mantener una segunda copia escrita a mano.
 import { AGUA_PEDIDO_URGENCIA_TOKENS, HARINA_PEDIDO_URGENCIA_PCT } from './pedidoUrgencia'
 import { MAX_DATOS_PONENCIA, PRECIO_DATO_SIMPOSIO } from './datosSimposio'
+import { PRECIO_RECETA_MAZO } from './preciosReceta'
 import { fmtAgua, fmtHarina } from './unidades'
 
 export type IdAccion =
@@ -47,7 +48,7 @@ export const descripcionesAcciones: Record<IdAccion, string> = {
   descarte:
     'Gratis en PA, una vez por día: es el único control voluntario de tu Acidez, y va en los dos sentidos. SUBIR se paga en Agua (2, 5 o 9 tokens por +1, +2 o +3); BAJAR se paga en Monedas (1, 3 o 6 por -1, -2 o -3), porque descartar parte del cultivo y refrescarlo es tirar producto. Un solo sentido por visita. Sirve para caer dentro de la Acidez Diana de una receta antes de iniciarla (Bono de Sabor), pero recuerda que la Madurez final premia el equilibrio: el pico está en Acidez 3 y los extremos 0 y 6 no puntúan.',
   F: 'Finaliza el protocolo de una masa y la vende de inmediato: obtiene Puntos de Maestría y Monedas según su zona (más Datos de Investigación si cae en Zona Óptima). El bono de Acidez, si la carta lo tiene sellado, suma puntos y +2 Monedas — salvo en un colapso.',
-  G: 'Toma 1 carta de receta del Mercado Central y la guarda boca arriba en tu Carpeta de Proyectos (máximo 3; si está llena, debes descartar una previa). El espacio del mercado queda vacío hasta el reabastecimiento al inicio del día siguiente.',
+  G: `Dos orígenes, y eliges uno por visita. Del mercado: tomas 1 de las 4 cartas expuestas pagando según su grado (Básica 1, Intermedia 2, Avanzada 3) y el espacio queda vacío hasta el reabastecimiento del día siguiente. A ciegas: robas la carta de arriba del mazo por ${PRECIO_RECETA_MAZO} Monedas fijas, salga el grado que salga — es la que se revelaría mañana, y las expuestas no se mueven; si el mazo está vacío se baraja el descarte antes de robar. En ambos casos la carta va boca arriba a tu Carpeta de Proyectos (máximo 3; si está llena, debes descartar una previa).`,
   simposio: `Dos modos, y eliges uno por visita. Ambos exigen tener al menos un horneado exitoso en tu Archivo. Sacrificar: publicas un pan y ganas Datos según su grado (Básica 1, Intermedia 2, Avanzada 3), pero el registro sale del archivo para siempre — pierdes sus Puntos de Maestría, su renta diaria, su paso hacia el 5/5 y, si era el único de su tipo, un escalón de Variedad de Recetas; es una palanca de emergencia, nunca una jugada eficiente. Ponencia: compras de 1 a ${MAX_DATOS_PONENCIA} Datos a ${PRECIO_DATO_SIMPOSIO} Monedas cada uno sin tocar el Archivo — ese precio es la tasa de Conversión de Riqueza, y el Comerciante no lo descuenta.`,
   jefatura:
     'Cuesta 1 PA y paga 1 Dato de Investigación al instante. Mañana abrirás la Fase II como Investigador Jefe: el orden de turno se calcula una sola vez al día, así que lo que compras es la salida de mañana, no la de hoy. Es el único espacio GLOBAL del tablero — lo ocupa un jugador por día en toda la mesa, no uno por jugador — así que reclamarla también se la quita a los demás. Si nadie la reclama, la Jefatura se queda donde está; reclamarla siendo ya Jefe es legal y es la única forma de retenerla.',
@@ -66,12 +67,18 @@ export const descripcionesAcciones: Record<IdAccion, string> = {
 
 /**
  * Acciones que REVELAN información oculta al resolverse — espejo de
- * ACCIONES_QUE_REVELAN en server/commands.py. Hoy NINGUNA acción lo hace
- * (todas operan sobre información pública), pero el contrato ya está
- * cableado: una acción listada aquí muestra en su tooltip el aviso de que
- * lo revelado no se puede deshacer (el servidor re-toma el checkpoint de
- * visita justo después de resolverla, así que un deshacer posterior
- * restaura DESDE ese punto, nunca antes).
+ * ACCIONES_QUE_REVELAN en server/commands.py. Sigue vacío, pero ya no
+ * porque nadie toque información oculta: la Acción G en modo «mazo» roba
+ * una carta boca abajo. No entra aquí porque G TERMINA LA VISITA, así que
+ * el robo cae fuera de la ventana de deshacer por construcción. Lo que se
+ * mantiene es que ninguna acción GRATUITA —las únicas que viven dentro de
+ * esa ventana— revela nada.
+ *
+ * El contrato, para cuando exista una gratuita que revele: una acción
+ * listada aquí muestra en su tooltip el aviso de que lo revelado no se
+ * puede deshacer (el servidor re-toma el checkpoint de visita justo
+ * después de resolverla, así que un deshacer posterior restaura DESDE ese
+ * punto, nunca antes).
  */
 export const ACCIONES_QUE_REVELAN: ReadonlySet<IdAccion> = new Set()
 

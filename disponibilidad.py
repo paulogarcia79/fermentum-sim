@@ -38,6 +38,7 @@ from engine import (
     PRECIO_PLIEGUES,
     PRECIO_PLIEGUES_VITALIDAD,
     PRECIO_RECETA,
+    PRECIO_RECETA_MAZO,
 )
 from models import Player, Recipe
 
@@ -65,13 +66,20 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     )
     hay_estacion_libre = player.indice_estacion_disponible is not None
     hay_receta_visible = any(r is not None for r in engine.market.recetas_visibles)
-    # Precio de la receta visible MÁS BARATA, no el mínimo global: el mazo es una
-    # sola baraja, así que lo que se puede pagar depende de las 4 cartas que hoy
-    # están sobre la mesa, no de lo que el catálogo tenga más barato.
+    # Precio de la receta visible MÁS BARATA, no el mínimo del catálogo: lo que
+    # se puede pagar depende de las 4 cartas que hoy están sobre la mesa, no de
+    # lo que el catálogo tenga más barato.
     precio_receta_minimo = min(
         (PRECIO_RECETA[r.grado] for r in engine.market.recetas_visibles if r is not None),
         default=0,
     )
+    # La Investigación a ciegas es el segundo camino de la Acción G y tiene su
+    # propio suelo, plano y ajeno a lo que haya expuesto: con las 4 estaciones
+    # vacías el espacio sigue siendo jugable si quedan cartas en el mazo (o
+    # descarte que rebarajar) y 2 Monedas.
+    puede_pagar_visible = hay_receta_visible and player.monedas >= precio_receta_minimo
+    hay_carta_en_mazo = not engine.market.mazo_recetas_agotado
+    puede_pagar_mazo = hay_carta_en_mazo and player.monedas >= PRECIO_RECETA_MAZO
     usados = player.acciones_pa_usadas_hoy
 
     resultados: List[Dict[str, Any]] = []
@@ -179,16 +187,20 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         motivo_g = "Ya usaste este espacio hoy"
     elif not tiene_pa:
         motivo_g = "Sin PA"
-    elif not hay_receta_visible:
-        motivo_g = "No hay recetas visibles en el mercado"
-    else:
+    elif not hay_receta_visible and not hay_carta_en_mazo:
+        motivo_g = "No hay recetas visibles ni cartas en el mazo"
+    elif not hay_carta_en_mazo:
         motivo_g = "Sin Monedas para ninguna receta visible"
+    elif not hay_receta_visible:
+        motivo_g = f"Sin Monedas para investigar a ciegas ({PRECIO_RECETA_MAZO})"
+    else:
+        motivo_g = (
+            "Sin Monedas para ninguna receta visible ni para investigar a ciegas "
+            f"({PRECIO_RECETA_MAZO})"
+        )
     agregar(
         "G",
-        "G" not in usados
-        and tiene_pa
-        and hay_receta_visible
-        and player.monedas >= precio_receta_minimo,
+        "G" not in usados and tiene_pa and (puede_pagar_visible or puede_pagar_mazo),
         motivo_g,
     )
     agregar(

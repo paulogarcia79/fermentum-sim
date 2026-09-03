@@ -129,6 +129,20 @@ class MarketSlotEmptyError(FermentumError):
     """
 
 
+class RecipeDeckEmptyError(FermentumError):
+    """
+    Se lanza cuando la «Investigación a ciegas» (Acción G, ``origen="mazo"``)
+    no encuentra ninguna carta que robar: mazo de recetas Y su descarte vacíos.
+
+    Es un estado distinto del de ``MarketSlotEmptyError`` y por eso no lo reusa:
+    un slot vacío se repone solo en el Protocolo de Refresco del día siguiente,
+    mientras que un mazo agotado no se repone con el tiempo — solo vuelven a
+    entrar cartas al descarte cuando alguien cambia una carta de su Carpeta de
+    Proyectos o sacrifica un horneado en el Simposio. Prometer lo contrario en
+    el mensaje sería mentirle al jugador.
+    """
+
+
 class NotYourTurnError(FermentumError):
     """
     Se lanza cuando se intenta resolver una acción o pase de turno para un
