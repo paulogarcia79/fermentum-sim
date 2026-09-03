@@ -44,6 +44,7 @@ from models import (
     EfectoClimatico,
     Environment,
     AMPLIACION_OPTIMA_MODULO,
+    DATOS_HORAS_EXTRAS,
     FermentationSlot,
     Grado,
     HorneadoRecord,
@@ -1420,7 +1421,11 @@ class GameEngine:
         Un jugador que ejecutó ``pasar_turno`` este día nunca vuelve a ser
         elegible (cede el resto del día, incluidas sus acciones gratuitas
         pendientes). En caso contrario, es elegible si tiene PA disponibles,
-        si aún no ha usado Acción A u Horas Extras hoy, si aún puede pagar
+        si aún no ha usado la Acción A, si aún no ha usado las Horas Extras **y
+        puede pagarlas** (la cláusula medía sólo la bandera, así que un jugador
+        sin Datos volvía a la rotación toda la ronda por una acción que no podía
+        permitirse — el resto de cláusulas sí comprueban el bolsillo), si aún
+        puede pagar
         un Pedido de Urgencia (0 PA, sin límite por ronda, sin flag de "ya
         usado" — se autolimita por Datos de Investigación disponibles), si
         aún le queda el espacio de Pliegues sin usar y puede pagar al menos su
@@ -1436,7 +1441,14 @@ class GameEngine:
         return (
             player.puntos_accion > 0
             or not player.accion_alimentar_usada
-            or not player.horas_extras_usadas
+            or (
+                not player.horas_extras_usadas
+                and player.datos_investigacion >= DATOS_HORAS_EXTRAS
+            )
+            # La cláusula del Pedido de Urgencia. Hoy subsume a la anterior porque
+            # ambas piden 1 Dato, pero se escriben separadas a propósito: son dos
+            # acciones distintas y repreciar una no debe apagar en silencio la
+            # visita que concede la otra.
             or player.datos_investigacion >= 1
             or (
                 "E" not in player.acciones_pa_usadas_hoy

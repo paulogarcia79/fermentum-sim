@@ -298,9 +298,10 @@ Cada jugador dispone de **2 Puntos de Acción (PA)** por Día de Laboratorio.
 - **Acciones que no terminan el turno:** Alimentar el Cultivo, Técnica (Pliegues), Descarte, Horas
   Extras y Pedido de Urgencia son gratuitas en PA y **no** cierran la visita del jugador — un
   jugador que ya gastó sus 2 PA en otras acciones sigue recibiendo visitas mientras le quede alguna
-  de estas cinco acciones sin usar ese día (en el caso de Pliegues y Descarte, mientras conserve su
-  espacio libre y con qué pagarlo: Monedas para Pliegues, y Monedas **o** agua para Descarte, que
-  cobra un recurso distinto en cada sentido). Cualquier acción de costo en PA, o un **Pasar**
+  de estas cinco acciones sin usar ese día **y pueda pagarla**: 1 Dato para Horas Extras, Monedas
+  para Pliegues, y Monedas **o** agua para Descarte, que cobra un recurso distinto en cada sentido
+  (Pliegues y Descarte necesitan además conservar su espacio libre). Sin con qué pagarlas, esas
+  acciones ya no te devuelven a la rotación: el turno pasa de largo. Cualquier acción de costo en PA, o un **Pasar**
   explícito, sí cierra la visita; **Pasar** además renuncia de inmediato a cualquier acción gratuita
   pendiente por el resto del día.
 - **Un espacio de acción, una visita por día:** cada espacio de acción (B a G, Simposio Técnico,

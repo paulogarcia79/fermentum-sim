@@ -395,6 +395,32 @@ def test_el_espacio_de_pliegues_no_se_reenciende_con_el_marcador() -> None:
 
 
 # ---------------------------------------------------------------------------
+# 5. Elegibilidad: la clausula que solo miraba la bandera
+# ---------------------------------------------------------------------------
+
+
+def test_sin_datos_las_horas_extras_ya_no_conceden_visitas() -> None:
+    """Antes, `not horas_extras_usadas` bastaba para volver a la rotacion
+    aunque el jugador no tuviera con que pagarlas -- el resto de clausulas si
+    miran el bolsillo. Un jugador seco quedaba en bucle hasta pasar turno."""
+    engine = _motor()
+    engine.iniciar_dia()
+    jugador = engine.jugador_activo
+    idx = engine.players.index(jugador)
+
+    jugador.puntos_accion = 0
+    jugador.accion_alimentar_usada = True
+    jugador.datos_investigacion = 0
+    jugador.monedas = 0
+    jugador.reserva_agua = 0
+
+    assert engine._jugador_elegible(idx) is False
+
+    jugador.datos_investigacion = DATOS_HORAS_EXTRAS
+    assert engine._jugador_elegible(idx) is True
+
+
+# ---------------------------------------------------------------------------
 # 6. El dia siguiente
 # ---------------------------------------------------------------------------
 
