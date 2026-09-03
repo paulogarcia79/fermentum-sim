@@ -92,8 +92,10 @@ python3 test_actions_suite.py
 # Run the headless HTTP backend (single worker only — see server/app.py's concurrency note)
 .venv/bin/uvicorn server.app:app --host 127.0.0.1 --port 8000 --workers 1
 
-# Run the web client (separate terminal, needs the backend above already running) — see
-# web/README.md. vite.config.ts proxies /games/* to :8000 so no CORS setup is needed in dev.
+# Run the web client on http://localhost:3010 (separate terminal, needs the backend above already
+# running) — see web/README.md. The port is pinned in vite.config.ts (port 3010 + strictPort, so a
+# clash fails loudly instead of drifting to 3011) rather than using Vite's shared 5173 default.
+# vite.config.ts proxies /games/* to :8000 so no CORS setup is needed in dev.
 cd web && npm install && npm run dev
 
 # Type-check + production build the web client
