@@ -482,6 +482,28 @@ p1.horas_extras_usadas = False
 xraises(MissingResourceError, "HE sin datos", lambda: manager.accion_auxiliar_horas_extras(p1))
 
 # ========================================================================
+print("--- Estasis Biologica ---")
+p1.tecnologias.criopreservacion = False
+p1.estasis_suspendida = False
+xraises(RuleViolationError, "Estasis sin Criopreservacion", lambda: manager.accion_auxiliar_estasis(p1, suspender=True))
+
+p1.tecnologias.criopreservacion = True
+pa_est = p1.puntos_accion
+espacios_est = list(p1.acciones_pa_usadas_hoy)
+
+manager.accion_auxiliar_estasis(p1, suspender=True)
+check("Estasis: bandera suspendida", lambda: None if p1.estasis_suspendida else (_ for _ in ()).throw(AssertionError()))
+check("Estasis: no gasta PA", lambda: None if p1.puntos_accion == pa_est else (_ for _ in ()).throw(AssertionError()))
+check("Estasis: no ocupa espacio", lambda: None if p1.acciones_pa_usadas_hoy == espacios_est else (_ for _ in ()).throw(AssertionError()))
+
+manager.accion_auxiliar_estasis(p1, suspender=False)
+check("Estasis: interruptor de dos sentidos", lambda: None if not p1.estasis_suspendida else (_ for _ in ()).throw(AssertionError()))
+
+xraises(InvalidActionError, "Estasis con parametro no booleano", lambda: manager.accion_auxiliar_estasis(p1, suspender=1))
+
+p1.tecnologias.criopreservacion = False
+
+# ========================================================================
 print("--- Protocolo H: Re-cultivo Manual ---")
 p1.vitalidad = 0
 p1.acidez = 0

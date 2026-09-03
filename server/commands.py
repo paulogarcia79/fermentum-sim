@@ -44,8 +44,9 @@ from exceptions import InvalidActionError
 from models import FermentationSlot, HorneadoRecord, Player, TecnologiaID, TipoHarina
 
 # Acciones que terminan la visita del jugador al completarse con éxito.
-# Ver Milestone 1 (engine.py): Acciones A y E, Horas Extras y Pedido de Urgencia
-# son gratuitas (0 PA) y NO terminan el turno por sí mismas; todas las demás sí.
+# Ver Milestone 1 (engine.py): Acciones A y E, Horas Extras, Pedido de Urgencia y
+# Estasis Biológica son gratuitas (0 PA) y NO terminan el turno por sí mismas;
+# todas las demás sí.
 # La Acción E es gratuita en PA pero se paga en Monedas, y aun así conserva la
 # regla "un espacio, una visita por día" (ACTIONS_REGISTRY.md §1).
 ACCIONES_QUE_TERMINAN_TURNO: Dict[str, bool] = {
@@ -63,6 +64,7 @@ ACCIONES_QUE_TERMINAN_TURNO: Dict[str, bool] = {
     "I": True,
     "horas_extras": False,
     "pedido_urgencia": False,
+    "estasis": False,
 }
 
 # Acciones que REVELAN información oculta al resolverse (robar de un mazo
@@ -216,6 +218,14 @@ def _despachar(
 
     if accion == "horas_extras":
         return manager.accion_auxiliar_horas_extras(player)
+
+    if accion == "estasis":
+        suspender = params.get("suspender")
+        if not isinstance(suspender, bool):
+            raise InvalidActionError(
+                f"'suspender' debe ser un booleano. Recibido: {suspender!r}."
+            )
+        return manager.accion_auxiliar_estasis(player, suspender=suspender)
 
     if accion == "pedido_urgencia":
         recurso = params.get("recurso")
@@ -419,6 +429,11 @@ def describir_accion(
 
     if accion == "horas_extras":
         return "Horas Extras: +1 PA (−1 Dato)"
+
+    if accion == "estasis":
+        if params.get("suspender"):
+            return "Suspendió la Estasis Biológica por esta noche"
+        return "Reactivó la Estasis Biológica"
 
     if accion == "pedido_urgencia":
         if params.get("recurso") == "agua":

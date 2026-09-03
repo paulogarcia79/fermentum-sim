@@ -137,6 +137,12 @@ export interface Player {
   archivo_horneado_exitoso: HorneadoRecord[]
   archivo_colapsos: HorneadoRecord[]
   horas_extras_usadas: boolean
+  /** True si este jugador ha suspendido su Estasis Biológica para la Fase III
+   * de HOY, es decir, si su cultivo va a sufrir el desgaste normal esta noche
+   * pese a tener la Criopreservación. La Fase III la limpia tras aplicar el
+   * desgaste, así que la Estasis se reactiva sola cada día. Inerte en quien no
+   * tiene la mejora. Ver ModalEstasis.vue. */
+  estasis_suspendida: boolean
   /** Ids de espacios de acción con costo de PA (B, C, D, E, F, G, H, I,
    * 'simposio') que este jugador ya visitó hoy -- cada uno solo puede
    * usarse una vez por Día de Laboratorio. Ver BarraAcciones.vue. */
@@ -167,6 +173,11 @@ export interface Player {
    * -- incluida la exencion por Criopreservacion y el -2 de Aletargamiento
    * Invernal -- es una regla de CLIMATE_LOGIC.md y no se duplica aqui. */
   vitalidad_prevista: number
+  /** La misma proyeccion con la Estasis Biologica en el ajuste CONTRARIO al
+   * actual, para que ModalEstasis.vue ensene las dos cifras a la vez sin
+   * calcular nada. La da el servidor (engine.vitalidad_prevista_alterna); en
+   * quien no tiene Criopreservacion coincide con vitalidad_prevista. */
+  vitalidad_prevista_alterna: number
   /** True si el desgaste de esta noche llevara a este jugador a Vitalidad 0
    * por primera vez (episodio de contaminacion NUEVO: -3 Puntos de Maestria).
    * Un jugador ya contaminado devuelve false. Ver engine.riesgo_colapso. */

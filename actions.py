@@ -1446,6 +1446,67 @@ class ActionManager:
         player.datos_investigacion -= 1
         player.otorgar_punto_accion_extra()
 
+    def accion_auxiliar_estasis(self, player: Player, suspender: bool) -> None:
+        """
+        Acción Auxiliar: Estasis Biológica (ACTIONS_REGISTRY.md §3 «Estasis Biológica»).
+
+        Tipo:    Acción gratuita (0 PA). No ocupa espacio de acción.
+        Costo:   Ninguno.
+        Requiere: Tecnología Criopreservación instalada.
+        Efecto:  Fija ``player.estasis_suspendida``. Con la Estasis SUSPENDIDA el
+                 cultivo base sufre esta noche el desgaste metabólico normal
+                 (-1, o -2 con Aletargamiento Invernal); reactivada, lo ignora.
+        Límite:  Ninguno — la bandera la limpia la Fase III tras aplicar el
+                 desgaste (``GameEngine._aplicar_desgaste_metabolico``), así que
+                 la Estasis se reactiva sola cada día.
+
+        Notas de diseño (las cuatro decisiones que sostienen esta acción):
+
+        · **Por qué existe.** La Acción B sella el Dado de Inóculo con la Vitalidad
+          del día (``accion_B_iniciar_receta``) y nada en el juego BAJA la Vitalidad
+          a propósito — el Descarte solo mueve la Acidez. Quien tiene Criopreservación
+          y alimenta a diario sube 2→6 y se queda clavado en 6, de modo que sus masas
+          avanzan 9-11 casillas por noche y sobrepasan de un salto la zona óptima
+          (2-3 casillas) de las recetas Avanzadas. La mejora que se pagó en Datos
+          inhabilitaba el tramo alto del catálogo justo para su dueño.
+        · **Es un interruptor de dos sentidos, no un consumo.** Puede accionarse
+          cuantas veces se quiera durante cualquier visita que el jugador ya tenga;
+          por eso NO llama a ``ocupar_espacio_accion`` ni marca ninguna bandera de
+          "ya usada", y por eso NO aparece en ``GameEngine._jugador_elegible``: no
+          otorga visitas. Un ajuste no es un recurso.
+        · **Por defecto la Estasis está ACTIVA.** El estado de partida es el de
+          siempre, así que quien ignore la acción no pierde nada, y la suspensión
+          dura una sola noche: un ajuste olvidado no puede contaminar a nadie.
+        · **No emite ``GameEvent``.** Es una acción de 0 PA, es decir que ocurre
+          dentro de la ventana de deshacer, y ``GameSession.restaurar_checkpoint``
+          hace ``pickle.loads`` del motor entero: un evento aquí encogería
+          ``engine.eventos`` al deshacer y dejaría colgados los punteros ``since``
+          de los clientes — el invariante que existe para proteger ``AvisoAccion``.
+          El rastro permanente lo deja el evento DESGASTE de la Fase III, que
+          informa de ``estasis_suspendida``.
+
+        Args:
+            player: Jugador que ajusta su Estasis Biológica.
+            suspender: True para sufrir el desgaste de esta noche, False para
+                volver a ignorarlo.
+
+        Raises:
+            InvalidActionError: ``suspender`` no es un booleano.
+            RuleViolationError: El jugador no tiene la Criopreservación instalada.
+        """
+        if not isinstance(suspender, bool):
+            raise InvalidActionError(
+                f"suspender debe ser un booleano. Recibido: {suspender!r}"
+            )
+
+        if not player.tecnologias.criopreservacion:
+            raise RuleViolationError(
+                f"'{player.nombre}' no puede ajustar la Estasis Biológica sin la "
+                "tecnología Criopreservación instalada."
+            )
+
+        player.estasis_suspendida = suspender
+
     def accion_auxiliar_pedido_urgencia(
         self,
         player: Player,

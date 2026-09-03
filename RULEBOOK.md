@@ -305,8 +305,10 @@ Cada jugador dispone de **2 Puntos de Acción (PA)** por Día de Laboratorio.
   el mismo espacio dos veces. El tope es una propiedad **del espacio**, no del coste. **Reclamar la
   Jefatura es la excepción y va al revés:** ese espacio se agota para TODA la mesa en cuanto un
   jugador lo visita, no solo para él. Alimentar el
-  Cultivo y Horas Extras se limitan con su propio marcador de "ya usada", y Pedido de Urgencia no
-  tiene límite alguno (ver sus entradas en el Catálogo de Acciones).
+  Cultivo y Horas Extras se limitan con su propio marcador de "ya usada", y ni Pedido de Urgencia ni
+  Estasis Biológica tienen límite alguno — la segunda porque es un **ajuste y no un consumo**: un
+  interruptor de dos sentidos que puedes accionar las veces que quieras y que, por lo mismo, tampoco
+  te mantiene en la rotación de visitas (ver sus entradas en el Catálogo de Acciones).
 - **Sin escasez de insumos:** a diferencia de las recetas del mercado (que sí ocupan un espacio
   limitado), la harina y el agua ya no se agotan por turno — son un precio compartido (Bolsa de
   Harinas) y una tabla de precio por temperatura (Suministro Hídrico Global) que cualquier jugador
@@ -596,6 +598,32 @@ penalización. Ese riesgo es el contrapeso del escalón caro: el juego avisa, pe
 **Costo:** 1 Dato de Investigación. Otorga de inmediato +1 Punto de Acción adicional para usar ese
 mismo día. Solo puede activarse **una vez por Día de Laboratorio** por jugador.
 
+#### Estasis Biológica
+
+**Costo:** ninguno. **Requiere la tecnología Criopreservación.** No ocupa espacio de acción, no
+termina tu turno y no tiene límite de usos.
+
+Tu Criopreservación mantiene el cultivo en estasis: ignora el desgaste metabólico cada noche. Esta
+acción decide si, **sólo por esta noche**, lo dejas desgastarse con normalidad (−1 Vitalidad, −2 con
+Aletargamiento Invernal vigente). Es un interruptor de dos sentidos: puedes suspender la Estasis y
+volver a activarla cuantas veces quieras mientras sea tu turno. La Fase III **la reactiva sola**, así
+que la suspensión nunca dura más de una noche y un ajuste olvidado no puede contaminarte.
+
+Se decide en la Fase II, con la carta de clima ya sobre la mesa: eliges sabiendo la temperatura del
+día y si hay Aletargamiento.
+
+> **Por qué querrías desgastar tu propio cultivo.** Iniciar Receta sella el **Dado de Inóculo** con
+> tu Vitalidad de ese día, y ese número se suma al avance de esa masa **todas las noches**. Nada más
+> en el juego baja la Vitalidad a propósito — el Descarte sólo mueve la Acidez —, así que quien tiene
+> Criopreservación y alimenta a diario sube hasta 6 y se queda ahí clavado: sus masas avanzan de 9 a
+> 11 casillas por noche, y las recetas Avanzadas tienen zonas óptimas de 2 o 3 casillas. Pasarse de
+> largo dejaba de ser un error de cálculo para ser una certeza, precisamente para quien había pagado
+> la mejora. Con la suspensión, la Vitalidad vuelve a ser un dial de dos sentidos, como la Acidez.
+
+**Ojo:** suspender la Estasis con Vitalidad 1 (o 2 bajo Aletargamiento) te lleva a **0**, es decir a
+Contaminación: −3 Puntos de Maestría y no puedes iniciar recetas hasta ejecutar un Protocolo de
+Emergencia. El juego te enseña la cifra resultante antes de confirmar, pero no te lo impide.
+
 #### Pedido de Urgencia
 
 **Costo:** 1 Dato de Investigación. Ignora el Mercado por completo — sin importar el precio
@@ -778,6 +806,9 @@ Al final de la Fase III, todos los cultivos base sufren desgaste:
 - **Con Aletargamiento Invernal vigente:** −2 Vitalidad.
 - **Con la tecnología Criopreservación instalada:** el jugador ignora el desgaste por completo
   ese día (Estasis Biológica) — ni −1 ni −2, sin importar el clima.
+- **Con la Estasis suspendida esta noche:** ese mismo jugador sufre el desgaste normal que le
+  tocaría sin la mejora (−1, o −2 con Aletargamiento). Es una decisión suya, tomada en la Fase II
+  con la acción gratuita «Estasis Biológica» (§7); la Fase III reactiva la Estasis al terminar.
 
 > **La cuenta que conviene tener presente.** El desgaste resta 1 y Alimentar el Cultivo repone 1
 > una vez al día, así que **quien alimenta a diario se queda donde empezó**: en Vitalidad 2. Desde
@@ -875,7 +906,7 @@ importar lo que costó: ver [Desarrollo Tecnológico](#112-cálculo-de-puntos-de
 | **Incubadora** | 3 Datos | Permite ajustar la temperatura local ±5°C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima. |
 | **Cámara B** | 4 Datos | Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas. |
 | **Módulo Analítico** | 4 Datos | **Ensancha la Zona Óptima 1 casilla por cada lado** — se come una casilla del Pre-fermento por abajo y una del Colapso por arriba, así que **también retrasa el colapso**. Además sube el rendimiento del horneado: **2 Datos** en cualquier punto de la Zona Óptima y **3** en el centro exacto. |
-| **Criopreservación** | 2 Datos | Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III. |
+| **Criopreservación** | 2 Datos | Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III. Puedes **suspenderla noche a noche** con la acción gratuita del mismo nombre (§7) para dejar bajar tu Vitalidad cuando te convenga un Dado de Inóculo más bajo. |
 | **Comerciante** | 3 Datos | Mejores condiciones de compra: **cada transacción de compra** de tu Acción C — bolsa o media bolsa de harina, lote de agua y la firma del Contrato con el Molino — te cuesta **1 Moneda menos**, con un mínimo de 1. **No mejora ninguna venta** y **no altera el movimiento del visor**: tu compra lo desplaza igual que la de cualquiera. |
 
 ---

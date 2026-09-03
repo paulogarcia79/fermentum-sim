@@ -382,6 +382,22 @@ def test_mensaje_del_descarte_nombra_recurso_y_sentido() -> None:
     assert bajar.endswith("Monedas)")
 
 
+def test_mensaje_de_la_estasis_en_sus_dos_sentidos() -> None:
+    """
+    La Estasis es el unico interruptor del juego, asi que su linea del registro
+    tiene que decir HACIA DONDE se movio: "suspendio" y "reactivo" describen
+    estados opuestos de la misma noche y una sola frase generica no serviria.
+    """
+    engine, manager, jugador = _motor_y_jugador()
+    jugador.tecnologias.criopreservacion = True
+
+    suspender = _describir(engine, manager, jugador, "estasis", {"suspender": True})
+    assert suspender == "Suspendió la Estasis Biológica por esta noche"
+
+    reactivar = _describir(engine, manager, jugador, "estasis", {"suspender": False})
+    assert reactivar == "Reactivó la Estasis Biológica"
+
+
 def test_mensaje_del_pedido_de_urgencia_en_sus_dos_ramas() -> None:
     from actions import AGUA_PEDIDO_URGENCIA
 

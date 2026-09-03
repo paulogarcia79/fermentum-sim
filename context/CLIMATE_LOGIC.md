@@ -48,7 +48,14 @@ Durante la Fase III (Fermentación), todas las masas activas en las estaciones d
 Tras procesar el avance de todas las masas, el entorno aplica el consumo de energía a los cultivos base (Masa Madre) de todos los jugadores:
 * **Desgaste Estándar:** La Vitalidad del cultivo base se reduce en `-1`.
 * **Modificador Aletargamiento:** Si el evento climático vigente es "Aletargamiento Invernal", la reducción de Vitalidad es `-2`.
+* **Criopreservación (Estasis Biológica):** el jugador que la tiene instalada **ignora el desgaste por completo** ese día — ni −1 ni −2, sin importar el clima.
+* **Estasis suspendida:** salvo que ese mismo jugador haya suspendido la Estasis para esta noche con la acción gratuita «Estasis Biológica» (ACTIONS_REGISTRY.md §3), en cuyo caso sufre el desgaste normal que le tocaría sin la mejora. La bandera (`Player.estasis_suspendida`) la limpia esta misma fase tras aplicar el desgaste, así que la Estasis se reactiva sola cada día.
 * **Límite Suelo:** La Vitalidad nunca puede descender por debajo de `0`. (Si llega a 0, el jugador queda penalizado y requiere Protocolos de Emergencia).
+
+### Por qué la Estasis se puede suspender
+La Acción B sella el `dado_inoculo` con la Vitalidad del día (§3, punto 1: el avance usa el valor **sellado**, no la Vitalidad viva), y ninguna acción del juego **baja** la Vitalidad a propósito — el Descarte solo mueve la Acidez. Un jugador con Criopreservación que alimenta a diario sube 2→6 y se queda clavado en 6, de modo que cada masa nueva avanza `temperatura//5 + 6 (± incubadora)` = 9 a 11 casillas por noche. Contra las 2–3 casillas de zona óptima de una receta Avanzada, eso significa pasar de largo en el segundo avance sin jugada posible que lo evite: la mejora que se pagó en Datos inhabilitaba el tramo alto del catálogo justo para su dueño. Poder renunciar a la Estasis una noche concreta convierte la Vitalidad en un dial de dos sentidos, igual que la Acidez ya lo era.
+
+La decisión se toma en la Fase II, con la carta de clima **ya revelada**: se sabe la temperatura del día y si hay Aletargamiento antes de elegir. Esa es también la razón de que baste una acción gratuita y no haga falta una parada nueva entre fases.
 
 ### El Aletargamiento ya no es una contaminación inevitable
 Como la Acción A repone `+1` Vitalidad una vez al día y el desgaste estándar resta `-1`, un jugador que alimenta a diario **orbita en su Vitalidad inicial**. Con la Vitalidad inicial de 1 que tenía el juego, la secuencia era: alimentar → 2, Aletargamiento `-2` → **0**. Contaminación garantizada, se jugara como se jugara, y las dos copias de la carta en el mazo de 30 hacían que le tocara a alguien casi todas las partidas. No era una decisión mal tomada; era el barajado.

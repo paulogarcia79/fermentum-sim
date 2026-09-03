@@ -674,6 +674,13 @@ class Technologies:
             habilita el inicio de recetas de grado Avanzado.
         criopreservacion: Efecto pasivo "Estasis Biológica" — durante la Fase III,
             el cultivo base ignora el desgaste metabólico normal (no resta Vitalidad).
+            La Estasis es el estado **por defecto**, pero su dueño puede suspenderla
+            para una noche concreta con la acción gratuita ``estasis``
+            (``Player.estasis_suspendida``): sin esa válvula, alimentar a diario
+            empuja la Vitalidad a 6 y la deja clavada ahí, y como la Acción B sella
+            el Dado de Inóculo con la Vitalidad del día, las recetas Avanzadas
+            (zona óptima de 2-3 casillas) se vuelven inhorneables justo para quien
+            pagó la mejora.
         comerciante: Mejores condiciones de compra en la Acción C: cada transacción
             de COMPRA de la visita (bolsa o media bolsa de harina, lote de agua,
             firma del Contrato con el Molino) cuesta ``DESCUENTO_COMERCIANTE``
@@ -879,6 +886,23 @@ class Player:
     Solo se puede usar una vez por día. Se resetea en resetear_puntos_accion().
     """
 
+    estasis_suspendida: bool = False
+    """
+    True si el jugador ha suspendido la Estasis Biológica para la Fase III de HOY,
+    es decir, si ha pedido que su cultivo base sufra el desgaste metabólico normal
+    esta noche pese a tener la Criopreservación instalada.
+
+    Solo tiene sentido con ``tecnologias.criopreservacion``; en cualquier otro
+    jugador es inerte (el desgaste ya se aplica de todos modos). La bandera la
+    limpia la propia Fase III tras aplicar el desgaste
+    (``GameEngine._aplicar_desgaste_metabolico``), de modo que la Estasis se
+    reactiva sola cada día y un ajuste olvidado no puede contaminar a nadie.
+
+    **No es un marcador de "ya usada"**: la acción ``estasis`` es un interruptor
+    de dos sentidos que puede accionarse cuantas veces se quiera, así que este
+    campo NO participa en ``GameEngine._jugador_elegible`` — no otorga visitas.
+    """
+
     acciones_pa_usadas_hoy: List[str] = field(default_factory=list)
     """
     Ids de espacios de acción con costo de PA (B, C, D, E, F, G, H, I,
@@ -990,6 +1014,7 @@ class Player:
         self.archivo_horneado_exitoso = []
         self.archivo_colapsos = []
         self.horas_extras_usadas = False
+        self.estasis_suspendida = False
         self.en_estado_contaminacion = False
         self.contador_contaminaciones = 0
         self.accion_alimentar_usada = False

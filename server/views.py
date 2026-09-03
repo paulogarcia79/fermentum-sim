@@ -139,6 +139,11 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
             PRECIO_RENTA[r.recipe.grado] for r in jugador.archivo_horneado_exitoso
         )
         datos_jugador["vitalidad_prevista"] = engine.vitalidad_prevista(jugador)
+        # La misma proyección con la Estasis Biológica en el ajuste contrario:
+        # es lo que ModalEstasis.vue enseña para que la decisión se tome viendo
+        # las dos cifras. Va aquí y no en el cliente por el mismo motivo que la
+        # anterior — el -2 de Aletargamiento es una regla de CLIMATE_LOGIC.md.
+        datos_jugador["vitalidad_prevista_alterna"] = engine.vitalidad_prevista_alterna(jugador)
         datos_jugador["en_riesgo_colapso"] = engine.riesgo_colapso(jugador)
         # Zonas del track ya ampliadas por el Módulo Analítico, receta por receta,
         # SOLO en las recetas que este jugador posee. Las del mercado conservan las

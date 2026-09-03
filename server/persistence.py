@@ -45,8 +45,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 17
+VERSION_FORMATO = 18
 """
+Bumped a 18: `Player` gana `estasis_suspendida`, la valvula de la Criopreservacion
+(la Estasis se puede suspender una noche para dejar bajar la Vitalidad y con ella
+el Dado de Inoculo). Un pickle viejo trae `Player` sin ese campo, y el desgaste de
+la primera Fase III tras restaurar lo leeria (`GameEngine._delta_desgaste`).
+
 Bumped a 17: `GameSession` gana `registro_acciones` (el log append-only de los
 movimientos de jugador) y `checkpoint_registro_len`. Un pickle viejo trae
 sesiones sin ambos atributos, y el primer `restaurar_checkpoint` tras cargarlo

@@ -244,3 +244,62 @@ def test_descarte_y_deshacer_no_alteran_el_log_de_eventos() -> None:
 
     cliente.post(f"/games/{room_id}/undo", headers={"X-Player-Token": token})
     assert len(sesion.engine.eventos) == antes
+
+
+def test_estasis_y_deshacer_no_alteran_el_log_de_eventos() -> None:
+    """
+    Mismo invariante para «Estasis Biológica», y aquí importa doblemente: la
+    accion cambia una bandera que la Fase III LEE esa misma noche, asi que la
+    tentacion de anunciarla con un GameEvent es real. No lo hace -- al ser 0 PA
+    vive dentro de la ventana de deshacer, y `restaurar_checkpoint` repone el
+    motor desde un pickle, de modo que un evento suyo haria ENCOGER
+    `engine.eventos`. El rastro lo deja el DESGASTE de la Fase III.
+    """
+    cliente, room_id, tokens, sesion = _partida_iniciada()
+    idx = _indice_del_jugador_en_turno(cliente, room_id, tokens)
+    token = _token_del_jugador_en_turno(cliente, room_id, tokens)
+    sesion.engine.players[idx].tecnologias.criopreservacion = True
+    antes = len(sesion.engine.eventos)
+
+    r = cliente.post(
+        f"/games/{room_id}/actions",
+        headers={"X-Player-Token": token},
+        json={"accion": "estasis", "params": {"suspender": True}},
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["players"][idx]["estasis_suspendida"] is True
+    # La proyeccion que ve el cliente ya refleja el desgaste de esta noche.
+    jugador = r.json()["players"][idx]
+    assert jugador["vitalidad_prevista"] == max(0, jugador["vitalidad"] - 1)
+    assert len(sesion.engine.eventos) == antes
+
+    cliente.post(f"/games/{room_id}/undo", headers={"X-Player-Token": token})
+    assert len(sesion.engine.eventos) == antes
+
+
+def test_estasis_emite_su_aviso_y_lo_rechazado_no_suena() -> None:
+    """El canal efimero: la accion suena en todas las pestañas, pero una
+    rechazada (sin la mejora instalada) no emite ningun aviso."""
+    cliente, room_id, tokens, sesion = _partida_iniciada()
+    idx = _indice_del_jugador_en_turno(cliente, room_id, tokens)
+    token = _token_del_jugador_en_turno(cliente, room_id, tokens)
+    cola = _ColaFalsa()
+    sesion.suscriptores.append(cola)
+
+    # Sin Criopreservación: rechazada, y por tanto muda.
+    r = cliente.post(
+        f"/games/{room_id}/actions",
+        headers={"X-Player-Token": token},
+        json={"accion": "estasis", "params": {"suspender": True}},
+    )
+    assert r.status_code >= 400
+    assert "estasis" not in cola.acciones()
+
+    sesion.engine.players[idx].tecnologias.criopreservacion = True
+    r = cliente.post(
+        f"/games/{room_id}/actions",
+        headers={"X-Player-Token": token},
+        json={"accion": "estasis", "params": {"suspender": True}},
+    )
+    assert r.status_code == 200, r.text
+    assert cola.acciones() == ["estasis"]

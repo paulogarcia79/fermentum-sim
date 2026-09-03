@@ -86,6 +86,10 @@ export const SONIDOS_ACCION: Record<IdSonido, Sonido> = {
   descarte: gratuita(1174.66), // Re6
   horas_extras: gratuita(1244.5), // Re#6
   pedido_urgencia: gratuita(1396.9), // Fa6
+  // Estasis Biologica: el tic mas grave de la familia. Es la unica gratuita que
+  // no gasta nada -- solo mueve un interruptor -- y bajar la nota es lo que la
+  // separa de oido de las otras cuatro sin sacarla del timbre de su zona.
+  estasis: gratuita(932.33), // La#5
 
   // --- Protocolos de emergencia ------------------------------------------
   H: emergencia(220, 164.81), // La3 -> Mi3

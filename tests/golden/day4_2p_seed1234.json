@@ -152,6 +152,7 @@
       "archivo_horneado_exitoso": [],
       "archivo_colapsos": [],
       "horas_extras_usadas": false,
+      "estasis_suspendida": false,
       "acciones_pa_usadas_hoy": [],
       "contador_contaminaciones": 0
     },
@@ -272,6 +273,7 @@
       "archivo_horneado_exitoso": [],
       "archivo_colapsos": [],
       "horas_extras_usadas": false,
+      "estasis_suspendida": false,
       "acciones_pa_usadas_hoy": [],
       "contador_contaminaciones": 0
     }

@@ -238,6 +238,16 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         not player.horas_extras_usadas and player.datos_investigacion >= 1,
         "Ya se usó hoy" if player.horas_extras_usadas else "Sin Datos de Investigación",
     )
+    # Estasis Biológica: interruptor, no consumo. Se lista SIEMPRE (como H e I)
+    # para que el espacio se vea apagado y el jugador aprenda que existe antes de
+    # necesitarlo; sin marca de "ya usada", porque puede accionarse en los dos
+    # sentidos cuantas veces se quiera. Sin puerta de PA ni de contaminación:
+    # accionarlo con Vitalidad 0 es inocuo.
+    agregar(
+        "estasis",
+        player.tecnologias.criopreservacion,
+        "Requiere Criopreservación",
+    )
 
     return resultados
 

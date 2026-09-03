@@ -14,6 +14,7 @@ import ModalG from './acciones/ModalG.vue'
 import ModalSimposio from './acciones/ModalSimposio.vue'
 import ModalConfirmacion from './acciones/ModalConfirmacion.vue'
 import ModalPedidoUrgencia from './acciones/ModalPedidoUrgencia.vue'
+import ModalEstasis from './acciones/ModalEstasis.vue'
 import {
   ACCIONES_QUE_REVELAN,
   GRUPOS_ACCION,
@@ -49,6 +50,11 @@ function jugadoresQueUsaron(id: IdAccion): Player[] {
   if (id === 'A') return store.estado!.players.filter((p) => p.accion_alimentar_usada)
   if (id === 'horas_extras') return store.estado!.players.filter((p) => p.horas_extras_usadas)
   if (id === 'pedido_urgencia') return []
+  // Estasis no es un espacio que se gaste: el marcador no dice "ya lo usó" sino
+  // "tiene la Estasis suspendida ESTA noche", que es estado visible todo el día
+  // y se limpia solo en la Fase III. Por eso tampoco está en
+  // ESPACIOS_GRATIS_UNA_VEZ_POR_DIA -- se puede accionar en los dos sentidos.
+  if (id === 'estasis') return store.estado!.players.filter((p) => p.estasis_suspendida)
   return store.estado!.players.filter((p) => p.acciones_pa_usadas_hoy.includes(id))
 }
 
@@ -313,6 +319,7 @@ async function pasarDeVerdad() {
       @cerrar="cerrar"
     />
     <ModalPedidoUrgencia v-if="modalAbierto === 'pedido_urgencia'" @cerrar="cerrar" />
+    <ModalEstasis v-if="modalAbierto === 'estasis'" @cerrar="cerrar" />
   </section>
 </template>
 

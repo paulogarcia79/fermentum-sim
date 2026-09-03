@@ -20,6 +20,7 @@ export type IdAccion =
   | 'I'
   | 'horas_extras'
   | 'pedido_urgencia'
+  | 'estasis'
 
 /**
  * Todo lo que puede aparecer como una linea del registro de la partida: las
@@ -51,6 +52,8 @@ export const descripcionesAcciones: Record<IdAccion, string> = {
   I: 'Solo disponible con Vitalidad en 0 (penalización de -3 Puntos de Maestría). Costo: 1 Dato de Investigación. Limpia la Contaminación y fija Vitalidad=2, Acidez=2.',
   horas_extras:
     'Gratis, en cualquier momento de tu turno, una vez por día. Costo: 1 Dato de Investigación. Otorga inmediatamente +1 Punto de Acción.',
+  estasis:
+    'Solo con la Criopreservación instalada. Gratis, sin costo, sin límite de usos: no ocupa espacio de acción ni termina tu turno. Decide si esta noche tu cultivo base sufre el desgaste metabólico normal (−1 Vitalidad, −2 con Aletargamiento Invernal) en vez de ignorarlo. Sirve para BAJAR la Vitalidad a voluntad: la Acción B sella el Dado de Inóculo con tu Vitalidad del día, así que una Vitalidad alta hace avanzar tus masas demasiado rápido para la zona óptima de las recetas Avanzadas. La Estasis se reactiva sola al día siguiente.',
   pedido_urgencia: `Gratis, sin límite por ronda. Costo: 1 Dato de Investigación. Ignora el mercado y entrega una parcela FIJA: ${fmtHarina(HARINA_PEDIDO_URGENCIA_PCT)} de un tipo de Harina (media bolsa) o ${fmtAgua(AGUA_PEDIDO_URGENCIA_TOKENS)} de Agua — uno de los dos, no ambos, y tú solo eliges cuál. Las cantidades son fijas porque el Pedido es un rescate, no un atajo para saltarse el mercado: media bolsa y no una entera para que revender lo pedido deje de ser el mejor negocio de la partida, y un lote de agua y no los que quieras porque 1 Dato llegaba a cubrir toda el agua de la partida.`,
 }
 
@@ -119,6 +122,7 @@ export const GRUPOS_ACCION: readonly GrupoAccion[] = [
       { id: 'descarte', etiqueta: 'Descarte', costo: 'Agua o Monedas' },
       { id: 'horas_extras', etiqueta: 'Horas Extras', costo: '0 PA' },
       { id: 'pedido_urgencia', etiqueta: 'Pedido de Urgencia', costo: '0 PA' },
+      { id: 'estasis', etiqueta: 'Estasis Biológica', costo: '0 PA' },
     ],
   },
   {

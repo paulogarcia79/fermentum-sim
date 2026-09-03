@@ -265,6 +265,14 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
             @cerrar="tecAbierta = null"
           >
             {{ EMOJI_TECNOLOGIA[tec.id] }} {{ tec.nombre }}
+            <!-- La Criopreservacion es la unica mejora con un ajuste diario: si su
+                 dueno suspendio la Estasis, el cultivo se desgasta esta noche. Se
+                 dice aqui porque es donde se mira "que tengo instalado"; el
+                 interruptor vive en la barra de acciones. -->
+            <span
+              v-if="tec.id === 'criopreservacion' && jugador.estasis_suspendida"
+              class="nota-slot"
+            >suspendida esta noche</span>
             <button
               type="button"
               class="boton-info"
@@ -541,6 +549,12 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
   border-style: solid;
   border-color: var(--cobre);
   color: var(--tinta);
+}
+
+.nota-slot {
+  display: block;
+  font-size: var(--t-micro);
+  color: var(--riesgo);
 }
 
 .mejora-slot .boton-info {

@@ -1219,6 +1219,10 @@ class GameEngine:
         for player in orden:
             player.accion_alimentar_usada = False
             player.acciones_pa_usadas_hoy = []
+            # La Fase III ya la limpia tras aplicar el desgaste; se repite aquí
+            # para que "falsa al empezar toda Fase II" sea visible en el mismo
+            # sitio que el resto de banderas de día.
+            player.estasis_suspendida = False
         for player in orden:
             player.resetear_puntos_accion()
 
@@ -1642,7 +1646,7 @@ class GameEngine:
             return max(0, receta.tokens_agua - 1)
         return receta.tokens_agua
 
-    def _delta_desgaste(self, player: Player) -> int:
+    def _delta_desgaste(self, player: Player, suspendida: Optional[bool] = None) -> int:
         """
         Desgaste de Vitalidad que ``player`` sufrirá en la Fase III de HOY.
 
@@ -1651,12 +1655,27 @@ class GameEngine:
         ``vitalidad_prevista``/``riesgo_colapso`` (que lo predicen para la UI),
         de modo que el aviso al jugador no pueda divergir del efecto real.
 
+        Args:
+            player: Jugador cuyo desgaste se calcula.
+            suspendida: Fuerza el estado de la Estasis en lugar de leer
+                ``player.estasis_suspendida``. Lo usa
+                ``vitalidad_prevista_alterna`` para proyectar el ajuste
+                contrario sin tocar el estado ni repetir la fórmula.
+
         Returns:
-            0 si el jugador tiene Criopreservación (Estasis Biológica);
-            si no, ``environment.desgaste_vitalidad_fase_3`` (-1, o -2 con
+            0 si el jugador tiene Criopreservación (Estasis Biológica) y NO la ha
+            suspendido para esta noche (``Player.estasis_suspendida``); si no,
+            ``environment.desgaste_vitalidad_fase_3`` (-1, o -2 con
             Aletargamiento Invernal activo).
+
+        La suspensión es la válvula de escape de la Criopreservación: la Acción B
+        sella el Dado de Inóculo con la Vitalidad del día, así que sin una forma
+        deliberada de BAJAR la Vitalidad, su dueño acaba clavado en 6 y sus masas
+        sobrepasan de un salto la zona óptima de las recetas Avanzadas.
         """
-        if player.tecnologias.criopreservacion:
+        if suspendida is None:
+            suspendida = player.estasis_suspendida
+        if player.tecnologias.criopreservacion and not suspendida:
             return 0
         return self._environment.desgaste_vitalidad_fase_3
 
@@ -1669,6 +1688,25 @@ class GameEngine:
         esta predicción es exacta, no una estimación.
         """
         return max(0, min(6, player.vitalidad + self._delta_desgaste(player)))
+
+    def vitalidad_prevista_alterna(self, player: Player) -> int:
+        """
+        Vitalidad que tendría ``player`` esta noche con la Estasis Biológica en
+        el ajuste CONTRARIO al actual.
+
+        Es lo que el jugador necesita para decidir si suspende la Estasis o no:
+        el modal enseña las dos cifras a la vez. Se calcula aquí, y no en el
+        cliente, por el mismo motivo que ``vitalidad_prevista`` — el desgaste
+        (con el -2 de Aletargamiento Invernal) es una regla de CLIMATE_LOGIC.md
+        y duplicarla en TypeScript sería un punto de deriva garantizado.
+
+        En un jugador sin Criopreservación la bandera es inerte, así que este
+        valor coincide con ``vitalidad_prevista``.
+        """
+        delta: int = self._delta_desgaste(
+            player, suspendida=not player.estasis_suspendida
+        )
+        return max(0, min(6, player.vitalidad + delta))
 
     def riesgo_colapso(self, player: Player) -> bool:
         """
@@ -1692,7 +1730,14 @@ class GameEngine:
           · Estándar: ``-1`` Vitalidad.
           · Aletargamiento Invernal activo: ``-2`` Vitalidad.
           · Criopreservación activa ("Estasis Biológica", GDD v0.0.2 Módulo III §5):
-            el jugador ignora el desgaste por completo este día (``delta = 0``).
+            el jugador ignora el desgaste por completo este día (``delta = 0``),
+            **salvo** que haya suspendido la Estasis para esta noche con la acción
+            gratuita ``estasis``, en cuyo caso sufre el desgaste normal.
+          · La bandera ``Player.estasis_suspendida`` se limpia AQUÍ, tras aplicar
+            el desgaste: la Estasis se reactiva sola cada día, de modo que un
+            ajuste olvidado nunca puede contaminar a nadie. Este es el único
+            registro permanente de la suspensión — la acción en sí no emite
+            ningún ``GameEvent``, por vivir dentro de la ventana de deshacer.
           · Límite suelo: la Vitalidad nunca cae por debajo de 0.
           · Consecuencia de llegar a 0: estado de Contaminación + penalización
             de -3 PM (gestionado automáticamente por ``Player.ajustar_vitalidad``).
@@ -1701,15 +1746,23 @@ class GameEngine:
             delta: int = self._delta_desgaste(player)
             vit_antes: int = player.vitalidad
             contaminado_antes: bool = player.en_estado_contaminacion
+            estasis_suspendida: bool = player.estasis_suspendida
 
             player.ajustar_vitalidad(delta)
+            player.estasis_suspendida = False
 
+            sufijo: str = " (Estasis suspendida)" if estasis_suspendida else ""
             self._emit(
                 EventoTipo.DESGASTE,
                 jugador_idx=jugador_idx,
-                datos={"delta": delta, "vitalidad_antes": vit_antes, "vitalidad_despues": player.vitalidad},
+                datos={
+                    "delta": delta,
+                    "vitalidad_antes": vit_antes,
+                    "vitalidad_despues": player.vitalidad,
+                    "estasis_suspendida": estasis_suspendida,
+                },
                 mensaje=f"{player.nombre} sufre desgaste metabólico: "
-                        f"Vitalidad {vit_antes} → {player.vitalidad}.",
+                        f"Vitalidad {vit_antes} → {player.vitalidad}{sufijo}.",
             )
             if player.en_estado_contaminacion and not contaminado_antes:
                 self._emit(
