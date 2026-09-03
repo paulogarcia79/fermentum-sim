@@ -39,7 +39,12 @@ from actions import (
     OPERACIONES_HARINA,
     RECURSO_MOLINO,
 )
-from engine import CANTIDAD_BOLSA_PCT, DATOS_JEFATURA, GameEngine
+from engine import (
+    CANTIDAD_BOLSA_PCT,
+    DATOS_JEFATURA,
+    MONEDAS_MOSTRADOR,
+    GameEngine,
+)
 from exceptions import InvalidActionError
 from models import FermentationSlot, HorneadoRecord, Player, TecnologiaID, TipoHarina
 
@@ -60,6 +65,7 @@ ACCIONES_QUE_TERMINAN_TURNO: Dict[str, bool] = {
     "G": True,
     "simposio": True,
     "jefatura": True,
+    "mostrador": True,
     "H": True,
     "I": True,
     "horas_extras": False,
@@ -208,6 +214,10 @@ def _despachar(
         # Sin parámetros: el espacio es único en la mesa y su único efecto
         # configurable es quién lo ocupa, que ya viene en `player`.
         return manager.accion_reclamar_jefatura(player)
+
+    if accion == "mostrador":
+        # Sin parámetros: no hay nada que elegir, que es exactamente el punto.
+        return manager.accion_turno_mostrador(player)
 
     if accion == "H":
         return manager.accion_H_recultivo_manual(player)
@@ -437,6 +447,9 @@ def describir_accion(
 
     if accion == "jefatura":
         return f"Reclamó la Jefatura de Investigación (+{DATOS_JEFATURA} Datos)"
+
+    if accion == "mostrador":
+        return f"Atendió el mostrador (+{MONEDAS_MOSTRADOR} Moneda)"
 
     if accion == "H":
         return "Re-cultivo Manual: limpió la Contaminación"

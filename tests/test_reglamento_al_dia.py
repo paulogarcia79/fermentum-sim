@@ -49,6 +49,7 @@ from actions import (
 from engine import (
     DATOS_JEFATURA,
     DATOS_SIMPOSIO,
+    MONEDAS_MOSTRADOR,
     PRECIO_AGUA,
     PRECIO_CONTRATO_MOLINO,
     PRECIO_RECETA,
@@ -672,6 +673,24 @@ def test_la_jefatura_se_reclama_y_paga_datos(docs, doc) -> None:
     accion = _seccion(docs[doc], "Reclamar la Jefatura", largo=900)
     assert re.search(r"\b%d\b.{0,40}Dato" % DATOS_JEFATURA, accion), (
         f"{doc}: la acción no declara que paga {DATOS_JEFATURA} Dato"
+    )
+
+
+@AMBOS
+def test_el_mostrador_paga_monedas(docs, doc) -> None:
+    """La cifra del suelo del tablero, y la regla que lo hace repetible.
+
+    Se comprueba la seccion y no el documento entero porque «1 Moneda» aparece
+    en media docena de tablas de precio. La segunda mitad (no ocupa espacio)
+    va aqui porque es lo que distingue esta accion de las otras siete que
+    cuestan 1 PA: sin ella, el segundo PA del dia se queda tan hueco como antes.
+    """
+    bloque = _seccion(docs[doc], "Turno de Mostrador", largo=900)
+    assert re.search(r"\b%d\b.{0,40}Moneda" % MONEDAS_MOSTRADOR, bloque), (
+        f"{doc}: el Mostrador no declara que paga {MONEDAS_MOSTRADOR} Moneda"
+    )
+    assert re.search(r"no (se agota|ocupa)", bloque), (
+        f"{doc}: el Mostrador no dice que no ocupa espacio de accion"
     )
 
 

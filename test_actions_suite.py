@@ -10,7 +10,7 @@ from models import (
     Player, FermentationSlot, HorneadoRecord, TecnologiaID, TipoHarina,
     Grado, RECIPE_CATALOG, Environment,
 )
-from engine import GameEngine, Market
+from engine import GameEngine, Market, MONEDAS_MOSTRADOR
 from actions import ActionManager, AGUA_PEDIDO_URGENCIA, HARINA_PEDIDO_URGENCIA
 from exceptions import (
     NotEnoughActionPointsError, MissingResourceError,
@@ -533,6 +533,24 @@ xraises(RuleViolationError, "Incubadora sobre estacion vacia", lambda: manager.a
 
 p1.estaciones_fermentacion[0] = None
 p1.tecnologias.incubadora = False
+
+# ========================================================================
+print("--- Turno de Mostrador ---")
+p1.puntos_accion = 2
+p1.monedas = 0
+p1.acciones_pa_usadas_hoy = []
+
+manager.accion_turno_mostrador(p1)
+check("Mostrador: paga MONEDAS_MOSTRADOR", lambda: None if p1.monedas == MONEDAS_MOSTRADOR else (_ for _ in ()).throw(AssertionError(f"monedas={p1.monedas}")))
+check("Mostrador: gasta 1 PA", lambda: None if p1.puntos_accion == 1 else (_ for _ in ()).throw(AssertionError()))
+check("Mostrador: NO ocupa espacio", lambda: None if p1.acciones_pa_usadas_hoy == [] else (_ for _ in ()).throw(AssertionError(f"usados={p1.acciones_pa_usadas_hoy}")))
+
+# El invariante que justifica la accion: se repite mientras queden PA, porque
+# el hueco que viene a tapar puede darse dos veces el mismo dia.
+manager.accion_turno_mostrador(p1)
+check("Mostrador: repetible el mismo dia", lambda: None if p1.monedas == 2 * MONEDAS_MOSTRADOR and p1.puntos_accion == 0 else (_ for _ in ()).throw(AssertionError()))
+
+xraises(NotEnoughActionPointsError, "Mostrador sin PA", lambda: manager.accion_turno_mostrador(p1))
 
 # ========================================================================
 print("--- Protocolo H: Re-cultivo Manual ---")

@@ -201,6 +201,42 @@ total, repartido por rotación y no por riqueza. Está limitado por competencia,
 no por precio, que es lo que impide que se convierta en un grifo.
 """
 
+MONEDAS_MOSTRADOR: int = 1
+"""
+Monedas que paga el «Turno de Mostrador» (1 PA, sin límite diario).
+
+Es el **suelo** del tablero: la acción que existe para que un jugador con PA y
+sin ninguna jugada útil no tenga que tirar el resto del día pasando turno. Antes
+de ella, un jugador sin recetas en la carpeta, con la masa aún en Crecimiento,
+sin Monedas, sin Datos y con la Jefatura ya reclamada por otro no tenía más
+salida que ``pasar_turno``, que renuncia también a las acciones gratuitas.
+
+Uno, y no dos, es una decisión de diseño y no una cifra provisional. 1 Moneda es
+exactamente lo que valía la Acción E retirada (1 PA por 1 casilla de avance), la
+acción que nadie tomaba: ese es justamente el listón que se busca. Cualquier
+acción real domina al Mostrador, así que nunca es una línea de juego — es lo que
+se hace cuando no hay nada que hacer.
+
+**Por qué se paga en Monedas y no en Datos ni en Vitalidad.** En Datos formaría
+un bucle con Horas Extras (1 Dato → +1 PA → 1 Dato) y pisaría a la Jefatura, que
+ya paga 1 Dato por 1 PA *y además* el orden de turno. En Vitalidad pisaría a la
+Acción A, que da +1 por 10% de harina y encima cuesta 0 PA. Las Monedas son la
+divisa más líquida (compran Pliegues, recetas Básicas, media bolsa de Blanca) y
+no cierran ningún ciclo: son renovables, pero el Mostrador no es barato en
+*turnos*, que es el recurso que de verdad limita el día.
+
+**Por qué no ocupa espacio de acción** (``consumir_punto_accion`` con
+``ocupa_espacio=False``): un jugador tiene 2 PA, y el hueco que esta acción viene
+a tapar puede darse dos veces el mismo día. Un espacio de una visita por día
+dejaría el segundo PA igual de hueco que antes, resolviendo medio problema.
+
+**Por qué no está condicionada a «no tener nada mejor que hacer».** Esa
+condición no es observable: ``disponibilidad.py`` reporta la Acción C habilitada
+siempre que haya PA y no se haya usado el espacio, aunque el jugador no tenga
+Monedas ni harina que vender. Un guardia así se apagaría casi siempre y el suelo
+no estaría cuando hace falta. Se autolimita siendo débil, no estando cerrado.
+"""
+
 RENDIMIENTO_MOLINO_PCT: int = 20
 """
 Harina que el Contrato con el Molino entrega cada Fase III: 2 tokens (20%) del

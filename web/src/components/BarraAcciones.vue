@@ -43,6 +43,49 @@ function estado(id: IdAccion) {
  * con costo de PA (punto sólido), ver .marcador-jugador.gratis más abajo. */
 const ESPACIOS_GRATIS_UNA_VEZ_POR_DIA: IdAccion[] = ['A', 'E', 'horas_extras']
 
+/** Espacios que SÍ se marcan al visitarlos pero NO se agotan: el peón dice
+ * "estuve aquí", no "está cerrado". Llevan por eso una insignia ∞, porque sin
+ * ella el marcador se leería como el de cualquier otro espacio.
+ *
+ * Hoy solo el Mostrador, y la razón de que lo necesite es que **contradice la
+ * regla de su propio grupo**: la cabecera de Principales dice "un espacio
+ * distinto por visita". Las acciones sin límite del grupo Gratuitas (Pedido de
+ * Urgencia) no necesitan insignia, porque su cabecera ya anuncia "puedes
+ * encadenarlas" y ahí no hay nada que contradecir. */
+const ESPACIOS_REPETIBLES: IdAccion[] = ['mostrador']
+
+/** Un peón por cada VISITA al Mostrador de hoy, en orden cronológico y **sin
+ * deduplicar**: ir dos veces deja dos peones de tu color, porque el espacio se
+ * puede visitar una vez por PA y el recuento es justo lo que el jugador quiere
+ * leer de un vistazo. Es la única lista de peones que puede repetir jugador —
+ * en cualquier otro espacio el límite diario lo hace imposible.
+ *
+ * Se deriva del registro de movimientos porque `acciones_pa_usadas_hoy` NUNCA
+ * contiene 'mostrador' (ese invariante es lo que hace repetible a la acción, ver
+ * engine.MONEDAS_MOSTRADOR). `computed` y no una función suelta: el registro
+ * crece toda la partida y el template lo consultaría una vez por peón. */
+const visitasMostrador = computed<Player[]>(() => {
+  const est = store.estado!
+  return est.registro_acciones
+    .filter(
+      (e) =>
+        e.accion === 'mostrador' && e.dia === est.environment.dia_actual && !e.deshecha,
+    )
+    .map((e) => est.players[e.jugador_idx])
+    .filter((p): p is Player => p !== undefined)
+})
+
+/** Texto del peón `i` del espacio `id`. En un espacio repetible numera la
+ * visita, que es lo que responde a "¿por qué hay dos puntos de mi color?". */
+function tituloPeon(id: IdAccion, i: number): string {
+  const lista = jugadoresQueUsaron(id)
+  const p = lista[i]
+  if (!ESPACIOS_REPETIBLES.includes(id)) return `${p.nombre} ya visitó este espacio hoy`
+  const hechas = lista.slice(0, i + 1).filter((q) => q === p).length
+  const total = lista.filter((q) => q === p).length
+  return `${p.nombre} — visita ${hechas} de ${total} hoy · el espacio sigue abierto`
+}
+
 /** Jugadores que ya visitaron el espacio de acción `id` hoy -- recorre a
  * TODOS los jugadores (no solo el propio, a diferencia de `disponibilidad`)
  * para poder mostrar el marcador de color de cada uno. Pedido de Urgencia
@@ -51,6 +94,8 @@ function jugadoresQueUsaron(id: IdAccion): Player[] {
   if (id === 'A') return store.estado!.players.filter((p) => p.accion_alimentar_usada)
   if (id === 'horas_extras') return store.estado!.players.filter((p) => p.horas_extras_usadas)
   if (id === 'pedido_urgencia') return []
+  // Un peon por visita, no por jugador -- ver `visitasMostrador`.
+  if (id === 'mostrador') return visitasMostrador.value
   // Estasis no es un espacio que se gaste: el marcador no dice "ya lo usó" sino
   // "tiene la Estasis suspendida ESTA noche", que es estado visible todo el día
   // y se limpia solo en la Fase III. Por eso tampoco está en
@@ -180,15 +225,26 @@ async function pasarDeVerdad() {
         <div class="grid-botones">
           <Tooltip v-for="b in g.acciones" :key="b.id" class="envoltorio-boton">
             <div v-if="jugadoresQueUsaron(b.id).length > 0" class="marcadores-jugador">
+              <!-- Clave por indice y no por nombre: en un espacio repetible el
+                   mismo jugador aparece varias veces y `p.nombre` chocaria. -->
               <span
-                v-for="p in jugadoresQueUsaron(b.id)"
-                :key="p.nombre"
+                v-for="(p, i) in jugadoresQueUsaron(b.id)"
+                :key="i"
                 class="marcador-jugador"
                 :class="{ gratis: ESPACIOS_GRATIS_UNA_VEZ_POR_DIA.includes(b.id) }"
                 :style="{ '--color-marcador': hexDeColor(p.color) }"
-                :title="`${p.nombre} ya visitó este espacio hoy`"
+                :title="tituloPeon(b.id, i)"
               />
             </div>
+            <!-- ∞: este espacio se marca pero no se agota. Va en la esquina
+                 izquierda, la que dejan libres los peones; solo la casilla B
+                 la disputa, y B no es repetible. -->
+            <span
+              v-if="ESPACIOS_REPETIBLES.includes(b.id)"
+              class="insignia-repetible"
+              aria-hidden="true"
+              >∞</span
+            >
             <!-- Las recetas que ya tienes en mano, encendidas si sus insumos
                  alcanzan. Ocupan la esquina libre: los peones de quien ya visito
                  el espacio viven en la de la derecha. -->
@@ -217,6 +273,9 @@ async function pasarDeVerdad() {
                 :class="{ lista: r.lista }"
               >
                 {{ r.linea }}
+              </p>
+              <p v-if="ESPACIOS_REPETIBLES.includes(b.id)" class="tooltip-repetible">
+                ∞ No se agota: puedes volver mientras te queden PA.
               </p>
               <p v-if="ACCIONES_QUE_REVELAN.has(b.id)" class="tooltip-motivo">
                 ⚠ Revela información oculta: ese paso no se puede deshacer.
@@ -302,6 +361,13 @@ async function pasarDeVerdad() {
       titulo="Reclamar la Jefatura (1 PA)"
       :descripcion="descripcionesAcciones.jefatura"
       accion="jefatura"
+      @cerrar="cerrar"
+    />
+    <ModalConfirmacion
+      v-if="modalAbierto === 'mostrador'"
+      titulo="Turno de Mostrador (1 PA)"
+      :descripcion="descripcionesAcciones.mostrador"
+      accion="mostrador"
       @cerrar="cerrar"
     />
     <ModalConfirmacion
@@ -456,6 +522,13 @@ async function pasarDeVerdad() {
   display: flex;
   gap: 2px;
   z-index: 10;
+  /* En un espacio repetible hay un peon por visita, no por jugador: con 4
+     jugadores a 3 PA caben hasta 12. Envuelven hacia abajo en vez de
+     desbordar la casilla, y el ancho maximo deja libre la esquina izquierda,
+     que es donde vive la insignia ∞. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 60%;
 }
 
 .marcador-jugador {
@@ -472,11 +545,29 @@ async function pasarDeVerdad() {
   box-shadow: none;
 }
 
+/* Insignia de espacio que no se agota. Deliberadamente discreta: acompana al
+   peon para que no se lea como "cerrado", no compite con la etiqueta. */
+.insignia-repetible {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  z-index: 10;
+  font-size: var(--t-micro);
+  line-height: 1;
+  color: var(--acento-zona, var(--cobre));
+  opacity: 0.75;
+  pointer-events: none;
+}
+
 /* La caja la dibuja Tooltip.vue (teleportada al body). Aqui solo queda el
    color de las lineas de aviso, que son contenido de slot y por tanto llevan
    el scope de ESTE componente. */
 .tooltip-motivo {
   color: var(--riesgo);
+}
+
+.tooltip-repetible {
+  color: var(--cobre);
 }
 
 /* Recetas en mano, en la esquina libre de la casilla «Iniciar Receta».

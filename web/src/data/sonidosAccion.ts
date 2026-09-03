@@ -64,6 +64,10 @@ export const SONIDOS_ACCION: Record<IdSonido, Sonido> = {
   jefatura: principal(698.46), // Fa5 -- la nota mas alta de la familia: es el
   // unico espacio global, y que suene por encima del resto ayuda a notar que
   // acaban de quitarte algo de la mesa, no solo a jugar su turno.
+  mostrador: principal(349.23), // Fa4 -- la nota mas BAJA de la familia, justo
+  // una octava por debajo de la Jefatura y en el extremo opuesto por el mismo
+  // motivo: es el suelo del tablero, la accion que se toma cuando no hay nada
+  // mejor. Oirla grave dice "no ha pasado gran cosa" sin necesidad de mirar.
 
   // Hornear y Vender: el momento de cobrar. Arpegio ascendente de tres
   // notas con cola larga -- el unico sonido "de premio" del juego.

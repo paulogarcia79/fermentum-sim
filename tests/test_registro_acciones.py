@@ -35,6 +35,7 @@ from starlette.testclient import TestClient
 
 from actions import ActionManager
 from bootstrap import create_game
+from engine import MONEDAS_MOSTRADOR
 from events import EventoTipo
 from models import RECIPE_CATALOG, FermentationSlot, TecnologiaID, TipoHarina
 from server import persistence
@@ -334,6 +335,17 @@ def test_mensaje_de_mejora_usa_el_nombre_legible() -> None:
     )
 
     assert mensaje == f"Instaló {TecnologiaID.CAMARA_B.nombre_legible}"
+
+
+def test_mensaje_del_mostrador_nombra_la_moneda() -> None:
+    """`describir_accion` revienta en TIEMPO DE EJECUCION para una accion sin
+    rama (su AssertionError final), no al importar: una accion nueva sin linea
+    de registro solo se descubre jugandola. De ahi este caso."""
+    engine, manager, jugador = _motor_y_jugador()
+
+    mensaje = _describir(engine, manager, jugador, "mostrador", {})
+
+    assert mensaje == f"Atendió el mostrador (+{MONEDAS_MOSTRADOR} Moneda)"
 
 
 def test_mensaje_de_pliegues_detalla_el_reparto() -> None:

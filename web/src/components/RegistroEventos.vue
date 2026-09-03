@@ -54,6 +54,7 @@ const ICONOS_ACCION: Record<IdMovimiento, string> = {
   G: '📋',
   simposio: '🎓',
   jefatura: '👑',
+  mostrador: '🪙',
   H: '🧹',
   I: '💉',
   horas_extras: '⏳',

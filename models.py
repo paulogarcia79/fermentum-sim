@@ -1086,15 +1086,27 @@ class Player:
         """
         self.acciones_pa_usadas_hoy.append(espacio_accion_id)
 
-    def consumir_punto_accion(self, espacio_accion_id: str) -> None:
+    def consumir_punto_accion(
+        self, espacio_accion_id: str, ocupa_espacio: bool = True
+    ) -> None:
         """
         Decrementa 1 PA del jugador y registra `espacio_accion_id` en
         acciones_pa_usadas_hoy, bloqueando ese espacio para el resto del día.
         Precondición: el llamador debe verificar puntos_accion >= 1 y que
         espacio_accion_id no esté ya en acciones_pa_usadas_hoy ANTES de llamar.
+
+        `ocupa_espacio=False` gasta el PA SIN marcar espacio, de modo que la
+        acción puede repetirse el mismo día. Es el caso inverso y simétrico de
+        `ocupar_espacio_accion`, que marca espacio sin gastar PA (Acción E,
+        Descarte). Hoy sólo lo usa el «Turno de Mostrador»: es el suelo del
+        tablero y un jugador tiene 2 PA, así que limitarlo a una visita por día
+        dejaría el segundo PA tan hueco como antes (ver
+        `engine.MONEDAS_MOSTRADOR`). El id se pasa igualmente porque el PA sí se
+        gasta y el parámetro nombra qué lo gastó.
         """
         self.puntos_accion -= 1
-        self.ocupar_espacio_accion(espacio_accion_id)
+        if ocupa_espacio:
+            self.ocupar_espacio_accion(espacio_accion_id)
 
     def otorgar_punto_accion_extra(self) -> None:
         """

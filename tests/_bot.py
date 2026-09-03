@@ -82,6 +82,7 @@ def heuristic_turn(engine: "GameEngine", player: "Player", manager: "ActionManag
         lambda: _intentar_alimentar(player, manager),
         lambda: _intentar_investigar(engine, player, manager),
         lambda: _intentar_adquirir(engine, player, manager),
+        lambda: _intentar_mostrador(player, manager),
     ]
     for intento in intentos:
         try:
@@ -90,12 +91,17 @@ def heuristic_turn(engine: "GameEngine", player: "Player", manager: "ActionManag
         except FermentumError:
             continue
 
-    # Sin acciones legales disponibles: pasar_turno() (no una asignacion
-    # directa a puntos_accion) es obligatorio aqui -- marca al jugador como
-    # renunciado por el resto del dia (engine.py:_jugador_elegible). Sin
-    # esto, un jugador sin PA ni recursos pero con accion_alimentar_usada
-    # o horas_extras_usadas aun en False seguiria siendo "elegible" para
-    # una proxima vuelta indefinidamente.
+    # Sin PA y sin acciones legales: pasar_turno() (no una asignacion directa
+    # a puntos_accion) es obligatorio aqui -- marca al jugador como renunciado
+    # por el resto del dia (engine.py:_jugador_elegible). Sin esto, un jugador
+    # sin PA ni recursos pero con accion_alimentar_usada o horas_extras_usadas
+    # aun en False seguiria siendo "elegible" para una proxima vuelta
+    # indefinidamente.
+    #
+    # Desde el Turno de Mostrador, llegar hasta aqui implica 0 PA: con PA, el
+    # ultimo intento siempre tiene exito. Es justo el hueco que esa accion vino
+    # a tapar, y el bot lo ejerce por la misma razon que un jugador -- pasar
+    # renuncia tambien a las gratuitas del resto del dia.
     engine.pasar_turno(player)
 
 
@@ -137,6 +143,19 @@ def _intentar_investigar(engine: "GameEngine", player: "Player", manager: "Actio
             manager.accion_G_investigar_protocolo(player, idx)
             return True
     return False
+
+
+def _intentar_mostrador(player: "Player", manager: "ActionManager") -> bool:
+    """Ultimo recurso ANTES de pasar: 1 PA por 1 Moneda.
+
+    No ocupa espacio, asi que sirve para cada PA que quede suelto. Va el ultimo
+    de la lista a proposito: es el suelo del tablero y cualquier otra jugada lo
+    domina (engine.MONEDAS_MOSTRADOR).
+    """
+    if player.puntos_accion < 1:
+        return False
+    manager.accion_turno_mostrador(player)
+    return True
 
 
 def _intentar_adquirir(engine: "GameEngine", player: "Player", manager: "ActionManager") -> bool:

@@ -641,6 +641,80 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   (`PatrocinioCard` changed shape and old pickles hold the pre-cut economy). The golden snapshot
   was regenerated; its diff is exactly 36×3 payouts + 2 vitalidades + 1 starting Dato, nothing
   else. Tests: `tests/test_renta_panaderia.py`.
+
+  **Turno de Mostrador — the floor of the board, and the only PA action that is not a space.**
+  A player could hold PA and have no useful move — empty carpeta, mass still in Crecimiento,
+  0 Monedas, 0 Datos, Jefatura already claimed by someone else — and the only exit was
+  `pasar_turno`, which also forfeits the day's free actions. Leftover PA was lost silently:
+  `resolver_fase_III` never reads `puntos_accion`, and the endgame «Desperdicio» penalty counts
+  only flour and water. `accion_turno_mostrador` is 1 PA for `MONEDAS_MOSTRADOR` (= 1) Moneda.
+  Four things carry weight:
+  - **It occupies no action space, which is the whole point.** A player has 2 PA (3 with Horas
+    Extras) and the hollow can occur once per PA, so a once-per-day space would fix half the
+    problem. `Player.consumir_punto_accion` gained an `ocupa_espacio: bool = True` parameter —
+    the exact inverse of the existing `ocupar_espacio_accion` (space without PA, for E and
+    Descarte) — and `"mostrador"` never enters `acciones_pa_usadas_hoy`. It is therefore the
+    mirror image of Reclamar Jefatura in the space rule: that one is exhausted for the **whole
+    table** at once, this one is never exhausted at all. No new persisted field, so **no
+    `VERSION_FORMATO` bump**.
+  - **It is deliberately not gated on "nothing better to do".** That condition is not
+    observable: `disponibilidad.py` reports Acción C enabled whenever the player has PA and
+    hasn't used the space, even with nothing to trade. A guard would switch the floor off almost
+    always, precisely when it is needed. It self-limits by being **weak, not by being closed** —
+    hence the one-rung ladder (`agregar("mostrador", tiene_pa, "Sin PA")`), the only PA action
+    whose availability check has no second clause.
+  - **Monedas, and exactly 1.** In Datos it would loop with Horas Extras (1 Dato → +1 PA →
+    1 Dato) and undercut Jefatura, which already pays 1 Dato for 1 PA *plus* turn order; in
+    Vitalidad it would duplicate Acción A, which pays +1 for 10% flour at 0 PA. One Moneda is
+    exactly what the retired 1-PA Acción E was worth — the action nobody ever took — which is
+    the intended bar: every real action dominates it, so it is never a line of play.
+  - **It emits no `GameEvent`**, like every other action but F, so `engine.eventos` is unchanged
+    across it; being a PA action it closes the visit and the undo window (`es_gratuita` is
+    derived from `ACCIONES_QUE_TERMINAN_TURNO`, so registering `"mostrador": True` was enough).
+
+  This is the one change here that **regenerated the golden snapshot deliberately**:
+  `tests/_bot.py:heuristic_turn` gained `_intentar_mostrador` as its last attempt before
+  `pasar_turno`, so the bot stops forfeiting whole days. The diff is explainable — the recipe
+  deck is the old one minus its top card (one extra Acción G), plus one extra market purchase
+  and the Monedas — and `pasar_turno` is now reached only at 0 PA. Client side the three
+  exhaustive `Record`s (`descripcionesAcciones.ts`, `sonidosAccion.ts`, `RegistroEventos.vue`'s
+  icon map) each gained an entry, the sound is `principal(349.23)` — Fa4, the lowest note of the
+  family, an octave under Jefatura's Fa5 and at the opposite end for the same reason — and
+  `BarraAcciones.vue` reuses `ModalConfirmacion` (like Jefatura).
+
+  **The pawn is shown anyway, and an `∞` badge is what makes it honest.** A space that records
+  no visit reads as one nobody uses, so the Mostrador does get a marker — but the marker's usual
+  meaning on this board is "closed for you today", which here would be a lie. `ESPACIOS_REPETIBLES`
+  (next to the existing `ESPACIOS_GRATIS_UNA_VEZ_POR_DIA`) drives a small `∞` in the tile's free
+  left corner, a matching tooltip line, and a different pawn `title` ("ya pasó por aquí hoy — el
+  espacio sigue abierto"). Two things carry weight:
+  - **The pawn is derived from `registro_acciones`, not from a new field.** `acciones_pa_usadas_hoy`
+    must never contain `"mostrador"` — that is the invariant making the action repeatable — so the
+    client filters the movement log it already receives whole in every snapshot, by `accion`,
+    `environment.dia_actual` and `!deshecha`. No backend change, no new field, **no
+    `VERSION_FORMATO` bump**. The `deshecha` clause is correct rather than load-bearing: a
+    Mostrador is a PA action, so it closes the visit and the undo window and its entry can never be
+    struck out. Day rollover clears the pawns with no code doing it, because the filter is on the
+    day.
+  - **One pawn per *visit*, deliberately not per player.** Going twice leaves two dots of your
+    colour, so the corner reads as a count of what you spent there. This is the only pawn list in
+    the game that can repeat a player — every other space's daily limit makes it impossible — and
+    it forced two small things: the `v-for` key moved from `p.nombre` to the index (duplicate keys
+    otherwise), and `.marcadores-jugador` gained `flex-wrap` with a `max-width` so the worst case
+    (4 players × 3 PA = 12 dots) wraps to a second row inside the tile instead of overflowing it or
+    reaching the `∞`. Measured in the browser: 12 dots occupy 67×16 px in a 111×49 px tile. The
+    pawn `title` numbers the visit ("visita 2 de 2 hoy"), which is what answers the question a
+    second dot of your own colour raises. `visitasMostrador` is a `computed` rather than a plain
+    call because the movement log grows all game and the template would otherwise re-filter it once
+    per pawn.
+  - **Only the Mostrador gets the badge, and that is the rule to apply next time.** The `∞` marks a
+    space that **contradicts its own group's header**: Principales says "un espacio distinto por
+    visita". Pedido de Urgencia is equally unlimited but sits under Gratuitas, whose header already
+    says "puedes encadenarlas", so there is nothing to correct and it keeps showing no marker.
+
+  Tests: `tests/test_mostrador.py`, plus
+  `test_reglamento_al_dia.py::test_el_mostrador_paga_monedas` (verified by mutation on both
+  documents).
 - **`events.py`** — `GameEvent`/`EventoTipo`/`EventSink`: a structured log of automatic,
   no-player-input state changes (chief-researcher assignment, climate reveal, market refresh,
   end-of-day discard of the market's oldest recipe, mass advance, structural collapse, every

@@ -7,9 +7,9 @@
       "en_estado_contaminacion": false,
       "puntos_accion": 0,
       "datos_investigacion": 0,
-      "monedas": 3,
+      "monedas": 1,
       "reserva_harina": {
-        "Blanca": 160,
+        "Blanca": 260,
         "Centeno": 0,
         "Integral": 0
       },
@@ -153,7 +153,9 @@
       "archivo_colapsos": [],
       "horas_extras_usadas": false,
       "estasis_suspendida": false,
-      "acciones_pa_usadas_hoy": [],
+      "acciones_pa_usadas_hoy": [
+        "C"
+      ],
       "contador_contaminaciones": 0
     },
     {
@@ -163,7 +165,7 @@
       "en_estado_contaminacion": false,
       "puntos_accion": 0,
       "datos_investigacion": 0,
-      "monedas": 1,
+      "monedas": 4,
       "reserva_harina": {
         "Blanca": 160,
         "Centeno": 0,
@@ -268,6 +270,49 @@
           "monedas_pre_fermento": 8,
           "monedas_optima": 15,
           "monedas_colapso": 5
+        },
+        {
+          "id": "pizza_napolitana",
+          "nombre": "Pizza Napolitana",
+          "grado": "Intermedia",
+          "harinas": [
+            [
+              "Blanca",
+              50
+            ],
+            [
+              "Integral",
+              50
+            ]
+          ],
+          "hidratacion_pct": 62,
+          "tokens_agua": 13,
+          "acidez_diana": [
+            3
+          ],
+          "bono_sabor_pts": 2,
+          "zona_crecimiento": [
+            1,
+            5
+          ],
+          "zona_pre_fermento": [
+            6,
+            10
+          ],
+          "zona_optima": [
+            11,
+            14
+          ],
+          "zona_colapso": [
+            15,
+            20
+          ],
+          "puntos_pre_fermento": 4,
+          "puntos_optimos": 14,
+          "penalizacion_colapso": -4,
+          "monedas_pre_fermento": 9,
+          "monedas_optima": 15,
+          "monedas_colapso": 6
         }
       ],
       "archivo_horneado_exitoso": [],
@@ -581,8 +626,8 @@
         "monedas_colapso": 6
       },
       {
-        "id": "pizza_napolitana",
-        "nombre": "Pizza Napolitana",
+        "id": "brioche",
+        "nombre": "Brioche",
         "grado": "Intermedia",
         "harinas": [
           [
@@ -590,38 +635,38 @@
             50
           ],
           [
-            "Integral",
+            "Centeno",
             50
           ]
         ],
-        "hidratacion_pct": 62,
-        "tokens_agua": 13,
+        "hidratacion_pct": 52,
+        "tokens_agua": 11,
         "acidez_diana": [
-          3
+          1
         ],
-        "bono_sabor_pts": 2,
+        "bono_sabor_pts": 3,
         "zona_crecimiento": [
           1,
-          5
+          7
         ],
         "zona_pre_fermento": [
-          6,
-          10
-        ],
-        "zona_optima": [
-          11,
+          8,
           14
         ],
-        "zona_colapso": [
+        "zona_optima": [
           15,
+          17
+        ],
+        "zona_colapso": [
+          18,
           20
         ],
-        "puntos_pre_fermento": 4,
-        "puntos_optimos": 14,
-        "penalizacion_colapso": -4,
-        "monedas_pre_fermento": 9,
+        "puntos_pre_fermento": 5,
+        "puntos_optimos": 16,
+        "penalizacion_colapso": -6,
+        "monedas_pre_fermento": 8,
         "monedas_optima": 15,
-        "monedas_colapso": 6
+        "monedas_colapso": 5
       },
       {
         "id": "focaccia",
@@ -666,49 +711,6 @@
       null
     ],
     "mazo_recetas": [
-      {
-        "id": "brioche",
-        "nombre": "Brioche",
-        "grado": "Intermedia",
-        "harinas": [
-          [
-            "Blanca",
-            50
-          ],
-          [
-            "Centeno",
-            50
-          ]
-        ],
-        "hidratacion_pct": 52,
-        "tokens_agua": 11,
-        "acidez_diana": [
-          1
-        ],
-        "bono_sabor_pts": 3,
-        "zona_crecimiento": [
-          1,
-          7
-        ],
-        "zona_pre_fermento": [
-          8,
-          14
-        ],
-        "zona_optima": [
-          15,
-          17
-        ],
-        "zona_colapso": [
-          18,
-          20
-        ],
-        "puntos_pre_fermento": 5,
-        "puntos_optimos": 16,
-        "penalizacion_colapso": -6,
-        "monedas_pre_fermento": 8,
-        "monedas_optima": 15,
-        "monedas_colapso": 5
-      },
       {
         "id": "panettone",
         "nombre": "Panettone",

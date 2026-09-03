@@ -223,6 +223,12 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
         jefatura_de is None and tiene_pa,
         motivo_jefatura,
     )
+    # El Mostrador es la única acción con costo de PA cuya escalera tiene un solo
+    # peldaño: no hay espacio que consultar (no ocupa ninguno, ver
+    # engine.MONEDAS_MOSTRADOR) ni recurso que exigir, así que teniendo PA está
+    # siempre disponible. Ese es justamente su cometido — es el suelo, la acción
+    # que garantiza que ningún turno con PA se quede sin nada que hacer.
+    agregar("mostrador", tiene_pa, "Sin PA")
     agregar(
         "H",
         "H" not in usados and contaminado and tiene_pa and harina_total >= HARINA_RECULTIVO_MANUAL,

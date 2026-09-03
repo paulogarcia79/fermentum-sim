@@ -16,6 +16,7 @@ export type IdAccion =
   | 'G'
   | 'simposio'
   | 'jefatura'
+  | 'mostrador'
   | 'H'
   | 'I'
   | 'horas_extras'
@@ -49,6 +50,8 @@ export const descripcionesAcciones: Record<IdAccion, string> = {
   simposio: 'Sacrifica un horneado exitoso de tu Archivo para publicarlo y ganar Datos de Investigación según su grado (Básica 1, Intermedia 2, Avanzada 3). El registro sale del archivo para siempre: pierdes sus Puntos de Maestría, su renta diaria, su paso hacia el 5/5 y, si era el único de su tipo, un escalón de Variedad de Recetas. Es una palanca de emergencia, nunca una jugada eficiente.',
   jefatura:
     'Cuesta 1 PA y paga 1 Dato de Investigación al instante. Mañana abrirás la Fase II como Investigador Jefe: el orden de turno se calcula una sola vez al día, así que lo que compras es la salida de mañana, no la de hoy. Es el único espacio GLOBAL del tablero — lo ocupa un jugador por día en toda la mesa, no uno por jugador — así que reclamarla también se la quita a los demás. Si nadie la reclama, la Jefatura se queda donde está; reclamarla siendo ya Jefe es legal y es la única forma de retenerla.',
+  mostrador:
+    'Cuesta 1 PA y paga 1 Moneda. Es el suelo del tablero: la acción que existe para que un turno con Puntos de Acción nunca se quede sin nada que hacer. A diferencia del resto de acciones con costo de PA, NO ocupa espacio — puedes repetirla mientras te queden PA. Cualquier otra acción rinde más: úsala cuando ninguna te sirva, en vez de pasar turno y renunciar también a tus acciones gratuitas del resto del día.',
   H: 'Solo disponible con Vitalidad en 0 (penalización de -3 Puntos de Maestría). Costo: 3 tokens de Harina (30%, cualquier tipo), sin costo de Agua. Limpia la Contaminación y fija Vitalidad=1, Acidez=1.',
   I: 'Solo disponible con Vitalidad en 0 (penalización de -3 Puntos de Maestría). Costo: 1 Dato de Investigación. Limpia la Contaminación y fija Vitalidad=2, Acidez=2.',
   horas_extras:
@@ -112,6 +115,7 @@ export const GRUPOS_ACCION: readonly GrupoAccion[] = [
       { id: 'G', etiqueta: 'Investigar Protocolo', costo: '1 PA' },
       { id: 'simposio', etiqueta: 'Simposio Técnico', costo: '1 PA' },
       { id: 'jefatura', etiqueta: 'Reclamar Jefatura', costo: '1 PA' },
+      { id: 'mostrador', etiqueta: 'Turno de Mostrador', costo: '1 PA' },
     ],
   },
   {

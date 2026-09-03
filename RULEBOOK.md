@@ -302,9 +302,11 @@ Cada jugador dispone de **2 Puntos de Acción (PA)** por Día de Laboratorio.
   Día de Laboratorio, por jugador** — el investigador marca el espacio con su color en cuanto lo
   visita, bloqueándolo para él (no para el resto de jugadores) hasta el día siguiente. Con 2-3 PA
   (Horas Extras incluida) esto significa como máximo un uso de cada espacio distinto por día, nunca
-  el mismo espacio dos veces. El tope es una propiedad **del espacio**, no del coste. **Reclamar la
-  Jefatura es la excepción y va al revés:** ese espacio se agota para TODA la mesa en cuanto un
-  jugador lo visita, no solo para él. Alimentar el
+  el mismo espacio dos veces. El tope es una propiedad **del espacio**, no del coste. Hay dos
+  excepciones, y van en direcciones opuestas: **Reclamar la Jefatura** se agota para TODA la mesa en
+  cuanto un jugador la visita, no solo para él; y el **Turno de Mostrador** no se agota nunca —
+  cuesta PA pero no ocupa espacio, así que puedes repetirlo mientras te queden Puntos de Acción (es
+  el suelo del tablero: ver su entrada en el Catálogo de Acciones). Alimentar el
   Cultivo y Horas Extras se limitan con su propio marcador de "ya usada", y ni Pedido de Urgencia ni
   Estasis Biológica ni Incubadora tienen límite alguno — las dos últimas porque son **ajustes y no
   consumos**: diales de dos sentidos que puedes accionar las veces que quieras y que, por lo mismo,
@@ -533,6 +535,35 @@ reclamación la ficha se queda donde está, cualquiera puede venir a comprarla.
 > también la divisa técnica y el resto de la mesa se quedaba sin combustible para Horas Extras y
 > Pedidos de Urgencia. Aquí entra **1 Dato por día en total**, repartido por rotación y no por
 > riqueza: lo limita la competencia, no el precio.
+
+#### Turno de Mostrador
+
+**Costo:** 1 PA. Ganas **1 Moneda**. No hay nada que elegir ni nada que pagar.
+
+**Sin límite: es el único espacio con costo de PA que no se agota.** Todos los demás se marcan con
+tu peón al visitarlos y quedan cerrados para ti hasta el día siguiente; este no. Puedes atender el
+mostrador tantas veces como Puntos de Acción te queden.
+
+Es el **suelo del tablero**: la acción que existe para que un turno nunca esté vacío. Si te
+encuentras con Puntos de Acción y ninguna jugada que te sirva — sin recetas en la Carpeta, con la
+masa todavía en Crecimiento, sin Monedas para el Mercado, sin Datos para una mejora y con la
+Jefatura ya reclamada por otro — dejas la investigación, bajas a la panadería y despachas lo que
+haya en el mostrador.
+
+> **Una Moneda es poco a propósito.** Es exactamente lo que valía la vieja acción de Pliegues que
+> costaba 1 PA, la que nadie tomaba nunca: ese es el listón que se busca. Cualquier otra acción del
+> tablero rinde más que atender el mostrador, así que esto no es nunca una estrategia — es lo que
+> haces cuando no hay nada que hacer. Y no se puede ganar la partida a base de mostrador: el día
+> tiene 2 Puntos de Acción, y gastarlos aquí es no haber horneado, ni comprado, ni investigado.
+
+> **Por qué no está condicionada a «no tener nada mejor que hacer».** Sería la regla natural y es
+> impracticable: nadie en la mesa puede juzgar si a otro jugador le conviene o no una compra. Un
+> permiso así habría que discutirlo cada vez. El Mostrador se limita solo, siendo flojo: no hace
+> falta cerrarlo porque nunca compensa.
+
+**Ojo:** pasar turno **no** es lo mismo. Pasar renuncia a todo el resto del día, incluidas tus
+acciones gratuitas (Alimentar el Cultivo, Pliegues, Descarte, Horas Extras, Pedido de Urgencia).
+Atender el mostrador solo gasta un Punto de Acción y te deja en la rotación.
 
 ### Acciones auxiliares y de emergencia (Costo: 0 PA)
 

@@ -48,6 +48,7 @@ from engine import (
     COSTE_REFRESCO_AGUA,
     DATOS_JEFATURA,
     DATOS_SIMPOSIO,
+    MONEDAS_MOSTRADOR,
     PRECIO_AGUA,
     PRECIO_CONTRATO_MOLINO,
     PRECIO_DESCARTE,
@@ -1404,6 +1405,47 @@ class ActionManager:
 
         player.consumir_punto_accion("jefatura")
         player.datos_investigacion += DATOS_JEFATURA
+
+    def accion_turno_mostrador(self, player: Player) -> None:
+        """
+        Turno de Mostrador (ACTIONS_REGISTRY.md §2 «Mostrador»).
+
+        Costo:   1 PA. Termina la visita, como toda acción principal.
+        Efecto:  +``MONEDAS_MOSTRADOR`` Moneda.
+        Límite:  **Ninguno.** Es la única acción con costo de PA que NO ocupa
+                 espacio: se repite mientras queden PA.
+
+        Es el **suelo del tablero**, la acción que existe para que un turno nunca
+        esté hueco. Antes de ella, un jugador con PA pero sin ninguna jugada útil
+        — carpeta vacía, masa aún en Crecimiento, 0 Monedas, 0 Datos y la
+        Jefatura ya reclamada por otro — no tenía más salida que ``pasar_turno``,
+        que además renuncia a las acciones gratuitas del resto del día. Los PA
+        sobrantes se perdían en silencio: la Fase III nunca lee ``puntos_accion``.
+
+        Las tres decisiones que la sostienen están documentadas en
+        ``engine.MONEDAS_MOSTRADOR``: paga en Monedas (no en Datos, que formaría
+        bucle con Horas Extras, ni en Vitalidad, que pisa a la Acción A), paga 1
+        (el valor exacto de la Acción E retirada, la que nadie tomaba), y no está
+        condicionada a «no tener nada mejor que hacer» porque esa condición no es
+        observable — la Acción C figura habilitada casi siempre. Se autolimita
+        siendo débil, no estando cerrada.
+
+        **No ocupa espacio a propósito.** Un jugador tiene 2 PA y el hueco puede
+        darse dos veces el mismo día; un espacio de una visita por día resolvería
+        medio problema. Por eso llama a ``consumir_punto_accion`` con
+        ``ocupa_espacio=False`` y ``"mostrador"`` nunca entra en
+        ``acciones_pa_usadas_hoy`` (PLAYER_STATE.md §1).
+
+        Args:
+            player: Jugador que atiende el mostrador.
+
+        Raises:
+            NotEnoughActionPointsError: PA insuficientes.
+        """
+        self._require_pa(player, 1)
+
+        player.consumir_punto_accion("mostrador", ocupa_espacio=False)
+        player.monedas += MONEDAS_MOSTRADOR
 
     # ==================================================================
     # ACCIONES AUXILIARES
