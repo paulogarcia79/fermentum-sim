@@ -30,19 +30,29 @@ import type { HorneadoRecord, TecnologiaID, TipoHarina } from '../types'
 
 const TIPOS_HARINA: TipoHarina[] = ['Blanca', 'Centeno', 'Integral']
 
-const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
+/**
+ * Que jugador se dibuja. Es una entrada de render, no estado de la app: quien
+ * decide es GameView (igual que con `esMiTurno` o `visible()`), leyendo
+ * store.jugadorObservado. Toda la informacion del juego es publica -- el
+ * servidor manda el estado completo de todos los jugadores a todo el mundo
+ * (server/views.py) -- asi que este mismo arbol vale para cualquier indice.
+ */
+const props = defineProps<{ jugadorIdx: number }>()
+
+const jugador = computed(() => store.estado!.players[props.jugadorIdx])
+const esPropio = computed(() => props.jugadorIdx === store.sesion!.playerIndex)
 
 /** Cuantas recetas de la carpeta se pueden pagar hoy (ver types.ts: `insumos`
  *  mide la despensa, no los bloqueos del jugador). */
 const recetasListas = computed(
-  () => yo.value.carpeta_proyectos.filter((r) => r.insumos?.completos).length,
+  () => jugador.value.carpeta_proyectos.filter((r) => r.insumos?.completos).length,
 )
-const colorHex = computed(() => hexDeColor(yo.value.color))
+const colorHex = computed(() => hexDeColor(jugador.value.color))
 
 // Espejo de la penalizacion por desperdicio de models.py
 // (puntos_maestria_final: -(total_tokens_recursos // 3)). El conteo en si lo
 // hace el servidor; aqui solo se divide para mostrar el coste ya acumulado.
-const penalizacionDesperdicio = computed(() => -Math.floor(yo.value.total_tokens_recursos / 3))
+const penalizacionDesperdicio = computed(() => -Math.floor(jugador.value.total_tokens_recursos / 3))
 
 const EMOJI_TECNOLOGIA: Record<TecnologiaID, string> = {
   incubadora: '🌡',
@@ -56,17 +66,21 @@ const tecAbierta = ref<TecnologiaID | null>(null)
 
 /** Aviso de colapso: opt-in por jugador (se elige en el lobby). `en_riesgo_colapso`
  * lo calcula el servidor -- ya contempla la exencion por Criopreservacion y el
- * -2 de Aletargamiento Invernal. */
+ * -2 de Aletargamiento Invernal.
+ *
+ * Solo en el tablero propio: la preferencia es de ESTE navegador y el aviso es
+ * una llamada a la accion ("alimenta el cultivo"), no un dato del oponente.
+ * Quien mire un tablero ajeno sigue viendo la Vitalidad real en la pista. */
 const avisoColapso = computed(
-  () => store.preferencias.alertaContaminacion && yo.value.en_riesgo_colapso,
+  () => esPropio.value && store.preferencias.alertaContaminacion && jugador.value.en_riesgo_colapso,
 )
 
 /** Archivo completo, exitosos primero y colapsos despues -- ambos suman al
  * marcador (los colapsos en negativo), pero solo los exitosos cuentan para
  * el gatillo de quinta receta. */
 const registrosArchivo = computed<{ registro: HorneadoRecord; colapso: boolean }[]>(() => [
-  ...yo.value.archivo_horneado_exitoso.map((registro) => ({ registro, colapso: false })),
-  ...yo.value.archivo_colapsos.map((registro) => ({ registro, colapso: true })),
+  ...jugador.value.archivo_horneado_exitoso.map((registro) => ({ registro, colapso: false })),
+  ...jugador.value.archivo_colapsos.map((registro) => ({ registro, colapso: true })),
 ])
 
 /** Termino «Variedad de Recetas» (CORE_MECHANICS.md 3), tal como llega del
@@ -74,10 +88,10 @@ const registrosArchivo = computed<{ registro: HorneadoRecord; colapso: boolean }
  * dentro de `desglose_maestria`, y el valor marginal de la proxima clase
  * nueva es simplemente "una clase mas", no la formula. */
 const variedad = computed(() => {
-  const distintas = yo.value.recetas_distintas_horneadas
+  const distintas = jugador.value.recetas_distintas_horneadas
   return {
     distintas,
-    puntos: yo.value.desglose_maestria['Variedad de Recetas'] ?? 0,
+    puntos: jugador.value.desglose_maestria['Variedad de Recetas'] ?? 0,
     // Incremento de la curva al pasar de n a n+1 clases: n+1.
     proxima: distintas + 1,
   }
@@ -92,10 +106,10 @@ const variedad = computed(() => {
  * que el servidor manda aparte: `tecnologias` ya llega como un booleano por
  * mejora, asi que contarlos no duplica ninguna regla. */
 const desarrollo = computed(() => {
-  const instaladas = TECNOLOGIAS.filter((t) => yo.value.tecnologias[t.id]).length
+  const instaladas = TECNOLOGIAS.filter((t) => jugador.value.tecnologias[t.id]).length
   return {
     instaladas,
-    puntos: yo.value.desglose_maestria['Desarrollo Tecnológico'] ?? 0,
+    puntos: jugador.value.desglose_maestria['Desarrollo Tecnológico'] ?? 0,
     proxima: instaladas + 1,
   }
 })
@@ -108,29 +122,33 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
 </script>
 
 <template>
-  <section class="panel mi-tablero" :style="{ borderLeftColor: colorHex }">
+  <section
+    class="panel mi-tablero"
+    :class="{ ajeno: !esPropio }"
+    :style="{ borderLeftColor: colorHex }"
+  >
     <header class="cabecera-tablero">
       <h2>
         <span class="punto-color" :style="{ background: colorHex }" />
-        {{ yo.nombre }}
+        {{ jugador.nombre }}
       </h2>
-      <span v-if="yo.en_estado_contaminacion" class="badge-contaminado">◉ CONTAMINADO</span>
+      <span v-if="jugador.en_estado_contaminacion" class="badge-contaminado">◉ CONTAMINADO</span>
 
       <span class="marcador">
         <span class="ico-s"><IconoMaestria /></span>
-        <strong class="dato">{{ yo.puntos_horneados }}</strong> pts horneados
+        <strong class="dato">{{ jugador.puntos_horneados }}</strong> pts horneados
         <span
           class="proyeccion"
           title="Puntuación si la partida terminara ahora: horneados + madurez del cultivo + conversión de riqueza − penalizaciones (desperdicio, contaminación). Cambia también sin hornear."
         >
-          · proyección <span class="dato">{{ yo.puntos_maestria_final }}</span> PM
+          · proyección <span class="dato">{{ jugador.puntos_maestria_final }}</span> PM
         </span>
       </span>
 
       <span class="pa" title="Puntos de Acción disponibles">
         <span class="eyebrow">PA</span>
         <span class="pa-pips">
-          <span v-for="i in 3" :key="i" class="pip" :class="{ activo: i <= yo.puntos_accion }">●</span>
+          <span v-for="i in 3" :key="i" class="pip" :class="{ activo: i <= jugador.puntos_accion }">●</span>
         </span>
       </span>
     </header>
@@ -141,25 +159,25 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
         <h3 class="eyebrow">Cultivo</h3>
         <PistaMedida
           etiqueta="Vitalidad"
-          :valor="yo.vitalidad"
+          :valor="jugador.vitalidad"
           :max="6"
-          :previsto="avisoColapso ? yo.vitalidad_prevista : null"
+          :previsto="avisoColapso ? jugador.vitalidad_prevista : null"
           :tono="avisoColapso ? 'riesgo' : 'vital'"
         />
         <p
           v-if="avisoColapso"
           class="aviso-colapso"
-          :title="`Vitalidad ${yo.vitalidad} → ${yo.vitalidad_prevista} esta noche: entrarás en Contaminación (-3 Puntos de Maestría y no podrás Iniciar Receta). Alimenta el cultivo (Acción A, 0 PA) antes de terminar el día.`"
+          :title="`Vitalidad ${jugador.vitalidad} → ${jugador.vitalidad_prevista} esta noche: entrarás en Contaminación (-3 Puntos de Maestría y no podrás Iniciar Receta). Alimenta el cultivo (Acción A, 0 PA) antes de terminar el día.`"
         >
           ⚠ Colapsa esta noche si no lo alimentas
         </p>
         <PistaMedida
           etiqueta="Acidez"
-          :valor="yo.acidez"
+          :valor="jugador.acidez"
           :max="6"
           :bandas="BANDAS_ACIDEZ"
           tono="frio"
-          :lectura="`${yo.acidez}/6 · ${puntosEquilibrio(yo.acidez)} pts`"
+          :lectura="`${jugador.acidez}/6 · ${puntosEquilibrio(jugador.acidez)} pts`"
         />
 
         <h3 class="eyebrow">Recursos</h3>
@@ -168,44 +186,48 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
             v-for="tipo in TIPOS_HARINA"
             :key="tipo"
             class="recurso-tile"
-            :title="`Harina ${tipo}: ${fmtTokensHarina(yo.reserva_harina[tipo])} del 10% = ${yo.reserva_harina[tipo]}%`"
+            :title="`Harina ${tipo}: ${fmtTokensHarina(jugador.reserva_harina[tipo])} del 10% = ${jugador.reserva_harina[tipo]}%`"
           >
             <span class="ico-s"><IconoHarina :tipo="tipo" /></span>
-            <span class="dato">{{ tokensHarina(yo.reserva_harina[tipo]) }}</span>
-            <span class="unidad-secundaria">({{ yo.reserva_harina[tipo] }}%)</span>
+            <span class="dato">{{ tokensHarina(jugador.reserva_harina[tipo]) }}</span>
+            <span class="unidad-secundaria">({{ jugador.reserva_harina[tipo] }}%)</span>
           </div>
           <div
             class="recurso-tile"
-            :title="`Agua: ${fmtTokensAgua(yo.reserva_agua)} del 5% = ${pctAgua(yo.reserva_agua)}% de hidratación`"
+            :title="`Agua: ${fmtTokensAgua(jugador.reserva_agua)} del 5% = ${pctAgua(jugador.reserva_agua)}% de hidratación`"
           >
             <span class="ico-s"><IconoAgua /></span>
-            <span class="dato">{{ yo.reserva_agua }}</span>
-            <span class="unidad-secundaria">({{ pctAgua(yo.reserva_agua) }}%)</span>
+            <span class="dato">{{ jugador.reserva_agua }}</span>
+            <span class="unidad-secundaria">({{ pctAgua(jugador.reserva_agua) }}%)</span>
           </div>
           <div class="recurso-tile" title="Datos de Investigación">
-            <span class="ico-s"><IconoDatos /></span><span class="dato">{{ yo.datos_investigacion }}</span>
+            <span class="ico-s"><IconoDatos /></span><span class="dato">{{ jugador.datos_investigacion }}</span>
           </div>
           <div class="recurso-tile" title="Monedas">
-            <span class="ico-s"><IconoMonedas /></span><span class="dato">{{ yo.monedas }}</span>
+            <span class="ico-s"><IconoMonedas /></span><span class="dato">{{ jugador.monedas }}</span>
           </div>
           <div class="recurso-tile" title="Dados de inóculo en reserva">
-            <span class="ico-s emoji">🎲</span><span class="dato">{{ yo.dados_inoculo }}</span>
+            <span class="ico-s emoji">🎲</span><span class="dato">{{ jugador.dados_inoculo }}</span>
           </div>
         </div>
         <p
-          v-if="yo.contrato_molino"
+          v-if="jugador.contrato_molino"
           class="linea-molino"
-          title="Contrato con el Molino: cada Fase III el molino te entrega esta harina, sin pasar por la Bolsa y sin mover el visor. Es permanente y no puede cambiarse."
+          :title="`Contrato con el Molino: cada Fase III el molino ${
+            esPropio ? 'te' : 'le'
+          } entrega esta harina, sin pasar por la Bolsa y sin mover el visor. Es permanente y no puede cambiarse.`"
         >
           🌾 Molino: <span class="dato">+{{ tokensHarina(RENDIMIENTO_MOLINO_PCT) }}</span>
-          {{ yo.contrato_molino }}/noche
+          {{ jugador.contrato_molino }}/noche
         </p>
         <p
           class="linea-desperdicio"
           :class="{ penaliza: penalizacionDesperdicio < 0 }"
-          title="Al final de la partida pierdes 1 Punto de Maestría por cada 3 tokens de insumo sin usar. Un token de harina (10%) y uno de agua (5%) cuentan igual aquí."
+          :title="`Al final de la partida ${
+            esPropio ? 'pierdes' : 'pierde'
+          } 1 Punto de Maestría por cada 3 tokens de insumo sin usar. Un token de harina (10%) y uno de agua (5%) cuentan igual aquí.`"
         >
-          <span class="dato">{{ yo.total_tokens_recursos }}</span> tokens sin usar
+          <span class="dato">{{ jugador.total_tokens_recursos }}</span> tokens sin usar
           <span v-if="penalizacionDesperdicio < 0">→ {{ penalizacionDesperdicio }} PM al final</span>
           <span v-else>→ sin penalización todavía</span>
         </p>
@@ -214,12 +236,12 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
       <section class="sub-zona zona-estaciones">
         <h3 class="eyebrow">Estaciones de fermentación</h3>
         <div class="estaciones">
-          <EstacionCard :slot="yo.estaciones_fermentacion[0]" :indice="0" mostrar-fantasma />
-          <EstacionCard :slot="yo.estaciones_fermentacion[1]" :indice="1" mostrar-fantasma />
+          <EstacionCard :slot="jugador.estaciones_fermentacion[0]" :indice="0" mostrar-fantasma />
+          <EstacionCard :slot="jugador.estaciones_fermentacion[1]" :indice="1" mostrar-fantasma />
           <EstacionCard
-            :slot="yo.estaciones_fermentacion[2] ?? null"
+            :slot="jugador.estaciones_fermentacion[2] ?? null"
             :indice="2"
-            :bloqueada="!yo.tecnologias.camara_b"
+            :bloqueada="!jugador.tecnologias.camara_b"
             mostrar-fantasma
           />
         </div>
@@ -228,7 +250,7 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
           Mejoras de laboratorio ({{ desarrollo.instaladas }}/{{ TECNOLOGIAS.length }})
           <span
             class="termino-pm"
-            :title="`Desarrollo Tecnológico: ${desarrollo.instaladas} mejora(s) instalada(s) = +${desarrollo.puntos} PM al final. La próxima mejora suma +${desarrollo.proxima} PM, cueste los Datos que cueste: cuenta cuántas tienes, no lo que pagaste.`"
+            :title="`Desarrollo Tecnológico: ${desarrollo.instaladas} mejora(s) instalada(s) = +${desarrollo.puntos} PM al final. La próxima mejora suma +${desarrollo.proxima} PM, cueste los Datos que cueste: cuenta cuántas ${esPropio ? 'tienes' : 'tiene'}, no lo que pagaste.`"
           >
             · <span class="dato">+{{ desarrollo.puntos }}</span> PM
           </span>
@@ -238,7 +260,7 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
             v-for="tec in TECNOLOGIAS"
             :key="tec.id"
             class="mejora-slot"
-            :class="{ activa: yo.tecnologias[tec.id] }"
+            :class="{ activa: jugador.tecnologias[tec.id] }"
             :fijado="tecAbierta === tec.id"
             @cerrar="tecAbierta = null"
           >
@@ -255,7 +277,7 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
 
             <template #contenido>
               <p>{{ tec.descripcion }}</p>
-              <p v-if="!yo.tecnologias[tec.id]">Costo: {{ tec.costo }} Datos</p>
+              <p v-if="!jugador.tecnologias[tec.id]">Costo: {{ tec.costo }} Datos</p>
             </template>
           </Tooltip>
         </div>
@@ -263,7 +285,7 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
 
       <section class="sub-zona zona-carpeta">
         <h3 class="eyebrow">
-          Carpeta de Proyectos ({{ yo.carpeta_proyectos.length }}/3)
+          Carpeta de Proyectos ({{ jugador.carpeta_proyectos.length }}/3)
           <span v-if="recetasListas > 0" class="termino-pm">
             · <span class="dato">{{ recetasListas }}</span>
             {{ recetasListas === 1 ? 'lista' : 'listas' }} para iniciar
@@ -274,19 +296,19 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
                desde el espacio «Iniciar Receta»: ¿me alcanza para ESTA? Va en el
                tablero y no en RecetaCard porque la misma carta se usa en el
                mercado y en las estaciones, donde la despensa no significa nada. -->
-          <div v-for="(receta, i) in yo.carpeta_proyectos" :key="i" class="proyecto">
+          <div v-for="(receta, i) in jugador.carpeta_proyectos" :key="i" class="proyecto">
             <p class="tag-insumos" :class="{ lista: receta.insumos?.completos }">
               {{ receta.insumos?.completos ? '✓ Insumos completos' : fmtFaltantes(receta.insumos!) }}
             </p>
             <RecetaCard :receta="receta" />
           </div>
-          <p v-if="yo.carpeta_proyectos.length === 0" class="vacio">— vacía —</p>
+          <p v-if="jugador.carpeta_proyectos.length === 0" class="vacio">— vacía —</p>
         </div>
       </section>
 
       <section class="sub-zona zona-archivo">
         <h3 class="eyebrow">
-          Archivo de Horneados ({{ yo.archivo_horneado_exitoso.length }}/5)
+          Archivo de Horneados ({{ jugador.archivo_horneado_exitoso.length }}/5)
           <span
             class="termino-pm"
             :title="`Variedad de Recetas: ${variedad.distintas} receta(s) distinta(s) horneada(s) con éxito = +${variedad.puntos} PM al final. La próxima receta NUEVA suma +${variedad.proxima} PM; repetir una ya horneada no suma nada.`"
@@ -295,11 +317,13 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
             <span class="dato">+{{ variedad.puntos }}</span> PM
           </span>
           <span
-            v-if="yo.renta_diaria > 0"
+            v-if="jugador.renta_diaria > 0"
             class="renta"
-            title="Ingresos de Panadería: Monedas que cobrarás esta noche en la Fase III, una vez por cada horneado exitoso del archivo (Básica 1, Intermedia 2, Avanzada 3). Un colapso no rinde nada, y sacrificar un horneado en el Simposio corta su parte."
+            :title="`Ingresos de Panadería: Monedas que ${
+              esPropio ? 'cobrarás' : 'cobrará'
+            } esta noche en la Fase III, una vez por cada horneado exitoso del archivo (Básica 1, Intermedia 2, Avanzada 3). Un colapso no rinde nada, y sacrificar un horneado en el Simposio corta su parte.`"
           >
-            · <span class="dato">+{{ yo.renta_diaria }}</span> Monedas/noche
+            · <span class="dato">+{{ jugador.renta_diaria }}</span> Monedas/noche
           </span>
         </h3>
         <ul class="archivo-lista">
@@ -620,5 +644,20 @@ const ETIQUETA_ZONA: Record<HorneadoRecord['zona_resultado'], string> = {
   .estaciones {
     grid-template-columns: 1fr;
   }
+}
+/* Tablero ajeno. El cobre significa «tuyo / interactivo» en todo el sistema
+   (ver App.vue), asi que mirar el tablero de otro no puede pintarlo con el
+   mismo acento: los mismos hitos se marcan en tinta neutra. El unico color
+   que SI se conserva es el raíl izquierdo, que es el color de asiento de ese
+   jugador, y los colores de estado de partida (--verdin de la renta,
+   --vital/--riesgo del archivo), que son datos y no identidad. */
+.mi-tablero.ajeno .pip.activo,
+.mi-tablero.ajeno .termino-pm,
+.mi-tablero.ajeno .tag-insumos.lista {
+  color: var(--tinta);
+}
+
+.mi-tablero.ajeno .mejora-slot.activa {
+  border-color: var(--borde-fuerte);
 }
 </style>

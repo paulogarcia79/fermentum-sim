@@ -7,9 +7,7 @@
  * Es un wrapper y no una prop en cada panel a proposito: los nueve
  * componentes de panel siguen sin saber nada de esta funcionalidad de
  * disposicion. La ✕ va posicionada en absoluto sobre la esquina del
- * <section class="panel">; los tres paneles que ya tienen contenido alineado
- * a la derecha en su cabecera (Clima, Tendencias, MiTablero) reservan hueco
- * con un padding-right propio desde GameView.vue.
+ * <section class="panel">.
  */
 defineProps<{ etiqueta: string }>()
 defineEmits<{ ocultar: [] }>()

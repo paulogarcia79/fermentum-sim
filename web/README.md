@@ -41,6 +41,11 @@ serves that bundle locally.
 - `src/components/` — `LobbyView` (create/join/start) and `GameView` (`ClimaBanner`,
   `MercadoPanel`, `MiTablero`/`EstacionCard`, `TablerosOponentes`, `BarraAcciones`,
   `RegistroEventos`, `FermentationReportModal`, `RankingView`).
+  `MiTablero` takes a `jugadorIdx` prop and can draw **any** player, since the server ships
+  every player's full state to every client (`server/views.py`). `SelectorTablero`'s chips
+  (which replace the region's label) and `TablerosOponentes`' rows both switch the Tablero
+  region to another player's board; the selection lives in `store.jugadorObservado`
+  (per-game, not a preference) and snaps back to your own board when your turn arrives.
 - `src/components/acciones/` — one component per player action, plus a shared
   `ModalConfirmacion.vue` for the three
   parameterless confirm actions (H, I, Horas Extras). Button enablement comes from the server's

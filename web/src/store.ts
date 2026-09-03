@@ -68,6 +68,12 @@ interface Store {
    * BarraAcciones (v-if="esMiTurno") y con ella cualquier ref local -- ver
    * ResultadoHorneadoModal.vue, montado desde GameView. */
   resultadoHorneado: HorneadoRecord | null
+  /** Indice del jugador cuyo tablero se muestra en la region Tablero, o
+   * `null` = el propio. Bandera POR PARTIDA y no preferencia: un indice de
+   * asiento no significa nada en la partida siguiente, asi que ni se
+   * persiste ni sobrevive a cerrarSesion(); ademas vuelve sola a `null`
+   * cuando llega el turno (ver aplicarEstado). */
+  jugadorObservado: number | null
 }
 
 export const store: Store = reactive({
@@ -85,6 +91,7 @@ export const store: Store = reactive({
   preferencias: cargarPreferenciasLocales(),
   finAnticipadoPendiente: false,
   resultadoHorneado: null,
+  jugadorObservado: null,
 })
 
 /** Ver Store.resultadoHorneado. Lo setea ModalF.vue tras un horneado
@@ -221,6 +228,32 @@ export function alternarPanel(id: IdPanel): void {
   persistirPreferencias()
 }
 
+/**
+ * Cambia el tablero que se ve en la region Tablero: `idx` de otro jugador, o
+ * `null` para volver al propio. Ver Store.jugadorObservado.
+ *
+ * Elegir un tablero ajeno DES-oculta el panel si estaba oculto, y de forma
+ * permanente -- a diferencia del force-show temporal de «Espacios de Accion»
+ * durante tu turno. Pedir ver un tablero es una peticion explicita, asi que
+ * sobrescribir la preferencia es lo honesto: si no, el clic en una fila de
+ * oponente no haria nada visible y se leeria como un fallo.
+ */
+export function observarJugador(idx: number | null): void {
+  // El asiento propio se normaliza a null: una sola representacion de "mi
+  // tablero", para que el clic en la propia ficha y la vuelta automatica al
+  // llegar el turno dejen el store en el mismo estado.
+  const propio = idx !== null && idx === store.sesion?.playerIndex
+  store.jugadorObservado = propio ? null : idx
+  if (store.jugadorObservado === null) return
+
+  const ocultos = store.preferencias.panelesOcultos
+  const i = ocultos.indexOf('mi_tablero')
+  if (i !== -1) {
+    ocultos.splice(i, 1)
+    persistirPreferencias()
+  }
+}
+
 /** Vuelve a mostrar los nueve paneles. Es la salida de emergencia de una
  * preferencia que dura para siempre: sin esto, un jugador que oculto medio
  * tablero hace tres sesiones tendria que acordarse de que ficha apago. */
@@ -280,6 +313,7 @@ export function cerrarSesion(): void {
   store.inicioDiaPendiente = false
   store.finAnticipadoPendiente = false
   store.resultadoHorneado = null
+  store.jugadorObservado = null
   ultimaCartaClimaId = undefined
   finAnticipadoDescartadoEnConteo = -1
   jugadorEnTurnoAnterior = null
@@ -350,6 +384,11 @@ export function aplicarEstado(nuevo: GameStateView): void {
     nuevo.jugador_en_turno_idx === miIndice &&
     (jugadorEnTurnoAnterior !== miIndice || diaAvanzo)
   ) {
+    // El tablero vuelve al propio: es donde estan la carpeta, la despensa y
+    // el cultivo que las acciones del turno necesitan mirar, y el reloj de
+    // pase por inactividad ya corre. Va ANTES del sonido a proposito, para
+    // que la vuelta no dependa del interruptor de audio.
+    store.jugadorObservado = null
     // Un poco despues: si el turno llego porque un oponente acaba de
     // actuar, su sonido de accion esta sonando ahora mismo.
     if (store.preferencias.sonido) reproducirNotificacionTurno(0.35)
@@ -433,6 +472,7 @@ function volverAVistaDeLobby(): void {
   store.inicioDiaPendiente = false
   store.finAnticipadoPendiente = false
   store.resultadoHorneado = null
+  store.jugadorObservado = null
   ultimaCartaClimaId = undefined
   finAnticipadoDescartadoEnConteo = -1
   jugadorEnTurnoAnterior = null

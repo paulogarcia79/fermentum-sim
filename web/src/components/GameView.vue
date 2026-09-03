@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import {
   alternarPanel,
   confirmarFinAnticipado,
@@ -13,6 +13,7 @@ import MercadoPanel from './MercadoPanel.vue'
 import BolsaHarinasPanel from './BolsaHarinasPanel.vue'
 import MazoTendenciasPanel from './MazoTendenciasPanel.vue'
 import MiTablero from './MiTablero.vue'
+import SelectorTablero from './SelectorTablero.vue'
 import OrdenTurnoPanel from './OrdenTurnoPanel.vue'
 import TablerosOponentes from './TablerosOponentes.vue'
 import BarraAcciones from './BarraAcciones.vue'
@@ -29,6 +30,29 @@ import type { IdPanel } from '../data/panelesTablero'
 const estado = computed(() => store.estado!)
 const miIndice = computed(() => store.sesion!.playerIndex)
 const esMiTurno = computed(() => estado.value.jugador_en_turno_idx === miIndice.value)
+
+// Que tablero se ve en la region Tablero. La comprobacion de rango es un
+// cinturon de seguridad: players.length no cambia a media partida y el store
+// resetea la bandera al salir, pero un indice fuera de rango reventaria el
+// render entero de la region.
+const tableroIdx = computed(() => {
+  const observado = store.jugadorObservado
+  return observado !== null && observado < estado.value.players.length
+    ? observado
+    : miIndice.value
+})
+const tableroEsPropio = computed(() => tableroIdx.value === miIndice.value)
+
+// Por debajo de 1100px la pagina vuelve a hacer scroll y la fila del oponente
+// (region lateral) puede quedar lejos del tablero. En el tablero fijado a la
+// ventana esto no hace nada, que es lo correcto.
+watch(
+  () => store.jugadorObservado,
+  (observado) => {
+    if (observado === null) return
+    document.querySelector('.region-tablero')?.scrollIntoView({ block: 'nearest' })
+  },
+)
 
 // `partida_terminada` es el pestillo del gatillo, no el final de la partida:
 // cuando alguien hornea su 5ª receta salta a media Fase II y todavía queda la
@@ -204,10 +228,13 @@ onUnmounted(() => detenerTransmisionEnVivo())
             </section>
           </div>
 
-          <section v-if="regionTablero" class="region region-tablero" aria-label="Mi tablero">
-            <h2 class="eyebrow rotulo-region">Mi Tablero</h2>
-            <PanelOcultable etiqueta="Mi Tablero" @ocultar="alternarPanel('mi_tablero')">
-              <MiTablero />
+          <section v-if="regionTablero" class="region region-tablero" aria-label="Tablero">
+            <SelectorTablero />
+            <PanelOcultable
+              :etiqueta="tableroEsPropio ? 'Mi Tablero' : 'Tablero'"
+              @ocultar="alternarPanel('mi_tablero')"
+            >
+              <MiTablero :jugador-idx="tableroIdx" />
             </PanelOcultable>
           </section>
         </div>
