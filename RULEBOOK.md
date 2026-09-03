@@ -119,11 +119,12 @@ Fermentum usa dos recursos económicos independientes, que no se convierten entr
 - **Monedas:** la divisa comercial. Se ganan de dos formas: el pago inmediato al Hornear y
   Vender, y los **Ingresos de Panadería**, la renta que cada pan ya horneado sigue produciendo
   todas las noches (ver [9.4](#94-ingresos-de-panadería)). Se gastan comprando harina y agua en el
-  Mercado, adquiriendo recetas y pagando Pliegues.
+  Mercado, adquiriendo recetas, pagando Pliegues y comprando Datos de Investigación en la
+  **ponencia** del Simposio Técnico.
 - **Datos de Investigación:** la divisa técnica del laboratorio. Se ganan **reclamando la
   Jefatura** (1 por día, y solo se la lleva un jugador de la mesa), horneando en Zona Óptima y
-  sacrificando un pan del Archivo en el Simposio Técnico; algunos Patrocinios reparten alguno al
-  empezar. Se gastan en instalar Tecnologías, en Horas Extras, en el Pedido de Urgencia y en el
+  en el Simposio Técnico — sacrificando un pan del Archivo, o presentando allí una **ponencia**
+  a razón de **5 Monedas** por cada Dato; algunos Patrocinios reparten alguno al empezar. Se gastan en instalar Tecnologías, en Horas Extras, en el Pedido de Urgencia y en el
   Inóculo de Emergencia.
 
 > **La panadería es un motor, no una caja registradora.** Un pan horneado no se cobra y se olvida:
@@ -168,7 +169,8 @@ Fermentum usa dos recursos económicos independientes, que no se convierten entr
    insumos de mayor valor, para compensar la ventaja temporal del Investigador Jefe. Los **Datos
    Iniciales** van en sentido inverso a las Monedas: el patrocinador que menos dinero da compensa
    con conocimiento. Existen porque los Datos son escasos hasta el primer horneado en Zona Óptima
-   — el Simposio Técnico exige sacrificar un pan ya horneado, y al empezar nadie tiene ninguno.
+   — el Simposio Técnico, en cualquiera de sus dos modos, exige tener un pan ya horneado en el
+   Archivo, y al empezar nadie tiene ninguno.
 
 4. **Carpeta de Proyectos inicial:** separar **un ejemplar de cada protocolo Básico** (son 4),
    barajar esos cuatro y entregar a cada jugador 1 al azar — de un **protocolo distinto**, de modo
@@ -427,7 +429,8 @@ la **media bolsa**, que se deriva del entero con ⌈Compra/2⌉ y ⌊Venta/2⌋:
 > de **compra** de tu visita — harina (bolsa o media), lote de agua y la firma del Molino — cuesta
 > **1 Moneda menos**, con un mínimo de 1: los precios de las tablas de arriba son los de la mesa, y
 > tú pagas uno menos por cada compra. **Ninguna venta mejora**, y tu compra **mueve el visor igual
-> que la de cualquiera**.
+> que la de cualquiera**. Tampoco descuenta la **ponencia** del Simposio Técnico: esos 5 Monedas
+> por cada Dato los paga toda la mesa por igual.
 >
 > Sí: con el descuento, comprar Blanca un día y venderla al siguiente te deja **+1 Moneda**
 > (comprar sube el visor, así que la venta cobra la casilla siguiente, y en Blanca eso empata justo
@@ -489,26 +492,44 @@ siguiente.
 
 #### Simposio Técnico
 
-**Costo:** 1 PA + **un pan horneado con éxito de tu Archivo**. **Límite:** 1 vez por día (por
-espacio de acción).
+**Costo:** 1 PA + **o bien un pan horneado con éxito de tu Archivo, o bien 5 Monedas por cada
+Dato**. **Límite:** 1 vez por día (por espacio de acción), así que **eliges un modo por visita**.
 
-Presentas uno de tus panes en el simposio: retiras su registro del **Archivo de Horneados
-Exitosos** y ganas Datos de Investigación **según el grado de la carta** — Básica **1**,
-Intermedia **2**, Avanzada **3**. La carta vuelve al descarte del mazo de recetas y puede
-reaparecer al rebarajar.
+**En los dos modos necesitas al menos un pan en tu Archivo de Horneados Exitosos**: lo que se
+presenta en un simposio es un pan, y el modo solo decide si además lo sacrificas.
 
-Es la **única forma de sacar un pan del Archivo**, y hacerlo cuesta, todo a la vez:
+**Modo «sacrificar».** Retiras el registro del **Archivo de Horneados Exitosos** y ganas Datos de
+Investigación **según el grado de la carta** — Básica **1**, Intermedia **2**, Avanzada **3**. La
+carta vuelve al descarte del mazo de recetas y puede reaparecer al rebarajar.
+
+**Modo «ponencia».** Presentas el pan sin retirarlo y pagas la asistencia: **5 Monedas** por cada
+Dato, de 1 a **3** Datos por visita. **Tu Archivo no se toca** — ni sus puntos, ni su renta, ni el
+contador X/5.
+
+> **Por qué 5 y por qué 3.** Cinco Monedas es exactamente lo que vale 1 Punto de Maestría en
+> [Conversión de Riqueza](#112-cálculo-de-puntos-de-maestría-finales): el Dato que compras cuesta
+> el punto que ese dinero te habría dado al final, así que es un trueque a la par y solo compensa
+> si lo inviertes en algo que rinda más. Cinco está además por encima de las 3 Monedas que puedes
+> revender de una media bolsa, de modo que no existe la rueda «compro Datos, pido harina, la
+> vendo». Y el tope de 3 es justo lo que paga sacrificar una Avanzada: por mucha renta que
+> acumules, tu bolsa nunca rinde en una visita más que un sacrificio, y comprar un solo Dato es
+> peor que [Reclamar la Jefatura](#7-catálogo-de-acciones), que te lo da por el mismo PA y sin
+> pagar nada. La ponencia compensa cuando quieres 2 o 3 de golpe, o cuando otro ya se llevó la
+> Jefatura de hoy. **El Comerciante no la descuenta.**
+
+Sacrificar es la **única forma de sacar un pan del Archivo**, y hacerlo cuesta, todo a la vez:
 
 - los **Puntos de Maestría** de ese horneado;
 - su **renta** de [Ingresos de Panadería](#94-ingresos-de-panadería), para el resto de la partida;
 - un escalón de **Variedad de Recetas**, si era el único pan de ese tipo que tenías;
 - un paso del contador **X/5** que termina la partida.
 
-> **No es una jugada eficiente, y no pretende serlo.** Ningún puñado de Datos compensa ese precio:
-> el Simposio es una **palanca de emergencia** — quemar un éxito pasado para salvar el presente —
-> y en la práctica se sacrifica siempre el pan más barato que se tenga. Un jugador con 4 panes en
-> el Archivo puede además sacrificar uno para *retrasar* el final de la partida; es carísimo, y
-> por eso es legítimo. Lo que no puede es deshacer un final ya desencadenado.
+> **Sacrificar no es una jugada eficiente, y no pretende serlo.** Ningún puñado de Datos compensa
+> ese precio: el sacrificio es una **palanca de emergencia** — quemar un éxito pasado para salvar
+> el presente — y en la práctica se sacrifica siempre el pan más barato que se tenga. Un jugador
+> con 4 panes en el Archivo puede además sacrificar uno para *retrasar* el final de la partida; es
+> carísimo, y por eso es legítimo. Lo que no puede es deshacer un final ya desencadenado. Cuando lo
+> que te sobra es dinero y no panes, la alternativa es la ponencia.
 
 **Ojo, cambió respecto a versiones anteriores:** el Simposio ya **no** descarta de la Carpeta de
 Proyectos ni de una estación de fermentación. Para descartar de la Carpeta está la propia acción
@@ -531,7 +552,8 @@ reclamación la ficha se queda donde está, cualquiera puede venir a comprarla.
 
 > **Un Punto de Acción entero por salir primero es caro, y debe serlo.** A cambio te llevas el
 > Dato, y ahí está la otra mitad del asunto: es la única fuente de Datos de Investigación de la
-> partida que no pasa por hornear en Zona Óptima. Antes, quien horneaba bien primero acumulaba
+> partida que no pasa por el Archivo — ni por hornear en Zona Óptima ni por el Simposio — y la
+> única que no te cuesta nada más que el punto de acción. Antes, quien horneaba bien primero acumulaba
 > también la divisa técnica y el resto de la mesa se quedaba sin combustible para Horas Extras y
 > Pedidos de Urgencia. Aquí entra **1 Dato por día en total**, repartido por rotación y no por
 > riqueza: lo limita la competencia, no el precio.
@@ -901,8 +923,9 @@ Tres precisiones que deciden partidas:
 - **Los colapsos no rinden nada.** Solo paga el Archivo de Horneados *Exitosos*; el Archivo de
   Colapsos no produce Monedas. Provocar un colapso es fácil y barato, así que pagarlo sería
   regalar la renta sin haber horneado bien nada.
-- **Si un pan sale del Archivo, su renta se va con él.** La única forma de que eso ocurra es el
-  [Simposio Técnico](#7-catálogo-de-acciones).
+- **Si un pan sale del Archivo, su renta se va con él.** La única forma de que eso ocurra es
+  **sacrificarlo** en el [Simposio Técnico](#7-catálogo-de-acciones); presentar una ponencia allí
+  no retira nada.
 
 > **Este es el motor de la partida.** Hornear no es solo puntuar: es montar una fuente de ingresos
 > que trabaja para ti el resto del juego. Un pan horneado el Día 3 cobra seis o siete noches; el
@@ -966,7 +989,7 @@ importar lo que costó: ver [Desarrollo Tecnológico](#112-cálculo-de-puntos-de
 | **Cámara B** | 4 Datos | Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas. |
 | **Módulo Analítico** | 4 Datos | **Ensancha la Zona Óptima 1 casilla por cada lado** — se come una casilla del Pre-fermento por abajo y una del Colapso por arriba, así que **también retrasa el colapso**. Además sube el rendimiento del horneado: **2 Datos** en cualquier punto de la Zona Óptima y **3** en el centro exacto. |
 | **Criopreservación** | 2 Datos | Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III. Puedes **suspenderla noche a noche** con la acción gratuita del mismo nombre (§7) para dejar bajar tu Vitalidad cuando te convenga un Dado de Inóculo más bajo. |
-| **Comerciante** | 3 Datos | Mejores condiciones de compra: **cada transacción de compra** de tu Acción C — bolsa o media bolsa de harina, lote de agua y la firma del Contrato con el Molino — te cuesta **1 Moneda menos**, con un mínimo de 1. **No mejora ninguna venta** y **no altera el movimiento del visor**: tu compra lo desplaza igual que la de cualquiera. |
+| **Comerciante** | 3 Datos | Mejores condiciones de compra: **cada transacción de compra** de tu Acción C — bolsa o media bolsa de harina, lote de agua y la firma del Contrato con el Molino — te cuesta **1 Moneda menos**, con un mínimo de 1. **No mejora ninguna venta** y **no altera el movimiento del visor**: tu compra lo desplaza igual que la de cualquiera. Tampoco abarata la ponencia del Simposio Técnico. |
 
 ---
 
@@ -988,7 +1011,7 @@ y solo entonces se calcula la puntuación. Así todos los jugadores disputan exa
 número de días, sin importar en qué momento del día saltó el gatillo.
 
 El gatillo, una vez disparado, no se revierte: si el jugador que horneó su quinta receta la
-sacrifica después con un Simposio Técnico, la partida termina igualmente esta noche.
+sacrifica después en el Simposio Técnico, la partida termina igualmente esta noche.
 
 ### 11.2 Cálculo de Puntos de Maestría Finales
 
@@ -1046,6 +1069,10 @@ sacrifica después con un Simposio Técnico, la partida termina igualmente esta 
 > **Los Ingresos de Panadería no son un término de puntuación.** La renta se cobra en Monedas
 > durante la partida; lo que llegue al final sin gastar puntúa por Conversión de Riqueza como
 > cualquier otra Moneda. Su valor real es lo que te dejó comprar mientras jugabas.
+>
+> Esta tasa es también el precio de la **ponencia** del Simposio Técnico: 5 Monedas por cada Dato,
+> es decir, exactamente el punto que esas Monedas habrían valido aquí. Comprar un Dato nunca es
+> dinero regalado — solo compensa si lo inviertes en algo que rinda más de 1 punto.
 
 ### 11.3 Desempate
 

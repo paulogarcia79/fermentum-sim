@@ -49,7 +49,9 @@ from actions import (
 from engine import (
     DATOS_JEFATURA,
     DATOS_SIMPOSIO,
+    MAX_DATOS_PONENCIA,
     MONEDAS_MOSTRADOR,
+    PRECIO_DATO_SIMPOSIO,
     PRECIO_AGUA,
     PRECIO_CONTRATO_MOLINO,
     PRECIO_RECETA,
@@ -702,6 +704,23 @@ def test_datos_del_simposio(docs, doc) -> None:
         assert re.search(r"%s.{0,60}?%d" % (grado.value, datos), bloque, re.S), (
             f"{doc}: el Simposio no declara {datos} Datos para {grado.value}"
         )
+
+
+@AMBOS
+def test_la_ponencia_cuesta_monedas(docs, doc) -> None:
+    """El otro modo del Simposio: comprar Datos con Monedas.
+
+    Las dos cifras son de equilibrio, no de formato -- el precio es la tasa de
+    «Conversion de Riqueza» y el tope es lo que paga el mejor sacrificio -- asi
+    que un reglamento que las contradiga esta mintiendo sobre el balance.
+    """
+    bloque = _normalizar(_seccion(docs[doc], "Simposio Técnico", largo=4000))
+    assert re.search(r"\b%d\b Monedas.{0,30}Dato" % PRECIO_DATO_SIMPOSIO, bloque), (
+        f"{doc}: la ponencia no declara {PRECIO_DATO_SIMPOSIO} Monedas por Dato"
+    )
+    assert re.search(r"de 1 a \b%d\b Datos" % MAX_DATOS_PONENCIA, bloque), (
+        f"{doc}: la ponencia no declara el tope de {MAX_DATOS_PONENCIA} Datos por visita"
+    )
 
 
 # ===========================================================================

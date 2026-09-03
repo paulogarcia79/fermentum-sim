@@ -43,6 +43,7 @@ from engine import (
     CANTIDAD_BOLSA_PCT,
     DATOS_JEFATURA,
     MONEDAS_MOSTRADOR,
+    PRECIO_DATO_SIMPOSIO,
     GameEngine,
 )
 from exceptions import InvalidActionError
@@ -203,11 +204,30 @@ def _despachar(
         )
 
     if accion == "simposio":
-        # `indice` indexa ahora `archivo_horneado_exitoso`: el Simposio se paga
-        # sacrificando un horneado exitoso, no descartando de carpeta/estación.
+        # Dos modos bajo un mismo espacio, discriminados por `modo` igual que el
+        # Pedido de Urgencia lo hace con `recurso`: `sacrificar` indexa
+        # `archivo_horneado_exitoso`, `ponencia` compra Datos con Monedas y no lo
+        # toca. Aquí solo se comprueba el TIPO del parámetro del modo elegido; el
+        # del contrario se reenvía tal cual para que sea `ActionManager` —la única
+        # autoridad de reglas— quien rechace una combinación cruzada.
+        modo = params.get("modo")
+        if not isinstance(modo, str):
+            raise InvalidActionError(
+                f"'modo' debe ser 'sacrificar' o 'ponencia'. Recibido: {modo!r}."
+            )
         return manager.accion_simposio_tecnico(
             player,
-            indice=_requerir_int(params, "indice"),
+            modo=modo,
+            indice=(
+                _requerir_int(params, "indice")
+                if modo == "sacrificar"
+                else params.get("indice")
+            ),
+            datos=(
+                _requerir_int(params, "datos")
+                if modo == "ponencia"
+                else params.get("datos")
+            ),
         )
 
     if accion == "jefatura":
@@ -440,7 +460,14 @@ def describir_accion(
         return f"Investigó el protocolo {nombre}"
 
     if accion == "simposio":
-        # El Simposio devuelve la carta sacrificada al descarte del mercado.
+        if params.get("modo") == "ponencia":
+            # La ponencia no retira nada del archivo: se paga en Monedas.
+            coste = int(resultado) * PRECIO_DATO_SIMPOSIO
+            return (
+                f"Presentó una ponencia en el Simposio "
+                f"(+{resultado} Datos, -{coste} Monedas)"
+            )
+        # El sacrificio devuelve la carta al descarte del mercado.
         descarte = engine.market.descarte_recetas
         nombre = descarte[-1].nombre if descarte else "un horneado"
         return f"Publicó {nombre} en el Simposio (+{resultado} Datos)"

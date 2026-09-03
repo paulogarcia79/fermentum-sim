@@ -150,6 +150,64 @@ emergencia** — quemar un éxito pasado para salvar el presente — y no una ju
 motor. En la práctica se sacrifica siempre la carta más barata que se tenga.
 """
 
+PRECIO_DATO_SIMPOSIO: int = 5
+"""
+Monedas que cuesta CADA Dato comprado en el modo «ponencia» del Simposio Técnico.
+
+El Simposio tenía un solo pago — sacrificar un horneado del archivo — y ese pago es tan
+caro (sus Puntos de Maestría, su renta para el resto de la partida, un escalón de
+«Variedad de Recetas» y un paso del contador X/5) que la acción era una palanca que casi
+nadie tocaba. Al mismo tiempo, «Ingresos de Panadería» hace que al final de la partida
+sobren Monedas sin más destino que la harina, mientras los Datos — la única divisa que
+compra tecnologías — entran de uno en uno. La ponencia conecta las dos: se presenta un
+pan del archivo **sin retirarlo** y se paga la asistencia en Monedas.
+
+**Cinco, y no otra cifra, por dos razones que se cruzan.**
+
+Cinco es la tasa de «Conversión de Riqueza» (``Player.desglose_maestria``: +1 PM por cada
+5 Monedas sobrantes), así que un Dato comprado cuesta EXACTAMENTE el Punto de Maestría
+que ese dinero habría puntuado al final. No es dinero regalado convertido en divisa
+técnica: es un trueque a la par, y sólo compensa si el Dato se invierte en algo que
+rinda más de 1 PM.
+
+Y cinco está por encima de 3, que es lo máximo que se puede revender la media bolsa que
+entrega un Pedido de Urgencia (Centeno en la posición 5 se vende a 7, y la media redondea
+a la baja: ``Market.precio_venta_harina`` ⇒ 3). Eso cierra el bucle
+Monedas → Dato → media bolsa → Monedas, que a cualquier precio inferior a 4 habría sido
+una máquina de imprimir dinero con las dos acciones ya existentes.
+
+**No se deriva del ``// 5`` de ``desglose_maestria``**, igual que ``DATOS_SIMPOSIO`` no se
+deriva de ``PRECIO_RENTA`` pese a coincidir, y que ``AGUA_PEDIDO_URGENCIA`` no se deriva
+de ``AGUA_TOKENS_POR_LOTE[30]``: son dos reglas distintas que hoy valen lo mismo, y
+reequilibrar la puntuación final no debe reajustar en silencio el precio de una acción
+(ni al revés).
+
+**La tecnología Comerciante no lo descuenta.** ``actions.DESCUENTO_COMERCIANTE`` abarata
+las compras de la Acción C — bolsa, media bolsa, lote de agua y Contrato con el Molino —
+y nada más. Los 5 Monedas por Dato los paga toda la mesa por igual.
+"""
+
+MAX_DATOS_PONENCIA: int = 3
+"""
+Datos máximos que se pueden comprar en una sola ponencia (el mínimo es 1).
+
+Coincide con ``DATOS_SIMPOSIO[Grado.AVANZADA]``, el mejor pago del sacrificio, y esa es
+justo la intención: por mucha renta acumulada que tenga, una bolsa nunca rinde en una
+visita más Datos que sacrificar una carta Avanzada. El sacrificio conserva así su papel
+— es la única forma de llevarse un lote grande de Datos — aunque su tabla no haya
+cambiado.
+
+El tope también protege el primer escalón: Reclamar la Jefatura da 1 Dato por 1 PA y sin
+pagar Monedas, así que comprar un único Dato es estrictamente peor que reclamarla. La
+ponencia sólo compensa cuando se quieren 2 o 3 de golpe, o cuando otro jugador ya se
+llevó la Jefatura de hoy. Es una cifra de equilibrio, no de formato, y por eso vive aquí
+y no derivada de ``DATOS_SIMPOSIO``.
+
+El espacio de acción sigue siendo uno por día, de modo que un jugador compra como mucho
+3 Datos por jornada: acelera la carrera tecnológica al final de la partida sin volverla
+un grifo.
+"""
+
 # --- Bono de Sabor en Monedas (Hornear y Vender) ---
 MONEDAS_BONO_SABOR: int = 2
 """

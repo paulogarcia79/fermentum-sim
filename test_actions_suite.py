@@ -10,7 +10,7 @@ from models import (
     Player, FermentationSlot, HorneadoRecord, TecnologiaID, TipoHarina,
     Grado, RECIPE_CATALOG, Environment,
 )
-from engine import GameEngine, Market, MONEDAS_MOSTRADOR
+from engine import GameEngine, Market, MAX_DATOS_PONENCIA, MONEDAS_MOSTRADOR, PRECIO_DATO_SIMPOSIO
 from actions import ActionManager, AGUA_PEDIDO_URGENCIA, HARINA_PEDIDO_URGENCIA
 from exceptions import (
     NotEnoughActionPointsError, MissingResourceError,
@@ -425,7 +425,7 @@ print("--- Simposio Tecnico ---")
 p1.acciones_pa_usadas_hoy = []
 p1.puntos_accion = 1
 p1.archivo_horneado_exitoso = []
-xraises(RuleViolationError, "Simposio archivo vacio", lambda: manager.accion_simposio_tecnico(p1, 0))
+xraises(RuleViolationError, "Simposio archivo vacio", lambda: manager.accion_simposio_tecnico(p1, "sacrificar", indice=0))
 
 receta_basica = next(r for r in RECIPE_CATALOG.values() if r.grado == Grado.BASICA)
 receta_avanzada = next(r for r in RECIPE_CATALOG.values() if r.grado == Grado.AVANZADA)
@@ -447,7 +447,7 @@ p1.acciones_pa_usadas_hoy = []
 p1.puntos_accion = 2
 datos_s = p1.datos_investigacion
 
-manager.accion_simposio_tecnico(p1, 0)
+manager.accion_simposio_tecnico(p1, "sacrificar", indice=0)
 check("Simposio Basica: +1 dato", lambda: None if p1.datos_investigacion == datos_s + 1 else (_ for _ in ()).throw(AssertionError(f"datos={p1.datos_investigacion}")))
 check("Simposio: registro fuera del archivo", lambda: None if len(p1.archivo_horneado_exitoso) == 1 else (_ for _ in ()).throw(AssertionError()))
 check("Simposio: carta va al descarte del mercado", lambda: None if receta_basica in market.descarte_recetas else (_ for _ in ()).throw(AssertionError()))
@@ -455,15 +455,38 @@ check("Simposio: carta va al descarte del mercado", lambda: None if receta_basic
 p1.acciones_pa_usadas_hoy = []
 p1.puntos_accion = 2
 datos_s2 = p1.datos_investigacion
-manager.accion_simposio_tecnico(p1, 0)
+manager.accion_simposio_tecnico(p1, "sacrificar", indice=0)
 check("Simposio Avanzada: +3 datos", lambda: None if p1.datos_investigacion == datos_s2 + 3 else (_ for _ in ()).throw(AssertionError(f"datos={p1.datos_investigacion}")))
 check("Simposio: archivo vaciado", lambda: None if not p1.archivo_horneado_exitoso else (_ for _ in ()).throw(AssertionError()))
 
 p1.acciones_pa_usadas_hoy = []
 p1.puntos_accion = 1
 p1.archivo_horneado_exitoso = [_record(receta_basica)]
-xraises(InvalidActionError, "Simposio indice fuera de rango", lambda: manager.accion_simposio_tecnico(p1, 5))
+xraises(InvalidActionError, "Simposio indice fuera de rango", lambda: manager.accion_simposio_tecnico(p1, "sacrificar", indice=5))
+
+# Modo ponencia: paga PRECIO_DATO_SIMPOSIO Monedas por Dato y NO toca el archivo.
+p1.acciones_pa_usadas_hoy = []
+p1.puntos_accion = 2
+p1.monedas = 30
+datos_p = p1.datos_investigacion
+manager.accion_simposio_tecnico(p1, "ponencia", datos=2)
+check("Ponencia: +2 datos", lambda: None if p1.datos_investigacion == datos_p + 2 else (_ for _ in ()).throw(AssertionError(f"datos={p1.datos_investigacion}")))
+check("Ponencia: cobra 5 Monedas por dato", lambda: None if p1.monedas == 30 - 2 * PRECIO_DATO_SIMPOSIO else (_ for _ in ()).throw(AssertionError(f"monedas={p1.monedas}")))
+check("Ponencia: el archivo sigue intacto", lambda: None if len(p1.archivo_horneado_exitoso) == 1 else (_ for _ in ()).throw(AssertionError()))
+
+p1.acciones_pa_usadas_hoy = []
+p1.puntos_accion = 1
+p1.monedas = 4
+xraises(MissingResourceError, "Ponencia sin monedas", lambda: manager.accion_simposio_tecnico(p1, "ponencia", datos=1))
+xraises(InvalidActionError, "Ponencia por encima del tope", lambda: manager.accion_simposio_tecnico(p1, "ponencia", datos=MAX_DATOS_PONENCIA + 1))
+xraises(InvalidActionError, "Simposio modo desconocido", lambda: manager.accion_simposio_tecnico(p1, "congreso", datos=1))
+xraises(InvalidActionError, "Simposio parametros cruzados", lambda: manager.accion_simposio_tecnico(p1, "ponencia", datos=1, indice=0))
+
 p1.archivo_horneado_exitoso = []
+p1.acciones_pa_usadas_hoy = []
+p1.puntos_accion = 2
+p1.monedas = 30
+xraises(RuleViolationError, "Ponencia sin pan en el archivo", lambda: manager.accion_simposio_tecnico(p1, "ponencia", datos=1))
 
 # ========================================================================
 print("--- Horas Extras ---")

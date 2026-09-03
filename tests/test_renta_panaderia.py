@@ -197,7 +197,7 @@ def test_simposio_paga_datos_por_grado() -> None:
     jugador.archivo_horneado_exitoso = [_registro(AVANZADA)]
     datos_antes = jugador.datos_investigacion
 
-    devuelto = manager.accion_simposio_tecnico(jugador, 0)
+    devuelto = manager.accion_simposio_tecnico(jugador, "sacrificar", indice=0)
 
     assert devuelto == DATOS_SIMPOSIO[Grado.AVANZADA] == 3
     assert jugador.datos_investigacion == datos_antes + 3
@@ -222,7 +222,7 @@ def test_simposio_corta_la_renta_y_los_puntos() -> None:
     assert renta_antes == 4
     assert jugador.recetas_distintas_horneadas == 2
 
-    manager.accion_simposio_tecnico(jugador, 0)  # sacrifica la Avanzada
+    manager.accion_simposio_tecnico(jugador, "sacrificar", indice=0)  # sacrifica la Avanzada
 
     assert engine._cobrar_renta_panaderia(jugador) == 1
     assert jugador.puntos_horneados == puntos_antes - AVANZADA.puntos_optimos
@@ -240,7 +240,7 @@ def test_simposio_rechaza_archivo_vacio_sin_gastar_pa() -> None:
     jugador.archivo_horneado_exitoso = []
 
     try:
-        manager.accion_simposio_tecnico(jugador, 0)
+        manager.accion_simposio_tecnico(jugador, "sacrificar", indice=0)
         raise AssertionError("deberia haber lanzado RuleViolationError")
     except RuleViolationError:
         pass
@@ -257,7 +257,7 @@ def test_simposio_rechaza_indice_fuera_de_rango_sin_gastar_pa() -> None:
     jugador.archivo_horneado_exitoso = [_registro(BASICA)]
 
     try:
-        manager.accion_simposio_tecnico(jugador, 7)
+        manager.accion_simposio_tecnico(jugador, "sacrificar", indice=7)
         raise AssertionError("deberia haber lanzado InvalidActionError")
     except InvalidActionError:
         pass
@@ -277,7 +277,7 @@ def test_simposio_puede_retrasar_el_fin_de_partida() -> None:
     jugador.archivo_horneado_exitoso = [_registro(BASICA) for _ in range(4)]
 
     assert not engine.partida_terminada
-    manager.accion_simposio_tecnico(jugador, 0)
+    manager.accion_simposio_tecnico(jugador, "sacrificar", indice=0)
     assert len(jugador.archivo_horneado_exitoso) == 3
     assert not engine.partida_terminada
 
@@ -303,5 +303,5 @@ def test_el_gatillo_de_fin_de_partida_no_se_revierte() -> None:
 
     # ...y sacrificar uno despues no lo deshace: el flag esta enclavado.
     jugador.puntos_accion = 2
-    manager.accion_simposio_tecnico(jugador, 0)
+    manager.accion_simposio_tecnico(jugador, "sacrificar", indice=0)
     assert engine.partida_terminada

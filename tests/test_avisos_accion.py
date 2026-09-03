@@ -151,7 +151,7 @@ def test_accion_valida_difunde_un_aviso() -> None:
     r = cliente.post(
         f"/games/{room_id}/actions",
         headers={"X-Player-Token": token},
-        json={"accion": "simposio", "params": {"indice": 0}},
+        json={"accion": "simposio", "params": {"modo": "sacrificar", "indice": 0}},
     )
     assert r.status_code == 200, r.text
     assert cola.acciones() == ["simposio"]
@@ -169,7 +169,7 @@ def test_accion_rechazada_no_difunde_nada() -> None:
     r = cliente.post(
         f"/games/{room_id}/actions",
         headers={"X-Player-Token": token},
-        json={"accion": "simposio", "params": {"indice": 99}},
+        json={"accion": "simposio", "params": {"modo": "sacrificar", "indice": 99}},
     )
     assert r.status_code >= 400
     assert cola.acciones() == []

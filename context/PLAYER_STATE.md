@@ -75,7 +75,7 @@ Al iniciar la simulación (Día 1), el setup baraja el mazo de 8 Cartas de Patro
 
   Los jugadores que reciben números de Iniciativa altos (actúan más tarde en la primera ronda) son compensados con un capital de insumos de mayor valor para equilibrar la ventaja temporal del Investigador Jefe.
 
-  Los **Datos Iniciales** van en sentido inverso a las Monedas de la carta (el patrocinador tacaño compensa con conocimiento). Existen porque el Simposio Técnico dejó de ser una fuente barata de Datos: ahora exige sacrificar un horneado del Archivo (ver ACTIONS_REGISTRY.md §Simposio), así que sin ellos no habría ningún Dato en la mesa hasta el primer horneado en Zona Óptima — y con ello ni Horas Extras, ni Pedido de Urgencia, ni mejoras de laboratorio, ni Protocolo I.
+  Los **Datos Iniciales** van en sentido inverso a las Monedas de la carta (el patrocinador tacaño compensa con conocimiento). Existen porque el Simposio Técnico dejó de ser una fuente barata de Datos: **sus dos modos exigen tener ya un horneado en el Archivo** — el sacrificio para retirarlo, la ponencia para presentarlo y pagar en Monedas (ver ACTIONS_REGISTRY.md §Simposio). Esa puerta compartida es lo que mantiene cierta la frase siguiente: sin los Datos Iniciales no habría ningún Dato en la mesa hasta el primer horneado en Zona Óptima — y con ello ni Horas Extras, ni Pedido de Urgencia, ni mejoras de laboratorio, ni Protocolo I.
 
 ---
 

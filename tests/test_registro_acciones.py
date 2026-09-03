@@ -458,6 +458,48 @@ def test_mensaje_del_pedido_de_urgencia_en_sus_dos_ramas() -> None:
     assert harina == "Pedido de Urgencia: media bolsa de Centeno"
 
 
+def test_mensaje_del_simposio_en_sus_dos_modos() -> None:
+    """La ponencia no retira ninguna carta, asi que su linea no puede nombrar
+    una: dice lo que costo, que es la unica cifra que el modo aporta."""
+    from engine import DATOS_SIMPOSIO, PRECIO_DATO_SIMPOSIO
+    from models import Grado, HorneadoRecord, RECIPE_CATALOG
+
+    basica = next(r for r in RECIPE_CATALOG.values() if r.grado == Grado.BASICA)
+
+    def registro():
+        return HorneadoRecord(
+            recipe=basica,
+            posicion_final=basica.zona_optima[0],
+            puntos_base=basica.puntos_optimos,
+            bono_sabor_aplicado=False,
+            fue_colapso=False,
+            datos_obtenidos=0,
+            monedas_obtenidos=0,
+            ampliacion_aplicada=0,
+        )
+
+    engine, manager, jugador = _motor_y_jugador()
+    jugador.archivo_horneado_exitoso = [registro()]
+    jugador.monedas = 30
+    ponencia = _describir(
+        engine, manager, jugador, "simposio", {"modo": "ponencia", "datos": 2}
+    )
+    assert ponencia == (
+        f"Presentó una ponencia en el Simposio "
+        f"(+2 Datos, -{2 * PRECIO_DATO_SIMPOSIO} Monedas)"
+    )
+
+    engine, manager, jugador = _motor_y_jugador()
+    jugador.archivo_horneado_exitoso = [registro()]
+    sacrificio = _describir(
+        engine, manager, jugador, "simposio", {"modo": "sacrificar", "indice": 0}
+    )
+    assert sacrificio == (
+        f"Publicó {basica.nombre} en el Simposio "
+        f"(+{DATOS_SIMPOSIO[Grado.BASICA]} Datos)"
+    )
+
+
 def test_mensaje_de_iniciar_receta_nombra_la_estacion() -> None:
     engine, manager, jugador = _motor_y_jugador()
     receta = jugador.carpeta_proyectos[0]

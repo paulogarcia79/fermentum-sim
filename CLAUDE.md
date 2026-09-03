@@ -642,6 +642,49 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   was regenerated; its diff is exactly 36×3 payouts + 2 vitalidades + 1 starting Dato, nothing
   else. Tests: `tests/test_renta_panaderia.py`.
 
+  **Simposio Técnico — la ponencia, a second rung priced in Monedas instead of a bake.** The
+  Simposio had one payment and it was ruinous (the bake's 9–20 PM, its rent for the rest of the
+  game, a Variedad tier and a step of the X/5 trigger), so nobody pulled the lever; meanwhile
+  Ingresos de Panadería piles up Monedas late with nothing to buy but flour, and Datos — the only
+  currency that buys technologies — arrive one at a time. `accion_simposio_tecnico` now takes a
+  `modo`: `sacrificar` is unchanged, `ponencia` buys 1–3 Datos at
+  `engine.PRECIO_DATO_SIMPOSIO` (5) Monedas each and leaves the archive alone. Six things carry
+  weight:
+  - **5 is the Conversión de Riqueza rate, and deliberately not derived from it.** A bought Dato
+    costs exactly the PM those Monedas would have scored (`Player.desglose_maestria`'s
+    `monedas // 5`), so it is a trade at par rather than free value. It is a separate constant for
+    the `DATOS_SIMPOSIO`-vs-`PRECIO_RENTA` and `AGUA_PEDIDO_URGENCIA`-vs-`AGUA_TOKENS_POR_LOTE[30]`
+    reason: rebalancing endgame scoring must not silently reprice an action.
+  - **5 also has to beat 3**, the most a Pedido de Urgencia's half bag resells for (Centeno at
+    position 5 sells 7, the half rounds down). At 4 or less, Monedas → Dato → media bolsa →
+    Monedas would have been a money printer built from two actions that already existed.
+  - **`MAX_DATOS_PONENCIA = 3` equals `DATOS_SIMPOSIO[AVANZADA]`.** No purse ever outpays a
+    sacrificed Avanzada in one visit, so the sacrifice keeps a role its unchanged table alone
+    would not give it; and since Jefatura pays 1 Dato for 1 PA and no Monedas, buying a single
+    Dato is strictly worse than claiming it. The ponencia only pays at 2–3 at once.
+  - **Both modes are gated on a non-empty archive, and that gate is load-bearing three times
+    over.** It is what stops Patrocinio Monedas being a Día-1 Datos tap, what keeps
+    `PLAYER_STATE.md`'s "no Datos on the table until the first bake" true, and what let
+    `disponibilidad.py` go **completely untouched** — its clause (archive + PA + free space)
+    already covers both. One mode per visit needs no rule either: the space is once per day.
+  - **Comerciante does not discount it** (`DESCUENTO_COMERCIANTE` is Acción C only), stated in
+    all four rule surfaces because the tech's own callout is where a reader would look.
+  - **The wire is discriminated, and `modo` has no default.** `{modo, indice}` |
+    `{modo, datos}`, the Pedido de Urgencia `recurso` precedent; `commands.py` type-checks only
+    the selected mode's param and forwards the other raw, so `ActionManager` stays the only rules
+    authority. A default would have let the old `(player, 0)` calls pass `0` as a mode and hide
+    the migration, so every caller had to be updated.
+
+  Neither mode emits a `GameEvent`, no persisted field changed shape (**no `VERSION_FORMATO`
+  bump**), and `tests/_bot.py` never visits the Simposio, so the golden snapshot passes
+  **unregenerated**. `datosSimposio.ts` mirrors both constants (the rent is still not mirrored —
+  it arrives precomputed); `ModalSimposio.vue` gained a radio toggle and a 1–3 stepper with
+  `ModalG.vue`'s "Cuesta X · tienes Y" disabled-Confirmar treatment. Tests:
+  `tests/test_simposio_ponencia.py`, plus
+  `test_reglamento_al_dia.py::test_la_ponencia_cuesta_monedas` (verified by mutation on both
+  documents; the price appears in the section twice, so mutating only one occurrence passes —
+  the check is honest, the first mutation attempt was not).
+
   **Turno de Mostrador — the floor of the board, and the only PA action that is not a space.**
   A player could hold PA and have no useful move — empty carpeta, mass still in Crecimiento,
   0 Monedas, 0 Datos, Jefatura already claimed by someone else — and the only exit was

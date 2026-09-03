@@ -48,9 +48,11 @@ from engine import (
     COSTE_REFRESCO_AGUA,
     DATOS_JEFATURA,
     DATOS_SIMPOSIO,
+    MAX_DATOS_PONENCIA,
     MONEDAS_MOSTRADOR,
     PRECIO_AGUA,
     PRECIO_CONTRATO_MOLINO,
+    PRECIO_DATO_SIMPOSIO,
     PRECIO_DESCARTE,
     PRECIO_PLIEGUES,
     PRECIO_PLIEGUES_VITALIDAD,
@@ -204,11 +206,12 @@ HARINA_RECULTIVO_MANUAL: int = 30
 Porcentaje de harina (cualquier tipo) que cuesta el Protocolo H: Re-cultivo Manual.
 
 Bajó de 50 a 30 al endurecerse el resto del juego alrededor de la contaminación. El
-Protocolo I cuesta 1 Dato, y los Datos ahora sólo salen de hornear bien o de sacrificar
-un horneado en el Simposio, así que un jugador contaminado temprano puede no tener
-ninguno; H es la vía comprable y tiene que seguir siéndolo. A 30% queda dentro de la
-bolsa inicial de Patrocinio incluso después de varias Acciones A, de modo que rescatarse
-nunca obliga a gastar antes una visita entera en el mercado.
+Protocolo I cuesta 1 Dato, y los Datos salen de hornear bien, de reclamar la Jefatura o
+del Simposio Técnico (sacrificando un horneado o comprándolos en una ponencia, que
+también exige tener ya un pan en el Archivo), así que un jugador contaminado temprano
+puede no tener ninguno; H es la vía comprable y tiene que seguir siéndolo. A 30% queda
+dentro de la bolsa inicial de Patrocinio incluso después de varias Acciones A, de modo
+que rescatarse nunca obliga a gastar antes una visita entera en el mercado.
 
 Sigue siendo el rescate peor de los dos (Vitalidad/Acidez a 1, frente a 2 del Protocolo I).
 """
@@ -1301,64 +1304,151 @@ class ActionManager:
     def accion_simposio_tecnico(
         self,
         player: Player,
-        indice: int,
+        modo: str,
+        indice: Optional[int] = None,
+        datos: Optional[int] = None,
     ) -> int:
         """
         Simposio Técnico — Generación de Datos (ACTIONS_REGISTRY.md §2 «Simposio»).
 
-        Costo:   1 PA + **un horneado exitoso del archivo**.
-        Efecto:  Retira un ``HorneadoRecord`` de ``archivo_horneado_exitoso`` y
-                 acredita ``DATOS_SIMPOSIO[grado]`` Datos de Investigación
-                 (Básica 1, Intermedia 2, Avanzada 3).
+        Costo:   1 PA + **uno de dos pagos, a elegir con ``modo``**:
+                 · ``"sacrificar"``: un horneado exitoso del archivo.
+                 · ``"ponencia"``:   ``PRECIO_DATO_SIMPOSIO`` (5) Monedas por cada
+                   Dato, de 1 a ``MAX_DATOS_PONENCIA`` (3) por visita.
+        Efecto:  · ``"sacrificar"``: retira un ``HorneadoRecord`` de
+                   ``archivo_horneado_exitoso`` y acredita ``DATOS_SIMPOSIO[grado]``
+                   Datos (Básica 1, Intermedia 2, Avanzada 3).
+                 · ``"ponencia"``: acredita ``datos`` Datos y cobra las Monedas. **El
+                   archivo no se toca.**
 
-        Es la acción más destructiva del juego y la ÚNICA que saca un registro del
-        archivo de horneados. Como ``puntos_horneados``, ``puntos_variedad`` y
-        ``recetas_distintas_horneadas`` son ``@property`` sobre esa misma lista,
-        sacrificar un registro le quita automáticamente:
+        **Los dos modos exigen un archivo no vacío**, y el espacio es uno por día, así
+        que una visita elige un modo y sólo uno. La puerta compartida es lo que impide
+        que las Monedas del Patrocinio se conviertan en un grifo de Datos el Día 1: sigue
+        sin haber ningún Dato en la mesa hasta el primer horneado. Es también la razón de que
+        ``disponibilidad.py`` no necesita cláusula nueva: su condición (archivo no
+        vacío + PA + espacio libre) ya vale para los dos modos.
+
+        **El sacrificio** es la acción más destructiva del juego y la ÚNICA que saca un
+        registro del archivo de horneados. Como ``puntos_horneados``,
+        ``puntos_variedad`` y ``recetas_distintas_horneadas`` son ``@property`` sobre
+        esa misma lista, sacrificar un registro le quita automáticamente:
           · sus Puntos de Maestría base (9-20 según la carta),
           · su renta diaria (``engine.PRECIO_RENTA``) para el resto de la partida,
           · posiblemente un escalón entero de «Variedad de Recetas» (hasta -5 PM),
           · y un paso del contador X/5 que dispara el fin de partida.
+        Ningún rendimiento en Datos hace eso *eficiente*: es una palanca de emergencia,
+        no una jugada de motor. Un jugador en 4/5 puede además usarla para bajar a 3/5 y
+        retrasar el final — carísimo, pero legítimo. La carta física vuelve a
+        ``market.descarte_recetas`` y puede reaparecer al rebarajar.
 
-        Ningún rendimiento en Datos hace esto *eficiente*: es una palanca de
-        emergencia, no una jugada de motor. Un jugador en 4/5 puede además usarla
-        para bajar a 3/5 y retrasar el final — carísimo, pero legítimo.
-
-        La carta física vuelve a ``market.descarte_recetas`` y puede reaparecer al
-        rebarajar, igual que hacía el Simposio cuando descartaba de la carpeta.
+        **La ponencia** es el otro lado: no destruye nada y se paga con el dinero que
+        «Ingresos de Panadería» acumula al final de la partida. El precio y el tope son
+        cifras de equilibrio y su razonamiento vive en las docstrings de
+        ``engine.PRECIO_DATO_SIMPOSIO`` (5 = la tasa de «Conversión de Riqueza», y por
+        encima de lo que revende una media bolsa, así que no hay bucle) y
+        ``engine.MAX_DATOS_PONENCIA`` (3 = lo que paga el mejor sacrificio, y la
+        Jefatura sigue dominando el primer escalón). La tecnología **Comerciante no
+        descuenta** aquí: sólo abarata las compras de la Acción C.
 
         Args:
             player: Jugador que ejecuta el simposio.
-            indice: Índice en ``player.archivo_horneado_exitoso``.
+            modo: ``"sacrificar"`` o ``"ponencia"``. Sin valor por defecto a
+                propósito: cada modo pide un parámetro distinto y un defecto
+                silencioso escondería la migración de las llamadas antiguas.
+            indice: Índice en ``player.archivo_horneado_exitoso``. Obligatorio con
+                ``"sacrificar"`` y prohibido con ``"ponencia"``.
+            datos: Datos a comprar (1..``MAX_DATOS_PONENCIA``). Obligatorio con
+                ``"ponencia"`` y prohibido con ``"sacrificar"``.
 
         Returns:
             Datos de Investigación acreditados.
 
         Raises:
+            InvalidActionError: ``modo`` desconocido, parámetro del modo contrario,
+                ``indice`` fuera de rango o ``datos`` fuera de 1..3.
             NotEnoughActionPointsError: PA insuficientes.
             RuleViolationError: El archivo de horneados exitosos está vacío.
-            InvalidActionError: ``indice`` fuera de rango.
+            MissingResourceError: Monedas insuficientes para la ponencia.
         """
+        # --- 1. Forma de la llamada (antes que nada: no depende del estado) ---
+        if modo not in ("sacrificar", "ponencia"):
+            raise InvalidActionError(
+                f"Simposio Técnico: modo {modo!r} inválido. "
+                "Debe ser 'sacrificar' o 'ponencia'."
+            )
+        if modo == "sacrificar":
+            if indice is None:
+                raise InvalidActionError(
+                    "Simposio Técnico: sacrificar necesita el 'indice' del horneado "
+                    "en el Archivo."
+                )
+            if datos is not None:
+                raise InvalidActionError(
+                    "Simposio Técnico: elige UN solo modo por visita. Un sacrificio "
+                    "no lleva cantidad de Datos: la paga el grado de la carta."
+                )
+        else:
+            if datos is None:
+                raise InvalidActionError(
+                    "Simposio Técnico: una ponencia necesita cuántos 'datos' comprar "
+                    f"(1..{MAX_DATOS_PONENCIA})."
+                )
+            if indice is not None:
+                raise InvalidActionError(
+                    "Simposio Técnico: elige UN solo modo por visita. Una ponencia no "
+                    "retira ningún horneado del Archivo, así que no lleva 'indice'."
+                )
+
+        # --- 2. Coste común: PA y espacio ---
         self._require_pa(player, 1)
         self._require_espacio_disponible(player, "simposio")
 
+        # --- 3. Puerta común: hace falta un pan en el Archivo en los DOS modos ---
         if not player.archivo_horneado_exitoso:
             raise RuleViolationError(
-                f"'{player.nombre}' no tiene horneados exitosos que sacrificar en el "
-                "Simposio Técnico. Hay que hornear bien algo antes de poder publicarlo."
-            )
-        if not (0 <= indice < len(player.archivo_horneado_exitoso)):
-            raise InvalidActionError(
-                f"Índice {indice} fuera de rango para archivo_horneado_exitoso "
-                f"(tamaño actual: {len(player.archivo_horneado_exitoso)})."
+                f"'{player.nombre}' no tiene ningún horneado exitoso en el Archivo. El "
+                "Simposio Técnico exige uno, sea para sacrificarlo o para presentar "
+                "una ponencia sobre él."
             )
 
+        # --- 4. Validación propia de cada modo ---
+        coste_monedas: int = 0
+        if modo == "sacrificar":
+            assert indice is not None  # garantizado por la validación de forma
+            if not (0 <= indice < len(player.archivo_horneado_exitoso)):
+                raise InvalidActionError(
+                    f"Índice {indice} fuera de rango para archivo_horneado_exitoso "
+                    f"(tamaño actual: {len(player.archivo_horneado_exitoso)})."
+                )
+        else:
+            # `bool` es subclase de `int`: True colándose como "1 Dato" sería un
+            # parámetro que nadie escribió a propósito.
+            if isinstance(datos, bool) or not isinstance(datos, int):
+                raise InvalidActionError(
+                    f"Simposio Técnico: 'datos' debe ser un entero, no {datos!r}."
+                )
+            if not (1 <= datos <= MAX_DATOS_PONENCIA):
+                raise InvalidActionError(
+                    f"Simposio Técnico: una ponencia compra entre 1 y "
+                    f"{MAX_DATOS_PONENCIA} Datos. Recibido: {datos}."
+                )
+            coste_monedas = datos * PRECIO_DATO_SIMPOSIO
+            self._require_monedas(player, coste_monedas)
+
+        # --- 5. Aplicar (ya no puede fallar nada) ---
         player.consumir_punto_accion("simposio")
-        record = player.archivo_horneado_exitoso.pop(indice)
-        datos: int = DATOS_SIMPOSIO[record.recipe.grado]
-        player.datos_investigacion += datos
-        self._engine.market.descarte_recetas.append(record.recipe)
-        return datos
+        if modo == "sacrificar":
+            assert indice is not None
+            record = player.archivo_horneado_exitoso.pop(indice)
+            datos_ganados: int = DATOS_SIMPOSIO[record.recipe.grado]
+            self._engine.market.descarte_recetas.append(record.recipe)
+        else:
+            assert datos is not None
+            player.monedas -= coste_monedas
+            datos_ganados = datos
+
+        player.datos_investigacion += datos_ganados
+        return datos_ganados
 
     def accion_reclamar_jefatura(self, player: Player) -> None:
         """
