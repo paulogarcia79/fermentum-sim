@@ -14,55 +14,63 @@ Construye el dict JSON que se envía a los clientes HTTP a partir de
      boca arriba). Enviar ``snapshot()`` sin este paso le daría a cualquier
      jugador conocimiento perfecto de las próximas cartas de clima y
      recetas — la única forma en que "serializar todo" es activamente
-     incorrecta aquí.
+     incorrecta aquí. La longitud del mazo de recetas no es solo informativa:
+     es lo que le dice al cliente si la «Investigación a ciegas» (Acción G en
+     modo mazo) tiene carta que robar — y con 0, ``descarte_recetas``, que
+     viaja sin redactar por ser público, dice si aún hay descarte que rebarajar.
   2. **Campos de turno/fase**: añade lo que un cliente necesita para saber
      de quién es el turno y si su propia solicitud podría estar basada en
      un estado obsoleto (``fase_actual``, ``turno_nonce``,
-     ``jugador_en_turno_idx``, ``jefe_investigador_idx``) — datos que viven
-     en el motor, no en las entidades de dominio serializables.
+     ``jugador_en_turno_idx``, ``jefe_investigador_idx``, ``turno_orden``) —
+     datos que viven en el motor, no en las entidades de dominio
+     serializables. ``turno_orden`` es la secuencia completa de índices de
+     jugador en orden de juego del día (``[0]`` = Investigador Jefe);
+     información pública, sin redacción.
   3. **Disponibilidad de acciones**: ``acciones_disponibles``, una lista
      por jugador (ver ``disponibilidad.py``) para que un cliente pueda
      habilitar/deshabilitar sus propios botones sin reimplementar ninguna
      regla — la vista es la misma para cualquier solicitante (no hay
      información oculta entre jugadores en este juego), así que cada
      cliente simplemente indexa por su propio ``player_index``.
-  4. **Puntuación**: ``Player.puntos_maestria_final`` y
-     ``GameEngine.calcular_ranking_final`` son ``@property``/métodos, no
-     campos de dataclass — ``dataclasses.asdict`` no los incluye. Se
-     calculan aquí (``puntos_maestria_final`` por jugador, ``ranking`` con
-     el resultado de ``calcular_ranking_final``) en vez de que el cliente
-     reimplemente la fórmula de puntuación de ``CORE_MECHANICS.md`` §3 en
-     TypeScript — el mismo principio que la disponibilidad de acciones.
-  5. **Puntos de Zona Baja por receta**: cada receta serializada (en la
-     carpeta de proyectos, en una estación activa, o en el mercado) recibe
-     un campo ``puntos_zona_baja`` adicional, calculado con la misma
-     fórmula que usa ``engine._calcular_puntos_zona`` para la zona baja
-     (``max(1, puntos_optimos // PUNTOS_ZONA_BAJA_DIVISOR)``). Ese divisor
-     es una *asunción* documentada en ``engine.py`` (RECIPE_DATABASE.md no
-     lo cuantifica) — se calcula aquí en vez de en TypeScript por la misma
-     razón que el punto 4: si el divisor cambia algún día, un cliente que
-     lo hubiera reimplementado quedaría desincronizado en silencio.
+  4. **Puntuación**: ``Player.puntos_maestria_final``,
+     ``Player.desglose_maestria`` y ``GameEngine.calcular_ranking_final`` son
+     ``@property``/métodos, no campos de dataclass — ``dataclasses.asdict``
+     no los incluye. Se calculan aquí (``puntos_maestria_final``,
+     ``desglose_maestria`` y ``recetas_distintas_horneadas`` por jugador,
+     ``ranking`` con el resultado de ``calcular_ranking_final``) en vez de
+     que el cliente reimplemente la fórmula de puntuación de
+     ``CORE_MECHANICS.md`` §3 en TypeScript — el mismo principio que la
+     disponibilidad de acciones. El desglose viaja término a término y ya
+     ordenado, así que la pantalla de ranking lo pinta recorriéndolo, sin
+     conocer ni el número de términos ni su aritmética.
+  5. **Mazo de Tendencias de Mercado**: ``Market.mazo_tendencias`` (el mazo
+     de Tendencias restante, en orden) se reemplaza por su longitud —
+     mismo tratamiento que el mazo de clima y el mazo de recetas. Su
+     descarte (``descarte_tendencias``) sí es información pública, igual
+     que el descarte de clima/recetas, y se serializa sin cambios.
   6. **Color de jugador y voto de fin anticipado**: ``Seat.color`` y
      ``GameSession.votos_fin_anticipado`` viven en la capa de sala
      (``server/sessions.py``), no en el ``Player``/``GameEngine`` de
      dominio — así que ``game_state_view`` recibe la ``GameSession``
      completa (no solo el ``engine``) para poder anexar ambos a la vista.
+  7. **Registro de movimientos**: ``GameSession.registro_acciones``, el log
+     append-only de qué hizo cada jugador (ver ``EntradaRegistro``) — otra
+     cosa que vive en la sala y no en el motor, y por eso llega por la misma
+     puerta que el punto 6. Va entero en cada respuesta, no por delta,
+     porque un deshacer MUTA entradas antiguas (las marca deshechas).
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from dataclasses import asdict
+from typing import TYPE_CHECKING, Any, Dict
 
-from disponibilidad import acciones_disponibles
-from engine import PUNTOS_ZONA_BAJA_DIVISOR
+from disponibilidad import acciones_disponibles, insumos_receta
+from models import Recipe
+from engine import PRECIO_RENTA
 from serialization import snapshot
 
 if TYPE_CHECKING:
     from server.sessions import GameSession
-
-
-def _enriquecer_receta(receta: Optional[Dict[str, Any]]) -> None:
-    if receta is not None:
-        receta["puntos_zona_baja"] = max(1, receta["puntos_optimos"] // PUNTOS_ZONA_BAJA_DIVISOR)
 
 
 def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
@@ -76,6 +84,7 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
 
     mercado = estado["market"]
     mercado["mazo_recetas_restantes"] = len(mercado.pop("mazo_recetas"))
+    mercado["mazo_tendencias_restantes"] = len(mercado.pop("mazo_tendencias"))
 
     jugador_activo = engine.jugador_activo
     jefe = engine.jefe_investigador
@@ -86,23 +95,130 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
         engine.players.index(jugador_activo) if jugador_activo is not None else None
     )
     estado["jefe_investigador_idx"] = engine.players.index(jefe) if jefe is not None else None
+    # Secuencia completa de turno del día (índices en players, [0] = Jefe).
+    # Tras el fin de partida conserva el orden del último día — inofensivo:
+    # el panel de orden solo se muestra mientras se juega.
+    estado["turno_orden"] = engine.turno_orden
+    # Quién ocupó hoy el espacio (global) de la Jefatura, o None si sigue libre.
+    # Público: `disponibilidad` ya lo usa para apagar el espacio, y el panel de
+    # orden de turno lo muestra para explicar por qué está apagado.
+    estado["jefatura_reclamada_por"] = engine.jefatura_reclamada_por
     estado["acciones_disponibles"] = [
         acciones_disponibles(engine, jugador) for jugador in engine.players
     ]
+    # Campos derivados que `dataclasses.asdict` no incluye (son @property o
+    # métodos del engine) más el color, que vive en el asiento y no en el
+    # jugador de dominio. `vitalidad_prevista`/`en_riesgo_colapso` se calculan
+    # aquí y no en el cliente a propósito: la fórmula del desgaste (incluida la
+    # exención por Criopreservación y el -2 de Aletargamiento Invernal) es una
+    # regla de CLIMATE_LOGIC.md y no debe duplicarse en TypeScript.
     for datos_jugador, jugador, asiento in zip(estado["players"], engine.players, sesion.seats):
         datos_jugador["puntos_maestria_final"] = jugador.puntos_maestria_final
+        datos_jugador["puntos_horneados"] = jugador.puntos_horneados
+        # Desglose de los 8 términos de CORE_MECHANICS.md §3, ya en orden de
+        # presentación, y el recuento de recetas distintas horneadas con
+        # éxito que alimenta el término «Variedad de Recetas». El recuento
+        # viaja aparte del desglose porque la UI lo muestra durante la
+        # partida (cabecera del Archivo de Horneados), donde no hay ningún
+        # desglose a la vista, y despejarlo desde el número triangular sería
+        # absurdo. «Desarrollo Tecnológico», en cambio, NO necesita su propio
+        # recuento: `tecnologias` ya viaja como cuatro booleanos en el snapshot,
+        # así que el cliente lo deriva sin que el servidor mande nada nuevo.
+        datos_jugador["desglose_maestria"] = jugador.desglose_maestria
+        datos_jugador["recetas_distintas_horneadas"] = jugador.recetas_distintas_horneadas
+        # Insumos sin usar, en la unidad de la regla de desperdicio de
+        # CORE_MECHANICS.md §3.4 (-1 PM por cada 3): un token de harina del
+        # 10% y uno de agua del 5% cuentan igual. Es un @property, así
+        # que asdict no lo trae, y la división entera de la fórmula no debe
+        # reimplementarse en TypeScript.
+        datos_jugador["total_tokens_recursos"] = jugador.total_tokens_recursos
         datos_jugador["color"] = asiento.color
-        for receta in datos_jugador["carpeta_proyectos"]:
-            _enriquecer_receta(receta)
-        for estacion in datos_jugador["estaciones_fermentacion"]:
-            if estacion is not None:
-                _enriquecer_receta(estacion["recipe"])
-    for receta in mercado["recetas_visibles"]:
-        _enriquecer_receta(receta)
+        # Ingresos de Panadería que este jugador cobrará esta noche. Se calcula
+        # en el servidor por el mismo criterio que el resto: la tasa por grado
+        # (`engine.PRECIO_RENTA`) es una regla del motor y duplicarla en
+        # TypeScript sería un punto de deriva. Es información pública — el
+        # archivo de horneados ya lo es.
+        datos_jugador["renta_diaria"] = sum(
+            PRECIO_RENTA[r.recipe.grado] for r in jugador.archivo_horneado_exitoso
+        )
+        # Marcador neutral de las Horas Extras: si le queda sin gastar, y en qué
+        # casilla lo puso si ya lo gastó. Ambos son @property derivados de la
+        # entrada duplicada de `acciones_pa_usadas_hoy`, así que `asdict` no los
+        # trae. Van aquí y no en el cliente por el mismo motivo que el resto de
+        # esta lista: qué espacios admiten el marcador es una regla del motor
+        # (`actions.ESPACIOS_CON_MARCADOR_NEUTRAL`) y reimplementarla en
+        # TypeScript sería un punto de deriva. Es información pública — el peón
+        # gris se ve en el tablero de todos.
+        datos_jugador["espacio_repetido_hoy"] = jugador.espacio_repetido_hoy
+        datos_jugador["marcador_neutral_disponible"] = jugador.marcador_neutral_disponible
+        datos_jugador["vitalidad_prevista"] = engine.vitalidad_prevista(jugador)
+        # La misma proyección con la Estasis Biológica en el ajuste contrario:
+        # es lo que ModalEstasis.vue enseña para que la decisión se tome viendo
+        # las dos cifras. Va aquí y no en el cliente por el mismo motivo que la
+        # anterior — el -2 de Aletargamiento es una regla de CLIMATE_LOGIC.md.
+        datos_jugador["vitalidad_prevista_alterna"] = engine.vitalidad_prevista_alterna(jugador)
+        datos_jugador["en_riesgo_colapso"] = engine.riesgo_colapso(jugador)
+        # Zonas del track ya ampliadas por el Módulo Analítico, receta por receta,
+        # SOLO en las recetas que este jugador posee. Las del mercado conservan las
+        # zonas impresas: no son de nadie todavía.
+        #
+        # Se calculan aquí por la misma razón que `vitalidad_prevista`: el umbral de
+        # colapso es la regla que el jugador lee para medir su riesgo, y duplicar esa
+        # aritmética en TypeScript es exactamente el punto de deriva que este módulo
+        # existe para evitar. El cliente solo dibuja lo que recibe.
+        ampliacion = engine.ampliacion_zona_optima(jugador)
+        for clave, recetas in (
+            ("carpeta_proyectos", jugador.carpeta_proyectos),
+            ("estaciones_fermentacion", jugador.estaciones_fermentacion),
+            ("archivo_horneado_exitoso", jugador.archivo_horneado_exitoso),
+            ("archivo_colapsos", jugador.archivo_colapsos),
+        ):
+            for datos_item, item in zip(datos_jugador[clave], recetas):
+                if item is None:
+                    continue
+                # carpeta_proyectos es List[Recipe]; las estaciones y los archivos
+                # envuelven la receta, así que hay que bajar un nivel.
+                receta = item if isinstance(item, Recipe) else item.recipe
+                destino = datos_item if isinstance(item, Recipe) else datos_item["recipe"]
+                destino["zonas_efectivas"] = receta.zonas_efectivas(ampliacion)
+                # Harina y agua que le faltan a ESTA carta, SOLO en la carpeta.
+                # Las del mercado no son de nadie todavía y las de estaciones y
+                # archivos ya están pagadas: en ambos casos la cuenta no
+                # significaría nada. El descuento de Alta Humedad lo aplica
+                # `engine.agua_requerida`, así que se calcula en el servidor por
+                # el mismo criterio que `vitalidad_prevista` — es una regla de
+                # CLIMATE_LOGIC.md y duplicarla en TypeScript sería deriva.
+                if clave == "carpeta_proyectos":
+                    destino["insumos"] = insumos_receta(engine, jugador, receta)
+        # Los HorneadoRecord del archivo llevan dos @property que asdict no
+        # incluye y que el cliente no debe recalcular (la zona en particular
+        # es lógica de reglas): se inyectan aquí, registro por registro.
+        for clave_archivo, registros in (
+            ("archivo_horneado_exitoso", jugador.archivo_horneado_exitoso),
+            ("archivo_colapsos", jugador.archivo_colapsos),
+        ):
+            for datos_registro, registro in zip(datos_jugador[clave_archivo], registros):
+                datos_registro["puntos_totales"] = registro.puntos_totales
+                datos_registro["zona_resultado"] = registro.zona_resultado
     estado["ranking"] = [
         {"posicion": posicion, "player_idx": engine.players.index(jugador)}
         for posicion, jugador in engine.calcular_ranking_final()
     ]
     estado["votos_fin_anticipado"] = sorted(sesion.votos_fin_anticipado)
+    # True si el jugador activo puede deshacer su visita en curso (hay un
+    # checkpoint tomado en esta misma visita) -- ver POST /games/{id}/undo.
+    # Es informacion publica inofensiva: solo dice "el jugador activo ya
+    # hizo algo gratuito esta visita", que de todas formas se ve en el tablero.
+    estado["puede_deshacer"] = sesion.puede_deshacer()
+    # Registro completo de movimientos de jugador (ver
+    # server/sessions.py:EntradaRegistro). Vive en la sesion, no en el motor,
+    # asi que -- como `color` y los votos -- solo esta vista, que recibe la
+    # GameSession entera, puede adjuntarlo. Va completo y no por delta: un
+    # deshacer MUTA entradas viejas (marca `deshecha`), cosa que un protocolo
+    # `?since=N` no sabria expresar sin logica de deltas en el cliente, que es
+    # justo lo que este proyecto evita (store.ts siempre reemplaza el snapshot
+    # entero). Y como el cliente ya refresca el estado con cada aviso de
+    # accion, llega en vivo sin ninguna ruta nueva.
+    estado["registro_acciones"] = [asdict(entrada) for entrada in sesion.registro_acciones]
 
     return estado

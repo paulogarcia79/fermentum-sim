@@ -8,6 +8,15 @@ import vue from '@vitejs/plugin-vue'
 export default defineConfig({
   plugins: [vue()],
   server: {
+    // 3010 y no el 5173 por defecto de Vite: esa es la puerta que TODO proyecto
+    // Vite pide, asi que dos repos abiertos a la vez se pisan. Aqui esta fijada
+    // a proposito para que la URL del laboratorio no cambie segun que mas haya
+    // levantado.
+    port: 3010,
+    // Fallar en vez de saltar a 3011. Sin esto Vite busca la siguiente puerta
+    // libre EN SILENCIO, que es exactamente el problema que fijar la puerta
+    // venia a resolver: la URL volveria a depender de quien arranco primero.
+    strictPort: true,
     proxy: {
       '/games': 'http://127.0.0.1:8000',
     },

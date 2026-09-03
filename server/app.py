@@ -38,7 +38,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-from typing import Any, AsyncIterator, Dict, List, Tuple, Type
+from typing import Any, AsyncIterator, Dict, List, Tuple, Type, Union
 
 from starlette.applications import Starlette
 from starlette.requests import Request
@@ -54,16 +54,25 @@ from exceptions import (
     InsufficientPlayersError,
     InvalidActionError,
     MarketSlotEmptyError,
+    RecipeDeckEmptyError,
     NotYourTurnError,
     PhaseViolationError,
     ResourceDeficitError,
     RuleViolationError,
 )
 from server import persistence
-from server.commands import resolver_comando
+from server.commands import (
+    ACCIONES_QUE_REVELAN,
+    ACCIONES_QUE_TERMINAN_TURNO,
+    MENSAJES_MOVIMIENTO,
+    describir_accion,
+    resolver_comando,
+)
 from server.errors import (
+    CapacidadInvalidaError,
     ColorInvalidoError,
     ColorYaTomadoError,
+    NadaQueDeshacerError,
     NoActiveTurnError,
     NotHostError,
     PartidaNoEnCursoError,
@@ -75,7 +84,14 @@ from server.errors import (
     RoomNotJoinableError,
     UnknownPlayerTokenError,
 )
-from server.sessions import GameSession, RoomManager, RoomStatus, Seat
+from server.sessions import (
+    MAX_JUGADORES,
+    AvisoAccion,
+    GameSession,
+    RoomManager,
+    RoomStatus,
+    Seat,
+)
 from server.views import game_state_view
 
 # ===========================================================================
@@ -94,6 +110,7 @@ _MAPEO_ERRORES: List[Tuple[Type[Exception], int, str]] = [
     (GameAlreadyOverError, 410, "partida_terminada"),
     (InsufficientPlayersError, 400, "jugadores_insuficientes"),
     (MarketSlotEmptyError, 409, "slot_mercado_ocupado"),
+    (RecipeDeckEmptyError, 409, "mazo_recetas_agotado"),
     (FermentumError, 400, "error_de_reglas"),  # respaldo genérico
     (RoomNotFoundError, 404, "sala_no_encontrada"),
     (RoomFullError, 409, "sala_llena"),
@@ -104,8 +121,10 @@ _MAPEO_ERRORES: List[Tuple[Type[Exception], int, str]] = [
     (PlayerNotInactiveError, 409, "jugador_no_inactivo"),
     (ColorInvalidoError, 400, "color_invalido"),
     (ColorYaTomadoError, 409, "color_ya_tomado"),
+    (CapacidadInvalidaError, 400, "capacidad_invalida"),
     (PartidaNoEnCursoError, 409, "partida_no_en_curso"),
     (PartidaNoTerminadaError, 409, "partida_no_terminada"),
+    (NadaQueDeshacerError, 409, "nada_que_deshacer"),
     (RoomError, 400, "error_de_sala"),  # respaldo genérico
 ]
 
@@ -151,10 +170,17 @@ async def _cuerpo_json(request: Request) -> Dict[str, Any]:
     return cuerpo
 
 
+NOMBRE_LONGITUD_MINIMA = 3
+
+
 def _requerir_nombre(cuerpo: Dict[str, Any]) -> str:
     nombre = str(cuerpo.get("nombre") or "").strip()
     if not nombre:
         raise InvalidActionError("Se requiere 'nombre' (no vacío) en el cuerpo.")
+    if len(nombre) < NOMBRE_LONGITUD_MINIMA:
+        raise InvalidActionError(
+            f"'nombre' debe tener al menos {NOMBRE_LONGITUD_MINIMA} caracteres."
+        )
     return nombre
 
 
@@ -163,6 +189,22 @@ def _requerir_color(cuerpo: Dict[str, Any]) -> str:
     if not color:
         raise InvalidActionError("Se requiere 'color' (no vacío) en el cuerpo.")
     return color
+
+
+def _requerir_max_jugadores(cuerpo: Dict[str, Any]) -> int:
+    """
+    Chequeo de forma (si viene, ¿es un entero?) -- el rango real
+    (``1..MAX_JUGADORES``) lo valida ``RoomManager.crear_sala`` (regla de
+    dominio, igual que ``_validar_color``). Opcional: por defecto
+    ``MAX_JUGADORES`` (4), el techo histórico antes de que este campo
+    existiera -- LobbyView.vue siempre manda un valor explícito desde su
+    selector nuevo, pero cualquier otro llamador de la API (tests
+    incluidos) no tiene por qué que preocuparse por la capacidad.
+    """
+    crudo = cuerpo.get("max_jugadores", MAX_JUGADORES)
+    if isinstance(crudo, bool) or not isinstance(crudo, int):
+        raise InvalidActionError("'max_jugadores' debe ser un entero.")
+    return crudo
 
 
 def _avanzar_fase_si_corresponde(sesion: GameSession) -> None:
@@ -213,6 +255,24 @@ def _formatear_sse(seq: int, evento: GameEvent) -> str:
     return f"id: {seq}\ndata: {payload}\n\n"
 
 
+def _formatear_sse_aviso(aviso: AvisoAccion) -> str:
+    """
+    Frame efímero de acción de jugador (ver ``AvisoAccion``), en un canal
+    paralelo sobre la misma conexión: lleva nombre (``event: accion``, así
+    que llega a un ``addEventListener('accion', ...)`` y no al ``onmessage``
+    del log de eventos) y **deliberadamente NINGUNA línea ``id:``**.
+
+    Lo segundo es lo que sostiene todo el diseño: el navegador solo mueve su
+    ``Last-Event-ID`` cuando el frame trae ``id:``, así que un aviso no puede
+    descolocar el puntero de resume del log de eventos -- que es un índice
+    dentro de ``engine.eventos``, donde un aviso nunca entra.
+    """
+    payload = json.dumps(
+        {"accion": aviso.accion, "jugador_idx": aviso.jugador_idx}, ensure_ascii=False
+    )
+    return f"event: accion\ndata: {payload}\n\n"
+
+
 INTERVALO_LIMPIEZA_SEGUNDOS = 10 * 60
 """Cada cuánto corre RoomManager.limpiar_inactivas() en segundo plano (Milestone 6)."""
 
@@ -256,7 +316,8 @@ def crear_app() -> Starlette:
             cuerpo = await _cuerpo_json(request)
             nombre = _requerir_nombre(cuerpo)
             color = _requerir_color(cuerpo)
-            sesion, asiento = salas.crear_sala(nombre, color)
+            max_jugadores = _requerir_max_jugadores(cuerpo)
+            sesion, asiento = salas.crear_sala(nombre, color, max_jugadores)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(
@@ -265,6 +326,7 @@ def crear_app() -> Starlette:
                 "host_token": sesion.host_token,
                 "player_token": asiento.token,
                 "player_index": asiento.player_index,
+                "max_jugadores": sesion.max_jugadores,
             },
             status_code=201,
         )
@@ -304,6 +366,7 @@ def crear_app() -> Starlette:
             {
                 "room_id": sesion.id,
                 "status": sesion.status.value,
+                "max_jugadores": sesion.max_jugadores,
                 "seats": [
                     {"player_index": a.player_index, "nombre": a.nombre, "color": a.color}
                     for a in sesion.seats
@@ -372,7 +435,7 @@ def crear_app() -> Starlette:
         except ValueError:
             desde = 0
 
-        cola: "asyncio.Queue[GameEvent]" = asyncio.Queue()
+        cola: "asyncio.Queue[Union[GameEvent, AvisoAccion]]" = asyncio.Queue()
         # Suscribirse y leer el backlog bajo el mismo lock que protege toda
         # mutación del motor: ninguna emisión concurrente puede colarse
         # entre "ya me suscribí" y "ya leí lo que había hasta ahora" (ver
@@ -392,6 +455,10 @@ def crear_app() -> Starlette:
                         evento = await asyncio.wait_for(cola.get(), timeout=15)
                     except asyncio.TimeoutError:
                         yield ": keepalive\n\n"  # evita que un proxy cierre la conexión inactiva
+                        continue
+                    if isinstance(evento, AvisoAccion):
+                        # No incrementa `seq`: un aviso no es parte del log.
+                        yield _formatear_sse_aviso(evento)
                         continue
                     seq += 1
                     yield _formatear_sse(seq, evento)
@@ -436,7 +503,52 @@ def crear_app() -> Starlette:
                     )
                 jugador = engine.players[asiento.player_index]
                 manager = ActionManager(engine)
-                resolver_comando(engine, manager, jugador, accion, params)
+                # Antes de mutar: la Acción F emite su HORNEADO durante el
+                # propio despacho, y la línea "Horneó X" del registro debe
+                # leerse por delante de ese evento, no detrás.
+                pos_eventos = len(engine.eventos)
+                # Checkpoint de deshacer. Una acción gratuita deja la visita
+                # abierta, así que el estado PRE-acción se fotografía la
+                # primera vez (las siguientes gratuitas de la misma visita
+                # comparten ese punto de restauración). El orden importa:
+                # ActionManager valida todo y revienta ANTES de mutar
+                # (fail-fast), así que si la acción se rechaza hay que
+                # devolver el checkpoint a como estaba -- ni descartar el de
+                # una visita que no terminó, ni conservar uno recién creado
+                # para una acción que nunca ocurrió.
+                es_gratuita = accion in ACCIONES_QUE_TERMINAN_TURNO and not ACCIONES_QUE_TERMINAN_TURNO[accion]
+                checkpoint_nuevo = es_gratuita and not sesion.puede_deshacer()
+                if checkpoint_nuevo:
+                    sesion.tomar_checkpoint()
+                try:
+                    resultado = resolver_comando(engine, manager, jugador, accion, params)
+                except FermentumError:
+                    if checkpoint_nuevo:
+                        sesion.limpiar_checkpoint()
+                    raise
+                if not es_gratuita:
+                    sesion.limpiar_checkpoint()  # la visita terminó: nada deshacible
+                # Antes de re-tomar el checkpoint de una acción reveladora:
+                # así su entrada queda DENTRO de la longitud congelada y un
+                # deshacer posterior no la tacha (lo revelado no se
+                # des-revela).
+                sesion.registrar_accion(
+                    accion,
+                    asiento.player_index,
+                    describir_accion(engine, jugador, accion, params, resultado),
+                    pos_eventos,
+                )
+                # Contrato de ACCIONES_QUE_REVELAN (hoy todas False): lo
+                # revelado no se des-revela -- el checkpoint se re-toma
+                # DESPUÉS de resolver, y ese es el nuevo piso del deshacer.
+                if ACCIONES_QUE_REVELAN.get(accion):
+                    sesion.tomar_checkpoint()
+                # Aquí y no antes: la acción ya se aplicó, así que una
+                # rechazada por fail-fast no suena en ninguna pestaña. Y
+                # antes de avanzar de fase, para que el aviso de la acción
+                # llegue por delante de los eventos de Fase III que ella misma
+                # disparó.
+                sesion.difundir_accion(accion, asiento.player_index)
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
                 vista = game_state_view(sesion)
@@ -455,8 +567,59 @@ def crear_app() -> Starlette:
             async with sesion.lock:
                 _requerir_turno_del_jugador(engine, asiento)
                 jugador = engine.players[asiento.player_index]
+                sesion.limpiar_checkpoint()  # el pase cierra la visita
+                pos_eventos = len(engine.eventos)
                 engine.pasar_turno(jugador)
+                sesion.registrar_accion(
+                    "pasar",
+                    asiento.player_index,
+                    MENSAJES_MOVIMIENTO["pasar"],
+                    pos_eventos,
+                )
+                sesion.difundir_accion("pasar", asiento.player_index)
                 _avanzar_fase_si_corresponde(sesion)
+                salas.guardar(sesion)
+                vista = game_state_view(sesion)
+        except (FermentumError, RoomError) as exc:
+            return _respuesta_error(exc)
+        return JSONResponse(vista)
+
+    async def deshacer(request: Request) -> JSONResponse:
+        """
+        Deshace la visita en curso del jugador activo: restaura el motor al
+        checkpoint tomado antes de su primera acción de esta visita. Solo
+        el propio jugador activo, solo mientras su visita siga abierta
+        (una acción con costo de PA o un pase la cierran), ilimitado dentro
+        de esa ventana -- siempre vuelve al mismo punto. No emite eventos:
+        dentro de la ventana solo caben acciones gratuitas, que tampoco los
+        emiten, así que el log queda intacto y los punteros `since` de los
+        clientes siguen siendo válidos.
+        """
+        room_id = request.path_params["room_id"]
+        try:
+            token = _requerir_token(request)
+            sesion = salas.obtener(room_id)
+            asiento = sesion.asiento_por_token(token)
+            engine = _requerir_partida_iniciada(sesion)
+
+            async with sesion.lock:
+                _requerir_turno_del_jugador(engine, asiento)
+                if not sesion.puede_deshacer():
+                    raise NadaQueDeshacerError(
+                        "No hay nada que deshacer: todavía no hiciste ninguna "
+                        "acción en esta visita."
+                    )
+                sesion.restaurar_checkpoint()
+                # `sesion.engine` y no `engine`: el local apunta al motor
+                # recién descartado. (Las longitudes coinciden por el
+                # invariante, pero leer el objeto muerto es una trampa.)
+                sesion.registrar_accion(
+                    "deshacer",
+                    asiento.player_index,
+                    MENSAJES_MOVIMIENTO["deshacer"],
+                    len(sesion.engine.eventos),
+                )
+                sesion.difundir_accion("deshacer", asiento.player_index)
                 salas.guardar(sesion)
                 vista = game_state_view(sesion)
         except (FermentumError, RoomError) as exc:
@@ -475,11 +638,26 @@ def crear_app() -> Starlette:
         try:
             token = _requerir_token(request)
             sesion = salas.obtener(room_id)
-            sesion.asiento_por_token(token)  # valida que quien pide sea un jugador de la sala
+            # Valida que quien pide sea un jugador de la sala, y se conserva:
+            # el registro nombra a quién forzó el pase.
+            solicitante = sesion.asiento_por_token(token)
             engine = _requerir_partida_iniciada(sesion)
 
             async with sesion.lock:
-                sesion.forzar_pase_por_inactividad()
+                pos_eventos = len(engine.eventos)
+                idx_pasado = sesion.forzar_pase_por_inactividad()
+                # Después (no antes): si el pase forzado se rechaza (jugador
+                # aún activo), su checkpoint de visita debe sobrevivir.
+                sesion.limpiar_checkpoint()
+                sesion.registrar_accion(
+                    "pase_forzado",
+                    idx_pasado,
+                    MENSAJES_MOVIMIENTO["pase_forzado"].format(nombre=solicitante.nombre),
+                    pos_eventos,
+                )
+                # El aviso sigue siendo "pasar": es el canal de sonido, y un
+                # pase forzado suena igual. Solo el registro los distingue.
+                sesion.difundir_accion("pasar", idx_pasado)
                 _avanzar_fase_si_corresponde(sesion)
                 salas.guardar(sesion)
                 vista = game_state_view(sesion)
@@ -535,6 +713,7 @@ def crear_app() -> Starlette:
             {
                 "room_id": sesion.id,
                 "status": sesion.status.value,
+                "max_jugadores": sesion.max_jugadores,
                 "seats": [
                     {"player_index": a.player_index, "nombre": a.nombre, "color": a.color}
                     for a in sesion.seats
@@ -542,7 +721,7 @@ def crear_app() -> Starlette:
             }
         )
 
-    return Starlette(
+    aplicacion = Starlette(
         routes=[
             Route("/games", crear_sala, methods=["POST"]),
             Route("/games/{room_id}", ver_sala, methods=["GET"]),
@@ -553,12 +732,20 @@ def crear_app() -> Starlette:
             Route("/games/{room_id}/events/stream", flujo_eventos, methods=["GET"]),
             Route("/games/{room_id}/actions", enviar_accion, methods=["POST"]),
             Route("/games/{room_id}/pass", pasar, methods=["POST"]),
+            Route("/games/{room_id}/undo", deshacer, methods=["POST"]),
             Route("/games/{room_id}/force-pass", forzar_pase, methods=["POST"]),
             Route("/games/{room_id}/confirm-end", confirmar_fin, methods=["POST"]),
             Route("/games/{room_id}/return-to-lobby", volver_a_lobby, methods=["POST"]),
         ],
         lifespan=_crear_lifespan(salas),
     )
+    # El RoomManager es privado del closure de arriba; exponerlo en
+    # `app.state` no cambia ninguna ruta y le da a las pruebas la unica cosa
+    # que HTTP no puede devolver: la GameSession viva, para poder engancharle
+    # un suscriptor falso y observar lo que se difunde (ver
+    # tests/test_avisos_accion.py).
+    aplicacion.state.salas = salas
+    return aplicacion
 
 
 app = crear_app()

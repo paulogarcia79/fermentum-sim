@@ -2,15 +2,28 @@
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from '../api'
 import { ApiFallo } from '../api'
-import { establecerSesion, iniciarPolling, refrescarEstado, store } from '../store'
+import {
+  establecerAlertaContaminacion,
+  establecerSesion,
+  iniciarPolling,
+  refrescarEstado,
+  store,
+} from '../store'
 import type { SalaMetadata } from '../api'
 import { COLORES_JUGADOR, hexDeColor } from '../data/coloresJugador'
+
+const NOMBRE_LONGITUD_MINIMA = 3
+const JUGADORES_POSIBLES = [1, 2, 3, 4]
 
 const nombre = ref('')
 const codigoSala = ref('')
 const colorSeleccionado = ref<string | null>(null)
+const jugadoresObjetivo = ref(4)
 const error = ref<string | null>(null)
 const cargando = ref(false)
+const enlaceCopiado = ref(false)
+const llegoPorInvitacion = ref(false)
+const confirmandoInicio = ref(false)
 
 const salaCreada = ref<{ roomId: string; hostToken: string; nombre: string } | null>(null)
 const metadata = ref<SalaMetadata | null>(null)
@@ -49,18 +62,39 @@ async function entrarASalaDeEspera(roomId: string, hostToken: string, nombreJuga
 // Si App.vue ya recuperó una sesión guardada (localStorage, ver
 // store.ts:intentarReconectar) y la sala seguía en LOBBY, store.sesion ya
 // está poblado al montar este componente -- solo hace falta retomar la
-// sala de espera con esos datos, sin volver a crear/unirse.
+// sala de espera con esos datos, sin volver a crear/unirse. Si no hay
+// sesión previa, se revisa si se llegó por un enlace de invitación
+// (?sala=CODIGO, ver el botón "Copiar enlace" en la sala de espera) para
+// precargar el código de sala -- no hay ningún router en la app, así que
+// esto es la única lectura de la URL que existe.
 onMounted(() => {
   if (store.sesion) {
     void entrarASalaDeEspera(store.sesion.roomId, store.sesion.hostToken ?? '', store.sesion.nombre)
+    return
+  }
+  const parametros = new URLSearchParams(window.location.search)
+  const salaInvitacion = parametros.get('sala')
+  if (salaInvitacion) {
+    codigoSala.value = salaInvitacion.trim().toUpperCase()
+    llegoPorInvitacion.value = true
+    window.history.replaceState({}, '', window.location.pathname)
   }
 })
 
-async function crear() {
+function nombreValido(): boolean {
   if (!nombre.value.trim()) {
     error.value = 'Escribe tu nombre primero.'
-    return
+    return false
   }
+  if (nombre.value.trim().length < NOMBRE_LONGITUD_MINIMA) {
+    error.value = `El nombre debe tener al menos ${NOMBRE_LONGITUD_MINIMA} caracteres.`
+    return false
+  }
+  return true
+}
+
+async function crear() {
+  if (!nombreValido()) return
   if (!colorSeleccionado.value) {
     error.value = 'Elige un color.'
     return
@@ -68,7 +102,7 @@ async function crear() {
   cargando.value = true
   error.value = null
   try {
-    const r = await api.crearSala(nombre.value.trim(), colorSeleccionado.value)
+    const r = await api.crearSala(nombre.value.trim(), colorSeleccionado.value, jugadoresObjetivo.value)
     establecerSesion({
       roomId: r.room_id,
       token: r.player_token,
@@ -85,10 +119,11 @@ async function crear() {
 }
 
 async function unirse() {
-  if (!nombre.value.trim() || !codigoSala.value.trim()) {
-    error.value = 'Escribe tu nombre y el código de sala.'
+  if (!codigoSala.value.trim()) {
+    error.value = 'Escribe el código de sala.'
     return
   }
+  if (!nombreValido()) return
   if (!colorSeleccionado.value) {
     error.value = 'Elige un color.'
     return
@@ -113,6 +148,20 @@ async function unirse() {
   }
 }
 
+async function copiarEnlace() {
+  if (!salaCreada.value) return
+  const url = `${window.location.origin}${window.location.pathname}?sala=${salaCreada.value.roomId}`
+  try {
+    await navigator.clipboard.writeText(url)
+    enlaceCopiado.value = true
+    window.setTimeout(() => {
+      enlaceCopiado.value = false
+    }, 1500)
+  } catch {
+    error.value = 'No se pudo copiar el enlace. Copia el código manualmente.'
+  }
+}
+
 async function refrescarMetadata() {
   if (!salaCreada.value) return
   try {
@@ -128,7 +177,21 @@ async function refrescarMetadata() {
   }
 }
 
-async function iniciar() {
+// Si hay menos jugadores sentados que el objetivo configurado al crear la
+// sala, se avisa antes de arrancar en vez de iniciar directo -- fácil de
+// hacer sin querer con el botón a un click. Si ya se alcanzó el objetivo
+// (el caso normal), arranca directo, igual que antes.
+function intentarIniciar() {
+  const actuales = metadata.value?.seats.length ?? 0
+  const objetivo = metadata.value?.max_jugadores ?? actuales
+  if (actuales < objetivo) {
+    confirmandoInicio.value = true
+    return
+  }
+  void iniciarConfirmado()
+}
+
+async function iniciarConfirmado() {
   if (!store.sesion?.hostToken) return
   cargando.value = true
   error.value = null
@@ -139,6 +202,7 @@ async function iniciar() {
     iniciarPolling()
   } catch (e) {
     error.value = e instanceof ApiFallo ? e.message : 'No se pudo iniciar la partida.'
+    confirmandoInicio.value = false
   } finally {
     cargando.value = false
   }
@@ -175,7 +239,7 @@ onUnmounted(() => {
     <div v-if="!salaCreada" class="panel formulario">
       <label>
         Tu nombre
-        <input v-model="nombre" placeholder="Investigador α" maxlength="24" />
+        <input v-model="nombre" placeholder="Investigador α" maxlength="24" :minlength="NOMBRE_LONGITUD_MINIMA" />
       </label>
 
       <label class="campo-color">
@@ -195,9 +259,38 @@ onUnmounted(() => {
         </div>
       </label>
 
+      <label class="campo-alerta">
+        <input
+          type="checkbox"
+          :checked="store.preferencias.alertaContaminacion"
+          @change="establecerAlertaContaminacion(($event.target as HTMLInputElement).checked)"
+        />
+        <span>
+          Avisarme si mi masa madre va a colapsar esta noche
+          <small>Marca la Vitalidad en rojo y refuerza el aviso al pasar turno.</small>
+        </span>
+      </label>
+
       <div class="acciones-lobby">
-        <button class="primario" :disabled="cargando" @click="crear">Crear sala nueva</button>
-        <div class="separador">o</div>
+        <template v-if="!llegoPorInvitacion">
+          <label class="campo-jugadores">
+            Jugadores en la sala
+            <div class="swatches">
+              <button
+                v-for="n in JUGADORES_POSIBLES"
+                :key="n"
+                type="button"
+                class="swatch-numero"
+                :class="{ activo: jugadoresObjetivo === n }"
+                @click="jugadoresObjetivo = n"
+              >
+                {{ n }}
+              </button>
+            </div>
+          </label>
+          <button class="primario" :disabled="cargando" @click="crear">Crear sala nueva</button>
+          <div class="separador">o</div>
+        </template>
         <label>
           Código de sala
           <input v-model="codigoSala" placeholder="ABC123" maxlength="6" style="text-transform: uppercase" />
@@ -209,8 +302,13 @@ onUnmounted(() => {
     </div>
 
     <div v-else class="panel sala-espera">
-      <h2>Sala {{ salaCreada.roomId }}</h2>
-      <p class="subtitulo">Comparte este código con el resto de investigadores.</p>
+      <div class="cabecera-sala">
+        <h2>Sala {{ salaCreada.roomId }}</h2>
+        <button type="button" class="copiar-enlace" @click="copiarEnlace">
+          {{ enlaceCopiado ? '¡Copiado!' : 'Copiar enlace' }}
+        </button>
+      </div>
+      <p class="subtitulo">Comparte el código o el enlace con el resto de investigadores.</p>
 
       <ul class="lista-asientos">
         <li v-for="asiento in metadata?.seats ?? []" :key="asiento.player_index">
@@ -219,9 +317,23 @@ onUnmounted(() => {
         </li>
       </ul>
 
-      <button v-if="store.sesion?.hostToken" class="primario" :disabled="cargando" @click="iniciar">
-        Iniciar partida ({{ metadata?.seats.length ?? 0 }} jugador{{ (metadata?.seats.length ?? 0) === 1 ? '' : 'es' }})
-      </button>
+      <template v-if="store.sesion?.hostToken">
+        <button v-if="!confirmandoInicio" class="primario" :disabled="cargando" @click="intentarIniciar">
+          Iniciar partida ({{ metadata?.seats.length ?? 0 }}/{{ metadata?.max_jugadores ?? '—' }} jugadores)
+        </button>
+        <div v-else class="confirmacion-inicio">
+          <p class="aviso">
+            Solo hay {{ metadata?.seats.length ?? 0 }} de {{ metadata?.max_jugadores ?? '—' }} jugadores
+            configurados. ¿Iniciar de todas formas?
+          </p>
+          <div class="botones-confirmacion">
+            <button :disabled="cargando" @click="confirmandoInicio = false">Cancelar</button>
+            <button class="primario" :disabled="cargando" @click="iniciarConfirmado">
+              Sí, iniciar con {{ metadata?.seats.length ?? 0 }}
+            </button>
+          </div>
+        </div>
+      </template>
       <p v-else class="subtitulo">Esperando a que el host inicie la partida…</p>
 
       <p v-if="error" class="error">{{ error }}</p>
@@ -232,79 +344,110 @@ onUnmounted(() => {
 <style scoped>
 .lobby {
   max-width: 480px;
-  margin: 3rem auto;
+  margin: var(--e6) auto;
   text-align: center;
 }
 
 h1 {
   margin-bottom: 0;
-  font-size: 2.2rem;
+  font-size: var(--t-display);
 }
 
 .subtitulo {
-  color: var(--color-texto-tenue);
-  margin-top: 0.25rem;
+  color: var(--tinta-tenue);
+  margin-top: var(--e1);
 }
 
 .formulario,
 .sala-espera {
-  margin-top: 1.5rem;
+  margin-top: var(--e5);
   text-align: left;
 }
 
 .flavor {
-  margin-top: 1.25rem;
+  margin-top: var(--e5);
   text-align: left;
 }
 
 .flavor p {
-  font-size: 0.9rem;
+  font-size: var(--t-m);
   line-height: 1.5;
-  color: var(--color-texto);
+  color: var(--tinta);
 }
 
 .flavor strong {
-  color: var(--color-acento);
+  color: var(--cobre);
 }
 
 .destacados {
   list-style: none;
   padding: 0;
-  margin: 0.75rem 0 0;
+  margin: var(--e3) 0 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  font-size: 0.8rem;
-  color: var(--color-texto-tenue);
+  gap: var(--e2);
+  font-size: var(--t-s);
+  color: var(--tinta-tenue);
 }
 
 label {
   display: block;
-  margin-bottom: 0.75rem;
-  font-size: 0.85rem;
-  color: var(--color-texto-tenue);
+  margin-bottom: var(--e3);
+  font-size: var(--t-s);
+  color: var(--tinta-tenue);
 }
 
-input {
+/* Solo los campos de texto del formulario (nombre / código de sala). El
+   :not() es necesario: sin el, un checkbox tambien heredaria width: 100% y
+   se comeria toda la fila, empujando su etiqueta fuera del panel. */
+input:not([type='checkbox']) {
   display: block;
   width: 100%;
-  margin-top: 0.25rem;
-  padding: 0.5rem;
-  background: var(--color-fondo);
-  border: 1px solid var(--color-borde);
-  border-radius: 4px;
-  color: var(--color-texto);
-  font-size: 1rem;
+  margin-top: var(--e1);
+  padding: var(--e2);
+  background: var(--carta);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-control);
+  color: var(--tinta);
+  font-size: var(--t-m);
 }
 
 .campo-color {
-  margin-bottom: 0.9rem;
+  margin-bottom: var(--e3);
+}
+
+.campo-alerta {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--e2);
+  margin-bottom: var(--e3);
+  cursor: pointer;
+  font-size: var(--t-s);
+}
+
+.campo-alerta input {
+  /* `width: auto` explicito, igual que `.campo-checkbox input` en App.vue:
+     la regla de arriba ya no le aplica, pero dejarlo escrito documenta el
+     tamaño nativo y evita que cualquier otra regla vuelva a estirarla.
+     flex-shrink: 0 para que la casilla no se aplaste cuando la etiqueta
+     ocupa dos lineas. */
+  width: auto;
+  margin-top: var(--e1);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.campo-alerta small {
+  display: block;
+  color: var(--tinta-tenue);
+  font-size: var(--t-xs);
+  margin-top: var(--e1);
 }
 
 .swatches {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.35rem;
+  gap: var(--e2);
+  margin-top: var(--e2);
 }
 
 .swatch {
@@ -317,7 +460,7 @@ input {
 }
 
 .swatch.activo {
-  border-color: var(--color-texto);
+  border-color: var(--tinta);
 }
 
 .swatch:disabled {
@@ -325,42 +468,81 @@ input {
   cursor: not-allowed;
 }
 
+.campo-jugadores {
+  margin-bottom: var(--e3);
+}
+
+.swatch-numero {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--r-control);
+  border: 2px solid var(--borde);
+  background: var(--carta);
+  color: var(--tinta);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.swatch-numero.activo {
+  border-color: var(--cobre);
+  color: var(--cobre);
+}
+
 button {
   width: 100%;
-  padding: 0.6rem;
-  border-radius: 4px;
-  border: 1px solid var(--color-borde);
-  background: var(--color-panel);
-  color: var(--color-texto);
+  padding: var(--e2);
+  border-radius: var(--r-control);
+  border: 1px solid var(--borde);
+  background: var(--zona);
+  color: var(--tinta);
 }
 
 button.primario {
-  background: var(--color-acento);
-  border-color: var(--color-acento);
-  color: #1a1410;
+  background: var(--cobre);
+  border-color: var(--cobre);
+  color: var(--tinta-sobre-acento);
   font-weight: 600;
 }
 
 .separador {
   text-align: center;
-  color: var(--color-texto-tenue);
-  margin: 0.75rem 0;
+  color: var(--tinta-tenue);
+  margin: var(--e3) 0;
+}
+
+.cabecera-sala {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e3);
+}
+
+.cabecera-sala h2 {
+  margin: 0;
+}
+
+.copiar-enlace {
+  width: auto;
+  flex: 0 0 auto;
+  padding: var(--e2) var(--e2);
+  font-size: var(--t-s);
 }
 
 .lista-asientos {
   list-style: none;
   padding: 0;
-  margin: 0 0 1rem;
+  margin: 0 0 var(--e4);
 }
 
 .lista-asientos li {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.6rem;
-  background: var(--color-fondo);
-  border-radius: 4px;
-  margin-bottom: 0.35rem;
+  gap: var(--e2);
+  padding: var(--e2) var(--e2);
+  background: var(--carta);
+  border-radius: var(--r-control);
+  margin-bottom: var(--e2);
 }
 
 .punto-color {
@@ -371,7 +553,24 @@ button.primario {
 }
 
 .error {
-  color: var(--color-mal);
-  margin-top: 0.75rem;
+  color: var(--riesgo);
+  margin-top: var(--e3);
+}
+
+.confirmacion-inicio {
+  border: 1px solid var(--riesgo);
+  border-radius: var(--r-control);
+  padding: var(--e2) var(--e3);
+}
+
+.confirmacion-inicio .aviso {
+  margin: 0 0 var(--e2);
+  font-size: var(--t-s);
+  color: var(--tinta);
+}
+
+.botones-confirmacion {
+  display: flex;
+  gap: var(--e2);
 }
 </style>

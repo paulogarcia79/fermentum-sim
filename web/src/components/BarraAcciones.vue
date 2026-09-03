@@ -1,35 +1,126 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { pasar, store } from '../store'
+import { deshacer, pasar, store } from '../store'
+import ModalShell from './ModalShell.vue'
+import Tooltip from './Tooltip.vue'
 import ModalA from './acciones/ModalA.vue'
 import ModalB from './acciones/ModalB.vue'
 import ModalC from './acciones/ModalC.vue'
 import ModalD from './acciones/ModalD.vue'
 import ModalE from './acciones/ModalE.vue'
+import ModalDescarte from './acciones/ModalDescarte.vue'
 import ModalF from './acciones/ModalF.vue'
 import ModalG from './acciones/ModalG.vue'
 import ModalSimposio from './acciones/ModalSimposio.vue'
 import ModalConfirmacion from './acciones/ModalConfirmacion.vue'
-import { descripcionesAcciones, type IdAccion } from '../data/descripcionesAcciones'
+import ModalPedidoUrgencia from './acciones/ModalPedidoUrgencia.vue'
+import ModalEstasis from './acciones/ModalEstasis.vue'
+import ModalIncubadora from './acciones/ModalIncubadora.vue'
+import {
+  ACCIONES_QUE_REVELAN,
+  GRUPOS_ACCION,
+  descripcionesAcciones,
+  type IdAccion,
+} from '../data/descripcionesAcciones'
+import { hexDeColor } from '../data/coloresJugador'
+import { fmtLineaReceta } from '../data/insumosReceta'
+import IconoPan from './IconoPan.vue'
+import type { Player } from '../types'
 
-const BOTONES: { id: IdAccion; etiqueta: string; costo: string }[] = [
-  { id: 'B', etiqueta: 'Iniciar Receta', costo: '1 PA' },
-  { id: 'C', etiqueta: 'Adquirir Insumos', costo: '1 PA' },
-  { id: 'D', etiqueta: 'Implementar Mejora', costo: '1 PA' },
-  { id: 'E', etiqueta: 'Pliegues', costo: '1 PA' },
-  { id: 'F', etiqueta: 'Hornear', costo: '1 PA' },
-  { id: 'G', etiqueta: 'Investigar Protocolo', costo: '1 PA' },
-  { id: 'simposio', etiqueta: 'Simposio Técnico', costo: '1 PA' },
-  { id: 'H', etiqueta: 'Re-cultivo Manual', costo: '1 PA' },
-  { id: 'I', etiqueta: 'Inóculo Emergencia', costo: '1 PA' },
-  { id: 'A', etiqueta: 'Alimentar Cultivo', costo: '0 PA' },
-  { id: 'horas_extras', etiqueta: 'Horas Extras', costo: '0 PA' },
-]
+/** Los 12 espacios en plano, sin zonas -- para el modal de confirmación de
+ * pase, que los lista como una sola lista de "lo que te queda por hacer".
+ * Deriva de GRUPOS_ACCION para que no haya dos catálogos que mantener. */
+const ACCIONES_PLANAS = GRUPOS_ACCION.flatMap((g) => g.acciones)
 
 const disponibilidad = computed(() => store.estado!.acciones_disponibles[store.sesion!.playerIndex])
 
 function estado(id: IdAccion) {
   return disponibilidad.value.find((a) => a.id === id) ?? { habilitada: false, motivo: '' }
+}
+
+const jugadorLocal = computed<Player>(() => store.estado!.players[store.sesion!.playerIndex])
+
+/** Espacios de acción gratuitos (0 PA) que igual solo se pueden visitar una
+ * vez por día -- se marcan visualmente distinto (aro hueco) de los espacios
+ * con costo de PA (punto sólido), ver .marcador-jugador.gratis más abajo. */
+const ESPACIOS_GRATIS_UNA_VEZ_POR_DIA: IdAccion[] = ['A', 'E', 'horas_extras']
+
+/** Jugadores que gastaron HOY su marcador neutral de Horas Extras en el espacio
+ * `id`. Se dibujan como un peón gris junto a los de color: el espacio se visitó
+ * dos veces, y el segundo peón no es de nadie.
+ *
+ * No se deriva del registro de movimientos (como los peones del Mostrador) sino
+ * del campo que el servidor ya envía: qué espacios admiten el marcador es una
+ * regla del motor, y `espacio_repetido_hoy` llega ya calculado. */
+function jugadoresConMarcadorNeutral(id: IdAccion): Player[] {
+  return store.estado!.players.filter((p) => p.espacio_repetido_hoy === id)
+}
+
+/** Espacios que SÍ se marcan al visitarlos pero NO se agotan: el peón dice
+ * "estuve aquí", no "está cerrado". Llevan por eso una insignia ∞, porque sin
+ * ella el marcador se leería como el de cualquier otro espacio.
+ *
+ * Hoy solo el Mostrador, y la razón de que lo necesite es que **contradice la
+ * regla de su propio grupo**: la cabecera de Principales dice "un espacio
+ * distinto por visita". Las acciones sin límite del grupo Gratuitas (Pedido de
+ * Urgencia) no necesitan insignia, porque su cabecera ya anuncia "puedes
+ * encadenarlas" y ahí no hay nada que contradecir. */
+const ESPACIOS_REPETIBLES: IdAccion[] = ['mostrador']
+
+/** Un peón por cada VISITA al Mostrador de hoy, en orden cronológico y **sin
+ * deduplicar**: ir dos veces deja dos peones de tu color, porque el espacio se
+ * puede visitar una vez por PA y el recuento es justo lo que el jugador quiere
+ * leer de un vistazo. Es la única lista de peones que puede repetir jugador —
+ * en cualquier otro espacio el límite diario lo hace imposible.
+ *
+ * Se deriva del registro de movimientos porque `acciones_pa_usadas_hoy` NUNCA
+ * contiene 'mostrador' (ese invariante es lo que hace repetible a la acción, ver
+ * engine.MONEDAS_MOSTRADOR). `computed` y no una función suelta: el registro
+ * crece toda la partida y el template lo consultaría una vez por peón. */
+const visitasMostrador = computed<Player[]>(() => {
+  const est = store.estado!
+  return est.registro_acciones
+    .filter(
+      (e) =>
+        e.accion === 'mostrador' && e.dia === est.environment.dia_actual && !e.deshecha,
+    )
+    .map((e) => est.players[e.jugador_idx])
+    .filter((p): p is Player => p !== undefined)
+})
+
+/** Texto del peón `i` del espacio `id`. En un espacio repetible numera la
+ * visita, que es lo que responde a "¿por qué hay dos puntos de mi color?". */
+function tituloPeon(id: IdAccion, i: number): string {
+  const lista = jugadoresQueUsaron(id)
+  const p = lista[i]
+  if (!ESPACIOS_REPETIBLES.includes(id)) return `${p.nombre} ya visitó este espacio hoy`
+  const hechas = lista.slice(0, i + 1).filter((q) => q === p).length
+  const total = lista.filter((q) => q === p).length
+  return `${p.nombre} — visita ${hechas} de ${total} hoy · el espacio sigue abierto`
+}
+
+/** Jugadores que ya visitaron el espacio de acción `id` hoy -- recorre a
+ * TODOS los jugadores (no solo el propio, a diferencia de `disponibilidad`)
+ * para poder mostrar el marcador de color de cada uno. Pedido de Urgencia
+ * no tiene límite diario, así que nunca devuelve marcadores. */
+function jugadoresQueUsaron(id: IdAccion): Player[] {
+  if (id === 'A') return store.estado!.players.filter((p) => p.accion_alimentar_usada)
+  if (id === 'horas_extras') return store.estado!.players.filter((p) => p.horas_extras_usadas)
+  if (id === 'pedido_urgencia') return []
+  // Un peon por visita, no por jugador -- ver `visitasMostrador`.
+  if (id === 'mostrador') return visitasMostrador.value
+  // Estasis no es un espacio que se gaste: el marcador no dice "ya lo usó" sino
+  // "tiene la Estasis suspendida ESTA noche", que es estado visible todo el día
+  // y se limpia solo en la Fase III. Por eso tampoco está en
+  // ESPACIOS_GRATIS_UNA_VEZ_POR_DIA -- se puede accionar en los dos sentidos.
+  if (id === 'estasis') return store.estado!.players.filter((p) => p.estasis_suspendida)
+  // Igual que la Estasis: la marca no dice "ya lo uso" sino "tiene un dial puesto
+  // para ESTA noche". La Fase III lo devuelve a 0, asi que la marca se limpia sola.
+  if (id === 'incubadora')
+    return store.estado!.players.filter((p) =>
+      p.estaciones_fermentacion.some((slot) => slot !== null && slot.modificador_incubadora !== 0),
+    )
+  return store.estado!.players.filter((p) => p.acciones_pa_usadas_hoy.includes(id))
 }
 
 const modalAbierto = ref<IdAccion | null>(null)
@@ -42,7 +133,84 @@ function cerrar() {
 }
 
 const pasando = ref(false)
-async function onPasar() {
+const confirmandoPase = ref(false)
+
+const yo = computed(() => store.estado!.players[store.sesion!.playerIndex])
+
+/**
+ * Las recetas de la Carpeta de Proyectos, con si sus insumos alcanzan hoy.
+ *
+ * Existe por un fallo de partida real: teniendo dos recetas en mano, el jugador
+ * se olvido de la comprada el dia anterior y gasto un Dato en un Pedido de
+ * Urgencia para conseguir algo que ya podia pagar. La carpeta esta en el tablero
+ * propio, que a 1366x768 queda por debajo del pliegue de scroll de su region, asi
+ * que el recordatorio se pone donde el jugador mira cuando decide: el espacio de
+ * accion. `insumos` lo calcula el servidor carta por carta (ver types.ts).
+ */
+const recetasEnMano = computed(() =>
+  yo.value.carpeta_proyectos.map((r) => ({
+    id: r.id,
+    nombre: r.nombre,
+    lista: r.insumos?.completos ?? false,
+    linea: fmtLineaReceta(r.nombre, r.insumos),
+  })),
+)
+
+/** Pasar es una renuncia TOTAL al resto del día: cede los PA restantes y
+ * también las acciones gratuitas sin usar (ver engine.pasar_turno). Antes de
+ * dejar que el jugador tire algo por accidente, se le muestra exactamente qué
+ * le queda -- y un atajo para usarlo -- en un modal de confirmación.
+ *
+ * "Qué le queda" se lee de `acciones_disponibles` (filtrando la propia tabla
+ * ACCIONES_PLANAS por `habilitada`), que ya lo calcula el servidor por
+ * jugador --
+ * nunca se reimplementa aquí ninguna regla de habilitación. */
+const accionesRestantes = computed(() => ACCIONES_PLANAS.filter((b) => estado(b.id).habilitada))
+
+/** El bloque rojo de colapso dentro del modal sigue siendo opt-in (checkbox
+ * del lobby); el modal en sí ya no -- aparece siempre que quede algo por
+ * hacer, tenga o no la alerta activada. */
+/** La zona de Protocolos de Emergencia siempre se ve (para que el jugador
+ * sepa que el rescate existe antes de necesitarlo), pero solo se enciende en
+ * rojo cuando de verdad está en juego. */
+const contaminado = computed(() => yo.value.en_estado_contaminacion)
+
+const avisoColapso = computed(
+  () => store.preferencias.alertaContaminacion && yo.value.en_riesgo_colapso,
+)
+
+function onPasar() {
+  if (accionesRestantes.value.length > 0) {
+    confirmandoPase.value = true
+    return
+  }
+  void pasarDeVerdad()
+}
+
+/** Deshacer la visita: restaura al estado previo a la primera accion
+ * gratuita de esta visita. El servidor manda `puede_deshacer` -- el boton
+ * solo existe cuando hay algo que deshacer, y una accion con costo de PA
+ * (que termina la visita) lo hace desaparecer para siempre. */
+const deshaciendo = ref(false)
+async function onDeshacer() {
+  deshaciendo.value = true
+  try {
+    await deshacer()
+  } finally {
+    deshaciendo.value = false
+  }
+}
+
+/** Atajo del modal de confirmación: en vez de pasar, saltar directo a una de
+ * las acciones que quedaban -- cierra la confirmación y abre el modal normal
+ * de esa acción (mismo flujo que clickear su espacio en el tablero). */
+function usarAccionRestante(id: IdAccion) {
+  confirmandoPase.value = false
+  abrir(id)
+}
+
+async function pasarDeVerdad() {
+  confirmandoPase.value = false
   pasando.value = true
   try {
     await pasar()
@@ -54,30 +222,199 @@ async function onPasar() {
 
 <template>
   <section class="barra-acciones">
-    <div class="grid-botones">
-      <div v-for="b in BOTONES" :key="b.id" class="envoltorio-boton">
-        <button :disabled="!estado(b.id).habilitada" :title="estado(b.id).motivo" @click="abrir(b.id)">
-          {{ b.etiqueta }} <span class="costo">[{{ b.costo }}]</span>
-        </button>
-        <div class="tooltip" role="tooltip">
-          <p>{{ descripcionesAcciones[b.id] }}</p>
-          <p v-if="!estado(b.id).habilitada && estado(b.id).motivo" class="tooltip-motivo">
-            ⚠ {{ estado(b.id).motivo }}
-          </p>
+    <div class="zonas">
+      <section
+        v-for="g in GRUPOS_ACCION"
+        :key="g.id"
+        class="zona-accion"
+        :class="[`zona-${g.id}`, { activa: g.id === 'emergencia' && contaminado }]"
+      >
+        <header class="cabecera-zona">
+          <h4>{{ g.titulo }}</h4>
+          <span class="insignia-costo">{{ g.costo }}</span>
+          <p class="nota-zona">{{ g.nota }}</p>
+        </header>
+
+        <div class="grid-botones">
+          <Tooltip v-for="b in g.acciones" :key="b.id" class="envoltorio-boton">
+            <div
+              v-if="
+                jugadoresQueUsaron(b.id).length > 0 ||
+                jugadoresConMarcadorNeutral(b.id).length > 0
+              "
+              class="marcadores-jugador"
+            >
+              <!-- Clave por indice y no por nombre: en un espacio repetible el
+                   mismo jugador aparece varias veces y `p.nombre` chocaria.
+                   Ahora tambien puede aparecer dos veces en un espacio normal:
+                   su color mas el peon gris de la repeticion. -->
+              <span
+                v-for="(p, i) in jugadoresQueUsaron(b.id)"
+                :key="i"
+                class="marcador-jugador"
+                :class="{ gratis: ESPACIOS_GRATIS_UNA_VEZ_POR_DIA.includes(b.id) }"
+                :style="{ '--color-marcador': hexDeColor(p.color) }"
+                :title="tituloPeon(b.id, i)"
+              />
+              <!-- El peon neutral: gris y sin color de asiento a proposito. La
+                   segunda visita no la firma un jugador, la firma el marcador. -->
+              <span
+                v-for="(p, i) in jugadoresConMarcadorNeutral(b.id)"
+                :key="`n${i}`"
+                class="marcador-jugador neutral"
+                :title="`${p.nombre} repitió este espacio hoy con su marcador neutral de Horas Extras`"
+              />
+            </div>
+            <!-- Marcador neutral aun sin gastar: vive en la casilla de Horas
+                 Extras, que es donde se compro, para que su dueno recuerde que
+                 lo tiene. Ocupa la esquina izquierda libre; Horas Extras no esta
+                 en ESPACIOS_REPETIBLES, asi que no choca con la insignia ∞. -->
+            <span
+              v-if="b.id === 'horas_extras' && jugadorLocal.marcador_neutral_disponible"
+              class="insignia-marcador-neutral"
+              aria-hidden="true"
+            />
+            <!-- ∞: este espacio se marca pero no se agota. Va en la esquina
+                 izquierda, la que dejan libres los peones; solo la casilla B
+                 la disputa, y B no es repetible. -->
+            <span
+              v-if="ESPACIOS_REPETIBLES.includes(b.id)"
+              class="insignia-repetible"
+              aria-hidden="true"
+              >∞</span
+            >
+            <!-- Las recetas que ya tienes en mano, encendidas si sus insumos
+                 alcanzan. Ocupan la esquina libre: los peones de quien ya visito
+                 el espacio viven en la de la derecha. -->
+            <div v-if="b.id === 'B' && recetasEnMano.length > 0" class="recetas-en-mano">
+              <span
+                v-for="(r, i) in recetasEnMano"
+                :key="i"
+                class="pan-en-mano ico-xs"
+                :class="{ lista: r.lista }"
+              >
+                <IconoPan :id="r.id" />
+              </span>
+            </div>
+            <!-- Sin `title`: el motivo ya sale en la caja de abajo, y el
+                 tooltip nativo del navegador se le montaba encima. -->
+            <button :disabled="!estado(b.id).habilitada" @click="abrir(b.id)">
+              {{ b.etiqueta }}
+            </button>
+
+            <template #contenido>
+              <p>{{ descripcionesAcciones[b.id] }}</p>
+              <p
+                v-for="(r, i) in b.id === 'B' ? recetasEnMano : []"
+                :key="i"
+                class="tooltip-receta"
+                :class="{ lista: r.lista }"
+              >
+                {{ r.linea }}
+              </p>
+              <p v-if="ESPACIOS_REPETIBLES.includes(b.id)" class="tooltip-repetible">
+                ∞ No se agota: puedes volver mientras te queden PA.
+              </p>
+              <p
+                v-if="b.id === 'horas_extras' && jugadorLocal.marcador_neutral_disponible"
+                class="tooltip-repetible"
+              >
+                Tienes un marcador neutral sin usar: hoy puedes repetir un espacio
+                ya visitado (B, C, D, F, G, Simposio, H o I).
+              </p>
+              <p v-if="ACCIONES_QUE_REVELAN.has(b.id)" class="tooltip-motivo">
+                ⚠ Revela información oculta: ese paso no se puede deshacer.
+              </p>
+              <p v-if="!estado(b.id).habilitada && estado(b.id).motivo" class="tooltip-motivo">
+                ⚠ {{ estado(b.id).motivo }}
+              </p>
+            </template>
+          </Tooltip>
         </div>
-      </div>
+      </section>
     </div>
 
-    <button class="pasar" :disabled="pasando" @click="onPasar">Pasar turno (sin más acciones)</button>
+    <div class="fila-controles">
+      <button
+        v-if="store.estado!.puede_deshacer"
+        class="deshacer"
+        :disabled="deshaciendo || pasando"
+        title="Restaura el estado al inicio de tu visita, deshaciendo las acciones gratuitas que hiciste. Lo que ya se reveló —una carta robada a ciegas del mazo, por ejemplo— nunca se restaura: esas acciones cierran la visita, así que quedan fuera de esta ventana."
+        @click="onDeshacer"
+      >
+        ↩ Deshacer
+      </button>
+      <button class="pasar" :disabled="pasando || deshaciendo" @click="onPasar">Pasar turno</button>
+    </div>
+
+    <ModalShell
+      v-if="confirmandoPase"
+      titulo="¿Pasar turno? Todavía puedes actuar"
+      @cerrar="confirmandoPase = false"
+    >
+      <p class="intro-pase">
+        Pasar renuncia a <strong>todo</strong> lo que te queda hoy — incluidas las acciones
+        gratuitas sin usar. Puedes usar cualquiera de estas antes de pasar:
+      </p>
+
+      <ul class="lista-restantes">
+        <li v-for="b in accionesRestantes" :key="b.id">
+          <button type="button" class="accion-restante" @click="usarAccionRestante(b.id)">
+            <span class="titulo-restante">
+              {{ b.etiqueta }} <span class="costo">[{{ b.costo }}]</span>
+            </span>
+            <!-- Pasar tambien renuncia a las recetas que ya tienes en mano, asi
+                 que la fila de B las nombra en vez de repetir las reglas. -->
+            <span v-if="b.id === 'B' && recetasEnMano.length > 0" class="blurb-restante">
+              <span v-for="(r, i) in recetasEnMano" :key="i" class="linea-receta" :class="{ lista: r.lista }">
+                {{ r.linea }}
+              </span>
+            </span>
+            <span v-else class="blurb-restante">{{ descripcionesAcciones[b.id] }}</span>
+          </button>
+        </li>
+      </ul>
+
+      <p v-if="avisoColapso" class="peligro-colapso">
+        <strong>⚠ Tu masa madre colapsa esta noche.</strong>
+        La Vitalidad bajará de {{ yo.vitalidad }} a {{ yo.vitalidad_prevista }} y entrarás en
+        Contaminación: -3 Puntos de Maestría y no podrás Iniciar Receta hasta usar un protocolo
+        de emergencia.
+      </p>
+
+      <template #acciones>
+        <button class="secundario" :disabled="pasando" @click="confirmandoPase = false">
+          Seguir jugando
+        </button>
+        <button class="confirmar-pase" :disabled="pasando" @click="pasarDeVerdad">
+          Pasar de todos modos
+        </button>
+      </template>
+    </ModalShell>
 
     <ModalA v-if="modalAbierto === 'A'" @cerrar="cerrar" />
     <ModalB v-if="modalAbierto === 'B'" @cerrar="cerrar" />
     <ModalC v-if="modalAbierto === 'C'" @cerrar="cerrar" />
     <ModalD v-if="modalAbierto === 'D'" @cerrar="cerrar" />
     <ModalE v-if="modalAbierto === 'E'" @cerrar="cerrar" />
+    <ModalDescarte v-if="modalAbierto === 'descarte'" @cerrar="cerrar" />
     <ModalF v-if="modalAbierto === 'F'" @cerrar="cerrar" />
     <ModalG v-if="modalAbierto === 'G'" @cerrar="cerrar" />
     <ModalSimposio v-if="modalAbierto === 'simposio'" @cerrar="cerrar" />
+    <ModalConfirmacion
+      v-if="modalAbierto === 'jefatura'"
+      titulo="Reclamar la Jefatura (1 PA)"
+      :descripcion="descripcionesAcciones.jefatura"
+      accion="jefatura"
+      @cerrar="cerrar"
+    />
+    <ModalConfirmacion
+      v-if="modalAbierto === 'mostrador'"
+      titulo="Turno de Mostrador (1 PA)"
+      :descripcion="descripcionesAcciones.mostrador"
+      accion="mostrador"
+      @cerrar="cerrar"
+    />
     <ModalConfirmacion
       v-if="modalAbierto === 'H'"
       titulo="Re-cultivo Manual (1 PA)"
@@ -99,86 +436,385 @@ async function onPasar() {
       accion="horas_extras"
       @cerrar="cerrar"
     />
+    <ModalPedidoUrgencia v-if="modalAbierto === 'pedido_urgencia'" @cerrar="cerrar" />
+    <ModalEstasis v-if="modalAbierto === 'estasis'" @cerrar="cerrar" />
+    <ModalIncubadora v-if="modalAbierto === 'incubadora'" @cerrar="cerrar" />
   </section>
 </template>
 
 <style scoped>
-.grid-botones {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 0.6rem;
-  margin-bottom: 0.75rem;
+/* La barra vive en el borde inferior de la mesa (region .region-acciones de
+   GameView.vue): las tres familias de espacios en fila -- Principales,
+   Gratuitas y Protocolos de Emergencia (ver GRUPOS_ACCION) -- y los controles
+   de turno al extremo derecho, siempre en el mismo sitio.
+
+   Ojo con el error facil: la insignia de Emergencia dice 1 PA, no 0 PA. H e I
+   son reactivas por DISPONIBILIDAD (necesitan contaminacion activa), no por
+   costo: cobran su PA y terminan el turno igual que las principales. */
+.barra-acciones {
+  display: flex;
+  align-items: stretch;
+  gap: var(--e2);
 }
 
+.zonas {
+  display: flex;
+  flex: 1 1 auto;
+  gap: var(--e2);
+  min-width: 0;
+}
+
+.zona-accion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+  min-width: 0;
+  padding: var(--e2);
+  border: 1px solid var(--borde);
+  border-top: 2px solid var(--acento-zona);
+  border-radius: var(--r-carta);
+}
+
+.zona-principales {
+  --acento-zona: var(--cobre);
+  flex: 3 1 auto;
+}
+
+.zona-gratuitas {
+  --acento-zona: var(--vital);
+  flex: 1 1 auto;
+}
+
+.zona-emergencia {
+  --acento-zona: var(--borde-fuerte);
+  flex: 1 1 auto;
+  opacity: 0.6;
+}
+
+/* Solo se enciende en rojo cuando el rescate esta de verdad en juego. */
+.zona-emergencia.activa {
+  --acento-zona: var(--riesgo);
+  opacity: 1;
+  background: var(--lavado-riesgo);
+}
+
+.cabecera-zona {
+  display: flex;
+  align-items: baseline;
+  gap: var(--e1);
+  flex-wrap: wrap;
+}
+
+.cabecera-zona h4 {
+  font-size: var(--t-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--tinta-tenue);
+}
+
+.insignia-costo {
+  font-family: var(--fuente-dato);
+  font-size: var(--t-micro);
+  padding: 0 var(--e1);
+  border: 1px solid var(--acento-zona);
+  border-radius: 999px;
+  color: var(--acento-zona);
+}
+
+.nota-zona {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
+}
+
+.grid-botones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+  gap: var(--e1);
+}
+
+/* Cada espacio de accion es una casilla impresa del tablero. */
 .envoltorio-boton {
   position: relative;
 }
 
 .envoltorio-boton button {
   width: 100%;
-  padding: 0.6rem 0.5rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--color-borde);
-  border-top: 3px solid var(--color-acento);
-  background: var(--color-fondo);
-  color: var(--color-texto);
-  font-size: 0.82rem;
+  height: 100%;
+  padding: var(--e2) var(--e1);
+  border: 1px solid var(--borde);
+  border-top: 2px solid var(--acento-zona, var(--cobre));
+  border-radius: var(--r-control);
+  background: var(--carta);
+  color: var(--tinta);
+  font-size: var(--t-xs);
   text-align: center;
+  transition: background var(--transicion), border-color var(--transicion);
 }
 
-.envoltorio-boton button:disabled {
-  border-top-color: var(--color-borde);
+.envoltorio-boton button:hover:not(:disabled) {
+  background: var(--zona);
+  border-color: var(--acento-zona, var(--cobre));
 }
 
-.tooltip {
-  visibility: hidden;
-  opacity: 0;
+/* Peones de quien ya visito el espacio hoy. Aro hueco = espacio gratuito de
+   una vez al dia; punto solido = espacio con costo de PA. */
+.marcadores-jugador {
   position: absolute;
-  bottom: calc(100% + 0.4rem);
-  left: 50%;
-  transform: translateX(-50%);
-  width: 240px;
-  max-width: 60vw;
-  background: var(--color-panel);
-  border: 1px solid var(--color-borde);
-  border-radius: 6px;
-  padding: 0.5rem 0.6rem;
-  font-size: 0.78rem;
-  line-height: 1.35;
-  color: var(--color-texto);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
-  z-index: 30;
+  top: 3px;
+  right: 3px;
+  display: flex;
+  gap: 2px;
+  z-index: 10;
+  /* En un espacio repetible hay un peon por visita, no por jugador: con 4
+     jugadores a 3 PA caben hasta 12. Envuelven hacia abajo en vez de
+     desbordar la casilla, y el ancho maximo deja libre la esquina izquierda,
+     que es donde vive la insignia ∞. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 60%;
+}
+
+.marcador-jugador {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-marcador);
+  box-shadow: 0 0 0 1px var(--mesa);
+}
+
+.marcador-jugador.gratis {
+  background: none;
+  border: 2px solid var(--color-marcador);
+  box-shadow: none;
+}
+
+/* El peon del marcador neutral: gris, sin color de asiento. Dice "aqui se
+   repitio", no "aqui estuvo fulano", que es justo lo que lo distingue. */
+.marcador-jugador.neutral {
+  background: var(--tinta-tenue);
+  box-shadow: 0 0 0 1px var(--borde-fuerte);
+}
+
+/* Marcador neutral comprado y aun sin gastar, en la casilla de Horas Extras.
+   Mismo sitio y misma discrecion que la insignia ∞ del Mostrador. */
+.insignia-marcador-neutral {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 10;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--tinta-tenue);
+  box-shadow: 0 0 0 1px var(--borde-fuerte);
   pointer-events: none;
-  transition: opacity 0.1s ease;
 }
 
-.tooltip p {
-  margin: 0;
+/* Insignia de espacio que no se agota. Deliberadamente discreta: acompana al
+   peon para que no se lea como "cerrado", no compite con la etiqueta. */
+.insignia-repetible {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  z-index: 10;
+  font-size: var(--t-micro);
+  line-height: 1;
+  color: var(--acento-zona, var(--cobre));
+  opacity: 0.75;
+  pointer-events: none;
 }
 
+/* La caja la dibuja Tooltip.vue (teleportada al body). Aqui solo queda el
+   color de las lineas de aviso, que son contenido de slot y por tanto llevan
+   el scope de ESTE componente. */
 .tooltip-motivo {
-  margin-top: 0.4rem !important;
-  color: var(--color-mal);
+  color: var(--riesgo);
 }
 
-.envoltorio-boton:hover .tooltip,
-.envoltorio-boton:focus-within .tooltip {
-  visibility: visible;
+.tooltip-repetible {
+  color: var(--cobre);
+}
+
+/* Recetas en mano, en la esquina libre de la casilla «Iniciar Receta».
+   Apagadas si les faltan insumos: la carta sigue estando, que es la mitad del
+   aviso, pero no invita a pulsar. `pointer-events: none` para que el clic
+   siga siendo del boton que hay debajo. */
+.recetas-en-mano {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  display: flex;
+  gap: 1px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* IconoPan trae sus propios rellenos (no usa currentColor), asi que los dos
+   estados se distinguen por saturacion, no por color: la receta que puedes
+   iniciar sale a todo color con su aro de «tuyo», y la que no, en gris. */
+.pan-en-mano {
+  filter: grayscale(1);
+  opacity: 0.4;
+}
+
+.pan-en-mano.lista {
+  filter: none;
   opacity: 1;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--cobre);
 }
 
-.costo {
-  color: var(--color-texto-tenue);
-  font-size: 0.75rem;
+.tooltip-receta {
+  color: var(--tinta-tenue);
+  font-size: var(--t-micro);
+}
+
+.tooltip-receta.lista {
+  color: var(--cobre);
+}
+
+.linea-receta {
   display: block;
 }
 
-.pasar {
+.linea-receta.lista {
+  color: var(--cobre);
+}
+
+/* --- Controles de turno -------------------------------------------------- */
+.fila-controles {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--e1);
+  flex: 0 0 auto;
+}
+
+.pasar,
+.deshacer {
+  padding: var(--e2) var(--e3);
+  border-radius: var(--r-control);
+  border: 1px solid var(--borde);
+  background: var(--carta);
+  color: var(--tinta);
+  font-size: var(--t-xs);
+  white-space: nowrap;
+  transition: border-color var(--transicion), color var(--transicion);
+}
+
+.pasar:hover:not(:disabled) {
+  border-color: var(--cobre);
+  color: var(--cobre);
+}
+
+.deshacer:hover:not(:disabled) {
+  border-color: var(--verdin);
+  color: var(--verdin);
+}
+
+/* --- Modal de confirmacion de pase --------------------------------------- */
+.intro-pase {
+  margin: 0 0 var(--e3);
+  font-size: var(--t-s);
+}
+
+.lista-restantes {
+  list-style: none;
+  margin: 0 0 var(--e3);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--e1);
+}
+
+.accion-restante {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   width: 100%;
-  padding: 0.5rem;
-  border-radius: 4px;
-  border: 1px solid var(--color-borde);
+  text-align: left;
+  padding: var(--e2);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-control);
+  background: var(--carta);
+  color: var(--tinta);
+  transition: border-color var(--transicion);
+}
+
+.accion-restante:hover {
+  border-color: var(--cobre);
+}
+
+.titulo-restante {
+  font-size: var(--t-s);
+  font-weight: 600;
+}
+
+.costo {
+  font-family: var(--fuente-dato);
+  font-size: var(--t-micro);
+  font-weight: 400;
+  color: var(--tinta-tenue);
+}
+
+.blurb-restante {
+  font-size: var(--t-micro);
+  color: var(--tinta-tenue);
+  line-height: 1.35;
+}
+
+.peligro-colapso {
+  margin: 0;
+  padding: var(--e2);
+  border: 1px solid var(--riesgo);
+  border-radius: var(--r-control);
+  background: var(--lavado-riesgo);
+  font-size: var(--t-xs);
+  line-height: 1.4;
+}
+
+.confirmar-pase {
+  flex: 1;
+  padding: var(--e2);
+  border-radius: var(--r-control);
+  border: 1px solid var(--riesgo);
   background: transparent;
-  color: var(--color-texto-tenue);
+  color: var(--riesgo);
+  font-size: var(--t-s);
+}
+
+.confirmar-pase:hover:not(:disabled) {
+  background: var(--lavado-riesgo);
+}
+
+/* Bajo 1100px la barra deja de ser una sola fila: las zonas se apilan igual
+   que el resto del tablero (ver GameView.vue). */
+@media (max-width: 1100px) {
+  .barra-acciones {
+    flex-direction: column;
+  }
+
+  .zonas {
+    flex-wrap: wrap;
+  }
+
+  .zona-principales {
+    flex: 1 1 20rem;
+  }
+
+  .zona-gratuitas,
+  .zona-emergencia {
+    flex: 1 1 12rem;
+  }
+
+  .fila-controles {
+    flex-direction: row;
+  }
+
+  .pasar {
+    flex: 1;
+  }
 }
 </style>

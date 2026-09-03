@@ -21,8 +21,16 @@ npm install   # first time only
 npm run dev
 ```
 
-Open the URL Vite prints (usually `http://localhost:5173`). `vite.config.ts` proxies `/games/*`
-to the backend on `:8000`, so the client can use relative URLs with no CORS setup needed in dev.
+Open <http://localhost:3010>. El puerto está **fijado** en `vite.config.ts` (`port: 3010` +
+`strictPort: true`) en vez de usar el 5173 por defecto de Vite: ese es el puerto que pide
+cualquier proyecto Vite, así que dos repos abiertos a la vez se pisan. Con `strictPort`, si el
+3010 está ocupado el arranque **falla** en lugar de saltar en silencio al 3011 — que es
+justamente lo que haría que la URL volviera a depender de quién arrancó primero.
+
+`vite.config.ts` proxies `/games/*` to the backend on `:8000`, so the client can use relative URLs
+with no CORS setup needed in dev. El backend sigue en el 8000: si también choca con algo tuyo,
+cámbialo en los tres sitios que lo nombran (`server/app.py`, el proxy de `vite.config.ts` y este
+README).
 
 `npm run build` type-checks (`vue-tsc -b`) and produces a static `dist/` bundle; `npm run preview`
 serves that bundle locally.
@@ -41,8 +49,13 @@ serves that bundle locally.
 - `src/components/` — `LobbyView` (create/join/start) and `GameView` (`ClimaBanner`,
   `MercadoPanel`, `MiTablero`/`EstacionCard`, `TablerosOponentes`, `BarraAcciones`,
   `RegistroEventos`, `FermentationReportModal`, `RankingView`).
-- `src/components/acciones/` — one component per player action (mirrors `main.py`'s
-  `_params_accion_*` functions), plus a shared `ModalConfirmacion.vue` for the three
+  `MiTablero` takes a `jugadorIdx` prop and can draw **any** player, since the server ships
+  every player's full state to every client (`server/views.py`). `SelectorTablero`'s chips
+  (which replace the region's label) and `TablerosOponentes`' rows both switch the Tablero
+  region to another player's board; the selection lives in `store.jugadorObservado`
+  (per-game, not a preference) and snaps back to your own board when your turn arrives.
+- `src/components/acciones/` — one component per player action, plus a shared
+  `ModalConfirmacion.vue` for the three
   parameterless confirm actions (H, I, Horas Extras). Button enablement comes from the server's
   `acciones_disponibles` (see `disponibilidad.py`) — this client never reimplements
   `ActionManager`'s rules to decide whether a button should be clickable.

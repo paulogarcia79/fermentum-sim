@@ -7,9 +7,9 @@ que resuelve cada Día de Laboratorio.
 Motivación: antes de este módulo, la única forma de saber qué pasó durante
 la Fase III (avances de masa, colapsos automáticos, desgaste, contaminación)
 era comparar un snapshot del estado "antes" contra el estado "después"
-(``main.py:_snapshot_jugador`` / ``_reporte_fermentacion``). Ese enfoque
-funciona para una CLI de un solo proceso, pero es insuficiente para
-cualquier cliente remoto: un colapso estructural puede costarle a un
+comparando un snapshot del estado "antes" contra el "después". Ese enfoque
+funcionaba en un solo proceso, pero es insuficiente para cualquier cliente
+remoto: un colapso estructural puede costarle a un
 jugador varios puntos de Maestría sin que haya tomado ninguna decisión, y
 ese jugador debe ser *informado* del suceso, no dejado a inferirlo de un
 diff de estado.
@@ -32,10 +32,19 @@ class EventoTipo(str, Enum):
 
     JEFE_ASIGNADO = "jefe_asignado"
     CLIMA_REVELADO = "clima_revelado"
+    # La tendencia se anuncia al inicio del día (pronóstico, no mueve nada
+    # todavía) y se aplica al final del mismo, rigiendo los precios de mañana.
+    TENDENCIA_ANUNCIADA = "tendencia_anunciada"
+    TENDENCIA_MERCADO = "tendencia_mercado"
     MERCADO_REFRESCADO = "mercado_refrescado"
+    RECETA_DESCARTADA = "receta_descartada"
     MASA_AVANZO = "masa_avanzo"
     HORNEADO = "horneado"
     DESGASTE = "desgaste"
+    # Ingresos de Panadería: cada horneado del archivo paga Monedas cada noche.
+    RENTA_PANADERIA = "renta_panaderia"
+    # Contrato con el Molino: el molino entrega harina cada noche a quien lo firmó.
+    RENDIMIENTO_MOLINO = "rendimiento_molino"
     CONTAMINACION = "contaminacion"
     FIN_DE_PARTIDA = "fin_de_partida"
 

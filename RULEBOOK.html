@@ -1,0 +1,1175 @@
+<!doctype html>
+<!-- charset OBLIGATORIO, y OBLIGATORIAMENTE aquí arriba: este documento se abre
+     suelto (file://), donde no hay cabecera HTTP que declare la codificación, y
+     el navegador solo la busca en los primeros 1024 bytes. Si baja del comentario
+     de mantenimiento queda fuera de ese margen, el navegador adivina, acierta
+     windows-1252, y cada acento y cada raya de un reglamento en español se
+     convierten en «BÃ¡sica» y «âˆ'». -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!--
+  MANTENIMIENTO — leer antes de editar.
+
+  Este fichero tiene un GEMELO: RULEBOOK.md, la misma reglamentación en texto plano.
+  NO hay ningún script que genere uno a partir del otro: se mantienen a mano en
+  paralelo, así que editar solo uno deja el trabajo a medias.
+
+  Todo cambio de regla debe tocar, en el MISMO commit, los cuatro sitios:
+    1. el código (models.py / engine.py / actions.py / ...)
+    2. context/*.md          — la especificación de implementación
+    3. RULEBOOK.md           — el gemelo
+    4. RULEBOOK.html         — este fichero
+
+  Ojo con las tablas: al añadir una columna hay que tocarla en el <thead> Y en todas
+  las filas del <tbody>. Ya se olvidó dos veces en silencio (ver CLAUDE.md, "Every
+  rules change MUST update the rulebooks"). Ningún test lee estos ficheros.
+
+  Fermentum_ GDDv0.0.2.pdf es LEGADO y NO es autoritativo. No es fuente de verdad.
+-->
+<title>Fermentum</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #f2f5f6;
+    --surface: #ffffff;
+    --surface-2: #e9edf0;
+    --surface-3: #dfe5e9;
+    --ink: #1e242d;
+    --ink-muted: #565f6b;
+    --ink-faint: #8892a0;
+    --border: #d7dde2;
+    --border-strong: #c1c9d0;
+
+    --accent-vitalidad: #c96a37;
+    --accent-acidez: #3f7a67;
+    --accent-agua: #2f7f92;
+    --accent-monedas: #93691a;
+    --accent-datos: #4c58ab;
+
+    --zone-crecimiento-bg: #f7f2e8;
+    --zone-crecimiento-ink: #9a8b6d;
+    --zone-baja-bg: #f3e6cd;
+    --zone-baja-ink: #7a5a17;
+    --zone-optima-bg: #dcefdc;
+    --zone-optima-ink: #2b6a37;
+    --zone-sobre-bg: #f4dcd8;
+    --zone-sobre-ink: #9c3a2c;
+
+    --shadow: 0 1px 2px rgba(30, 36, 45, 0.06), 0 8px 24px rgba(30, 36, 45, 0.06);
+
+    --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+    --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #161a20;
+      --surface: #1d232b;
+      --surface-2: #252c35;
+      --surface-3: #2c3440;
+      --ink: #e7eaee;
+      --ink-muted: #a7afba;
+      --ink-faint: #737c88;
+      --border: #333c47;
+      --border-strong: #414c59;
+
+      --accent-vitalidad: #e28a56;
+      --accent-acidez: #6bb79b;
+      --accent-agua: #5cb3c7;
+      --accent-monedas: #d1a740;
+      --accent-datos: #8a94db;
+
+      --zone-crecimiento-bg: #2a2720;
+      --zone-crecimiento-ink: #9c917c;
+      --zone-baja-bg: #3a3221;
+      --zone-baja-ink: #e0bc74;
+      --zone-optima-bg: #223328;
+      --zone-optima-ink: #86caa0;
+      --zone-sobre-bg: #3a2521;
+      --zone-sobre-ink: #e29587;
+
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #161a20;
+    --surface: #1d232b;
+    --surface-2: #252c35;
+    --surface-3: #2c3440;
+    --ink: #e7eaee;
+    --ink-muted: #a7afba;
+    --ink-faint: #737c88;
+    --border: #333c47;
+    --border-strong: #414c59;
+
+    --accent-vitalidad: #e28a56;
+    --accent-acidez: #6bb79b;
+    --accent-agua: #5cb3c7;
+    --accent-monedas: #d1a740;
+    --accent-datos: #8a94db;
+
+    --zone-baja-bg: #3a3221;
+    --zone-baja-ink: #e0bc74;
+    --zone-optima-bg: #223328;
+    --zone-optima-ink: #86caa0;
+    --zone-sobre-bg: #3a2521;
+    --zone-sobre-ink: #e29587;
+
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
+
+  * { box-sizing: border-box; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent-agua); }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent-agua);
+    outline-offset: 2px;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+
+  /* ---------- Shell layout ---------- */
+  .shell {
+    display: grid;
+    grid-template-columns: 258px minmax(0, 1fr);
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Masthead ---------- */
+  .masthead {
+    grid-column: 1 / -1;
+    padding: 3.4rem clamp(1.25rem, 4vw, 3rem) 2.2rem;
+    border-bottom: 1px solid var(--border);
+    background:
+      linear-gradient(135deg, transparent 0%, transparent 60%, var(--surface-2) 60%, var(--surface-2) 100%),
+      var(--surface);
+  }
+
+  .masthead-inner { max-width: 760px; margin: 0 auto; }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent-vitalidad);
+    margin-bottom: 0.9rem;
+  }
+
+  .eyebrow::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 1px;
+    background: var(--accent-vitalidad);
+    transform: rotate(45deg);
+    display: inline-block;
+  }
+
+  .masthead h1 {
+    font-size: clamp(2.4rem, 5vw, 3.4rem);
+    line-height: 1.03;
+    margin: 0 0 0.6rem;
+    letter-spacing: -0.01em;
+  }
+
+  .masthead .tagline {
+    font-size: 1.08rem;
+    color: var(--ink-muted);
+    max-width: 46ch;
+    margin: 0 0 1.6rem;
+  }
+
+  .masthead-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+  }
+
+  .masthead-meta span {
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: var(--surface);
+  }
+
+  /* ---------- Nav rail ---------- */
+  .rail {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 2rem 1.1rem 2rem 1.6rem;
+    border-right: 1px solid var(--border);
+    font-size: 0.86rem;
+  }
+
+  .rail-title {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 0.9rem;
+  }
+
+  .rail ol {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+
+  .rail a {
+    display: flex;
+    gap: 0.55rem;
+    text-decoration: none;
+    color: var(--ink-muted);
+    padding: 0.42rem 0.5rem;
+    border-radius: 4px;
+    line-height: 1.3;
+  }
+
+  .rail a:hover { background: var(--surface-2); color: var(--ink); }
+
+  .rail .num {
+    font-family: var(--font-mono);
+    color: var(--ink-faint);
+    min-width: 1.3em;
+  }
+
+  .rail-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 0.9rem 0;
+  }
+
+  @media (max-width: 900px) {
+    .rail {
+      position: static;
+      height: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding: 1rem clamp(1.25rem, 4vw, 3rem);
+    }
+    .rail ol { flex-direction: row; flex-wrap: wrap; gap: 0.3rem; }
+    .rail a { padding: 0.32rem 0.55rem; background: var(--surface-2); font-size: 0.8rem; }
+  }
+
+  /* ---------- Main content ---------- */
+  main {
+    padding: 2.6rem clamp(1.25rem, 4vw, 3rem) 6rem;
+    min-width: 0;
+  }
+
+  .prose { max-width: 720px; }
+
+  section.rule {
+    margin-bottom: 3.4rem;
+    scroll-margin-top: 1.5rem;
+  }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.85rem;
+    margin-bottom: 1.1rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .section-head .n {
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    color: var(--accent-vitalidad);
+    font-weight: 600;
+  }
+
+  .section-head h2 {
+    font-size: 1.55rem;
+    margin: 0;
+  }
+
+  h3.sub {
+    font-size: 1.12rem;
+    margin: 1.9rem 0 0.7rem;
+    color: var(--ink);
+  }
+
+  h4.sub-sub {
+    font-family: var(--font-mono);
+    font-size: 0.92rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--accent-datos);
+    margin: 1.5rem 0 0.5rem;
+  }
+
+  p { margin: 0 0 1rem; color: var(--ink); }
+  .prose p { max-width: 68ch; }
+  strong { font-weight: 600; }
+  em.aside { color: var(--ink-muted); font-style: italic; }
+
+  ul.rules-list, ol.rules-list {
+    margin: 0 0 1.1rem;
+    padding-left: 1.3rem;
+    max-width: 68ch;
+  }
+  ul.rules-list li, ol.rules-list li { margin-bottom: 0.5rem; }
+
+  .callout {
+    border-left: 3px solid var(--accent-agua);
+    background: var(--surface-2);
+    padding: 0.9rem 1.1rem;
+    border-radius: 0 5px 5px 0;
+    margin: 1.1rem 0 1.4rem;
+    max-width: 68ch;
+    font-size: 0.94rem;
+    color: var(--ink-muted);
+  }
+  .callout strong { color: var(--ink); }
+
+  .formula {
+    font-family: var(--font-mono);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.95rem 1.15rem;
+    margin: 1rem 0 1.3rem;
+    font-size: 0.92rem;
+    color: var(--ink);
+    max-width: 68ch;
+    overflow-x: auto;
+  }
+
+  /* ---------- Currency / resource chips ---------- */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    font-weight: 500;
+    padding: 0.12rem 0.5rem 0.12rem 0.4rem;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .chip::before {
+    content: "";
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: none;
+  }
+  .chip.vitalidad { color: var(--accent-vitalidad); background: color-mix(in srgb, var(--accent-vitalidad) 14%, transparent); }
+  .chip.acidez { color: var(--accent-acidez); background: color-mix(in srgb, var(--accent-acidez) 14%, transparent); }
+  .chip.agua { color: var(--accent-agua); background: color-mix(in srgb, var(--accent-agua) 14%, transparent); }
+  .chip.monedas { color: var(--accent-monedas); background: color-mix(in srgb, var(--accent-monedas) 16%, transparent); }
+  .chip.datos { color: var(--accent-datos); background: color-mix(in srgb, var(--accent-datos) 14%, transparent); }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.4rem 0 1.6rem;
+  }
+
+  /* ---------- Cards for two-currency explainer, tech grid ---------- */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 0.9rem;
+    margin: 1.2rem 0 1.6rem;
+    max-width: 760px;
+  }
+
+  .card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.1rem;
+    background: var(--surface);
+  }
+  .card h5 {
+    margin: 0 0 0.4rem;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.98rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .card h5 .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .card p { margin: 0; font-size: 0.88rem; color: var(--ink-muted); }
+  .card .cost {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    margin-top: 0.5rem;
+    display: block;
+  }
+
+  /* ---------- Tables ---------- */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 0.6rem 0 1.8rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 560px;
+    background: var(--surface);
+    font-size: 0.87rem;
+  }
+
+  table caption {
+    caption-side: top;
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.74rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 0.7rem 1rem 0;
+    background: var(--surface);
+  }
+
+  thead th {
+    text-align: left;
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: 0.78rem;
+    letter-spacing: 0.01em;
+    color: var(--ink-muted);
+    background: var(--surface-2);
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid var(--border-strong);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    padding: 0.55rem 0.85rem;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+
+  tbody td.name {
+    font-family: var(--font-body);
+    font-weight: 500;
+    white-space: normal;
+  }
+
+  tbody td.wrap { white-space: normal; font-family: var(--font-body); color: var(--ink-muted); }
+
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--surface-2) 55%, transparent); }
+
+  /* `baja` y `sobre` son los nombres ANTIGUOS de las zonas (hoy Pre-fermento y
+     Colapso). Se conservan sólo como identificadores de CSS, donde ningún
+     lector los ve, para no repetir en 48 sitios un renombrado que no aporta
+     nada y que si se hace a medias apaga el color de una zona en silencio. El
+     texto visible usa siempre el vocabulario vigente: si aquí aparece
+     «Sobre-fermentada» fuera de un selector, es una errata. */
+  td.z-crecimiento { background: var(--zone-crecimiento-bg) !important; color: var(--zone-crecimiento-ink); font-weight: 400; }
+  td.z-baja { background: var(--zone-baja-bg) !important; color: var(--zone-baja-ink); font-weight: 600; }
+  td.z-optima { background: var(--zone-optima-bg) !important; color: var(--zone-optima-ink); font-weight: 600; }
+  td.z-sobre { background: var(--zone-sobre-bg) !important; color: var(--zone-sobre-ink); font-weight: 600; }
+
+  .zone-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin: 0.3rem 0 1.2rem;
+    font-size: 0.8rem;
+    font-family: var(--font-mono);
+  }
+  .zone-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.22rem 0.6rem;
+    border-radius: 5px;
+  }
+  .zone-legend .lc { background: var(--zone-crecimiento-bg); color: var(--zone-crecimiento-ink); }
+  .zone-legend .lb { background: var(--zone-baja-bg); color: var(--zone-baja-ink); }
+  .zone-legend .lo { background: var(--zone-optima-bg); color: var(--zone-optima-ink); }
+  .zone-legend .ls { background: var(--zone-sobre-bg); color: var(--zone-sobre-ink); }
+
+  /* ---------- Footer ---------- */
+  footer {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--border);
+    padding: 1.6rem clamp(1.25rem, 4vw, 3rem);
+    font-family: var(--font-mono);
+    font-size: 0.76rem;
+    color: var(--ink-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 900px) {
+    footer { grid-column: 1; }
+  }
+</style>
+
+<div class="shell">
+  <header class="masthead">
+    <div class="masthead-inner">
+      <div class="eyebrow">Reglamento completo</div>
+      <h1>Fermentum</h1>
+      <p class="tagline">Simulación de gestión de recursos y construcción de motores para 1–4 investigadores. Cultiva tu masa madre, hornea con precisión, comercia con inteligencia.</p>
+      <div class="masthead-meta">
+        <span>Revisión de reglas GDD v0.0.2</span>
+        <span>1–4 jugadores</span>
+        <span>Documento vivo — editar aquí ante cualquier cambio de regla</span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="rail" aria-label="Índice del reglamento">
+    <p class="rail-title">Índice</p>
+    <ol>
+      <li><a href="#s1"><span class="num">01</span>Introducción y objetivo</a></li>
+      <li><a href="#s2"><span class="num">02</span>Componentes</a></li>
+      <li><a href="#s3"><span class="num">03</span>Preparación de la partida</a></li>
+      <li><a href="#s4"><span class="num">04</span>Estructura del día</a></li>
+      <li><a href="#s5"><span class="num">05</span>Fase I — Ambiente</a></li>
+      <li><a href="#s6"><span class="num">06</span>Fase II — Acción</a></li>
+      <li><a href="#s7"><span class="num">07</span>Catálogo de acciones</a></li>
+      <li><a href="#s8"><span class="num">08</span>Catálogo de recetas</a></li>
+      <li><a href="#s9"><span class="num">09</span>Fase III — Fermentación</a></li>
+      <li><a href="#s10"><span class="num">10</span>Tecnologías</a></li>
+      <li><a href="#s11"><span class="num">11</span>Fin del juego y puntuación</a></li>
+      <li><a href="#s12"><span class="num">12</span>Anexo — resumen de mazos</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <div class="prose">
+
+      <section class="rule" id="s1">
+        <div class="section-head"><span class="n">01</span><h2>Introducción y objetivo</h2></div>
+        <p>Fermentum es una simulación competitiva de gestión de recursos y construcción de motores («engine-building») para 1 a 4 jugadores, ambientada en un laboratorio de panadería científica. Cada jugador dirige un investigador que cultiva y mantiene una masa madre viva, la utiliza para producir distintas recetas de panificación, y comercia con harina, agua y monedas para sostener su operación.</p>
+        <p>Los jugadores compiten por acumular la mayor cantidad de <strong>Puntos de Maestría</strong>. Estos se obtienen principalmente:</p>
+        <ul class="rules-list">
+          <li>Horneando recetas con éxito, especialmente en su Zona Óptima de fermentación.</li>
+          <li>Horneando recetas <strong>variadas</strong>: cada tipo nuevo de pan vale más que el anterior.</li>
+          <li>Equipando el laboratorio con <strong>Tecnologías</strong>: cada mejora instalada puntúa al final, y también con una curva creciente.</li>
+          <li>Manteniendo una masa madre con alta Vitalidad y un buen equilibrio de Acidez hasta el final de la partida.</li>
+          <li>Gestionando con cuidado la economía del laboratorio: insumos, Datos de Investigación y Monedas.</li>
+        </ul>
+        <div class="callout"><strong>Fin de la partida.</strong> El final se desencadena en cuanto se agota el mazo de Clima, o en cuanto algún jugador hornea con éxito su quinta receta — lo que ocurra primero. La partida no se corta ahí: se juega el Día de Laboratorio en curso hasta el final, de modo que todos los jugadores disputan el mismo número de días.</div>
+      </section>
+
+      <section class="rule" id="s2">
+        <div class="section-head"><span class="n">02</span><h2>Componentes</h2></div>
+        <ul class="rules-list">
+          <li><strong>Tablero Central (El Laboratorio):</strong> controla el estado global — termómetro/Ábaco de Fermentación, mercado de recetas, Bolsa de Harinas y Suministro Hídrico Global, y el Track de Orden de Turno.</li>
+          <li><strong>Tableros Individuales:</strong> uno por jugador, dividido en zonas — Cultivo Base (Vitalidad y Acidez), Estaciones de Fermentación (3, la tercera bloqueada al inicio), Tecnologías de Laboratorio, y Carpeta de Proyectos.</li>
+          <li><strong>Cartas de Receta:</strong> 36 en total — <strong>12 protocolos distintos</strong> (4 Básicas, 4 Intermedias, 4 Avanzadas) con distinto número de copias cada uno: las Básicas son comunes y las Avanzadas escasas. Ver <a href="#s8">Catálogo de Recetas</a>.</li>
+          <li><strong>Cartas de Clima:</strong> 30 cartas que regulan la temperatura y los eventos biológicos del laboratorio.</li>
+          <li><strong>Cartas de Tendencias de Mercado:</strong> 21 cartas que mueven el precio de la harina cada día.</li>
+          <li><strong>Cartas de Patrocinio:</strong> 8 cartas, usadas una sola vez, para repartir el orden de turno inicial y los recursos de arranque.</li>
+          <li><strong>Dados de Inóculo:</strong> 3 por jugador, sellan la velocidad de fermentación de cada masa iniciada.</li>
+          <li><strong>Cubos de Laboratorio:</strong> 9 por jugador, marcan acciones usadas, acidez sellada y tecnologías instaladas.</li>
+          <li><strong>Tokens de Recursos:</strong> harina (Blanca, Integral, Centeno) y agua — ver <a href="#unidades">Las dos unidades de insumo</a>.</li>
+          <li><strong>Fichas de Monedas</strong> y <strong>Tokens de Datos de Investigación:</strong> las dos divisas del juego.</li>
+        </ul>
+
+        <h3 class="sub" id="unidades">Las dos unidades de insumo</h3>
+        <p>Los dos insumos físicos se cuentan en <strong>tokens</strong>. Lo único que cambia entre ellos es cuánto vale un token:</p>
+        <div class="card-grid">
+          <div class="card">
+            <h5><span class="dot" style="background:var(--accent-vitalidad)"></span>Token de Harina = 10&nbsp;%</h5>
+            <p>1 bolsa = 100&nbsp;% = <strong>10 tokens</strong>. El Mercado opera en bolsa entera o media bolsa — 5&nbsp;(50%) —, nunca en tokens sueltos.</p>
+            <span class="cost">10 (100%) · 5 (50%) · 1 (10%)</span>
+          </div>
+          <div class="card">
+            <h5><span class="dot" style="background:var(--accent-agua)"></span>Token de Agua = 5&nbsp;%</h5>
+            <p>De hidratación. Un lote del 100&nbsp;% son <strong>20 tokens</strong>; el lote más pequeño, 2.</p>
+            <span class="cost">20 (100%) · 12 (60%) · 6 (30%) · 2 (10%)</span>
+          </div>
+        </div>
+        <div class="callout">En todo el reglamento las cantidades se escriben <strong>N&nbsp;(P%)</strong> — primero el número de tokens, después su porcentaje. Ambos tipos de token cuentan <strong>1:1</strong> en la Penalización por Desperdicio del final de la partida (<a href="#s11">§11</a>): un token de harina del 10&nbsp;% y uno de agua del 5&nbsp;% valen lo mismo a esos efectos, y esa es la razón de que la unidad atómica de la harina sea el 10&nbsp;% y no la bolsa entera.</div>
+
+        <h3 class="sub">Las dos divisas del juego</h3>
+        <p>Fermentum usa dos recursos económicos independientes, que no se convierten entre sí:</p>
+        <div class="card-grid">
+          <div class="card">
+            <h5><span class="dot" style="background:var(--accent-monedas)"></span>Monedas</h5>
+            <p>La divisa comercial. Se ganan vendiendo pan al Hornear y Vender y con los <strong>Ingresos de Panadería</strong>, la renta que cada pan horneado sigue produciendo cada noche. Se gastan comprando harina y agua en el Mercado, adquiriendo recetas, pagando Pliegues y comprando Datos en la <strong>ponencia</strong> del Simposio Técnico.</p>
+          </div>
+          <div class="card">
+            <h5><span class="dot" style="background:var(--accent-datos)"></span>Datos de Investigación</h5>
+            <p>La divisa técnica del laboratorio. Se ganan <strong>reclamando la Jefatura</strong> (1 por día, y solo se la lleva un jugador de la mesa), horneando en Zona Óptima y en el Simposio Técnico — sacrificando un pan del Archivo, o presentando allí una <strong>ponencia</strong> a razón de <strong>5 Monedas</strong> por cada Dato; algunos Patrocinios reparten alguno al empezar. Se gastan en Tecnologías, Horas Extras, Pedido de Urgencia e Inóculo de Emergencia.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="rule" id="s3">
+        <div class="section-head"><span class="n">03</span><h2>Preparación de la partida</h2></div>
+        <div class="callout"><strong>Todos los mazos se barajan al preparar la partida, antes de repartir o revelar ninguna carta:</strong> el de Recetas, el de Clima, el de Tendencias de Mercado y el de Patrocinio. Los pasos de abajo lo repiten módulo por módulo; ninguno de ellos es una excepción.</div>
+        <ol class="rules-list">
+          <li>Colocar el Tablero Central con la temperatura en <strong>20 °C</strong> y el Track de Orden de Turno al lado.</li>
+          <li>Repartir a cada jugador un Tablero Individual, sus marcadores, 3 Dados de Inóculo y 9 Cubos de Laboratorio. La Vitalidad inicia en <strong>Nivel 2</strong> y la Acidez en <strong>Nivel 1</strong>. Colocar una Ficha de Bloqueo sobre la tercera ranura de fermentación (se libera con Cámara B).</li>
+          <li><strong>Asignación de Patrocinios:</strong> barajar las 8 Cartas de Patrocinio y repartir una boca abajo a cada jugador. Revelar todas simultáneamente.
+            <ul class="rules-list">
+              <li>El jugador con la <strong>Iniciativa más baja</strong> recibe el token de Investigador Jefe y actúa primero el Día 1. Los demás se ordenan de forma ascendente.</li>
+              <li><strong>Despliegue de Insumos:</strong> cada jugador toma de la reserva general la harina, el lote de agua y las monedas indicadas en su carta. Hecho esto, las cartas vuelven a la caja — no se vuelven a usar.</li>
+            </ul>
+          </li>
+          <li><strong>Carpeta de Proyectos inicial:</strong> separar <strong>un ejemplar de cada protocolo Básico</strong> (son 4), barajar esos cuatro y entregar a cada jugador 1 al azar — de un <strong>protocolo distinto</strong>, de modo que una partida a 4 jugadores los reparte todos —, inactiva en su Carpeta de Proyectos.</li>
+          <li><strong>Mazo de mercado:</strong> retirar del mazo general <strong>una copia</strong> de cada Básica repartida — una copia, no el protocolo entero: cada Básica tiene 4 ejemplares y quitarlos todos dejaría ese pan fuera del mercado. Devolver al mazo el resto de las Básicas y <strong>barajarlo entero, todas las cartas juntas</strong>. No hay estratos: una Básica puede asomar en el mercado igual que una Avanzada. Lo que hace raras a las Avanzadas es que solo hay 2 copias de cada una frente a 4 de cada Básica (ver <a href="#s12">Anexo</a>), no el sitio que ocupan.</li>
+          <li><strong>Mercado inicial:</strong> revelar las primeras 4 cartas de ese mazo — pueden ser de cualquier grado. Colocar los 3 visores de la Bolsa de Harinas en la posición central (<strong>3 de 5</strong>).</li>
+          <li><strong>Mazos del día:</strong> barajar el <strong>mazo de Clima</strong> (30 cartas) y el <strong>mazo de Tendencias de Mercado</strong> (21 cartas) por separado y colocarlos boca abajo junto al Tablero Central, cada uno con su espacio de descarte al lado. No se revela ninguna carta en la preparación: la primera de cada mazo sale en la Fase I del Día 1.</li>
+        </ol>
+
+        <div class="table-wrap">
+          <table>
+            <caption>Cartas de Patrocinio — reparto de recursos iniciales</caption>
+            <thead>
+              <tr><th>Iniciativa</th><th>Harina — tokens (%)</th><th>Agua — tokens (%)</th><th>Monedas</th><th>Datos</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>1</td><td class="wrap">10 (100%) de Blanca</td><td>2 (10%)</td><td>9</td><td>—</td></tr>
+              <tr><td>2</td><td class="wrap">10 (100%) de Blanca</td><td>6 (30%)</td><td>8</td><td>—</td></tr>
+              <tr><td>3</td><td class="wrap">10 (100%) de Blanca</td><td>12 (60%)</td><td>6</td><td>1</td></tr>
+              <tr><td>4</td><td class="wrap">10 (100%) de Integral</td><td>6 (30%)</td><td>8</td><td>—</td></tr>
+              <tr><td>5</td><td class="wrap">10 (100%) de Integral</td><td>12 (60%)</td><td>6</td><td>1</td></tr>
+              <tr><td>6</td><td class="wrap">10 (100%) de Centeno</td><td>6 (30%)</td><td>8</td><td>—</td></tr>
+              <tr><td>7</td><td class="wrap">10 (100%) de Centeno</td><td>12 (60%)</td><td>6</td><td>1</td></tr>
+              <tr><td>8</td><td class="wrap">20 (200%) de Blanca</td><td>20 (100%)</td><td>4</td><td>2</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="wrap" style="font-size:0.88rem;color:var(--ink-muted);max-width:68ch;">Los jugadores con Iniciativa alta (actúan más tarde en la primera ronda) reciben un capital de insumos de mayor valor, para compensar la ventaja temporal del Investigador Jefe.</p>
+
+        <div class="callout">Cada jugador arranca, sin importar su carta, con: Vitalidad 1, Acidez 1, 3 Dados de Inóculo, 0 PA, 0 Datos de Investigación, todas las Tecnologías desactivadas, y 1 receta Básica aleatoria. A partir de la Ronda 2, el orden de turno vuelve a calcularse cada Fase I por la regla estándar de Jerarquía — la Iniciativa solo determina el Día 1.</div>
+      </section>
+
+      <section class="rule" id="s4">
+        <div class="section-head"><span class="n">04</span><h2>Estructura del día de laboratorio</h2></div>
+        <p>Cada ronda se llama un <strong>Día de Laboratorio</strong> y consta de tres fases secuenciales y estrictas, siempre en este orden:</p>
+        <ol class="rules-list">
+          <li><strong>Fase I: Ambiente</strong> — se preparan las variables globales del día.</li>
+          <li><strong>Fase II: Acción</strong> — los jugadores usan sus Puntos de Acción.</li>
+          <li><strong>Fase III: Fermentación</strong> — resolución automática de las masas, desgaste del cultivo base y cobro de los <strong>Ingresos de Panadería</strong> (cada pan del Archivo rinde Monedas).</li>
+        </ol>
+      </section>
+
+      <section class="rule" id="s5">
+        <div class="section-head"><span class="n">05</span><h2>Fase I — Ambiente</h2></div>
+        <p>Liderada por el Investigador Jefe, esta fase se resuelve en este orden:</p>
+
+        <h3 class="sub">5.1 · Actualización de Jerarquía</h3>
+        <p>El token de Investigador Jefe pasa a quien <strong>reclamó la Jefatura</strong> ayer, ocupando su espacio de acción (1 PA — ver <a href="#s7">Catálogo de acciones</a>).</p>
+        <ul class="rules-list">
+          <li><strong>Si nadie la reclamó, la ficha se queda donde está:</strong> el Jefe de ayer sigue siéndolo hoy. No hay rotación automática.</li>
+          <li>La reclamación <strong>vale para un día y se consume</strong>: quien reclamó el Día 3 abre el Día 4, y para abrir también el Día 5 tiene que volver a reclamarla.</li>
+          <li>El Investigador Jefe actúa primero en la Fase II y tiene prioridad en recetas e insumos.</li>
+          <li><em class="aside">Excepción: en el Día 1, el orden lo determina la Iniciativa de las Cartas de Patrocinio — nadie ha podido reclamar todavía.</em></li>
+        </ul>
+        <p class="callout"><strong>La Jefatura ya no se hereda: se compra.</strong> Antes la recibía automáticamente quien tuviera más Vitalidad, lo que significaba que el orden de turno no lo decidía nadie: se leía del tablero. Ir primero es ahora una jugada que cuesta un Punto de Acción entero, y quien la paga se lleva además un Dato de Investigación — la única fuente de Datos de toda la partida que no depende de hornear bien.</p>
+
+        <h3 class="sub">5.2 · Resolución del clima</h3>
+        <ol class="rules-list">
+          <li>Se revela la carta superior del mazo de Clima — permanece visible hasta la siguiente Fase I.</li>
+          <li>El termómetro se <strong>reinicia a la base de 20 °C</strong> y luego se aplica el Modificador Térmico de la carta (no se arrastra el resultado del día anterior).</li>
+          <li>Se sincroniza el <strong>Ábaco de Fermentación</strong>: 20 °C = 4 pasos, 25 °C = 5 pasos, 30 °C = 6 pasos.</li>
+          <li>Efectos Biológicos Inmediatos se aplican al instante a todos los jugadores.</li>
+          <li>Efectos Pasivos quedan vigentes durante el resto del día — ver <a href="#s12">Anexo</a>.</li>
+        </ol>
+
+        <h3 class="sub">5.3 · Mercado de Tendencias</h3>
+        <p>Se roba la carta superior del mazo de Tendencias de Mercado (21 cartas) y su modificador desplaza <strong>simultáneamente</strong> los 3 visores de la Bolsa de Harinas. Cada visor tiene tope independiente entre la posición 1 (barata) y la 5 (cara): si el desplazamiento excede el límite, se detiene ahí, sin arrastre. Si el mazo se agota, su descarte se baraja como mazo nuevo.</p>
+
+        <h3 class="sub">5.4 · Protocolo de Refresco del mercado de recetas</h3>
+        <p>Este paso <strong>reabastece</strong>, no descarta (el descarte de la carta más antigua ocurre al final de la Fase III del día anterior — ver <a href="#s9">§9</a>). Las cartas supervivientes se desplazan hacia la derecha para cubrir los espacios vacíos (los huecos dejados por jugadores con la Acción G y el hueco que dejó el descarte de fin de día), y se revelan cartas nuevas del mazo por el extremo izquierdo hasta completar de nuevo las 4 estaciones. Si el mazo de recetas se agota, se baraja su descarte como mazo nuevo; si mazo y descarte quedan vacíos, el mercado puede quedar temporalmente por debajo de 4 cartas.</p>
+        <p>El mazo también mengua <strong>durante el día</strong>: cada Investigación a ciegas (Acción G) se lleva su carta superior, así que el rebarajado del descarte puede ocurrir igualmente en plena Fase II, en el momento de robar.</p>
+      </section>
+
+      <section class="rule" id="s6">
+        <div class="section-head"><span class="n">06</span><h2>Fase II — Acción</h2></div>
+        <p>Cada jugador dispone de <strong>2 Puntos de Acción (PA)</strong> por Día de Laboratorio.</p>
+        <ul class="rules-list">
+          <li><strong>Turno intercalado:</strong> empezando por el Investigador Jefe, cada jugador ejecuta una sola acción por visita y el turno pasa al siguiente. Se repite hasta que nadie tenga PA ni una acción gratuita pendiente.</li>
+          <li><strong>Registro:</strong> al ejecutar una acción de costo, se desplaza un Cubo de Laboratorio al Checklist de Protocolo.</li>
+          <li><strong>Acciones que no terminan el turno:</strong> Alimentar el Cultivo, Técnica (Pliegues), Descarte, Horas Extras, Pedido de Urgencia, Estasis Biológica e Incubadora son gratuitas en PA y no cierran la visita — un jugador sin PA sigue recibiendo visitas mientras le quede alguna sin usar ese día <strong>y pueda pagarla</strong>: 1 Dato para Horas Extras, Monedas para Pliegues, y Monedas <em>o</em> agua para Descarte, que cobra un recurso distinto en cada sentido (Pliegues y Descarte necesitan además conservar su espacio libre). Sin con qué pagarlas, esas acciones ya no te devuelven a la rotación: el turno pasa de largo. Cualquier acción de costo en PA, o un <strong>Pasar</strong> explícito, sí cierra la visita; Pasar además renuncia de inmediato a cualquier acción gratuita pendiente.</li>
+          <li><strong>Un espacio, una visita por día:</strong> cada espacio de acción (B a G, Simposio Técnico, H, I y también <strong>E</strong> y <strong>Descarte</strong>, que no cuestan PA pero sí ocupan espacio) solo puede visitarse una vez por Día de Laboratorio, por jugador — el investigador marca el espacio con su color al visitarlo, bloqueándolo para él (no para el resto) hasta el día siguiente. La <strong>única</strong> forma de repetir un espacio es el <strong>marcador neutral</strong> que entregan las Horas Extras: permite volver una vez ese día a uno de los ocho espacios propios con costo de PA (B, C, D, F, G, Simposio Técnico, H e I). Es un marcador que no es de nadie — se coloca junto a tu peón de color, así que ni abre el espacio para los demás ni te deja repetirlo una tercera vez. El tope es una propiedad del espacio, no del coste. Hay <strong>dos excepciones, y van en direcciones opuestas</strong>: <strong>Reclamar la Jefatura</strong> se agota para toda la mesa en cuanto un jugador lo visita, no solo para él; y el <strong>Turno de Mostrador</strong> no se agota nunca — cuesta PA pero no ocupa espacio, así que puedes repetirlo mientras te queden Puntos de Acción. Alimentar el Cultivo y Horas Extras se limitan con su propio marcador de «ya usada», y ni Pedido de Urgencia ni Estasis Biológica ni Incubadora tienen límite alguno — las dos últimas porque son <strong>ajustes y no consumos</strong>: diales de dos sentidos que puedes accionar las veces que quieras y que, por lo mismo, tampoco te mantienen en la rotación de visitas.</li>
+          <li><strong>Sin escasez de insumos:</strong> a diferencia de las recetas del mercado, harina y agua ya no se agotan por turno — son un precio compartido que cualquier jugador puede usar sin quitarle el cupo a los demás.</li>
+        </ul>
+      </section>
+
+      <section class="rule" id="s7">
+        <div class="section-head"><span class="n">07</span><h2>Catálogo de acciones</h2></div>
+
+        <h4 class="sub-sub">Acciones principales · costo 1 PA</h4>
+
+        <h3 class="sub">B · Iniciar Receta</h3>
+        <p><strong>Costo:</strong> 1 PA + <strong>10 tokens de harina — 10&nbsp;(100%), una bolsa entera en total</strong> + los <strong>tokens de agua</strong> exactos que la receta imprima (cada token = 5&nbsp;% de hidratación). <strong>Límite:</strong> 1 vez por día (por espacio de acción).</p>
+        <p>Entre cuántos tipos se reparte esa bolsa lo dice el <strong>grado</strong> de la receta (ver <a href="#s8">Catálogo de Recetas</a>):</p>
+        <ul class="rules-list">
+          <li><strong>Básica:</strong> 10 tokens — 10&nbsp;(100%) de Harina Blanca.</li>
+          <li><strong>Intermedia:</strong> 5 tokens — 5&nbsp;(50%), media bolsa, de <strong>cada una</strong> de las dos harinas que imprima.</li>
+          <li><strong>Avanzada:</strong> 10 tokens — 10&nbsp;(100%) de la harina <strong>especial</strong> que imprima (Centeno o Integral).</li>
+        </ul>
+        <p>Hay que tener <strong>todas</strong> las harinas impresas: con una Intermedia, disponer de una de las dos mitades no basta.</p>
+        <p><strong>Ninguna receta exige tecnología.</strong> Una Avanzada de centeno puro puede iniciarse el primer día si se paga: lo que la hace difícil es su precio de adquisición y su bolsa entera de harina cara, no una mejora de laboratorio que haya que comprar antes.</p>
+        <p>Al iniciar la masa se sella su <strong>Memoria Biológica</strong>: el Dado de Inóculo guarda la Vitalidad actual (determina la velocidad de fermentación durante toda la vida de esa masa), y el Cubo de Laboratorio guarda la Acidez actual — solo si cae dentro del rango de Acidez Diana de la carta. Si el cubo queda sellado, la masa obtendrá el Bono de Sabor al hornearse con éxito.</p>
+        <p class="wrap" style="font-size:0.9rem;color:var(--ink-muted);">Requiere una estación de fermentación libre (la tercera solo con Cámara B) y al menos 1 Dado de Inóculo disponible.</p>
+
+        <h3 class="sub">C · Visitar el Mercado</h3>
+        <p><strong>Costo:</strong> 1 PA por visita, sin importar cuántas transacciones incluya. <strong>Límite:</strong> 1 vez por día (por espacio de acción).</p>
+        <ul class="rules-list">
+          <li><strong>Comprar Harina:</strong> pagar el coste de Compra visible y recibir <strong>10 tokens — 10&nbsp;(100%)</strong>, una bolsa entera. El visor sube 1 casilla (tope en 5).</li>
+          <li><strong>Vender Harina:</strong> entregar <strong>10 tokens — 10&nbsp;(100%)</strong> y cobrar el valor de Venta visible. El visor baja 1 casilla (tope en 1).</li>
+          <li><strong>Media Bolsa:</strong> comprar y vender admiten también <strong>media bolsa — 5 tokens, 5&nbsp;(50%)</strong>, a la mitad del precio visible <strong>redondeando hacia arriba al comprar y hacia abajo al vender</strong> (⌈Compra/2⌉ y ⌊Venta/2⌋). Con precios impares media bolsa nunca sale a mejor precio por token que una entera: es liquidez, no descuento. Una venta que redondee a <strong>0 Monedas</strong> (Blanca en la posición 1) es legal. <strong>El visor se mueve 1 casilla igual que con una bolsa entera</strong> — una transacción es una señal de mercado, sin importar su tamaño. Por debajo de la media bolsa el Mercado no opera: no se compran ni venden tokens sueltos de harina.</li>
+          <li><strong>Comprar Lote de Agua:</strong> pagar según temperatura actual y lote elegido, recibiendo el lote completo en tokens (1 token = 5&nbsp;% de hidratación). Los cuatro lotes son <strong>2&nbsp;(10%)</strong>, <strong>6&nbsp;(30%)</strong>, <strong>12&nbsp;(60%)</strong> y <strong>20&nbsp;(100%)</strong>.</li>
+          <li><strong>Contratar el Molino:</strong> pagar <strong>una sola vez</strong> el precio del tipo de harina elegido y quedarse con el <strong>Contrato con el Molino</strong> de esa harina. Desde esa misma noche, en cada Fase III, el molino entrega <strong>2 tokens — 2&nbsp;(20%)</strong> de esa harina, para siempre (ver <a href="#s9">Entrega del Molino</a>). <strong>No mueve el visor</strong>: el molino produce fuera de la Bolsa. Un contrato por jugador y por partida — no se cambia de harina, no se cancela y no se revende.</li>
+        </ul>
+        <div class="callout"><strong>Regla de Exclusividad.</strong> Una visita puede combinar varias transacciones, pero como máximo una por tipo de recurso — comprar Blanca, vender Centeno y comprar un lote de agua en la misma visita está permitido; comprar y vender la misma harina, o comprar el mismo tipo dos veces, no lo está. <strong>El Molino cuenta como su propio recurso</strong>, así que firmar el contrato de Centeno y comprar Centeno en esa misma visita sí es legal — el molino no entrega hasta la noche, y hoy todavía necesitas harina.</div>
+
+        <div class="table-wrap">
+          <table>
+            <caption>Bolsa de Harinas — Monedas según posición del visor (entre paréntesis, la media bolsa: ⌈Compra/2⌉ y ⌊Venta/2⌋)</caption>
+            <thead><tr><th>Harina</th><th>Pos. 1</th><th>Pos. 2</th><th>Pos. 3</th><th>Pos. 4</th><th>Pos. 5</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Blanca — Compra / Venta</td><td>2 (1) / 1 (0)</td><td>3 (2) / 2 (1)</td><td>4 (2) / 3 (1)</td><td>5 (3) / 4 (2)</td><td>6 (3) / 5 (2)</td></tr>
+              <tr><td class="name">Integral — Compra / Venta</td><td>4 (2) / 2 (1)</td><td>5 (3) / 3 (1)</td><td>6 (3) / 4 (2)</td><td>7 (4) / 5 (2)</td><td>8 (4) / 6 (3)</td></tr>
+              <tr><td class="name">Centeno — Compra / Venta</td><td>6 (3) / 3 (1)</td><td>7 (4) / 4 (2)</td><td>8 (4) / 5 (2)</td><td>9 (5) / 6 (3)</td><td>10 (5) / 7 (3)</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <caption>Contrato con el Molino — pago único en Monedas; la entrega nocturna es la misma para los tres</caption>
+            <thead><tr><th>Harina</th><th>Contrato</th><th>Entrega cada noche</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Blanca</td><td>3</td><td>2 (20%)</td></tr>
+              <tr><td class="name">Integral</td><td>4</td><td>2 (20%)</td></tr>
+              <tr><td class="name">Centeno</td><td>6</td><td>2 (20%)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="callout"><strong>Los tres se amortizan la misma noche: la cuarta.</strong> Valorando la entrega al precio de Compra de la posición 3 (donde arrancan los tres visores), el Molino de Blanca produce 0,8 Monedas por noche, el de Integral 1,2 y el de Centeno 1,6 — y a las cuatro noches los tres han cubierto su precio, mientras que a las tres no lo cubre ninguno. Que el horizonte sea idéntico es lo que mantiene la elección en «qué harina necesito» y no en «cuál se recupera antes». Es una noche más lento que los Ingresos de Panadería a propósito: la renta se cobra por haber horneado, que ya es la jugada difícil, mientras que el Contrato solo pide Monedas.</p>
+
+        <div class="table-wrap">
+          <table>
+            <caption>Suministro Hídrico Global — Monedas por temperatura y lote</caption>
+            <thead><tr><th>Temperatura</th><th>2 (10%)</th><th>6 (30%)</th><th>12 (60%)</th><th>20 (100%)</th></tr></thead>
+            <tbody>
+              <tr><td class="name">30 °C</td><td>3</td><td>6</td><td>10</td><td>14</td></tr>
+              <tr><td class="name">25 °C</td><td>2</td><td>5</td><td>8</td><td>12</td></tr>
+              <tr><td class="name">20 °C</td><td>2</td><td>4</td><td>7</td><td>10</td></tr>
+              <tr><td class="name">15 °C</td><td>1</td><td>3</td><td>6</td><td>9</td></tr>
+              <tr><td class="name">10 °C</td><td>1</td><td>2</td><td>4</td><td>7</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout"><strong>Con la tecnología <a href="#s10">Comerciante</a> instalada</strong>, cada transacción de <strong>compra</strong> de tu visita — harina (bolsa o media), lote de agua y la firma del Molino — cuesta <strong>1 Moneda menos</strong>, con un mínimo de 1: los precios de las tablas de arriba son los de la mesa, y tú pagas uno menos por cada compra. <strong>Ninguna venta mejora</strong>, y tu compra <strong>mueve el visor igual que la de cualquiera</strong>. Tampoco descuenta la <strong>ponencia</strong> del Simposio Técnico: esos 5 Monedas por cada Dato los paga toda la mesa por igual. Sí: con el descuento, comprar Blanca un día y venderla al siguiente te deja <strong>+1 Moneda</strong> (comprar sube el visor, así que la venta cobra la casilla siguiente, y en Blanca eso empata justo con la horquilla). No es un agujero, es una mala jugada: como no puedes comprar y vender la misma harina en la misma visita y el espacio C se agota una vez al día, ese +1 te cuesta <strong>dos días enteros</strong> de acceso al mercado — vender una bolsa que te regaló el Molino paga 5 en un solo Punto de Acción.</div>
+
+        <h3 class="sub">D · Implementar Mejora de Laboratorio</h3>
+        <p><strong>Costo:</strong> 1 PA + Datos de Investigación, según la mejora — ver <a href="#s10">Tecnologías de Laboratorio</a>. El beneficio se activa de inmediato. Cada mejora individual solo puede instalarse <strong>una vez</strong> por partida, pero un jugador puede llegar a instalar varias mejoras distintas — no existe un tope global de «una sola mejora en total». <strong>Límite adicional:</strong> el espacio D en sí solo puede visitarse 1 vez por día — instalar cualquier mejora agota el espacio para el resto del día, así que dos mejoras distintas nunca pueden instalarse el mismo día.</p>
+
+        <h3 class="sub">F · Hornear y Vender <em class="aside">(Finalización de Protocolo)</em></h3>
+        <p><strong>Costo:</strong> 1 PA. <strong>Límite:</strong> 1 vez por día (por espacio de acción) — no aplica al colapso automático de Fase III. Finaliza el protocolo de una masa y la vende de inmediato: se obtienen Puntos de Maestría, Monedas y (en Zona Óptima) Datos de Investigación, según la zona del track donde se encuentre el marcador.</p>
+        <p><strong>No se puede hornear una masa en Crecimiento.</strong> Todavía no es pan: la Acción F la rechaza y el espacio aparece deshabilitado. Toda masa nace en Crecimiento al iniciarse la receta y sale de él en cuanto la fermentación la lleva al Pre-fermento.</p>
+        <p><strong>Y tampoco puedes deshacerte de ella.</strong> Iniciar una receta es un compromiso irreversible: no existe ninguna acción que abandone una masa. Una masa que ya no quieres seguirá avanzando cada noche hasta que la hornees o hasta que colapse sola. Nunca se queda atascada ocupando la estación — la Fase III la mueve siempre — pero el precio de haberte equivocado de día es que vas a pagar su penalización de colapso.</p>
+
+        <div class="zone-legend">
+          <span class="lc">Crecimiento — no se hornea</span>
+          <span class="lb">Pre-fermento — masa cruda</span>
+          <span class="lo">Zona Óptima</span>
+          <span class="ls">Colapso</span>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <caption>Resolución de Hornear y Vender por zona</caption>
+            <thead><tr><th>Zona</th><th>Puntos de Maestría</th><th>Monedas</th><th>Datos</th></tr></thead>
+            <tbody>
+              <tr><td class="z-crecimiento">Crecimiento</td><td class="wrap">—</td><td class="wrap">—</td><td class="wrap">— <em>no se hornea</em></td></tr>
+              <tr><td class="z-baja">Pre-fermento</td><td class="wrap">Puntos reducidos</td><td class="wrap">Venta con margen reducido</td><td class="wrap">No</td></tr>
+              <tr><td class="z-optima">Óptima</td><td class="wrap">Puntos íntegros de la carta</td><td class="wrap">Ingreso completo</td><td class="wrap">Sí (+1, +1 con Módulo Analítico, +1 más en centro exacto)</td></tr>
+              <tr><td class="z-sobre">Colapso</td><td class="wrap">Penalización negativa</td><td class="wrap">Recuperación del coste base, sin margen</td><td class="wrap">No</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout"><strong>Bono de Sabor.</strong> Si la carta conserva el Cubo de Acidez sellado desde el inicio de la receta (y el horneado no fue un colapso), se suman los puntos de sabor impresos en la carta <strong>y</strong> +2 <span class="chip monedas" style="display:inline-flex">Monedas</span> adicionales. Nunca se aplica en un colapso.</div>
+
+        <h3 class="sub">G · Investigar Protocolo</h3>
+        <p><strong>Costo:</strong> 1 PA + <strong>Monedas según el grado de la carta</strong> — Básica <strong>1</strong>, Intermedia <strong>2</strong>, Avanzada <strong>3</strong>. El precio es <em>aditivo</em>: el Punto de Acción y el espacio siguen siendo el límite real, y las Monedas hacen del mercado una economía en lugar de una cola. <strong>Límites:</strong> máximo 3 cartas en la Carpeta de Proyectos (si está llena, hay que descartar una antes de investigar otra); además, 1 vez por día (por espacio de acción). Toma una carta de receta de cualquiera de las 4 estaciones del Mercado Central y la coloca inactiva en la Carpeta de Proyectos propia. El espacio del mercado queda vacío hasta el Protocolo de Refresco del día siguiente.</p>
+        <p><strong>Investigación a ciegas.</strong> En lugar de una carta expuesta puedes llevarte la <strong>carta superior del mazo</strong>, sin verla, por <strong>2</strong> Monedas fijas — salga el grado que salga. Es exactamente la carta que se revelaría mañana en el Protocolo de Refresco, y las 4 estaciones no se mueven. Si el mazo está vacío se baraja el descarte antes de robar; solo con el mazo <strong>y</strong> su descarte vacíos la opción deja de existir. Mismo Punto de Acción, mismo espacio (una cosa u otra por día) y mismo límite de 3 cartas en la Carpeta, con el mismo descarte previo si está llena.</p>
+
+        <h3 class="sub">Simposio Técnico</h3>
+        <p><strong>Costo:</strong> 1 PA + <strong>o bien un pan horneado con éxito de tu Archivo, o bien 5 Monedas por cada Dato</strong>. <strong>Límite:</strong> 1 vez por día (por espacio de acción), así que <strong>eliges un modo por visita</strong>.</p>
+        <p><strong>En los dos modos necesitas al menos un pan en tu Archivo de Horneados Exitosos</strong>: lo que se presenta en un simposio es un pan, y el modo solo decide si además lo sacrificas.</p>
+        <p><strong>Modo «sacrificar».</strong> Retiras el registro del <strong>Archivo de Horneados Exitosos</strong> y ganas Datos de Investigación <strong>según el grado de la carta</strong> — Básica <strong>1</strong>, Intermedia <strong>2</strong>, Avanzada <strong>3</strong>. La carta vuelve al descarte del mazo de recetas y puede reaparecer al rebarajar.</p>
+        <p><strong>Modo «ponencia».</strong> Presentas el pan sin retirarlo y pagas la asistencia: <strong>5 Monedas</strong> por cada Dato, de 1 a <strong>3</strong> Datos por visita. <strong>Tu Archivo no se toca</strong> — ni sus puntos, ni su renta, ni el contador X/5.</p>
+        <p class="callout"><strong>Por qué 5 y por qué 3.</strong> Cinco Monedas es exactamente lo que vale 1 Punto de Maestría en <a href="#s11">Conversión de Riqueza</a>: el Dato que compras cuesta el punto que ese dinero te habría dado al final, así que es un trueque a la par y solo compensa si lo inviertes en algo que rinda más. Cinco está además por encima de las 3 Monedas que puedes revender de una media bolsa, de modo que no existe la rueda «compro Datos, pido harina, la vendo». Y el tope de 3 es justo lo que paga sacrificar una Avanzada: por mucha renta que acumules, tu bolsa nunca rinde en una visita más que un sacrificio, y comprar un solo Dato es peor que Reclamar la Jefatura, que te lo da por el mismo PA y sin pagar nada. La ponencia compensa cuando quieres 2 o 3 de golpe, o cuando otro ya se llevó la Jefatura de hoy. <strong>El Comerciante no la descuenta.</strong></p>
+        <p>Sacrificar es la <strong>única forma de sacar un pan del Archivo</strong>, y hacerlo cuesta, todo a la vez: los <strong>Puntos de Maestría</strong> de ese horneado; su <strong>renta</strong> de Ingresos de Panadería para el resto de la partida; un escalón de <strong>Variedad de Recetas</strong>, si era el único pan de ese tipo; y un paso del contador <strong>X/5</strong> que termina la partida.</p>
+        <p class="note"><strong>Sacrificar no es una jugada eficiente, y no pretende serlo.</strong> Ningún puñado de Datos compensa ese precio: el sacrificio es una <strong>palanca de emergencia</strong> — quemar un éxito pasado para salvar el presente — y en la práctica se sacrifica siempre el pan más barato que se tenga. Un jugador con 4 panes en el Archivo puede además sacrificar uno para <em>retrasar</em> el final de la partida; es carísimo, y por eso es legítimo. Lo que no puede es deshacer un final ya desencadenado. Cuando lo que te sobra es dinero y no panes, la alternativa es la ponencia.</p>
+        <p><strong>Ojo, cambió respecto a versiones anteriores:</strong> el Simposio ya <strong>no</strong> descarta de la Carpeta de Proyectos ni de una estación de fermentación. Para descartar de la Carpeta está la propia acción Investigar Protocolo cuando la carpeta está llena; y <strong>abandonar una masa ya no es posible en absoluto</strong>.</p>
+
+        <h3 class="sub">Reclamar la Jefatura</h3>
+        <p><strong>Costo:</strong> 1 PA. Ganas <strong>1 Dato de Investigación</strong> en el acto y abres la Fase II <strong>de mañana</strong> como Investigador Jefe.</p>
+        <p><strong>Límite: uno por día en toda la mesa.</strong> Es el único espacio del tablero que no se agota por jugador sino para todos a la vez: en cuanto alguien coloca su peón aquí, nadie más puede reclamarla ese día. Ocuparlo no es solo usarlo — es quitárselo a los demás.</p>
+        <p>El efecto llega mañana porque el orden de turno se fija una sola vez, en la Fase I, y no se rebaraja a media jornada: lo que compras es la salida de mañana, no la de hoy. <strong>Reclamarla siendo ya el Jefe es legal</strong> y cuesta lo mismo — es la única manera de retenerla, porque aunque sin reclamación la ficha se queda donde está, cualquiera puede venir a comprarla.</p>
+        <p class="callout"><strong>Un Punto de Acción entero por salir primero es caro, y debe serlo.</strong> A cambio te llevas el Dato, y ahí está la otra mitad del asunto: es la única fuente de Datos de Investigación de la partida que no pasa por el Archivo — ni por hornear en Zona Óptima ni por el Simposio — y la única que no te cuesta nada más que el punto de acción. Antes, quien horneaba bien primero acumulaba también la divisa técnica y el resto de la mesa se quedaba sin combustible para Horas Extras y Pedidos de Urgencia. Aquí entra <strong>1 Dato por día en total</strong>, repartido por rotación y no por riqueza: lo limita la competencia, no el precio.</p>
+
+        <h3 class="sub">Turno de Mostrador</h3>
+        <p><strong>Costo:</strong> 1 PA. Ganas <strong>1 Moneda</strong>. No hay nada que elegir ni nada que pagar.</p>
+        <p><strong>Sin límite: es el único espacio con costo de PA que no se agota.</strong> Todos los demás se marcan con tu peón al visitarlos y quedan cerrados para ti hasta el día siguiente; este no. Puedes atender el mostrador tantas veces como Puntos de Acción te queden.</p>
+        <p>Es el <strong>suelo del tablero</strong>: la acción que existe para que un turno nunca esté vacío. Si te encuentras con Puntos de Acción y ninguna jugada que te sirva — sin recetas en la Carpeta, con la masa todavía en Crecimiento, sin Monedas para el Mercado, sin Datos para una mejora y con la Jefatura ya reclamada por otro — dejas la investigación, bajas a la panadería y despachas lo que haya en el mostrador.</p>
+        <p class="callout"><strong>Una Moneda es poco a propósito.</strong> Es exactamente lo que valía la vieja acción de Pliegues que costaba 1 PA, la que nadie tomaba nunca: ese es el listón que se busca. Cualquier otra acción del tablero rinde más que atender el mostrador, así que esto no es nunca una estrategia — es lo que haces cuando no hay nada que hacer. Y no se puede ganar la partida a base de mostrador: el día tiene 2 Puntos de Acción, y gastarlos aquí es no haber horneado, ni comprado, ni investigado.</p>
+        <p class="callout"><strong>Por qué no está condicionada a «no tener nada mejor que hacer».</strong> Sería la regla natural y es impracticable: nadie en la mesa puede juzgar si a otro jugador le conviene o no una compra. Un permiso así habría que discutirlo cada vez. El Mostrador se limita solo, siendo flojo: no hace falta cerrarlo porque nunca compensa.</p>
+        <p><strong>Ojo:</strong> pasar turno <strong>no</strong> es lo mismo. Pasar renuncia a todo el resto del día, incluidas tus acciones gratuitas (Alimentar el Cultivo, Pliegues, Descarte, Horas Extras, Pedido de Urgencia). Atender el mostrador solo gasta un Punto de Acción y te deja en la rotación.</p>
+
+        <h4 class="sub-sub">Acciones auxiliares y de emergencia · costo 0 PA</h4>
+
+        <h3 class="sub">A · Alimentar el Cultivo <em class="aside">(Mantenimiento)</em></h3>
+        <p><strong>Límite:</strong> una vez por día. Gastar <strong>1 token de harina — 1&nbsp;(10%)</strong> (cualquier tipo) por <strong>+1 Vitalidad</strong> (máximo Nivel 6). Repone exactamente el −1 que el Metabolismo resta cada Fase III, así que quien alimenta a diario orbita su Vitalidad inicial.</p>
+        <p>Esta acción <strong>no toca la Acidez</strong>. Todo el control voluntario de la Acidez vive en la acción <strong>Descarte</strong>, que la mueve en los dos sentidos.</p>
+
+        <h3 class="sub">Descarte <em class="aside">(Refresco del Cultivo)</em></h3>
+        <p><strong>Costo:</strong> 0 PA, pero <strong>ocupa su espacio de acción</strong>: una vez por Día de Laboratorio, como cualquier otro espacio. No termina el turno.</p>
+        <p>Es el único control voluntario de la Acidez, y funciona en <strong>los dos sentidos</strong> — pero cada uno se paga con un recurso distinto, y eso no es arbitrario: subir la acidez es sólo añadir agua, mientras que bajarla es descartar parte del cultivo y refrescarlo con harina nueva, es decir <strong>tirar producto</strong>. Elige un solo sentido por visita.</p>
+        <table>
+          <thead>
+            <tr><th>Mover la Acidez</th><th>1 nivel</th><th>2 niveles</th><th>3 niveles</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="name">Subir — cuesta tokens de agua</td><td>2</td><td>5</td><td>9</td></tr>
+            <tr><td class="name">Bajar — cuesta Monedas</td><td>1</td><td>3</td><td>6</td></tr>
+          </tbody>
+        </table>
+        <p>Ambas escaleras son <strong>crecientes al margen</strong> (2, 3 y 4 tokens; 1, 2 y 3 Monedas): comprar más nunca sale más barato por unidad. La Acidez sigue acotada entre los Niveles 0 y 6, y el escalón se cobra entero aunque el ajuste tope contra un extremo.</p>
+        <p class="note"><strong>Para qué sirve.</strong> Para caer dentro de la <strong>Acidez Diana</strong> de una receta antes de iniciarla y sellar así su Bono de Sabor. Pero no lo uses a ciegas: la <strong>Madurez del Cultivo</strong> del recuento final premia el <em>equilibrio</em>, no la acidez bruta — su pico está en el <strong>Nivel 3</strong> y los extremos 0 y 6 no puntúan. Perseguir la diana de un Panettone (Nivel 1) o de un Pumpernickel (Niveles 5-6) cuesta puntos finales mientras la sostienes, y por eso esas cartas son justamente las que más Bono de Sabor pagan.</p>
+
+        <h3 class="sub">E · Técnica (Pliegues)</h3>
+        <p><strong>Costo:</strong> Monedas, no PA. Se compran entre 1 y 3 espacios de avance del marcador de Inóculo y se reparten entre las masas activas: <strong>1 espacio = 1 Moneda, 2 = 3 Monedas, 3 = 6 Monedas</strong>. El precio es creciente al margen a propósito — comprar más nunca sale más barato por espacio — y depende del <strong>total</strong> comprado, no de cuántas masas se afecten. <strong>No termina el turno:</strong> se puede encadenar con otra acción en la misma visita. <strong>Límite:</strong> 1 vez por Día de Laboratorio — es la única acción de 0 PA que ocupa un espacio de acción, y se limita por ese espacio y no por su precio, porque las Monedas son un recurso renovable.</p>
+        <p>Con <strong>Cámara B</strong> instalada el jugador no compra más espacios, sino que puede repartirlos entre <strong>dos masas distintas</strong> en lugar de concentrarlos en una. La mejora desbloquea además una variante alternativa: recuperar <strong>+1 de Vitalidad</strong> en el cultivo base por <strong>6 Monedas</strong>, sin comprar ningún espacio de avance.</p>
+        <p><strong>Riesgo:</strong> el avance no tiene tope. Comprar 3 espacios puede empujar una masa más allá de su zona óptima hasta la zona sobre-fermentada, que la Fase III hornea automáticamente en colapso y con penalización. Ese riesgo es el contrapeso del escalón caro: el juego avisa, pero no lo impide.</p>
+
+        <h3 class="sub">Horas Extras</h3>
+        <p><strong>Costo:</strong> 1 Dato de Investigación. Otorga +1 PA de inmediato para usar ese mismo día, <strong>y un marcador neutral</strong>. Solo una vez por Día de Laboratorio, así que el marcador es también uno por día como máximo.</p>
+        <p>El marcador neutral es la única excepción a «un espacio, una visita por día»: una de tus acciones con costo de PA de hoy puede caer en un espacio que <strong>ya visitaste</strong>, y el marcador se coloca allí en lugar de un segundo peón de tu color. Vale para los ocho espacios propios con costo de PA — <strong>B, C, D, F, G, Simposio Técnico, H e I</strong> —, y no vale para <strong>Reclamar la Jefatura</strong> (que se agota para toda la mesa, no solo para ti) ni para <strong>Pliegues</strong> o <strong>Descarte</strong> (que cuestan 0 PA). El Turno de Mostrador no lo necesita: ya se repite mientras te queden Puntos de Acción.</p>
+        <p><strong>Se gasta sólo al repetir.</strong> Si el Punto de Acción extra lo usas en un espacio libre, marcas con tu color como siempre y <strong>te guardas el marcador</strong> para más tarde ese mismo día. Por eso da igual en qué momento del turno pidas las Horas Extras: adelantarlas nunca desperdicia el marcador.</p>
+        <p class="callout"><strong>Por qué está aquí.</strong> Sin el marcador, ese tercer Punto de Acción valía menos que los dos primeros: sólo podía comprar un espacio distinto y sin estrenar, que muchos días era el Mostrador (1 Moneda) o nada — a cambio de un Dato, que al final de la partida vale 1 Punto de Maestría. El precio no ha cambiado; lo que ha cambiado es lo que compra.</p>
+
+        <h3 class="sub">Estasis Biológica</h3>
+        <p><strong>Costo:</strong> ninguno. <strong>Requiere la tecnología Criopreservación.</strong> No ocupa espacio de acción, no termina el turno y no tiene límite de usos.</p>
+        <p>Tu Criopreservación mantiene el cultivo en estasis: ignora el desgaste metabólico cada noche. Esta acción decide si, <strong>sólo por esta noche</strong>, lo dejas desgastarse con normalidad (−1 Vitalidad, −2 con Aletargamiento Invernal vigente). Es un interruptor de dos sentidos: puedes suspender la Estasis y volver a activarla cuantas veces quieras mientras sea tu turno. La Fase III <strong>la reactiva sola</strong>, así que la suspensión nunca dura más de una noche y un ajuste olvidado no puede contaminarte.</p>
+        <p>Se decide en la Fase II, con la carta de clima ya sobre la mesa: eliges sabiendo la temperatura del día y si hay Aletargamiento.</p>
+        <div class="callout"><strong>Por qué querrías desgastar tu propio cultivo.</strong> Iniciar Receta sella el <strong>Dado de Inóculo</strong> con tu Vitalidad de ese día, y ese número se suma al avance de esa masa <strong>todas las noches</strong>. Nada más en el juego baja la Vitalidad a propósito — el Descarte sólo mueve la Acidez —, así que quien tiene Criopreservación y alimenta a diario sube hasta 6 y se queda ahí clavado: sus masas avanzan de 9 a 11 casillas por noche, y las recetas Avanzadas tienen zonas óptimas de 2 o 3 casillas. Pasarse de largo dejaba de ser un error de cálculo para ser una certeza, precisamente para quien había pagado la mejora. Con la suspensión, la Vitalidad vuelve a ser un dial de dos sentidos, como la Acidez.</div>
+        <p><strong>Ojo:</strong> suspender la Estasis con Vitalidad 1 (o 2 bajo Aletargamiento) te lleva a <strong>0</strong>, es decir a Contaminación: −3 Puntos de Maestría y no puedes iniciar recetas hasta ejecutar un Protocolo de Emergencia. El juego te enseña la cifra resultante antes de confirmar, pero no te lo impide.</p>
+
+        <h3 class="sub">Incubadora</h3>
+        <p><strong>Costo:</strong> ninguno. <strong>Requiere la tecnología Incubadora</strong> y al menos una masa fermentando. No ocupa espacio de acción, no termina el turno y no tiene límite de usos.</p>
+        <p>Fija, <strong>masa por masa</strong>, cuánto avanzará cada una <strong>esta noche</strong>: −1 la frena una casilla, +1 la acelera una, 0 la deja con su cinética limpia. Con varias estaciones ocupadas puedes frenar una mientras empujas otra — el dial es de cada masa, no del laboratorio.</p>
+        <p>Se decide en la Fase II, con la carta de clima ya sobre la mesa: eliges sabiendo la temperatura del día, es decir sabiendo cuánto va a correr cada masa. El ajuste <strong>dura una sola noche</strong>: la Fase III lo aplica y devuelve el dial a 0, así que un ajuste olvidado no puede seguir empujando una masa noche tras noche.</p>
+        <div class="callout"><strong>Por qué el dial no se elige al iniciar la receta.</strong> Antes se fijaba al mezclar y quedaba clavado en la masa para siempre. Quien compraba la Incubadora con una masa ya fermentando descubría que no podía tocarla: veía cómo se pasaba de la Zona Óptima sin poder frenarla, con la mejora recién pagada delante. Ahora el ajuste es de cada noche, así que instalar la Incubadora rescata lo que ya tienes en marcha — igual que hace el Módulo Analítico con la Zona Óptima.</div>
+        <p><strong>Ojo:</strong> un +1 puede meter la masa en <strong>Colapso</strong>, y entonces se hornea sola esta noche con la penalización de esa zona. El juego te enseña dónde caerá la masa antes de confirmar, pero no te lo impide: a veces adelantar un colapso es la jugada.</p>
+
+        <h3 class="sub">Pedido de Urgencia</h3>
+        <p><strong>Costo:</strong> 1 Dato de Investigación. Ignora el Mercado por completo — sin importar el precio vigente — y entrega de la reserva general una parcela <strong>fija</strong> a elección: <strong>media bolsa — 5&nbsp;(50%)</strong> de una harina, o <strong>6&nbsp;(30%)</strong> de agua. Eliges el recurso, nunca la cantidad.</p>
+        <p>Media bolsa, y no una entera, porque el Pedido era también el mejor arbitraje de la partida: 1 Dato entregaba una bolsa completa de cualquier harina, y una bolsa de Centeno en posición 5 se revende en el acto por 7 Monedas. La emergencia se conserva (dos Pedidos completan una bolsa, y una receta Intermedia sólo pide media de cada harina), pero la reventa se hunde — la venta de media bolsa redondea hacia <strong>abajo</strong>, así que ese mismo Centeno pasa a pagar 3.</p>
+        <p>El agua también es una cantidad fija, por un motivo paralelo: una receta pide entre 10 y 17 tokens y un lote del 100&nbsp;% cuesta de 7 a 14 Monedas, así que pedir «los que quieras» convertía 1 Dato en toda el agua de la partida. El agua no se revende, de modo que no había arbitraje en Monedas, pero el único freno era la penalización por desperdicio del recuento final (−1 punto por cada 3 tokens sin usar), un precio ridículo por saltarse el Suministro Hídrico durante toda la partida. Se entrega el equivalente al lote del 30&nbsp;%, que cuesta entre 2 y 6 Monedas según la temperatura: más o menos lo mismo que la media bolsa de harina, de modo que el Dato compra el mismo valor elijas lo que elijas. Y sostiene la misma historia — igual que dos Pedidos completan una bolsa, dos Pedidos cubren aproximadamente el agua de una receta.</p>
+        <p>Sin límite de usos por día; se autolimita solo por los Datos disponibles. Al no costar PA, queda exento de la regla «1 vez por día por espacio de acción» de la <a href="#s6">Fase II</a>.</p>
+
+        <h3 class="sub">Protocolos de Emergencia <em class="aside">(Rescate de Cultivo)</em></h3>
+        <p>Solo si la Vitalidad del cultivo base ha llegado a 0 (ver <a href="#s9">Fase III</a>):</p>
+        <ul class="rules-list">
+          <li><strong>H · Re-cultivo Manual:</strong> 1 PA + <strong>3 tokens de harina — 3&nbsp;(30%)</strong> (cualquier tipo, sin costo de agua). Retira la Contaminación y sitúa Vitalidad y Acidez en Nivel 1. <strong>Límite:</strong> 1 vez por día (por espacio de acción), además de requerir Contaminación activa.</li>
+          <li><strong>I · Inóculo de Emergencia:</strong> 1 PA + 1 Dato de Investigación. Retira la Contaminación y sitúa Vitalidad y Acidez en Nivel 2 — resultado superior al Re-cultivo Manual. <strong>Límite:</strong> 1 vez por día (por espacio de acción), además de requerir Contaminación activa.</li>
+        </ul>
+      </section>
+
+      <section class="rule" id="s8">
+        <div class="section-head"><span class="n">08</span><h2>Catálogo de recetas</h2></div>
+        <p>Hay <strong>12 protocolos distintos: 4 Básicas, 4 Intermedias y 4 Avanzadas.</strong> El mazo físico son 36 cartas, porque cada protocolo lleva un número distinto de copias — 4 por Básica, 3 por Intermedia, 2 por Avanzada (ver <a href="#s12">Anexo</a>). La escasez es, por sí sola, una segunda barrera para las Avanzadas: no basta con poder pagarlas, tienen que salir. Los tracks de fermentación de todas las recetas corren de 1 a 20 casillas.</p>
+
+        <h3 class="sub">Los tres grados</h3>
+        <p>El grado de una receta <strong>es</strong> la harina que imprime — no es una etiqueta aparte:</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Grado</th><th>Imprime</th><th>Coste en la Bolsa (visor en 1 → 5)</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Básica</td><td class="wrap">Harina Blanca 100% (una bolsa entera)</td><td>2 – 6 Monedas</td></tr>
+              <tr><td class="name">Intermedia</td><td class="wrap">50% + 50% de <strong>dos harinas distintas</strong> (dos medias bolsas)</td><td>3 – 7 … 5 – 9 Monedas</td></tr>
+              <tr><td class="name">Avanzada</td><td class="wrap">100% de <strong>una harina especial</strong> — Centeno o Integral</td><td>4 – 8 (Integral) / 6 – 10 (Centeno)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><strong>Harina especial</strong> = Centeno o Integral. La Blanca es el producto común y la pista más barata de las tres; es precisamente lo que impide que una Básica sea una Avanzada.</p>
+        <p>Solo existen esas dos formas de pago —una bolsa entera, o dos medias— y no es una restricción arbitraria: la Bolsa de Harinas únicamente vende bolsa entera y media bolsa (ver <a href="#s7">Acción C</a>), nunca tokens sueltos. Por eso una Intermedia no sale más cara por el peso de la harina, sino por la <strong>liquidez</strong>: obliga a tener dos pistas surtidas a la vez, y cada media bolsa se compra redondeando hacia arriba.</p>
+        <p>Las zonas de la tabla son las <strong>impresas</strong>. Con el <strong>Módulo Analítico</strong> instalado, tu Zona Óptima corre una casilla en cada dirección y el umbral de colapso se retrasa con ella (ver <a href="#s9">Colapso Estructural</a> y <a href="#s10">Tecnologías</a>).</p>
+        <p><strong>Ninguna carta exige tecnología.</strong> El grado dice qué harina cuesta y cuántos puntos paga, nada más. Adquirir la carta cuesta Monedas según su grado (Básica 1, Intermedia 2, Avanzada 3 — ver <a href="#s7">Acción G</a>), y el resto del freno es la harina que hay que reunir.</p>
+
+        <h3 class="sub">Puntuación por grado</h3>
+        <p>Los Puntos de Maestría de la Zona Óptima están escalonados por grado y <strong>no se solapan</strong>: Básica <strong>9 – 12</strong>, Intermedia <strong>13 – 16</strong>, Avanzada <strong>17 – 20</strong>.</p>
+        <p class="wrap" style="font-size:0.9rem;color:var(--ink-muted);">Las Monedas y el ancho de las zonas <strong>no</strong> están escalonados: son el eje que distingue, dentro de un mismo grado, una carta de puntos baratos de una carta caja fuerte. Compárense Hogaza Centeno (17 puntos, 18 Monedas, zona óptima de 4 casillas) y Pumpernickel (20 puntos, 19 Monedas, pero solo 3 casillas de zona óptima y un colapso de −8). El Bono de Sabor va por libre igual: Panettone es Intermedia y aun así tiene el mayor bono del juego (+8) — no es la carta de más puntos, es la de más sabor.</p>
+
+        <div class="zone-legend">
+          <span class="lc">Crecimiento — no se hornea</span>
+          <span class="lb">Pre-fermento — masa cruda</span>
+          <span class="lo">Zona Óptima</span>
+          <span class="ls">Colapso</span>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Receta</th><th>Grado</th><th>Coste<br><span style="font-weight:400">Monedas</span></th><th>Harina<br><span style="font-weight:400">siempre 10 (100%) en total</span></th><th>Agua<br><span style="font-weight:400">tokens (hidratación)</span></th><th>Acidez diana (bono)</th>
+                <th>Crecim.</th><th>Pre-ferm.</th><th>Óptima</th><th>Colapso</th>
+                <th>Puntos<br><span style="font-weight:400">Pre-f. / Óptima / Colapso</span></th><th>Monedas al hornear<br><span style="font-weight:400">Pre-f. / Óptima / Colapso</span></th>
+              </tr>
+            </thead>
+            <tbody>
+<tr><td class="name">Pan de Campo</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>12 (60%)</td><td>Nivel 3 (+1)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–10</td><td class="z-optima">11–15</td><td class="z-sobre">16–20</td><td>4 / 10 / −2</td><td>10 / 14 / 8</td></tr>
+              <tr><td class="name">Pan de Molde</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>11 (55%)</td><td>Nivel 1–2 (+2)</td><td class="z-crecimiento">1–3</td><td class="z-baja">4–8</td><td class="z-optima">9–14</td><td class="z-sobre">15–20</td><td>3 / 9 / −2</td><td>9 / 13 / 7</td></tr>
+              <tr><td class="name">Baguette</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>13 (65%)</td><td>Nivel 2 (+2)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–11</td><td class="z-optima">12–15</td><td class="z-sobre">16–20</td><td>5 / 11 / −2</td><td>11 / 15 / 9</td></tr>
+              <tr><td class="name">Focaccia</td><td>Básica</td><td>1</td><td class="wrap">Blanca 100%</td><td>15 (75%)</td><td>Nivel 1–2 (+2)</td><td class="z-crecimiento">1–4</td><td class="z-baja">5–9</td><td class="z-optima">10–14</td><td class="z-sobre">15–20</td><td>3 / 12 / −3</td><td>12 / 16 / 10</td></tr>
+              <tr><td class="name">Miche</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Integral 50%</td><td>14 (70%)</td><td>Nivel 3–4 (+2)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–11</td><td class="z-optima">12–16</td><td class="z-sobre">17–20</td><td>5 / 13 / −4</td><td>10 / 14 / 7</td></tr>
+              <tr><td class="name">Pizza Napolitana</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Integral 50%</td><td>13 (62%)</td><td>Nivel 3 (+2)</td><td class="z-crecimiento">1–5</td><td class="z-baja">6–10</td><td class="z-optima">11–14</td><td class="z-sobre">15–20</td><td>4 / 14 / −4</td><td>9 / 15 / 6</td></tr>
+              <tr><td class="name">Brioche</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>11 (52%)</td><td>Nivel 1 (+3)</td><td class="z-crecimiento">1–7</td><td class="z-baja">8–14</td><td class="z-optima">15–17</td><td class="z-sobre">18–20</td><td>5 / 16 / −6</td><td>8 / 15 / 5</td></tr>
+              <tr><td class="name">Panettone</td><td>Intermedia</td><td>2</td><td class="wrap">Blanca 50% + Centeno 50%</td><td>10 (47%)</td><td>Nivel 1 (+3)</td><td class="z-crecimiento">1–10</td><td class="z-baja">11–16</td><td class="z-optima">17–18</td><td class="z-sobre">19–20</td><td>8 / 16 / −8</td><td>7 / 16 / 4</td></tr>
+              <tr><td class="name">Hogaza Centeno</td><td>Avanzada</td><td>3</td><td class="wrap">Centeno 100%</td><td>14 (67%)</td><td>Nivel 4–5 (+4)</td><td class="z-crecimiento">1–6</td><td class="z-baja">7–12</td><td class="z-optima">13–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>11 / 18 / 8</td></tr>
+              <tr><td class="name">Pan Semillas</td><td>Avanzada</td><td>3</td><td class="wrap">Integral 100%</td><td>16 (78%)</td><td>Nivel 3–4 (+3)</td><td class="z-crecimiento">1–6</td><td class="z-baja">7–13</td><td class="z-optima">14–16</td><td class="z-sobre">17–20</td><td>6 / 17 / −5</td><td>10 / 17 / 7</td></tr>
+              <tr><td class="name">Pan Graham</td><td>Avanzada</td><td>3</td><td class="wrap">Integral 100%</td><td>16 (80%)</td><td>Nivel 4–5 (+4)</td><td class="z-crecimiento">1–6</td><td class="z-baja">7–13</td><td class="z-optima">14–17</td><td class="z-sobre">18–20</td><td>6 / 19 / −6</td><td>9 / 17 / 6</td></tr>
+              <tr><td class="name">Pumpernickel</td><td>Avanzada</td><td>3</td><td class="wrap">Centeno 100%</td><td>17 (85%)</td><td>Nivel 5–6 (+4)</td><td class="z-crecimiento">1–9</td><td class="z-baja">10–15</td><td class="z-optima">16–18</td><td class="z-sobre">19–20</td><td>8 / 20 / −8</td><td>7 / 19 / 3</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="callout"><strong>La columna de Monedas es solo el pago del momento de hornear.</strong> Cada pan que entra en tu Archivo sigue produciendo Monedas <strong>todas las noches</strong> mientras siga allí — Básica 1, Intermedia 2, Avanzada 3 (ver <a href="#s9">Ingresos de Panadería</a>). Los números de la tabla ya están ajustados a la baja para dejarle sitio a esa renta: <strong>cualquier carta recupera al tercer día lo que pagaba antes de golpe</strong>, y a partir de ahí gana más. Por eso el pan barato horneado el Día 3 puede rendir más que el pan caro horneado el Día 8.</p>
+        <p class="wrap" style="font-size:0.86rem;color:var(--ink-muted);max-width:68ch;">La columna <strong>Coste</strong> es lo que cuesta llevarse la carta del Mercado Central con la <a href="#s7">Acción G</a>; va impresa en la carta. No confundir con la harina y el agua, que son lo que cuesta <strong>iniciarla</strong> después con la Acción B. La Investigación a ciegas ignora esta columna: robar del mazo cuesta <strong>2</strong> Monedas fijas, sea cual sea la carta que salga.</p>
+        <p class="wrap" style="font-size:0.86rem;color:var(--ink-muted);max-width:68ch;">El número entre paréntesis junto a la Acidez Diana es el bono de Puntos de Maestría del Bono de Sabor (ver <a href="#s7">Acción F</a>); el Bono de Sabor también otorga siempre +2 Monedas adicionales, sin importar la receta.</p>
+      </section>
+
+      <section class="rule" id="s9">
+        <div class="section-head"><span class="n">09</span><h2>Fase III — Fermentación</h2></div>
+        <p>Ocurre de forma automática y simultánea para todos los jugadores, una vez que la Fase II termina.</p>
+
+        <h3 class="sub">9.1 · Cinética Biológica (avance de masas)</h3>
+        <p>Cada masa activa avanza en su track según:</p>
+        <div class="formula">Avance Final&nbsp; = &nbsp;(Temperatura Ambiental ÷ 5)&nbsp; + &nbsp;Valor del Dado de Inóculo&nbsp; + &nbsp;Modificador de Incubadora</div>
+        <ul class="rules-list">
+          <li>La inercia térmica (temperatura ÷ 5) es igual para todas las masas del laboratorio ese día.</li>
+          <li>El Dado de Inóculo es el valor <strong>sellado</strong> al iniciar esa masa — no cambia aunque la Vitalidad actual del cultivo base cambie después.</li>
+          <li>El Modificador de Incubadora (−1, 0 o +1) solo aplica con esa tecnología instalada. <strong>Lo fijas tú durante la Fase II</strong>, masa por masa, con la acción gratuita «Incubadora» (<a href="#s7">§7</a>), y esta fase lo <strong>devuelve a 0</strong> después de aplicarlo: el ajuste dura una sola noche. A diferencia del Dado de Inóculo, no queda sellado al iniciar la receta, así que instalar la Incubadora sirve también para las masas que ya tenías fermentando.</li>
+        </ul>
+        <div class="callout"><strong>Principio de Memoria Biológica.</strong> Una vez iniciada, una masa es un ecosistema independiente. Si el cultivo base llega a Vitalidad 0 o se contamina después, esa masa en curso no se ve afectada — sigue avanzando con el dado sellado en la mezcla original. Lo sellado es el <strong>Dado de Inóculo</strong>; el Modificador de Incubadora no lo está, y por eso puedes moverlo cada noche.</div>
+
+        <h3 class="sub">9.2 · Colapso Estructural (sobre-fermentación)</h3>
+        <p>Si la posición de una masa entra en su Zona de Colapso tras el Avance Final, colapsa de inmediato: se hornea automáticamente con costo 0 PA, aplicando la penalización de puntos y el ingreso de recuperación de coste de esa zona. El Dado de Inóculo se recupera y la estación queda libre para el día siguiente. Un colapso nunca otorga el Bono de Sabor.</p>
+        <p><strong>Las zonas que cuentan son las tuyas, no las impresas.</strong> Con el <strong>Módulo Analítico</strong> instalado, tu Zona Óptima corre una casilla en cada dirección, así que el umbral de colapso está una casilla más arriba de lo que dice la carta. Es un efecto <strong>vivo</strong>: instalarlo hoy salva esta noche una masa que ya estaba fermentando, sin que hiciera falta tenerlo al iniciarla. Ensanchar no mueve el centro exacto — la zona perdona más, pero clavar el centro cuesta lo mismo.</p>
+
+        <h3 class="sub">9.3 · Desgaste Metabólico</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Condición</th><th>Desgaste de Vitalidad</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Estándar</td><td>−1</td></tr>
+              <tr><td class="name">Aletargamiento Invernal vigente</td><td>−2</td></tr>
+              <tr><td class="name">Criopreservación instalada</td><td>0 — ignora el desgaste por completo</td></tr>
+              <tr><td class="name">Criopreservación con la Estasis suspendida esta noche</td><td>El desgaste normal (−1, o −2 con Aletargamiento) — decisión del jugador en la Fase II, ver <a href="#s7">§7</a></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><strong>La cuenta que conviene tener presente.</strong> El desgaste resta 1 y Alimentar el Cultivo repone 1 una vez al día, así que <strong>quien alimenta a diario se queda donde empezó</strong>: en Vitalidad 2. Desde ahí, un Aletargamiento Invernal (−2) te deja en 1 y sobrevives. Si te saltas la alimentación un solo día y cae esa carta, llegas a 0. Eso es exactamente lo que la Contaminación castiga.</p>
+        <p>La Vitalidad nunca desciende por debajo de 0. Si un jugador llega a 0 en cualquier momento, sufre una penalización inmediata de <strong>−3 Puntos de Maestría</strong> y entra en <strong>Contaminación</strong>: no puede iniciar nuevas recetas hasta ejecutar un Protocolo de Emergencia. Cada episodio de Contaminación aplica su propia penalización — se acumulan si ocurre más de una vez.</p>
+
+        <h3 class="sub">9.4 · Ingresos de Panadería</h3>
+        <p>Cada jugador cobra Monedas de la reserva general <strong>por cada pan de su Archivo de Horneados Exitosos</strong>, según el grado de cada carta:</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Grado del pan archivado</th><th>Monedas por noche</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Básica</td><td><span class="chip monedas">1</span></td></tr>
+              <tr><td class="name">Intermedia</td><td><span class="chip monedas">2</span></td></tr>
+              <tr><td class="name">Avanzada</td><td><span class="chip monedas">3</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Se cobra por <strong>todos</strong> los panes del Archivo, todas las noches, sin límite de días. Un jugador con una Focaccia y un Pumpernickel archivados cobra 1 + 3 = 4 Monedas cada Fase III.</p>
+        <ul class="rules-list">
+          <li><strong>Un pan horneado hoy cobra esta misma noche.</strong> No hay que esperar al día siguiente.</li>
+          <li><strong>Los colapsos no rinden nada.</strong> Solo paga el Archivo de Horneados <em>Exitosos</em>. Provocar un colapso es fácil y barato, así que pagarlo sería regalar la renta sin haber horneado bien nada.</li>
+          <li><strong>Si un pan sale del Archivo, su renta se va con él.</strong> La única forma de que eso ocurra es <strong>sacrificarlo</strong> en el Simposio Técnico; presentar una ponencia allí no retira nada.</li>
+        </ul>
+        <p class="callout"><strong>Este es el motor de la partida.</strong> Hornear no es solo puntuar: es montar una fuente de ingresos que trabaja para ti el resto del juego. Un pan horneado el Día 3 cobra seis o siete noches; el mismo pan horneado el Día 9 cobra una o dos. Pero la partida termina cuando alguien hornea su <strong>quinto</strong> pan, así que correr para montar la renta es también correr para cerrar tu propia ventana. Esa tensión es deliberada.</p>
+
+        <h3 class="sub">9.5 · Entrega del Molino</h3>
+        <p>Cada jugador que tenga firmado un <strong>Contrato con el Molino</strong> (Acción C, ver <a href="#s7">Catálogo de acciones</a>) recibe de la reserva general <strong>2 tokens — 2&nbsp;(20%)</strong> de la harina que contrató. Todas las noches, para siempre, sin límite de días y sin volver a pagar nada.</p>
+        <p>La entrega es <strong>la misma para los tres tipos de harina</strong>: lo que cambia entre ellos es el precio del contrato, no lo que produce. Así solo hay un número de producción que recordar, y elegir qué harina contratar es una pregunta sobre qué necesita tu panadería, no sobre qué contrato rinde más.</p>
+        <p class="callout"><strong>Por qué existe este paso.</strong> Antes, la única forma de tener harina era comprarla en la Bolsa — y comprar empuja el visor hacia el extremo caro. Eso dejaba muerto el lado de <em>venta</em> del mercado: una ida y vuelta comprar→vender pierde siempre el diferencial y mueve el visor dos veces en tu contra, y como la Tendencia desplaza los tres visores a la vez, tampoco había especulación posible. El Molino es la única harina que no compras, y por eso la única que puedes vender sin haberla pagado antes al precio de la Bolsa.</p>
+      </section>
+
+      <section class="rule" id="s10">
+        <div class="section-head"><span class="n">10</span><h2>Tecnologías de laboratorio</h2></div>
+        <p>Cada jugador puede instalar hasta 5 mejoras permanentes a lo largo de la partida (Acción D). Cada una solo puede instalarse una vez, pero un jugador puede llegar a tener varias distintas.</p>
+        <p>Además de su efecto en partida, <strong>cada mejora instalada puntúa al final</strong>, en curva creciente y sin importar lo que costó — ver <a href="#s11">Desarrollo Tecnológico</a> en §11.2. Una mejora no se desinstala nunca, así que esos puntos, una vez ganados, no se pierden.</p>
+
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Tecnología</th><th>Costo</th><th>Efecto</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Incubadora</td><td><span class="chip datos">3 Datos</span></td><td class="wrap">Ajusta la temperatura local ±5 °C (±1 casilla de avance en Fase III) para una masa específica, mitigando el clima. El dial se fija <strong>cada noche y masa por masa</strong> con la acción gratuita del mismo nombre (<a href="#s7">§7</a>), así que también sirve en masas que ya estaban fermentando cuando la instalaste.</td></tr>
+              <tr><td class="name">Cámara B</td><td><span class="chip datos">4 Datos</span></td><td class="wrap">Desbloquea la tercera estación de fermentación y mejora la Acción E (Pliegues): permite repartir los espacios comprados entre dos masas (no compra más), y habilita la variante de recuperar +1 Vitalidad por 6 Monedas.</td></tr>
+              <tr><td class="name">Módulo Analítico</td><td><span class="chip datos">4 Datos</span></td><td class="wrap"><strong>Ensancha la Zona Óptima 1 casilla por cada lado</strong> — se come una casilla del Pre-fermento por abajo y una del Colapso por arriba, así que <strong>también retrasa el colapso</strong>. Además sube el rendimiento del horneado: <strong>2 Datos</strong> en cualquier punto de la Zona Óptima y <strong>3</strong> en el centro exacto.</td></tr>
+              <tr><td class="name">Criopreservación</td><td><span class="chip datos">2 Datos</span></td><td class="wrap">Estasis Biológica: el cultivo base ignora por completo el desgaste metabólico normal de la Fase III. Puedes <strong>suspenderla noche a noche</strong> con la acción gratuita del mismo nombre (<a href="#s7">§7</a>) para dejar bajar tu Vitalidad cuando te convenga un Dado de Inóculo más bajo.</td></tr>
+              <tr><td class="name">Comerciante</td><td><span class="chip datos">3 Datos</span></td><td class="wrap">Mejores condiciones de compra: <strong>cada transacción de compra</strong> de tu Acción C — bolsa o media bolsa de harina, lote de agua y la firma del Contrato con el Molino — te cuesta <strong>1 Moneda menos</strong>, con un mínimo de 1. <strong>No mejora ninguna venta</strong> y <strong>no altera el movimiento del visor</strong>: tu compra lo desplaza igual que la de cualquiera. Tampoco abarata la ponencia del Simposio Técnico.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="rule" id="s11">
+        <div class="section-head"><span class="n">11</span><h2>Fin del juego y puntuación</h2></div>
+
+        <h3 class="sub">11.1 · Gatillos de finalización</h3>
+        <p>El final de la partida se <strong>desencadena</strong> de inmediato en cuanto ocurre cualquiera de estas dos condiciones:</p>
+        <ol class="rules-list">
+          <li>El mazo de Clima se agota por completo (se detecta al revelar la carta de Clima de la Fase I).</li>
+          <li>Algún jugador hornea con éxito su <strong>quinta receta</strong> (los colapsos con valor negativo no cuentan).</li>
+        </ol>
+        <p><strong>Disparar el final no detiene el juego: la partida termina al concluir el Día de Laboratorio en curso.</strong> Ese día se juega entero — todas las visitas de Fase II que queden y la Fase III completa (avance de masas, colapsos, ingresos de panadería, desgaste metabólico y tendencia de mercado) — y solo entonces se calcula la puntuación. Así todos los jugadores disputan exactamente el mismo número de días, sin importar en qué momento del día saltó el gatillo.</p>
+        <p>El gatillo, una vez disparado, no se revierte: si el jugador que horneó su quinta receta la sacrifica después en el Simposio Técnico, la partida termina igualmente esta noche.</p>
+
+        <h3 class="sub">11.2 · Cálculo de Puntos de Maestría finales</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Componente</th><th>Cálculo</th></tr></thead>
+            <tbody>
+              <tr><td>1</td><td class="name">Puntos Base</td><td class="wrap">Suma de los puntos de todas las recetas horneadas, positivas y negativas (colapsos incluidos).</td></tr>
+              <tr><td>2</td><td class="name">Puntos de Sabor</td><td class="wrap">Suma de los bonos de Bono de Sabor de cada carta horneada con el Cubo de Acidez sellado.</td></tr>
+              <tr><td>3</td><td class="name">Madurez del Cultivo</td><td class="wrap"><strong>Vitalidad actual + equilibrio de Acidez</strong>, donde el equilibrio vale <strong>3 − |Acidez − 3|</strong>: 0, +1, +2, <strong>+3</strong>, +2, +1, 0 para Acidez 0 a 6. La Vitalidad puntúa entera; la Acidez puntúa por lo <em>centrada</em> que esté, no por lo alta que sea. Un cultivo maduro es uno compensado, no uno maximalmente ácido — es la contrapartida de que la Acidez sea un dial que puedes mover en ambos sentidos (Descarte).</td></tr>
+              <tr><td>4</td><td class="name">Variedad de Recetas</td><td class="wrap">Puntos por la amplitud del repertorio: cuenta las recetas <strong>distintas</strong> (por protocolo, no por copia) del Archivo de Horneados Exitosos — 0&nbsp;/&nbsp;+1&nbsp;/&nbsp;+3&nbsp;/&nbsp;+6&nbsp;/&nbsp;+10&nbsp;/&nbsp;+15 para 0&nbsp;a&nbsp;5 tipos. Los colapsos no cuentan, y repetir un pan ya horneado no suma. Un pan sacrificado en el Simposio deja de contar.</td></tr>
+              <tr><td>5</td><td class="name">Desarrollo Tecnológico</td><td class="wrap">Puntos por la amplitud del laboratorio que construiste: cuenta cuántas <a href="#s10">Tecnologías</a> tienes instaladas, con la <strong>misma curva</strong> que Variedad de Recetas — 0&nbsp;/&nbsp;+1&nbsp;/&nbsp;+3&nbsp;/&nbsp;+6&nbsp;/&nbsp;+10&nbsp;/&nbsp;+15 para 0&nbsp;a&nbsp;5 mejoras. Los dos términos de amplitud llegan al mismo tope, +15, por motivos distintos: aquí porque hay cinco mejoras, arriba porque la partida termina al quinto horneado. Equiparte del todo cuesta 16 Datos, así que es una partida entera dedicada a ello. <strong>Cuenta cuántas tienes, no lo que pagaste:</strong> la Criopreservación (2 Datos) puntúa igual que la Cámara B (4 Datos). Y como una mejora no se desinstala jamás, este término nunca baja, a diferencia de Variedad.</td></tr>
+              <tr><td>6</td><td class="name">Penalización por Desperdicio</td><td class="wrap">−1 punto por cada 3 <strong>tokens de insumo</strong> sin utilizar. Un token de harina (10&nbsp;%) y uno de agua (5&nbsp;%) cuentan <strong>1:1</strong> aquí — ver <a href="#unidades">Las dos unidades de insumo</a>.</td></tr>
+              <tr><td>7</td><td class="name">Penalización por Contaminación</td><td class="wrap">−3 puntos por cada vez que la Vitalidad llegó a 0.</td></tr>
+              <tr><td>8</td><td class="name">Conversión de Riqueza</td><td class="wrap">+1 punto por cada 5 Monedas restantes (división entera).</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note"><strong>Los Ingresos de Panadería no son un término de puntuación.</strong> La renta se cobra en Monedas durante la partida; lo que llegue al final sin gastar puntúa por Conversión de Riqueza como cualquier otra Moneda. Su valor real es lo que te dejó comprar mientras jugabas. Esta tasa es también el precio de la <strong>ponencia</strong> del Simposio Técnico: 5 Monedas por cada Dato, es decir, exactamente el punto que esas Monedas habrían valido aquí.</p>
+
+        <h3 class="sub">11.3 · Desempate</h3>
+        <ol class="rules-list">
+          <li>Gana el investigador con más recetas <strong>distintas</strong> horneadas con éxito (el mismo recuento que alimenta Variedad de Recetas).</li>
+          <li>Si persiste el empate, gana quien tenga el mayor Nivel de Vitalidad en su cultivo base.</li>
+          <li>Si persiste el empate, gana quien tenga más Datos de Investigación.</li>
+          <li>Si persiste el empate, los investigadores empatados <strong>comparten el puesto</strong>: si es el primero, comparten la victoria y el siguiente ocupa el tercer puesto.</li>
+        </ol>
+      </section>
+
+      <section class="rule" id="s12">
+        <div class="section-head"><span class="n">12</span><h2>Anexo — resumen de mazos</h2></div>
+
+        <h3 class="sub">Mazo de Clima <em class="aside">(30 cartas)</em></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Evento</th><th>Cant.</th><th>Modif. térmico</th><th>Efecto biológico inmediato</th><th>Efecto pasivo</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Estabilidad Térmica</td><td>10</td><td>0 °C</td><td class="wrap">Ninguno</td><td class="wrap">Ninguno — avance normal.</td></tr>
+              <tr><td class="name">Fallo de Refrigeración</td><td>4</td><td>+5 °C</td><td class="wrap">Ninguno</td><td class="wrap">Acelera el avance base en +1 casilla.</td></tr>
+              <tr><td class="name">Ola de Calor</td><td>2</td><td>+10 °C</td><td class="wrap">Ninguno</td><td class="wrap">Acelera el avance base en +2 casillas.</td></tr>
+              <tr><td class="name">Corriente de Aire</td><td>4</td><td>−5 °C</td><td class="wrap">Ninguno</td><td class="wrap">Ralentiza el avance base en −1 casilla.</td></tr>
+              <tr><td class="name">Fallo de Calefacción</td><td>2</td><td>−10 °C</td><td class="wrap">Ninguno</td><td class="wrap">Ralentiza el avance base en −2 casillas.</td></tr>
+              <tr><td class="name">Alta Humedad</td><td>2</td><td>0 °C</td><td class="wrap">Ninguno</td><td class="wrap">Iniciar Receta cuesta 1 token de agua menos ese día (−5&nbsp;% de hidratación).</td></tr>
+              <tr><td class="name">Explosión de Levaduras</td><td>2</td><td>0 °C</td><td class="wrap">Todos ganan +1 Vitalidad (máx. 6)</td><td class="wrap">Ninguno.</td></tr>
+              <tr><td class="name">Acidificación Acelerada</td><td>2</td><td>0 °C</td><td class="wrap">Todos ganan +1 Acidez (máx. 6)</td><td class="wrap">Ninguno.</td></tr>
+              <tr><td class="name">Aletargamiento Invernal</td><td>2</td><td>−5 °C</td><td class="wrap">Ninguno</td><td class="wrap">Desgaste metabólico de −2 Vitalidad en vez de −1.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub">Mazo de Tendencias de Mercado <em class="aside">(21 cartas)</em></h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Modificador</th><th>Cant.</th><th>Efecto</th></tr></thead>
+            <tbody>
+              <tr><td>−2</td><td>1</td><td class="wrap">Los 3 visores de harina bajan 2 casillas (más baratos).</td></tr>
+              <tr><td>−1</td><td>7</td><td class="wrap">Los 3 visores bajan 1 casilla.</td></tr>
+              <tr><td>0</td><td>5</td><td class="wrap">Los visores no se mueven.</td></tr>
+              <tr><td>+1</td><td>7</td><td class="wrap">Los 3 visores suben 1 casilla (más caros).</td></tr>
+              <tr><td>+2</td><td>1</td><td class="wrap">Los 3 visores suben 2 casillas.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 class="sub">Mazo de Recetas <em class="aside">(36 cartas)</em></h3>
+        <p>12 protocolos distintos, con distinto número de copias según el grado:</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Grado</th><th>Protocolos</th><th>Copias de cada uno</th><th>Cartas</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Básica</td><td>4</td><td>4</td><td>16</td></tr>
+              <tr><td class="name">Intermedia</td><td>4</td><td>3</td><td>12</td></tr>
+              <tr><td class="name">Avanzada</td><td>4</td><td>2</td><td>8</td></tr>
+              <tr><td class="name"><strong>Total</strong></td><td><strong>12</strong></td><td>—</td><td><strong>36</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Las Básicas son comunes y las Avanzadas escasas: la rareza es una barrera independiente del precio, y es la <strong>única</strong> barrera de posición que hay — el mazo se baraja entero, sin estratos, así que los tres grados se mezclan y una Básica puede salir en el mercado igual que una Avanzada. Antes de barajarlo se retira una copia de cada Básica repartida a las Carpetas de Proyectos iniciales (ver <a href="#s3">Preparación</a>). Todos los valores de cada protocolo, en el <a href="#s8">Catálogo de Recetas</a>.</p>
+
+        <h3 class="sub">Mazo de Patrocinios <em class="aside">(8 cartas)</em></h3>
+        <p>Se usa una única vez, en la preparación de la partida — ver la tabla completa en <a href="#s3">Preparación de la Partida</a>. No vuelve a barajarse ni a jugarse durante la partida.</p>
+      </section>
+
+    </div>
+  </main>
+
+  <footer>
+    <span>Fermentum — Reglamento completo</span>
+    <span>Revisión GDD v0.0.2 · documento vivo</span>
+  </footer>
+</div>

@@ -4,31 +4,36 @@ const emit = defineEmits<{ cerrar: [] }>()
 </script>
 
 <template>
-  <div class="fondo-modal" @click.self="emit('cerrar')">
-    <div class="modal panel">
-      <div class="cabecera-modal">
-        <h3>{{ titulo }}</h3>
-        <button class="cerrar" @click="emit('cerrar')">✕</button>
-      </div>
-      <slot />
-      <p v-if="error" class="error-modal">⚠ {{ error }}</p>
-      <div class="pie-modal">
-        <slot name="acciones" />
+  <!-- A body: un overlay fixed no debe colgar del subarbol de una region
+       (GameView aplana lo que hay dentro con :deep, y los z-index de cada
+       region compiten entre si). El padre logico no cambia. -->
+  <Teleport to="body">
+    <div class="fondo-modal" @click.self="emit('cerrar')">
+      <div class="modal">
+        <div class="cabecera-modal">
+          <h3>{{ titulo }}</h3>
+          <button class="cerrar" @click="emit('cerrar')">✕</button>
+        </div>
+        <slot />
+        <p v-if="error" class="error-modal">⚠ {{ error }}</p>
+        <div class="pie-modal">
+          <slot name="acciones" />
+        </div>
       </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <style scoped>
 .fondo-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: var(--velo-modal);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 40;
-  padding: 1rem;
+  padding: var(--e4);
 }
 
 .modal {
@@ -42,7 +47,7 @@ const emit = defineEmits<{ cerrar: [] }>()
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--e3);
 }
 
 .cabecera-modal h3 {
@@ -52,20 +57,20 @@ const emit = defineEmits<{ cerrar: [] }>()
 .cerrar {
   background: none;
   border: none;
-  color: var(--color-texto-tenue);
-  font-size: 1.1rem;
-  padding: 0 0.25rem;
+  color: var(--tinta-tenue);
+  font-size: var(--t-l);
+  padding: 0 var(--e1);
 }
 
 .error-modal {
-  color: var(--color-mal);
-  font-size: 0.85rem;
-  margin-top: 0.5rem;
+  color: var(--riesgo);
+  font-size: var(--t-s);
+  margin-top: var(--e2);
 }
 
 .pie-modal {
-  margin-top: 1rem;
+  margin-top: var(--e4);
   display: flex;
-  gap: 0.5rem;
+  gap: var(--e2);
 }
 </style>

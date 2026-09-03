@@ -84,6 +84,16 @@ class CarpetaFullError(RuleViolationError):
     """
 
 
+class EspacioAccionYaUsadoError(RuleViolationError):
+    """
+    Subclase semántica de RuleViolationError.
+    Se lanza cuando un jugador intenta usar un espacio de acción con costo
+    de PA (Acciones B a I, Simposio Técnico) que ya usó en el día actual —
+    cada espacio de acción solo puede visitarse una vez por Día de
+    Laboratorio (PLAYER_STATE.md, `acciones_pa_usadas_hoy`).
+    """
+
+
 # ---------------------------------------------------------------------------
 # Excepciones de Flujo del Motor (engine.py)
 # ---------------------------------------------------------------------------
@@ -100,8 +110,8 @@ class PhaseViolationError(FermentumError):
 class GameAlreadyOverError(FermentumError):
     """
     Se lanza cuando se intenta continuar una partida que ya ha terminado
-    (ej. llamar a ejecutar_dia_laboratorio() después de que el mazo de
-    clima se agotó o un jugador horneó su quinta receta exitosa).
+    (ej. llamar a iniciar_dia() después de que el mazo de clima se agotó o
+    un jugador horneó su quinta receta exitosa).
     """
 
 
@@ -116,6 +126,20 @@ class MarketSlotEmptyError(FermentumError):
     """
     Se lanza cuando un jugador intenta tomar un recurso de un slot de
     mercado que ya fue reclamado por otro jugador en este mismo día.
+    """
+
+
+class RecipeDeckEmptyError(FermentumError):
+    """
+    Se lanza cuando la «Investigación a ciegas» (Acción G, ``origen="mazo"``)
+    no encuentra ninguna carta que robar: mazo de recetas Y su descarte vacíos.
+
+    Es un estado distinto del de ``MarketSlotEmptyError`` y por eso no lo reusa:
+    un slot vacío se repone solo en el Protocolo de Refresco del día siguiente,
+    mientras que un mazo agotado no se repone con el tiempo — solo vuelven a
+    entrar cartas al descarte cuando alguien cambia una carta de su Carpeta de
+    Proyectos o sacrifica un horneado en el Simposio. Prometer lo contrario en
+    el mensaje sería mentirle al jugador.
     """
 
 

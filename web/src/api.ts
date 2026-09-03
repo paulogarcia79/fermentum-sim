@@ -37,10 +37,11 @@ export interface CrearSalaResultado {
   host_token: string
   player_token: string
   player_index: number
+  max_jugadores: number
 }
 
-export function crearSala(nombre: string, color: string): Promise<CrearSalaResultado> {
-  return pedir('/games', conJson({ nombre, color }))
+export function crearSala(nombre: string, color: string, maxJugadores: number): Promise<CrearSalaResultado> {
+  return pedir('/games', conJson({ nombre, color, max_jugadores: maxJugadores }))
 }
 
 export interface UnirseSalaResultado {
@@ -55,6 +56,7 @@ export function unirseSala(roomId: string, nombre: string, color: string): Promi
 export interface SalaMetadata {
   room_id: string
   status: 'lobby' | 'en_curso' | 'terminada'
+  max_jugadores: number
   seats: { player_index: number; nombre: string; color: string }[]
 }
 
@@ -89,6 +91,13 @@ export function enviarAccion(
 
 export function pasarTurno(roomId: string, token: string): Promise<GameStateView> {
   return pedir(`/games/${roomId}/pass`, conToken(token, { method: 'POST' }))
+}
+
+/** Deshace la visita en curso del jugador activo: el servidor restaura el
+ * checkpoint tomado antes de su primera accion gratuita de esta visita.
+ * 409 "nada_que_deshacer" si no hizo nada aun (ver estado.puede_deshacer). */
+export function deshacerAccion(roomId: string, token: string): Promise<GameStateView> {
+  return pedir(`/games/${roomId}/undo`, conToken(token, { method: 'POST' }))
 }
 
 /** Milestone 6: cualquier jugador sentado puede pedir esto para destrabar
