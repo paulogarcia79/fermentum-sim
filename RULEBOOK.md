@@ -12,7 +12,9 @@
     4. RULEBOOK.html         — el gemelo
 
   Ya se olvidó dos veces en silencio (ver CLAUDE.md, "Every rules change MUST update
-  the rulebooks"). Ningún test lee estos ficheros.
+  the rulebooks"). tests/test_reglamento_al_dia.py vigila la mitad mecánica (todo
+  número derivable del código, y que los dos ficheros coincidan entre sí); la prosa
+  sigue siendo revisión humana.
 
   Fermentum_ GDDv0.0.2.pdf es LEGADO y NO es autoritativo. No es fuente de verdad.
 -->

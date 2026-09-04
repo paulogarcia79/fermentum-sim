@@ -1477,6 +1477,71 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   changed" badge, since the state view is refetched wholesale and a per-panel diff would be a
   feature of its own.
 
+  **El reglamento dentro de la app (`ReglamentoView.vue` + `data/reglamento.ts`) — the rules are
+  imported, never rewritten.** The client never mentioned that a rulebook exists: `RULEBOOK.html`
+  sat in the repo root, the backend serves no static files, and nothing linked to it. Writing a
+  "cómo se juega" page in Vue would have created a **fifth** rules surface free to contradict the
+  other four (see "Every rules change MUST update the rulebooks") and the only one no test reads.
+  Instead `data/reglamento.ts` does `import html from '../../../RULEBOOK.html?raw'`, `DOMParser`s
+  it **once at module load**, keeps `main.innerHTML`, and throws away the file's own `<style>`,
+  masthead, rail and footer; `ReglamentoView.vue` renders that with `v-html` and repaints ~20
+  rulebook classes onto the board tokens. A rule now reaches players by editing the reglamento,
+  which is mandatory anyway. `v-html` needs no sanitising and a comment says why: it is a repo
+  file inlined at build time, the same trust level as the source tree. Six things carry weight:
+  - **The `?raw` import needs `server.fs.allow: ['..']`, and its failure mode is the nasty kind.**
+    Vite's workspace root resolves to `web/` (the repo root has no `pnpm-workspace.yaml`, no
+    `lerna.json`, no `workspaces`, and `.git` does not count), and it re-checks `?raw` ids against
+    that allow-list *even for a static import* — so **`vite build` works and `npm run dev` returns
+    403**. The entry must be a **directory**: the second check runs with `?raw` still glued to the
+    id, so a single-file entry never matches (`"…/RULEBOOK.html"` ≠ `"…/RULEBOOK.html?raw"`).
+  - **The component is deliberately NOT `scoped`.** Its root is a `<Teleport>`, and Vue does not
+    stamp `data-v-*` on teleported content, so in `modo="superpuesto"` **none** of the scoped CSS
+    applied — the overlay rendered unpositioned and shoved the board down. Page mode looked
+    perfect throughout, because there the teleport is disabled, which is exactly what made it easy
+    to miss. Every selector in that file therefore hangs off `.reglamento`, and that is
+    load-bearing rather than tidy: bare `.cuerpo` and `.cerrar` would collide with `GameView.vue`
+    and `ModalShell.vue`.
+  - **Two hosts, one component.** `modo="pagina"` is `App.vue`'s third branch, driven by
+    `location.hash` (`#reglamento`, or `#reglamento/s7` to deep-link a section) with a **single**
+    `hashchange` listener — adding `popstate` too would double-fire. No `vue-router`, matching the
+    existing `?sala=` precedent, so `vue` stays the only runtime dependency.
+    `modo="superpuesto"` is a full-screen `role="dialog"` opened from GameView's header that
+    leaves the board mounted, so consulting a rule costs neither a panel's scroll position nor an
+    open tooltip. **A live game beats the hash**: `enPartida` is checked first.
+  - **In-content links are rewritten at parse time to `#reglamento/<id>`, but clicks are
+    intercepted.** The rewrite is what makes copying or middle-clicking a link work; letting the
+    click navigate would fire App's `hashchange` and, mid-game, rewrite the URL of a partida in
+    progress. Overlay mode never touches the URL at all. Modified clicks (ctrl/cmd/shift) are
+    left alone. The body holds 45 internal links and two of them point at an `h3` id, so the
+    scheme accepts any id, not just `s\d+`.
+  - **The TOC is rebuilt from `section.rule`, not copied from the file's `<nav class="rail">`.**
+    A Vue `v-for` gets `@click`, `aria-current` and the `<details>` collapse as ordinary template
+    code instead of DOM surgery on a `v-html` subtree, and it cannot drift from the sections that
+    actually exist. The rail stays in the file for the standalone `file://` page.
+  - **Both hosts use `defineAsyncComponent`**, so the ~84 KB of rulebook HTML rides its own chunk
+    (≈30 KB gzipped) instead of the boot bundle, fetched on first open with no hand-rolled
+    loading state. Lazily importing the raw string alone would add state for no gain.
+
+  Accessibility of the overlay follows the existing modals: focus moves to the ✕ on open and is
+  restored on close, Escape closes (the `Tooltip.vue` precedent), body scroll is locked, and
+  `scroll-behavior: smooth` is turned off under `prefers-reduced-motion` — the global rule in
+  `App.vue` only zeroes transitions and animations, so a JS/CSS smooth scroll falls outside that
+  net and is the one place the preference must be handled by hand. Careful with the focus
+  capture: it happens in the **setup body**, before the component moves focus itself, or it saves
+  an element inside the overlay that is destroyed on close and the focus lands on `<body>`.
+
+  This is not a rules change, so `context/*.md` and the reglamento's *content* are untouched —
+  only the two maintenance comments, which claimed no test reads those files. Tests:
+  `tests/test_reglamento_al_dia.py::test_el_html_tiene_la_estructura_que_la_app_renderiza` pins
+  the structure the client parses (exactly one `<main>`, `s1..s12` in order with their printed
+  ordinals, the rail agreeing, unique ids, no dangling internal link, and no
+  `<script>`/`<style>`/`on*` inside `<main>`). It strips HTML comments first, the way a browser
+  does — without that, a maintenance note that merely *mentions* `<main>` counts as a second tag,
+  which is exactly how the test first failed. Verified by mutation: renaming a section id,
+  removing `<main>`, and breaking an internal link each fail it. A break there leaves the in-game
+  rulebook empty while the standalone file still opens perfectly, and nothing under `web/` would
+  notice.
+
 ### Error handling
 
 All game-rule failures raise semantic exceptions from `exceptions.py` (never bare `Exception`,

@@ -854,3 +854,57 @@ def test_el_html_esta_bien_formado_y_sus_tablas_cuadran(html) -> None:
                 f"tabla de {columnas} columnas con una fila de {celdas}: "
                 f"{_normalizar(fila)[:90]}"
             )
+
+
+def test_el_html_tiene_la_estructura_que_la_app_renderiza(html) -> None:
+    """El cliente web pinta ESTE fichero dentro de la partida.
+
+    `web/src/data/reglamento.ts` importa RULEBOOK.html con `?raw`, se queda con
+    el interior de `<main>`, reconstruye el indice a partir de
+    `section.rule` + `.section-head .n` + `<h2>`, y reescribe los `href="#id"`
+    internos. Nada de eso esta escrito en el fichero: es un contrato implicito
+    con una estructura que aqui se puede cambiar sin enterarse.
+
+    Y el fallo seria silencioso en la peor direccion posible: el reglamento
+    suelto (file://) seguiria abriendose perfecto, mientras la app se queda sin
+    reglas o las pinta a medias. `web/` no tiene tests automaticos que lo
+    vean, asi que la comprobacion vive aqui.
+    """
+    # Se quitan los comentarios primero: el navegador los ignora al parsear, asi
+    # que el test tiene que ignorarlos tambien. Sin esto, una nota de
+    # mantenimiento que MENCIONE <main> contaria como una etiqueta de mas.
+    sin_comentarios = re.sub(r"<!--.*?-->", "", html, flags=re.S)
+    assert sin_comentarios.count("<main>") == 1 and sin_comentarios.count("</main>") == 1
+    cuerpo = sin_comentarios.split("<main>", 1)[1].split("</main>", 1)[0]
+
+    # Las 12 secciones, en orden, con su ordinal impreso: el indice de la app
+    # se construye leyendo exactamente estos tres trozos.
+    secciones = re.findall(
+        r'<section class="rule" id="(s\d+)">\s*'
+        r'<div class="section-head"><span class="n">(\d\d)</span><h2>([^<]+)</h2>',
+        cuerpo,
+    )
+    assert [ident for ident, _, _ in secciones] == [f"s{i}" for i in range(1, 13)]
+    assert [num for _, num, _ in secciones] == [f"{i:02d}" for i in range(1, 13)]
+    assert all(titulo.strip() for _, _, titulo in secciones), "una seccion sin <h2>"
+
+    # El indice del fichero suelto sigue existiendo y apunta a las mismas
+    # secciones. La app no lo usa (lo reconstruye), pero un desajuste aqui
+    # significa que uno de los dos indices esta mal.
+    rail = re.search(r'<nav class="rail".*?</nav>', html, re.S)
+    assert rail is not None, "falta el <nav class='rail'> del reglamento suelto"
+    assert re.findall(r'href="#(s\d+)"', rail.group(0)) == [i for i, _, _ in secciones]
+
+    # Anclas: sin ids repetidos (el `querySelector('#id')` de la app se queda
+    # con el primero) y sin enlaces internos a destinos que no existen.
+    ids = re.findall(r'\sid="([^"]+)"', cuerpo)
+    assert len(ids) == len(set(ids)), "ids repetidos dentro de <main>"
+    destinos = set(re.findall(r'href="#([^"]+)"', cuerpo))
+    assert destinos <= set(ids), f"enlaces internos sin destino: {sorted(destinos - set(ids))}"
+
+    # El contrato de `v-html`: dentro de <main> solo hay marcado inerte. No es
+    # una defensa contra un atacante (esto es un fichero del repositorio), sino
+    # la garantia de que sigue siendolo si alguien mete algo aqui sin pensar.
+    assert "<script" not in cuerpo and "<style" not in cuerpo
+    manejadores = re.findall(r"\son[a-z]+\s*=", cuerpo)
+    assert not manejadores, f"atributos de evento en linea: {manejadores[:3]}"

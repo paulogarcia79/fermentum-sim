@@ -22,7 +22,14 @@
 
   Ojo con las tablas: al añadir una columna hay que tocarla en el <thead> Y en todas
   las filas del <tbody>. Ya se olvidó dos veces en silencio (ver CLAUDE.md, "Every
-  rules change MUST update the rulebooks"). Ningún test lee estos ficheros.
+  rules change MUST update the rulebooks"). tests/test_reglamento_al_dia.py vigila la
+  mitad mecánica; la prosa sigue siendo revisión humana.
+
+  ADEMÁS: la app web RENDERIZA ESTE FICHERO. web/src/data/reglamento.ts lo importa con
+  `?raw`, se queda con el interior de <main> y reconstruye el índice a partir de los
+  <section class="rule" id="sN"> y sus <h2>. Cambiar esa estructura deja el reglamento
+  del juego roto aunque este fichero siga abriéndose perfecto por su cuenta; lo sujeta
+  test_el_html_tiene_la_estructura_que_la_app_renderiza.
 
   Fermentum_ GDDv0.0.2.pdf es LEGADO y NO es autoritativo. No es fuente de verdad.
 -->

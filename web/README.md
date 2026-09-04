@@ -54,6 +54,18 @@ serves that bundle locally.
   (which replace the region's label) and `TablerosOponentes`' rows both switch the Tablero
   region to another player's board; the selection lives in `store.jugadorObservado`
   (per-game, not a preference) and snaps back to your own board when your turn arrives.
+- `src/components/ReglamentoView.vue` + `src/data/reglamento.ts` — the full rulebook inside the
+  app. It is **not** rewritten here: `RULEBOOK.html` (repo root) is imported with Vite's `?raw`,
+  parsed once with `DOMParser`, stripped to its `<main>`, and repainted with the app's tokens, so
+  a rules change reaches players by editing the reglamento and nothing else. Reachable two ways:
+  `#reglamento` (or `#reglamento/s7` for a section) — the app's only hash route, handled in
+  `App.vue`, no `vue-router` — and a header button during a game, which opens it as a full-screen
+  overlay with the board still mounted behind. Both are lazy-loaded, so the ~84 KB of rulebook
+  HTML is its own chunk. Two things will bite you if you edit that component: the `?raw` import
+  needs `server.fs.allow: ['..']` in `vite.config.ts` (without it `npm run dev` 403s while
+  `npm run build` works fine), and its `<style>` is deliberately **not** `scoped` — a `<Teleport>`
+  root gets no `data-v-*` attribute, so scoped rules silently never applied in overlay mode. Every
+  selector there must stay prefixed with `.reglamento`.
 - `src/components/acciones/` — one component per player action, plus a shared
   `ModalConfirmacion.vue` for the three
   parameterless confirm actions (H, I, Horas Extras). Button enablement comes from the server's
