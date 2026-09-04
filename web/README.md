@@ -46,7 +46,9 @@ serves that bundle locally.
   for the response, render it). `iniciarPolling()` opens the SSE connection and starts the slow
   fallback polling together; each SSE message immediately triggers a state refetch rather than
   waiting for the next fallback tick.
-- `src/components/` — `LobbyView` (create/join/start) and `GameView` (`ClimaBanner`,
+- `src/components/` — `LobbyView` (a three-line switch: `LandingView` — hero + narrative +
+  `FormularioSala`'s segmented Crear/Unirse card — until you're seated, then `SalaEsperaView`)
+  and `GameView` (`ClimaBanner`,
   `MercadoPanel`, `MiTablero`/`EstacionCard`, `TablerosOponentes`, `BarraAcciones`,
   `RegistroEventos`, `FermentationReportModal`, `RankingView`).
   `MiTablero` takes a `jugadorIdx` prop and can draw **any** player, since the server ships
@@ -54,6 +56,9 @@ serves that bundle locally.
   (which replace the region's label) and `TablerosOponentes`' rows both switch the Tablero
   region to another player's board; the selection lives in `store.jugadorObservado`
   (per-game, not a preference) and snaps back to your own board when your turn arrives.
+- `src/data/copyLanding.ts` — every sentence on the landing and in the waiting room.
+  Deliberately free of rule numbers (prices, PA, thresholds, deck sizes): those belong to the
+  rulebook, which is tested against the code. The only figure allowed is "1–4 jugadores".
 - `src/components/ReglamentoView.vue` + `src/data/reglamento.ts` — the full rulebook inside the
   app. It is **not** rewritten here: `RULEBOOK.html` (repo root) is imported with Vite's `?raw`,
   parsed once with `DOMParser`, stripped to its `<main>`, and repainted with the app's tokens, so

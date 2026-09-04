@@ -1542,6 +1542,47 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   rulebook empty while the standalone file still opens perfectly, and nothing under `web/` would
   notice.
 
+  **Portada y sala de espera — the pre-game screens.** `LobbyView.vue` was one 577-line component
+  holding both the landing and the waiting room, clamped to 480px inside a shell that allows
+  1100px, whose only art was a 🍞 in the `h1` and three emoji bullets, and whose single form gave
+  "Crear sala" and "Unirse a sala" identical weight. It is now a three-line switch over
+  `LandingView.vue` and `SalaEsperaView.vue`, with `FormularioSala.vue` and `TarjetasFases.vue`
+  beside them. Four things carry weight:
+  - **The invite-link ordering bug is the lesson to carry to the next component split.** Children
+    mount **before** the parent's `onMounted`, so reading `?sala=` there left `FormularioSala`
+    already set up with a null prop: the invite link opened the "Crear sala" tab with an empty
+    code field. It is read in `LobbyView`'s **setup body** instead. The 577-line monolith could
+    not have this bug; splitting it created it, and it is invisible to every test in the repo
+    because nothing under `web/` is tested automatically.
+  - **Copy lives in `web/src/data/copyLanding.ts`, and it holds no rule numbers.** No prices, no
+    PA, no thresholds, no deck sizes — the only figure is "1–4 jugadores", a property of the
+    product (`server/sessions.py:MAX_JUGADORES`) rather than a rule. A number on the portada would
+    be a sixth copy nobody checks, and `test_reglamento_al_dia.py` cannot see this file. Voice is
+    second person and gender-neutral (the old text said "investigadora jefa"), with the descriptor
+    and the spec strip in third person as the box-back. `web/src/data/salas.ts` mirrors
+    `UMBRAL_LIMPIEZA_LOBBY_SEGUNDOS` so the waiting room can say a room expires — until now it
+    simply stopped existing with no warning, which is the kind of thing you only discover by
+    leaving a lobby open over lunch.
+  - **One primary action on screen at a time.** `FormularioSala.vue` replaces the "Crear … o …
+    Unirse" stack with a segmented control; name and colour are shared, and only the selected
+    mode's fields render. Typing a full code live-previews the room over the public
+    `GET /games/{id}` (seats, count, and greying the colours already taken), and says which of
+    "no existe" / "ya empezó" it is — three situations the old single error line conflated. Colour
+    selection carries a **check glyph**, not just a ring: a selector *of colours* cannot signal
+    its state with colour alone. Errors sit under the field they belong to rather than in one
+    shared line at the bottom.
+  - **`SalaEsperaView.vue` draws `max_jugadores` cells, filled or dashed-empty**, so "faltan dos"
+    is visible without reading a counter, and the room code is `--fuente-dato` at display size
+    because it is the one string that gets dictated aloud. `TarjetasFases.vue` is one component
+    used by **both** screens deliberately: what you read while waiting is the same thing that
+    explained the game before you joined, not a second wording free to drift.
+
+  Not a rules change, so `context/*.md` and the rulebooks are untouched. `web/` has no automated
+  tests (`vue-tsc -b` + a clean build is the whole check), so all of this was verified in a real
+  browser: the two-column landing collapsing to form-first under 720px, create → waiting room →
+  join from a second session → seat appearing within the 1.5 s poll → start, plus the three
+  code-field states and the per-field validation.
+
 ### Error handling
 
 All game-rule failures raise semantic exceptions from `exceptions.py` (never bare `Exception`,
