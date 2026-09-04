@@ -20,6 +20,7 @@ import BarraAcciones from './BarraAcciones.vue'
 import RegistroEventos from './RegistroEventos.vue'
 import FermentationReportModal from './FermentationReportModal.vue'
 import InicioDiaModal from './InicioDiaModal.vue'
+import PatrocinioModal from './PatrocinioModal.vue'
 import FinAnticipadoModal from './FinAnticipadoModal.vue'
 import ResultadoHorneadoModal from './ResultadoHorneadoModal.vue'
 import RankingView from './RankingView.vue'
@@ -336,9 +337,13 @@ onUnmounted(() => detenerTransmisionEnVivo())
 
     <!-- El resultado del propio horneado va primero: es la respuesta
          inmediata a lo que el jugador acaba de hacer. Si el mismo snapshot
-         tambien cerro el dia, el reporte de Fase III espera a que lo cierre. -->
+         tambien cerro el dia, el reporte de Fase III espera a que lo cierre.
+         La revelacion del Patrocinio va delante del modal del dia: en el Dia 1
+         los dos primeros nunca estan pendientes, asi que es lo primero que ve
+         un jugador al arrancar, y las cartas del dia vienen justo despues. -->
     <ResultadoHorneadoModal v-if="store.resultadoHorneado" />
     <FermentationReportModal v-else-if="store.reporteDiaPendiente !== null" />
+    <PatrocinioModal v-else-if="store.patrocinioPendiente" />
     <InicioDiaModal v-else-if="store.inicioDiaPendiente" />
     <FinAnticipadoModal v-else-if="store.finAnticipadoPendiente" />
   </div>

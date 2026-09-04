@@ -27,6 +27,12 @@ const reclamante = computed(() => {
   const idx = estado.value.jefatura_reclamada_por
   return idx === null ? null : estado.value.players[idx].nombre
 })
+
+// El Día 1 no lo decide la Jefatura (nadie ha podido reclamarla todavía) sino
+// la Iniciativa de las Cartas de Patrocinio: la nota lo dice y cada fila
+// enseña su número, que es lo que explica por qué la lista está como está.
+// Desde el Día 2 la carta ya no pinta nada y el panel vuelve a lo de siempre.
+const esDia1 = computed(() => estado.value.environment.dia_actual === 1)
 </script>
 
 <template>
@@ -46,6 +52,12 @@ const reclamante = computed(() => {
           {{ estado.players[idx].nombre }}
           <span v-if="idx === miIndice" class="tu">(tú)</span>
         </span>
+        <span
+          v-if="esDia1 && estado.players[idx].patrocinio"
+          class="tag iniciativa dato"
+          :title="`Iniciativa ${estado.players[idx].patrocinio!.iniciativa} en su Carta de Patrocinio`"
+          >Inic. {{ estado.players[idx].patrocinio!.iniciativa }}</span
+        >
         <span v-if="pos === 0" class="tag jefe">👑 Jefe</span>
         <span v-else-if="orden.length > 1 && pos === orden.length - 1" class="tag ultimo">Último</span>
       </li>
@@ -54,6 +66,10 @@ const reclamante = computed(() => {
     <p v-if="reclamante" class="nota reclamada">
       👑 Mañana abre <strong>{{ reclamante }}</strong
       >: ya reclamó la Jefatura hoy.
+    </p>
+    <p v-else-if="esDia1" class="nota">
+      Orden del Día 1 fijado por la Iniciativa de las Cartas de Patrocinio. La Jefatura se reclama
+      con 1 PA (y paga 1 Dato) y decide quién abre mañana.
     </p>
     <p v-else class="nota">
       Jefatura libre hoy — se reclama con 1 PA (y paga 1 Dato). Si nadie la reclama, se queda donde
@@ -140,6 +156,12 @@ const reclamante = computed(() => {
 
 .tag.jefe {
   color: var(--cobre);
+}
+
+.tag.iniciativa {
+  padding: 0 var(--e1);
+  border: 1px solid var(--borde);
+  border-radius: var(--r-control);
 }
 
 .nota {

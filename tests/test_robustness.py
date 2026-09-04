@@ -153,6 +153,23 @@ def test_privada_sobrevive_al_viaje_por_disco() -> None:
     assert [s.id for s in salas_nuevas.salas_abiertas()] == [publica.id]
 
 
+def test_el_patrocinio_sobrevive_al_viaje_por_disco() -> None:
+    """`Player.patrocinio` es un campo nuevo del pickle (VERSION_FORMATO 20): la
+    app lo revela al arrancar y `types.ts` lo espera en cada snapshot, asi que
+    una sesion restaurada tiene que traerlo intacto, no como `None`."""
+    salas = RoomManager()
+    sesion = _sala_en_curso(salas)
+    cartas = [p.patrocinio for p in sesion.engine.players]
+    assert all(c is not None for c in cartas)
+
+    salas_nuevas = RoomManager()
+    for restaurada in persistence.cargar_todas():
+        salas_nuevas.restaurar(restaurada)
+
+    recuperada = salas_nuevas.obtener(sesion.id)
+    assert [p.patrocinio for p in recuperada.engine.players] == cartas
+
+
 def test_partida_restaurada_sigue_siendo_jugable() -> None:
     """La prueba de fuego: tras 'reiniciar' (recargar desde disco), la
     partida debe seguir aceptando acciones y avanzando turnos con

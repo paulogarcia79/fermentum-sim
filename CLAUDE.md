@@ -1654,6 +1654,41 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   than in `data/sonidosAccion.ts`, whose exhaustive `Record<IdSonido, Sonido>` is keyed by wire
   action ids this is not. Nothing persisted changed shape: no `VERSION_FORMATO` bump.
 
+  **Revelación del Patrocinio — the card survives the deal, so the app can show it.** The
+  reglamento deals a Patrocinio card face down, reveals all of them at once and orders Día 1 by
+  their Iniciativa; in the app none of that was visible, because `bootstrap.create_game` splatted
+  the card into `Player.crear_dia_1` and kept only the permutation. A player started with
+  resources they could not explain, in a position `OrdenTurnoPanel` attributed to a "Jefatura
+  libre" nobody could have claimed. Now `Player.patrocinio: Optional[PatrocinioCard]` keeps the
+  card, and `PatrocinioModal.vue` reveals it first thing. Four things carry weight:
+  - **It is a `Player` field, not a view injection, because there is nothing to inject from.**
+    `views.py` injects derived values (`renta_diaria`, `vitalidad_prevista`); the card is not
+    derivable, it is *destroyed* at deal time. Being a frozen dataclass nested in a field it
+    rides `serialization.snapshot` and the pickle for free, hence **`VERSION_FORMATO` 20** and a
+    regenerated golden snapshot whose diff is exactly one `patrocinio` key per player (verified
+    by stripping the key and comparing against the old file). No rule reads it after Día 1; the
+    physical rule "the cards go back to the box" still holds for the *game*, and
+    `PLAYER_STATE.md` says so.
+  - **It goes ahead of `InicioDiaModal` in `GameView.vue`'s chain.** Both flags light up in the
+    same first snapshot (Fase I has already run when `/start` returns, see
+    `RoomManager.iniciar`), and the reveal is the only ordering where "what you have" precedes
+    "what the weather does to it". The Día-1 position is read off `turno_orden`, not recomputed
+    by sorting initiatives client-side — the engine already applied that rule.
+  - **Once per tab per game, and deliberately not seeded on reconnect.** `store.ts`'s
+    `patrocinioMostrado` follows `ultimaCartaClimaId`, not `jugadorEnTurnoAnterior`: a reload on
+    Día 1 re-shows the reveal, since it is "your starting situation" rather than a transition you
+    missed. Reset in both `cerrarSesion()` and `volverAVistaDeLobby()`, so a rematch shows it
+    again, and gated on `dia_actual === 1` so it never fires later.
+  - **`OrdenTurnoPanel` gets a Día-1 mode.** Each row carries its card's initiative and the note
+    says the order came from the cards; the claim-the-Jefatura note still wins when someone has
+    actually claimed it, which can happen on Día 1.
+
+  The same commit fixed two stale doc lines in this exact area: `models.py`'s `crear_dia_1`
+  docstring still claimed Datos were always 0, and `RULEBOOK.html`'s setup callout said
+  "Vitalidad 1, 0 Datos" while the `.md` twin was right — prose `test_reglamento_al_dia.py` cannot
+  see. Tests: `tests/test_patrocinio.py` (the deal-to-player mapping had never been asserted),
+  plus a disk round-trip in `tests/test_robustness.py`.
+
 ### Error handling
 
 All game-rule failures raise semantic exceptions from `exceptions.py` (never bare `Exception`,

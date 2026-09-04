@@ -45,8 +45,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 19
+VERSION_FORMATO = 20
 """
+Bumped a 20: `Player` gana `patrocinio`, la Carta de Patrocinio repartida en el
+setup, conservada para que la app la revele al arrancar la partida. Un pickle
+viejo trae `Player` sin ese campo y `serialization.snapshot` (`dataclasses.asdict`)
+lo omitiria, con lo que `types.ts` mentiria en cada snapshot de esa sala.
+
 Bumped a 19: `GameSession` gana `privada`, la exclusion del listado publico de
 salas abiertas (`GET /games`). Un pickle viejo trae sesiones sin ese atributo, y
 `RoomManager.salas_abiertas` lo lee en cada peticion del listado -- una sala
