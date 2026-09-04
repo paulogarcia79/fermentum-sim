@@ -8,6 +8,7 @@
 // estan arriba y solo se muestra lo propio del modo elegido, de forma que hay
 // UNA accion primaria en pantalla en cada momento.
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { reproducirAvisoSalaNueva } from '../sonido'
 import * as api from '../api'
 import { ApiFallo } from '../api'
 import type { SalaAbierta, SalaMetadata } from '../api'
@@ -50,18 +51,81 @@ const errorEnvio = ref<string | null>(null)
 // desmonta con la pestaña, dejarlo alli apagaria justo el contador que sirve
 // para descubrirlo.
 const SONDEO_SALAS_MS = 3000
+/** Cuanto se queda resaltada una sala recien aparecida. */
+const DURACION_RESALTE_MS = 6000
+/** Cuanto pulsa la insignia de la pestaña. Basta con que se note el cambio. */
+const DURACION_PULSO_MS = 1200
 
 const salasAbiertas = ref<SalaAbierta[]>([])
+const salasRecientes = ref<Set<string>>(new Set())
+const insigniaPulsando = ref(false)
 let sondeoSalas: number | undefined
+const temporizadores: number[] = []
+
+// Ids ya vistos, NO reactivo: solo sirve para calcular la diferencia entre dos
+// sondeos, nada lo pinta. Empieza sin sembrar y `primerSondeo` decide.
+let conocidas = new Set<string>()
+// Las salas que ya existian al abrir la pagina no son un evento: avisar de
+// ellas al cargar seria confundir "esto acaba de pasar" con "esto ya estaba".
+// Misma regla que store.ts aplica al aviso de turno y a la fanfarria de fin de
+// partida con `sembrarEstadoSinSonido` -- una reconexion no es una transicion.
+let primerSondeo = true
+
+const tituloBase = document.title
+
+function avisarDeSalasNuevas(nuevas: string[]) {
+  // Un solo sonido por tanda: si aparecen tres salas a la vez, tres pitidos
+  // encadenados suenan a error, no a aviso.
+  if (store.preferencias.sonido) reproducirAvisoSalaNueva()
+
+  const conResalte = new Set(salasRecientes.value)
+  for (const id of nuevas) conResalte.add(id)
+  salasRecientes.value = conResalte
+
+  insigniaPulsando.value = true
+  temporizadores.push(
+    window.setTimeout(() => (insigniaPulsando.value = false), DURACION_PULSO_MS),
+  )
+  temporizadores.push(
+    window.setTimeout(() => {
+      const restantes = new Set(salasRecientes.value)
+      for (const id of nuevas) restantes.delete(id)
+      salasRecientes.value = restantes
+    }, DURACION_RESALTE_MS),
+  )
+}
 
 async function refrescarSalas() {
   try {
-    salasAbiertas.value = (await api.listarSalas()).salas
+    const salas = (await api.listarSalas()).salas
+    salasAbiertas.value = salas
+
+    const ids = new Set(salas.map((sala) => sala.room_id))
+    const nuevas = [...ids].filter((id) => !conocidas.has(id))
+    // Se reemplaza entero en vez de acumular: asi una sala que se cierra y otra
+    // que abre despues son las dos un cambio limpio de diferencia de conjuntos.
+    conocidas = ids
+    if (primerSondeo) {
+      primerSondeo = false
+      return
+    }
+    if (nuevas.length) avisarDeSalasNuevas(nuevas)
   } catch {
     // Un fallo de red deja la lista como estaba: es informacion de apoyo, no
     // vale la pena gritarlo encima del formulario.
   }
 }
+
+// El titulo de la pestaña es el unico canal que llega a alguien que se fue a
+// otra pestaña -- que es exactamente lo que hace quien espera a que alguien
+// abra una sala. El sonido no basta: sin un gesto previo en la pestaña el
+// navegador no deja crear el AudioContext (ver sonido.ts:habilitarAudio).
+watch(
+  () => salasAbiertas.value.length,
+  (n) => {
+    document.title = n > 0 ? `(${n}) ${tituloBase}` : tituloBase
+  },
+)
 
 onMounted(() => {
   // Quien llega por un enlace de invitacion viene a unirse, no a crear.
@@ -75,6 +139,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (sondeoSalas) window.clearInterval(sondeoSalas)
+  for (const t of temporizadores) window.clearTimeout(t)
+  document.title = tituloBase
 })
 
 /** Elegir una sala de la lista rellena el codigo; el watcher de abajo hace el
@@ -236,7 +302,12 @@ async function unirse() {
         Unirse
         <!-- El contador esta en la pestaña, no solo dentro del panel, para que
              quien esta en "Crear sala" vea que hay partidas esperando. -->
-        <span v-if="salasAbiertas.length" class="dato insignia">{{ salasAbiertas.length }}</span>
+        <span
+          v-if="salasAbiertas.length"
+          class="dato insignia"
+          :class="{ pulso: insigniaPulsando }"
+          >{{ salasAbiertas.length }}</span
+        >
       </button>
     </div>
 
@@ -320,7 +391,12 @@ async function unirse() {
 
     <!-- --- Unirse ------------------------------------------------------ -->
     <template v-else>
-      <SalasAbiertas :salas="salasAbiertas" @elegir="elegirSala" @crear="modo = 'crear'" />
+      <SalasAbiertas
+        :salas="salasAbiertas"
+        :recientes="salasRecientes"
+        @elegir="elegirSala"
+        @crear="modo = 'crear'"
+      />
 
       <label class="campo">
         Código de sala
@@ -414,12 +490,30 @@ async function unirse() {
 }
 
 .insignia {
+  display: inline-block;
   margin-left: var(--e1);
   padding: 0 var(--e1);
   border-radius: 999px;
   background: var(--lavado-cobre);
   color: var(--cobre);
   font-size: var(--t-micro);
+}
+
+/* El pulso avisa desde la pestaña "Crear sala", que es donde el panel de
+   salas ni siquiera esta montado. @keyframes por lo mismo que el resalte de
+   la fila: la regla global de prefers-reduced-motion lo recorta sola. */
+.insignia.pulso {
+  animation: pulso-insignia 0.4s ease-out 3;
+}
+
+@keyframes pulso-insignia {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
 }
 
 /* La casilla de "Sala privada" vive dentro del panel de crear, asi que no

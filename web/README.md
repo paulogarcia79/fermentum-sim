@@ -62,7 +62,13 @@ serves that bundle locally.
   `FormularioSala`, which stays mounted, not in the panel). The server already filters private,
   full and started rooms, so every row is one where joining will work; the component re-filters
   nothing. Hosts can tick "Sala privada" at creation to stay off the list — that flag is the
-  only thing keeping a room code secret now.
+  only thing keeping a room code secret now. When a room appears that was not there on the
+  previous poll it announces itself four ways — a short sound, a highlighted row, a pulse on the
+  tab badge, and the open-room count in the browser tab title — because no single channel reaches
+  everyone: the sound needs a prior click in the tab before the browser allows audio, and the
+  title is the only cue a backgrounded tab shows. Rooms already open at page load are seeded, not
+  announced. The panel header carries a mute toggle writing the same `store.preferencias.sonido`
+  as the in-game one; muting stops only the audio.
 - `src/data/copyLanding.ts` — every sentence on the landing and in the waiting room.
   Deliberately free of rule numbers (prices, PA, thresholds, deck sizes): those belong to the
   rulebook, which is tested against the code. The only figure allowed is "1–4 jugadores".

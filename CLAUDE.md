@@ -1620,6 +1620,40 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   listing route, not just its own row (`tests/test_robustness.py::test_privada_sobrevive_al_viaje_por_disco`).
   Tests: the five cases in `tests/test_server_api.py` plus that round-trip.
 
+  **Aviso de sala nueva — four channels, because no single one reaches everybody.** A row quietly
+  appearing in that list is easy to miss, and the player most likely to be waiting for a room is
+  the one who tabbed away. Detection is a set difference over room ids in `refrescarSalas()`, and
+  it fires: a short sound, a copper wash + "nueva" chip on the row for 6 s, a pulse on the tab
+  badge, and the open-room count in `document.title`. Four things carry weight:
+  - **Seed the first poll, never announce it.** Rooms that already existed when the page loaded
+    are not an event; announcing them on load would confuse "this just happened" with "this was
+    already here". It is the same rule `store.ts` applies to the turn chime and the endgame
+    fanfare through `sembrarEstadoSinSonido` — a reconnect is not a live transition.
+  - **The title is the only channel that reaches a background tab, and the sound is the one that
+    may never work.** `sonido.ts` has no `AudioContext` until the first `pointerdown` in the tab
+    (`habilitarAudio`, wired in `App.vue`), so a player who opened the landing and never clicked
+    gets silence and a `console.debug` line — by design, not a bug. The title badge and the row
+    highlight exist precisely to cover that player, which is why this is four channels and not
+    just a ding.
+  - **The sound came with a mute button, and that was not optional.** The only sound toggle lived
+    in `GameView`'s header, i.e. nowhere near the landing. Making a screen emit sound with no
+    visible way to silence it is the worse of the two failure modes, so `SalasAbiertas.vue`'s
+    header carries one, writing the same durable `store.preferencias.sonido` through
+    `establecerSonido`. Muting silences only the audio: the row, the badge and the title still
+    announce, since they were never the intrusive part.
+  - **One sound per poll, not per room**, or three rooms appearing together would chain three
+    dings and read as an error. The timbre is E5→A5 at 0.16 gain, deliberately lower and quieter
+    than the turn chime (A5→C#6 at 0.22): "it's your move" is a stronger claim than "something
+    appeared", and if they sounded alike the more urgent one would lose its meaning. `sine`, not
+    the `sawtooth` of the Emergencia protocols, which reads as "something failed".
+
+  Both animations are `@keyframes`, so the global `prefers-reduced-motion` rule in `App.vue`
+  clamps them for free (the `ConfetiPanes.vue` precedent) — and because the row's copper border
+  and its chip are *not* animated, a reduced-motion player still gets the cue after the wash is
+  clamped away. `reproducirAvisoSalaNueva` lives in `sonido.ts` beside the endgame sounds rather
+  than in `data/sonidosAccion.ts`, whose exhaustive `Record<IdSonido, Sonido>` is keyed by wire
+  action ids this is not. Nothing persisted changed shape: no `VERSION_FORMATO` bump.
+
 ### Error handling
 
 All game-rule failures raise semantic exceptions from `exceptions.py` (never bare `Exception`,
