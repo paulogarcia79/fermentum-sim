@@ -7,13 +7,15 @@
 // Ahora hay un control segmentado: los campos compartidos (nombre, color)
 // estan arriba y solo se muestra lo propio del modo elegido, de forma que hay
 // UNA accion primaria en pantalla en cada momento.
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import * as api from '../api'
 import { ApiFallo } from '../api'
-import type { SalaMetadata } from '../api'
+import type { SalaAbierta, SalaMetadata } from '../api'
 import { establecerAlertaContaminacion, establecerSesion, store } from '../store'
 import { COLORES_JUGADOR, hexDeColor } from '../data/coloresJugador'
+import { SALA_PRIVADA_ETIQUETA, SALA_PRIVADA_NOTA } from '../data/copyLanding'
 import IconoPeon from './IconoPeon.vue'
+import SalasAbiertas from './SalasAbiertas.vue'
 
 const NOMBRE_LONGITUD_MINIMA = 3
 const JUGADORES_POSIBLES = [1, 2, 3, 4]
@@ -29,6 +31,7 @@ const nombre = ref('')
 const codigoSala = ref('')
 const colorSeleccionado = ref<string | null>(null)
 const jugadoresObjetivo = ref(4)
+const privada = ref(false)
 const cargando = ref(false)
 
 // Tres errores separados en vez de uno compartido: cada mensaje se pinta
@@ -38,13 +41,47 @@ const errorNombre = ref<string | null>(null)
 const errorColor = ref<string | null>(null)
 const errorEnvio = ref<string | null>(null)
 
+// --- Listado de salas abiertas -------------------------------------------
+//
+// El sondeo vive AQUI y no dentro de SalasAbiertas.vue aunque solo ese panel
+// dibuje la lista: la pestaña "Unirse" lleva el numero de salas en la propia
+// etiqueta, asi que quien esta en "Crear sala" tambien tiene que enterarse de
+// que hay partidas esperando sin cambiar de pestaña. Como el panel se monta y
+// desmonta con la pestaña, dejarlo alli apagaria justo el contador que sirve
+// para descubrirlo.
+const SONDEO_SALAS_MS = 3000
+
+const salasAbiertas = ref<SalaAbierta[]>([])
+let sondeoSalas: number | undefined
+
+async function refrescarSalas() {
+  try {
+    salasAbiertas.value = (await api.listarSalas()).salas
+  } catch {
+    // Un fallo de red deja la lista como estaba: es informacion de apoyo, no
+    // vale la pena gritarlo encima del formulario.
+  }
+}
+
 onMounted(() => {
   // Quien llega por un enlace de invitacion viene a unirse, no a crear.
   if (props.codigoInvitacion) {
     codigoSala.value = props.codigoInvitacion
     modo.value = 'unirse'
   }
+  void refrescarSalas()
+  sondeoSalas = window.setInterval(refrescarSalas, SONDEO_SALAS_MS)
 })
+
+onUnmounted(() => {
+  if (sondeoSalas) window.clearInterval(sondeoSalas)
+})
+
+/** Elegir una sala de la lista rellena el codigo; el watcher de abajo hace el
+ * resto (vista previa y colores tomados), asi que no hay una segunda ruta. */
+function elegirSala(roomId: string) {
+  codigoSala.value = roomId
+}
 
 // --- Vista previa de la sala a la que se va a entrar ----------------------
 //
@@ -129,7 +166,12 @@ async function crear() {
   if (!camposValidos()) return
   cargando.value = true
   try {
-    const r = await api.crearSala(nombre.value.trim(), colorSeleccionado.value!, jugadoresObjetivo.value)
+    const r = await api.crearSala(
+      nombre.value.trim(),
+      colorSeleccionado.value!,
+      jugadoresObjetivo.value,
+      privada.value,
+    )
     establecerSesion({
       roomId: r.room_id,
       token: r.player_token,
@@ -192,6 +234,9 @@ async function unirse() {
         @click="modo = 'unirse'"
       >
         Unirse
+        <!-- El contador esta en la pestaña, no solo dentro del panel, para que
+             quien esta en "Crear sala" vea que hay partidas esperando. -->
+        <span v-if="salasAbiertas.length" class="dato insignia">{{ salasAbiertas.length }}</span>
       </button>
     </div>
 
@@ -260,6 +305,14 @@ async function unirse() {
         </div>
       </fieldset>
 
+      <label class="campo-alerta">
+        <input v-model="privada" type="checkbox" />
+        <span>
+          {{ SALA_PRIVADA_ETIQUETA }}
+          <small>{{ SALA_PRIVADA_NOTA }}</small>
+        </span>
+      </label>
+
       <button class="primario" :disabled="cargando" @click="crear">
         {{ cargando ? 'Creando…' : 'Crear sala' }}
       </button>
@@ -267,6 +320,8 @@ async function unirse() {
 
     <!-- --- Unirse ------------------------------------------------------ -->
     <template v-else>
+      <SalasAbiertas :salas="salasAbiertas" @elegir="elegirSala" @crear="modo = 'crear'" />
+
       <label class="campo">
         Código de sala
         <input
@@ -356,6 +411,23 @@ async function unirse() {
 .segmentado button.activo {
   background: var(--zona);
   color: var(--cobre);
+}
+
+.insignia {
+  margin-left: var(--e1);
+  padding: 0 var(--e1);
+  border-radius: 999px;
+  background: var(--lavado-cobre);
+  color: var(--cobre);
+  font-size: var(--t-micro);
+}
+
+/* La casilla de "Sala privada" vive dentro del panel de crear, asi que no
+   lleva la linea superior que separa la de la alerta de contaminacion. */
+.campo-color + .campo-alerta {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 .campo-color {

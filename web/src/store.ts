@@ -692,9 +692,12 @@ export async function crearSalaNueva(): Promise<void> {
   const nombre = jugadorActual.nombre
   const color = jugadorActual.color
   const maxJugadores = store.estado.players.length
+  // La revancha hereda la privacidad: si el grupo jugaba en una sala que no
+  // salia en el listado publico, la siguiente tampoco debe salir.
+  const privada = store.estado.privada
   store.cargando = true
   try {
-    const r = await api.crearSala(nombre, color, maxJugadores)
+    const r = await api.crearSala(nombre, color, maxJugadores, privada)
     volverAVistaDeLobby()
     establecerSesion({
       roomId: r.room_id,

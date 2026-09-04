@@ -257,6 +257,9 @@ export interface GameStateView {
   /** Índices de jugador que confirmaron terminar la partida antes de
    * tiempo -- ver GameView.vue. No hay forma de retirar un voto. */
   votos_fin_anticipado: number[]
+  /** Campo de sala, no de partida: lo usa crearSalaNueva() para que una
+   *  revancha herede la privacidad de la sala que acaba de terminar. */
+  privada: boolean
   /** True si el jugador activo puede deshacer su visita en curso (ya hizo
    * alguna accion gratuita esta visita) -- ver POST /games/{id}/undo y el
    * boton Deshacer en BarraAcciones.vue. */

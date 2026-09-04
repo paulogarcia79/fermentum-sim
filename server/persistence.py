@@ -45,8 +45,13 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 DATA_DIR = Path("data/games")
-VERSION_FORMATO = 18
+VERSION_FORMATO = 19
 """
+Bumped a 19: `GameSession` gana `privada`, la exclusion del listado publico de
+salas abiertas (`GET /games`). Un pickle viejo trae sesiones sin ese atributo, y
+`RoomManager.salas_abiertas` lo lee en cada peticion del listado -- una sala
+restaurada de disco reventaria la portada entera, no solo su propia fila.
+
 Bumped a 18: `Player` gana `estasis_suspendida`, la valvula de la Criopreservacion
 (la Estasis se puede suspender una noche para dejar bajar la Vitalidad y con ella
 el Dado de Inoculo). Un pickle viejo trae `Player` sin ese campo, y el desgaste de

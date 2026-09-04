@@ -56,6 +56,13 @@ serves that bundle locally.
   (which replace the region's label) and `TablerosOponentes`' rows both switch the Tablero
   region to another player's board; the selection lives in `store.jugadorObservado`
   (per-game, not a preference) and snaps back to your own board when your turn arrives.
+- `src/components/SalasAbiertas.vue` — the public list of rooms waiting for players
+  (`GET /games`), shown above the code field in the Unirse tab, with the count mirrored in the
+  tab label so it is visible from the Crear tab too (hence the 3 s poll lives in
+  `FormularioSala`, which stays mounted, not in the panel). The server already filters private,
+  full and started rooms, so every row is one where joining will work; the component re-filters
+  nothing. Hosts can tick "Sala privada" at creation to stay off the list — that flag is the
+  only thing keeping a room code secret now.
 - `src/data/copyLanding.ts` — every sentence on the landing and in the waiting room.
   Deliberately free of rule numbers (prices, PA, thresholds, deck sizes): those belong to the
   rulebook, which is tested against the code. The only figure allowed is "1–4 jugadores".

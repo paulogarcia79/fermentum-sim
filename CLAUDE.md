@@ -1583,6 +1583,43 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   join from a second session → seat appearing within the 1.5 s poll → start, plus the three
   code-field states and the per-field validation.
 
+  **Salas abiertas (`GET /games`) — the listing, and the privacy trade it makes.** The only way
+  into a room was being told its six-letter code out of band, so someone opening the site without
+  an invite met an empty code field and no way forward. `RoomManager.salas_abiertas()` returns
+  the rooms a stranger can actually enter and `GET /games` publishes them; `SalasAbiertas.vue`
+  renders them above the code field. Five things carry weight:
+  - **Listed by default, with a "Sala privada" opt-out — and that means a code is no longer a
+    secret unless the host asks.** Stated rather than buried, because it is a real change in what
+    the code protects. The alternative (opt-in "Sala pública") was rejected for being empty in
+    practice: a list you have to remember to switch on is a list nobody sees. `GameSession.privada`
+    survives `reiniciar_a_lobby` like `max_jugadores`, and `views.py` ships it so
+    `store.ts:crearSalaNueva` makes a **rematch inherit the privacy** — otherwise a private
+    group's next game would quietly appear on the front page.
+  - **The three filters are what stop the list from lying.** LOBBY, not private, and a free seat:
+    `unirse` rejects a started room and a full one, so listing either would be offering a button
+    that can only fail. `test_el_listado_solo_ofrece_salas_a_las_que_se_puede_entrar` covers all
+    three, verified by mutation (dropping any one filter fails it).
+  - **The route ships no tokens, and a test asserts the exact key set.** It is public, so a
+    leaked `host_token` would let a stranger start someone's game and a leaked `Seat.token` would
+    let them play another person's turn. `test_el_listado_no_filtra_ningun_token` greps the raw
+    body for both and pins `{room_id, max_jugadores, segundos_abierta, seats}` — a whitelist, so
+    a future field has to be added deliberately.
+  - **`segundos_abierta` is computed server-side rather than shipping `creado_en`.** The client
+    only wants to say "hace 3 min", and subtracting two different clocks gives nonsense as soon
+    as one of them drifts. Same reasoning as `vitalidad_prevista` and `renta_diaria`.
+  - **The poll lives in `FormularioSala`, not in `SalasAbiertas`.** The panel unmounts with the
+    Crear/Unirse tab, but the count rides in the *tab label* ("Unirse · 2") precisely so someone
+    on Crear learns rooms are waiting without switching — putting the interval in the panel would
+    switch off exactly the counter that makes the feature discoverable. 3 s interval, cleared in
+    `onUnmounted`, the `SalaEsperaView` precedent. A failed poll leaves the previous list alone:
+    it is supporting information, not worth an error banner over the form.
+
+  `_requerir_privada` demands a real `bool` rather than a truthy value, because the string
+  `"no"` is truthy in Python and would mark private exactly the room the host wanted public.
+  `VERSION_FORMATO` went to 19: a restored pickle without the attribute would break the whole
+  listing route, not just its own row (`tests/test_robustness.py::test_privada_sobrevive_al_viaje_por_disco`).
+  Tests: the five cases in `tests/test_server_api.py` plus that round-trip.
+
 ### Error handling
 
 All game-rule failures raise semantic exceptions from `exceptions.py` (never bare `Exception`,

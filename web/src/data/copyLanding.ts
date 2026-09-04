@@ -112,3 +112,14 @@ export const SALA_COMPARTIR =
 export const SALA_MIENTRAS_ESPERAS = 'Mientras esperas'
 
 export const SALA_ASIENTO_VACIO = 'Esperando investigador…'
+
+export const SALA_PRIVADA_ETIQUETA = 'Sala privada'
+export const SALA_PRIVADA_NOTA =
+  'No aparece en la lista de salas abiertas; solo se entra con el código.'
+export const SALA_PRIVADA_CHIP = 'Privada'
+
+// --- Listado de salas abiertas -------------------------------------------
+
+export const SALAS_ABIERTAS_TITULO = 'Salas abiertas'
+export const SALAS_ABIERTAS_VACIO = 'No hay ninguna sala abierta ahora mismo.'
+export const SALAS_ABIERTAS_VACIO_ACCION = 'Crea una tú'

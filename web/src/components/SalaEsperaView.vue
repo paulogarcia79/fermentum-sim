@@ -12,7 +12,13 @@ import { iniciarPolling, refrescarEstado, store } from '../store'
 import { ApiFallo } from '../api'
 import { hexDeColor } from '../data/coloresJugador'
 import { MINUTOS_EXPIRACION_LOBBY } from '../data/salas'
-import { ENLACE_REGLAMENTO, SALA_ASIENTO_VACIO, SALA_COMPARTIR, SALA_MIENTRAS_ESPERAS } from '../data/copyLanding'
+import {
+  ENLACE_REGLAMENTO,
+  SALA_ASIENTO_VACIO,
+  SALA_COMPARTIR,
+  SALA_MIENTRAS_ESPERAS,
+  SALA_PRIVADA_CHIP,
+} from '../data/copyLanding'
 import IconoPeon from './IconoPeon.vue'
 import TarjetasFases from './TarjetasFases.vue'
 
@@ -119,7 +125,13 @@ function nombreAnfitrion(): string {
     <header class="cabecera">
       <div>
         <p class="eyebrow">Sala de espera</p>
-        <h1 class="dato codigo">{{ roomId }}</h1>
+        <h1 class="dato codigo">
+          {{ roomId }}
+          <!-- Le recuerda al host por que nadie la encuentra en el listado: sin
+               esto, "no entra nadie" y "la marque privada" son indistinguibles
+               desde esta pantalla. -->
+          <span v-if="metadata?.privada" class="marca privada">{{ SALA_PRIVADA_CHIP }}</span>
+        </h1>
       </div>
       <div class="botones-copia">
         <button type="button" @click="copiar('codigo')">
@@ -294,6 +306,16 @@ function nombreAnfitrion(): string {
 .marca.tu {
   color: var(--verdin);
   background: var(--lavado-verdin);
+}
+
+.marca.privada {
+  vertical-align: middle;
+  margin-left: var(--e2);
+  color: var(--tinta-tenue);
+  background: var(--zona);
+  border: 1px solid var(--borde);
+  font-family: var(--fuente);
+  letter-spacing: normal;
 }
 
 button.primario {
