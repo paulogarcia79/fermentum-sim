@@ -73,6 +73,7 @@ from exceptions import (
 from models import (
     DATOS_HORAS_EXTRAS,
     FermentationSlot,
+    HARINA_ALIMENTAR,
     HorneadoRecord,
     Player,
     Recipe,
@@ -305,8 +306,9 @@ class ActionManager:
       permanece intacto.
 
     Acciones implementadas:
+      Gratuita (0 PA, una vez al día):
+        A — Alimentar el Cultivo
       Principales (1 PA):
-        A — Alimentar / Refrescar el Cultivo
         B — Iniciar Receta
         C — Visitar el Mercado (comprar/vender harina, comprar agua)
         D — Implementar Mejora de Laboratorio
@@ -507,18 +509,27 @@ class ActionManager:
     def accion_A_alimentar(
         self,
         player: Player,
-        tipo_harina: Optional[str] = None,
-    ) -> None:
+        harina: Optional[Dict[str, int]] = None,
+    ) -> int:
         """
-        Acción A: Alimentar / Refrescar el Cultivo (ACTIONS_REGISTRY.md §3).
+        Acción A: Alimentar el Cultivo (ACTIONS_REGISTRY.md §3).
 
         Costo:      0 PA (acción auxiliar gratuita, una vez por Fase II).
-        Recursos:   10% de harina del tipo indicado.
-        Efecto:     +1 Vitalidad (máx. 6).
+        Recursos:   harina según ``HARINA_ALIMENTAR``: 10% = +1, 30% = +2.
+        Efecto:     +1 o +2 Vitalidad (máx. 6).
 
         Solo puede ejecutarse una vez por Fase II («accion_alimentar_usada»), y
-        repone exactamente el -1 que el desgaste metabólico resta cada Fase III:
-        un jugador que alimenta a diario ORBITA su Vitalidad inicial.
+        en esa única acción el jugador elige el escalón. El escalón barato repone
+        exactamente el -1 que el desgaste metabólico resta cada Fase III, así que
+        un jugador que alimenta a diario ORBITA su Vitalidad inicial; el de +2 es
+        el que permite contrarrestar el -2 de «Aletargamiento Invernal», o subir
+        un punto neto al día pagando su prima (ver ``HARINA_ALIMENTAR``).
+
+        La harina llega como un reparto ``{tipo: porcentaje}`` que puede mezclar
+        tipos o venir de uno solo, en múltiplos de 10. La cantidad de Vitalidad
+        se DERIVA de la suma del reparto (el escalón cuyo precio coincide); una
+        suma que no sea un escalón se rechaza. No se acepta un ``pasos`` aparte:
+        sería un segundo número libre de contradecir al primero.
 
         Nota de diseño: esta acción **ya no toca la Acidez**. Tuvo una mitad de
         agua que daba +1 Acidez, pero mientras la Acidez sólo sabía subir esa
@@ -531,12 +542,18 @@ class ActionManager:
 
         Args:
             player: Jugador que ejecuta la acción.
-            tipo_harina: Clave del tipo de harina a consumir ("Blanca", "Centeno"
-                o "Integral").
+            harina: Reparto ``{"Blanca" | "Centeno" | "Integral": porcentaje}``,
+                cada porcentaje un múltiplo positivo de 10 y la suma igual a un
+                valor de ``HARINA_ALIMENTAR``.
+
+        Returns:
+            Vitalidad ganada (el escalón elegido), antes del tope de 6.
 
         Raises:
-            InvalidActionError: Ya usada este turno, o tipo_harina inválido.
-            MissingResourceError: Si el jugador no tiene la harina pedida.
+            InvalidActionError: Ya usada este turno, reparto mal formado, tipo
+                de harina inválido, o una suma que no es ningún escalón.
+            MissingResourceError: Si al jugador le falta harina de algún tipo
+                del reparto; el mensaje nombra TODOS los faltantes.
         """
         if player.accion_alimentar_usada:
             raise InvalidActionError(
@@ -546,21 +563,56 @@ class ActionManager:
 
         # --- Bloque de validaciones (Fail-Fast) ---
         tipos_validos = {"Blanca", "Centeno", "Integral"}
-        if tipo_harina not in tipos_validos:
+        if not isinstance(harina, dict) or not harina:
             raise InvalidActionError(
-                f"tipo_harina debe ser uno de {sorted(tipos_validos)}. "
-                f"Recibido: {tipo_harina!r}"
+                "harina debe ser un reparto no vacío {tipo: porcentaje}. "
+                f"Recibido: {harina!r}"
             )
-        if player.reserva_harina.get(tipo_harina, 0) < 10:
+        for tipo, cantidad in harina.items():
+            if tipo not in tipos_validos:
+                raise InvalidActionError(
+                    f"Tipo de harina inválido en el reparto: {tipo!r}. "
+                    f"Debe ser uno de {sorted(tipos_validos)}."
+                )
+            if (
+                not isinstance(cantidad, int)
+                or isinstance(cantidad, bool)
+                or cantidad <= 0
+                or cantidad % 10 != 0
+            ):
+                raise InvalidActionError(
+                    f"La harina de {tipo} debe ser un múltiplo positivo de 10% "
+                    f"(un token). Recibido: {cantidad!r}"
+                )
+        total = sum(harina.values())
+        escalones = {precio: puntos for puntos, precio in HARINA_ALIMENTAR.items()}
+        if total not in escalones:
+            rungs = ", ".join(
+                f"{precio}% = +{puntos}" for puntos, precio in sorted(HARINA_ALIMENTAR.items())
+            )
+            raise InvalidActionError(
+                f"El reparto suma {total}% y no corresponde a ningún escalón de "
+                f"la Acción A ({rungs})."
+            )
+        faltantes = [
+            f"{tipo} (tiene {player.reserva_harina.get(tipo, 0)}%, necesita {cantidad}%)"
+            for tipo, cantidad in harina.items()
+            if player.reserva_harina.get(tipo, 0) < cantidad
+        ]
+        if faltantes:
             raise MissingResourceError(
-                f"'{player.nombre}' necesita al menos 10% de Harina {tipo_harina} "
-                f"pero tiene {player.reserva_harina.get(tipo_harina, 0)}%."
+                f"'{player.nombre}' no tiene harina suficiente para alimentar: "
+                + "; ".join(faltantes)
+                + "."
             )
 
         # --- Aplicar efectos (0 PA) ---
-        player.reserva_harina[tipo_harina] -= 10
-        player.ajustar_vitalidad(+1)
+        puntos = escalones[total]
+        for tipo, cantidad in harina.items():
+            player.reserva_harina[tipo] -= cantidad
+        player.ajustar_vitalidad(+puntos)
         player.accion_alimentar_usada = True
+        return puntos
 
     def accion_descarte_acidez(
         self,

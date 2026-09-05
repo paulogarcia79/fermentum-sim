@@ -46,7 +46,9 @@ serves that bundle locally.
   for the response, render it). `iniciarPolling()` opens the SSE connection and starts the slow
   fallback polling together; each SSE message immediately triggers a state refetch rather than
   waiting for the next fallback tick.
-- `src/components/` — `LobbyView` (create/join/start) and `GameView` (`ClimaBanner`,
+- `src/components/` — `LobbyView` (a three-line switch: `LandingView` — hero + narrative +
+  `FormularioSala`'s segmented Crear/Unirse card — until you're seated, then `SalaEsperaView`)
+  and `GameView` (`ClimaBanner`,
   `MercadoPanel`, `MiTablero`/`EstacionCard`, `TablerosOponentes`, `BarraAcciones`,
   `RegistroEventos`, `FermentationReportModal`, `RankingView`).
   `MiTablero` takes a `jugadorIdx` prop and can draw **any** player, since the server ships
@@ -54,6 +56,34 @@ serves that bundle locally.
   (which replace the region's label) and `TablerosOponentes`' rows both switch the Tablero
   region to another player's board; the selection lives in `store.jugadorObservado`
   (per-game, not a preference) and snaps back to your own board when your turn arrives.
+- `src/components/SalasAbiertas.vue` — the public list of rooms waiting for players
+  (`GET /games`), shown above the code field in the Unirse tab, with the count mirrored in the
+  tab label so it is visible from the Crear tab too (hence the 3 s poll lives in
+  `FormularioSala`, which stays mounted, not in the panel). The server already filters private,
+  full and started rooms, so every row is one where joining will work; the component re-filters
+  nothing. Hosts can tick "Sala privada" at creation to stay off the list — that flag is the
+  only thing keeping a room code secret now. When a room appears that was not there on the
+  previous poll it announces itself four ways — a short sound, a highlighted row, a pulse on the
+  tab badge, and the open-room count in the browser tab title — because no single channel reaches
+  everyone: the sound needs a prior click in the tab before the browser allows audio, and the
+  title is the only cue a backgrounded tab shows. Rooms already open at page load are seeded, not
+  announced. The panel header carries a mute toggle writing the same `store.preferencias.sonido`
+  as the in-game one; muting stops only the audio.
+- `src/data/copyLanding.ts` — every sentence on the landing and in the waiting room.
+  Deliberately free of rule numbers (prices, PA, thresholds, deck sizes): those belong to the
+  rulebook, which is tested against the code. The only figure allowed is "1–4 jugadores".
+- `src/components/ReglamentoView.vue` + `src/data/reglamento.ts` — the full rulebook inside the
+  app. It is **not** rewritten here: `RULEBOOK.html` (repo root) is imported with Vite's `?raw`,
+  parsed once with `DOMParser`, stripped to its `<main>`, and repainted with the app's tokens, so
+  a rules change reaches players by editing the reglamento and nothing else. Reachable two ways:
+  `#reglamento` (or `#reglamento/s7` for a section) — the app's only hash route, handled in
+  `App.vue`, no `vue-router` — and a header button during a game, which opens it as a full-screen
+  overlay with the board still mounted behind. Both are lazy-loaded, so the ~84 KB of rulebook
+  HTML is its own chunk. Two things will bite you if you edit that component: the `?raw` import
+  needs `server.fs.allow: ['..']` in `vite.config.ts` (without it `npm run dev` 403s while
+  `npm run build` works fine), and its `<style>` is deliberately **not** `scoped` — a `<Teleport>`
+  root gets no `data-v-*` attribute, so scoped rules silently never applied in overlay mode. Every
+  selector there must stay prefixed with `.reglamento`.
 - `src/components/acciones/` — one component per player action, plus a shared
   `ModalConfirmacion.vue` for the three
   parameterless confirm actions (H, I, Horas Extras). Button enablement comes from the server's

@@ -16,6 +16,14 @@
       "contrato_molino": null,
       "accion_alimentar_usada": true,
       "reserva_agua": 2,
+      "patrocinio": {
+        "iniciativa": 1,
+        "tipo_harina": "Blanca",
+        "harina_pct": 100,
+        "agua_tokens": 2,
+        "monedas": 9,
+        "datos": 0
+      },
       "estaciones_fermentacion": [
         null,
         null,
@@ -174,6 +182,14 @@
       "contrato_molino": null,
       "accion_alimentar_usada": true,
       "reserva_agua": 6,
+      "patrocinio": {
+        "iniciativa": 2,
+        "tipo_harina": "Blanca",
+        "harina_pct": 100,
+        "agua_tokens": 6,
+        "monedas": 8,
+        "datos": 0
+      },
       "estaciones_fermentacion": [
         null,
         null,

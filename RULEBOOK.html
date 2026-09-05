@@ -22,7 +22,14 @@
 
   Ojo con las tablas: al añadir una columna hay que tocarla en el <thead> Y en todas
   las filas del <tbody>. Ya se olvidó dos veces en silencio (ver CLAUDE.md, "Every
-  rules change MUST update the rulebooks"). Ningún test lee estos ficheros.
+  rules change MUST update the rulebooks"). tests/test_reglamento_al_dia.py vigila la
+  mitad mecánica; la prosa sigue siendo revisión humana.
+
+  ADEMÁS: la app web RENDERIZA ESTE FICHERO. web/src/data/reglamento.ts lo importa con
+  `?raw`, se queda con el interior de <main> y reconstruye el índice a partir de los
+  <section class="rule" id="sN"> y sus <h2>. Cambiar esa estructura deja el reglamento
+  del juego roto aunque este fichero siga abriéndose perfecto por su cuenta; lo sujeta
+  test_el_html_tiene_la_estructura_que_la_app_renderiza.
 
   Fermentum_ GDDv0.0.2.pdf es LEGADO y NO es autoritativo. No es fuente de verdad.
 -->
@@ -688,7 +695,7 @@
         </div>
         <p class="wrap" style="font-size:0.88rem;color:var(--ink-muted);max-width:68ch;">Los jugadores con Iniciativa alta (actúan más tarde en la primera ronda) reciben un capital de insumos de mayor valor, para compensar la ventaja temporal del Investigador Jefe.</p>
 
-        <div class="callout">Cada jugador arranca, sin importar su carta, con: Vitalidad 1, Acidez 1, 3 Dados de Inóculo, 0 PA, 0 Datos de Investigación, todas las Tecnologías desactivadas, y 1 receta Básica aleatoria. A partir de la Ronda 2, el orden de turno vuelve a calcularse cada Fase I por la regla estándar de Jerarquía — la Iniciativa solo determina el Día 1.</div>
+        <div class="callout">Cada jugador arranca, sin importar su carta de Patrocinio, con: <strong>Vitalidad 2</strong>, Acidez 1, 3 Dados de Inóculo, 0 Puntos de Acción, todas las Tecnologías desactivadas, y 1 receta Básica aleatoria en su Carpeta de Proyectos. Los Datos de Investigación iniciales sí dependen de la carta (ver tabla). A partir de la Ronda 2, el orden de turno vuelve a calcularse cada Fase I por la regla estándar de Jerarquía — la Iniciativa solo determina el Día 1.</div>
       </section>
 
       <section class="rule" id="s4">
@@ -875,7 +882,17 @@
         <h4 class="sub-sub">Acciones auxiliares y de emergencia · costo 0 PA</h4>
 
         <h3 class="sub">A · Alimentar el Cultivo <em class="aside">(Mantenimiento)</em></h3>
-        <p><strong>Límite:</strong> una vez por día. Gastar <strong>1 token de harina — 1&nbsp;(10%)</strong> (cualquier tipo) por <strong>+1 Vitalidad</strong> (máximo Nivel 6). Repone exactamente el −1 que el Metabolismo resta cada Fase III, así que quien alimenta a diario orbita su Vitalidad inicial.</p>
+        <p><strong>Límite:</strong> una vez por día, y en esa única acción eliges cuánto alimentas:</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Harina gastada</th><th>Vitalidad ganada</th></tr></thead>
+            <tbody>
+              <tr><td class="name"><strong>1 token — 1&nbsp;(10%)</strong> de un mismo tipo</td><td><strong>+1 Vitalidad</strong></td></tr>
+              <tr><td class="name"><strong>3 tokens — 3&nbsp;(30%)</strong>, de un tipo o mezclados</td><td><strong>+2 Vitalidad</strong></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Siempre hasta el máximo de Nivel 6. Con <strong>+1</strong> repones exactamente el −1 que el Metabolismo resta cada Fase III, así que quien alimenta a diario orbita su Vitalidad inicial. El escalón de <strong>+2</strong> cuesta tres tokens por dos puntos (el segundo punto sale a dos tokens): es lo que te deja contrarrestar el −2 de «Aletargamiento Invernal», o subir un punto neto pagando esa prima. Las mezclas van siempre en tokens enteros (múltiplos de 10%).</p>
         <p>Esta acción <strong>no toca la Acidez</strong>. Todo el control voluntario de la Acidez vive en la acción <strong>Descarte</strong>, que la mueve en los dos sentidos.</p>
 
         <h3 class="sub">Descarte <em class="aside">(Refresco del Cultivo)</em></h3>
@@ -1024,7 +1041,7 @@
             </tbody>
           </table>
         </div>
-        <p class="note"><strong>La cuenta que conviene tener presente.</strong> El desgaste resta 1 y Alimentar el Cultivo repone 1 una vez al día, así que <strong>quien alimenta a diario se queda donde empezó</strong>: en Vitalidad 2. Desde ahí, un Aletargamiento Invernal (−2) te deja en 1 y sobrevives. Si te saltas la alimentación un solo día y cae esa carta, llegas a 0. Eso es exactamente lo que la Contaminación castiga.</p>
+        <p class="note"><strong>La cuenta que conviene tener presente.</strong> El desgaste resta 1 y Alimentar el Cultivo repone 1 por un token una vez al día, así que <strong>quien alimenta a diario se queda donde empezó</strong>: en Vitalidad 2. Desde ahí, un Aletargamiento Invernal (−2) te deja en 1 y sobrevives; y si ese día pagas el escalón de +2 (3 tokens), te quedas en 2. Si te saltas la alimentación un solo día y cae esa carta, llegas a 0. Eso es exactamente lo que la Contaminación castiga.</p>
         <p>La Vitalidad nunca desciende por debajo de 0. Si un jugador llega a 0 en cualquier momento, sufre una penalización inmediata de <strong>−3 Puntos de Maestría</strong> y entra en <strong>Contaminación</strong>: no puede iniciar nuevas recetas hasta ejecutar un Protocolo de Emergencia. Cada episodio de Contaminación aplica su propia penalización — se acumulan si ocurre más de una vez.</p>
 
         <h3 class="sub">9.4 · Ingresos de Panadería</h3>

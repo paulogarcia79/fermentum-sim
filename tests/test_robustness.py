@@ -134,6 +134,42 @@ def test_guardar_y_cargar_todas_recupera_una_partida_en_curso() -> None:
     assert restaurada.suscriptores == []  # nunca se restauran suscriptores SSE viejos
 
 
+def test_privada_sobrevive_al_viaje_por_disco() -> None:
+    """`RoomManager.salas_abiertas` lee `privada` en cada peticion del listado
+    publico, asi que una sala restaurada sin ese atributo no rompe su propia
+    fila: rompe la portada entera. Por eso el pickle se versiona (ver
+    persistence.VERSION_FORMATO), y por eso esto se comprueba."""
+    salas = RoomManager()
+    salas.crear_sala("Nil", "verde", privada=True)
+    publica, _a = salas.crear_sala("Alba", "rojo")
+
+    salas_nuevas = RoomManager()
+    for sesion in persistence.cargar_todas():
+        salas_nuevas.restaurar(sesion)
+
+    # La publica se lista y la privada no: el filtro sigue leyendo bien el
+    # atributo despues del viaje por disco, y la publica esta ahi para que la
+    # asercion no pueda pasar simplemente por una lista vacia.
+    assert [s.id for s in salas_nuevas.salas_abiertas()] == [publica.id]
+
+
+def test_el_patrocinio_sobrevive_al_viaje_por_disco() -> None:
+    """`Player.patrocinio` es un campo nuevo del pickle (VERSION_FORMATO 20): la
+    app lo revela al arrancar y `types.ts` lo espera en cada snapshot, asi que
+    una sesion restaurada tiene que traerlo intacto, no como `None`."""
+    salas = RoomManager()
+    sesion = _sala_en_curso(salas)
+    cartas = [p.patrocinio for p in sesion.engine.players]
+    assert all(c is not None for c in cartas)
+
+    salas_nuevas = RoomManager()
+    for restaurada in persistence.cargar_todas():
+        salas_nuevas.restaurar(restaurada)
+
+    recuperada = salas_nuevas.obtener(sesion.id)
+    assert [p.patrocinio for p in recuperada.engine.players] == cartas
+
+
 def test_partida_restaurada_sigue_siendo_jugable() -> None:
     """La prueba de fuego: tras 'reiniciar' (recargar desde disco), la
     partida debe seguir aceptando acciones y avanzando turnos con

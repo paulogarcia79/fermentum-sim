@@ -55,6 +55,11 @@ interface Store {
    * dia actual: la carta de clima Y la tendencia de mercado anunciada, ambas
    * reveladas por la misma Fase I -- ver InicioDiaModal.vue. */
   inicioDiaPendiente: boolean
+  /** True si el jugador todavia no reconocio en esta pestaña la revelacion de
+   * las Cartas de Patrocinio (la suya, las de todos, y la posicion del Dia 1
+   * que se deriva de ellas) -- ver PatrocinioModal.vue. Solo puede encenderse
+   * con `dia_actual === 1`. */
+  patrocinioPendiente: boolean
   /** Preferencias de UI del jugador local, persistidas en localStorage bajo
    * su propia clave. NO se resetean al cerrar sesion ni al volver al lobby:
    * son duraderas, a diferencia de las banderas por partida de mas abajo. */
@@ -85,6 +90,7 @@ export const store: Store = reactive({
   cargando: false,
   reporteDiaPendiente: null,
   inicioDiaPendiente: false,
+  patrocinioPendiente: false,
   // `cargarPreferenciasLocales` es una declaracion de funcion (hoisted), asi
   // que puede usarse aqui aunque este definida mas abajo junto al resto de
   // helpers de localStorage.
@@ -118,6 +124,18 @@ export function cerrarResultadoHorneado(): void {
  * distinguiría dos "+1" seguidos.
  */
 let ultimaCartaClimaId: string | null | undefined = undefined
+
+/**
+ * Si esta pestaña ya mostró la revelación del Patrocinio en esta partida. No
+ * reactivo -- solo lo lee aplicarEstado(). Es "una vez por pestaña y
+ * partida", no "una vez por partida": recargar o reconectar durante el Día 1
+ * vuelve a enseñarla, igual que InicioDiaModal vuelve a enseñar las cartas del
+ * día -- es "esta es tu situación de arranque", no el relato de una
+ * transición ya vista, y por eso `sembrarEstadoSinSonido()` NO la siembra a
+ * propósito. Desde el Día 2 no se dispara nunca, y se resetea con las demás
+ * banderas por partida para que una revancha la vuelva a mostrar.
+ */
+let patrocinioMostrado = false
 
 /**
  * Conteo de `votos_fin_anticipado` en el que este jugador descartó por
@@ -311,10 +329,12 @@ export function cerrarSesion(): void {
   store.error = null
   store.reporteDiaPendiente = null
   store.inicioDiaPendiente = false
+  store.patrocinioPendiente = false
   store.finAnticipadoPendiente = false
   store.resultadoHorneado = null
   store.jugadorObservado = null
   ultimaCartaClimaId = undefined
+  patrocinioMostrado = false
   finAnticipadoDescartadoEnConteo = -1
   jugadorEnTurnoAnterior = null
   finDePartidaSonado = false
@@ -363,6 +383,14 @@ export function aplicarEstado(nuevo: GameStateView): void {
   const diaAvanzo = diaAnterior !== undefined && nuevo.environment.dia_actual > diaAnterior
   if (diaAvanzo) {
     store.reporteDiaPendiente = diaAnterior
+  }
+
+  // La revelación del Patrocinio va ANTES del modal del día en GameView.vue:
+  // ambos se encienden en este mismo snapshot al arrancar, y el jugador tiene
+  // que saber con qué cuenta antes de que se le cuente qué clima le espera.
+  if (nuevo.environment.dia_actual === 1 && !patrocinioMostrado) {
+    store.patrocinioPendiente = true
+    patrocinioMostrado = true
   }
 
   const cartaId = nuevo.environment.ultima_carta_clima?.id ?? null
@@ -447,6 +475,10 @@ export function reconocerInicioDia(): void {
   store.inicioDiaPendiente = false
 }
 
+export function reconocerPatrocinio(): void {
+  store.patrocinioPendiente = false
+}
+
 /** El jugador descartó el aviso de fin anticipado ("Ahora no"). No vuelve a
  * aparecer hasta que otro jugador más se sume al pedido (el conteo crezca). */
 export function reconocerFinAnticipado(): void {
@@ -470,10 +502,12 @@ function volverAVistaDeLobby(): void {
   store.ultimoSeqVisto = 0
   store.reporteDiaPendiente = null
   store.inicioDiaPendiente = false
+  store.patrocinioPendiente = false
   store.finAnticipadoPendiente = false
   store.resultadoHorneado = null
   store.jugadorObservado = null
   ultimaCartaClimaId = undefined
+  patrocinioMostrado = false
   finAnticipadoDescartadoEnConteo = -1
   jugadorEnTurnoAnterior = null
   finDePartidaSonado = false
@@ -692,9 +726,12 @@ export async function crearSalaNueva(): Promise<void> {
   const nombre = jugadorActual.nombre
   const color = jugadorActual.color
   const maxJugadores = store.estado.players.length
+  // La revancha hereda la privacidad: si el grupo jugaba en una sala que no
+  // salia en el listado publico, la siguiente tampoco debe salir.
+  const privada = store.estado.privada
   store.cargando = true
   try {
-    const r = await api.crearSala(nombre, color, maxJugadores)
+    const r = await api.crearSala(nombre, color, maxJugadores, privada)
     volverAVistaDeLobby()
     establecerSesion({
       roomId: r.room_id,

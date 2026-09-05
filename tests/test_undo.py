@@ -47,7 +47,7 @@ def _alimentar(cliente, room_id, token):
     r = cliente.post(
         f"/games/{room_id}/actions",
         headers={"X-Player-Token": token},
-        json={"accion": "A", "params": {"tipo_harina": "Blanca"}},
+        json={"accion": "A", "params": {"harina": {"Blanca": 10}}},
     )
     return r
 
@@ -148,7 +148,7 @@ def test_accion_gratuita_rechazada_no_toca_el_checkpoint() -> None:
     r = cliente.post(
         f"/games/{room_id}/actions",
         headers={"X-Player-Token": token},
-        json={"accion": "A", "params": {"tipo_harina": "Trigo"}},
+        json={"accion": "A", "params": {"harina": {"Trigo": 10}}},
     )
     assert r.status_code != 200, r.text
     assert _estado(cliente, room_id, token)["puede_deshacer"] is False

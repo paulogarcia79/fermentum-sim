@@ -185,7 +185,7 @@ def test_pasar_y_deshacer_tambien_difunden() -> None:
     r = cliente.post(
         f"/games/{room_id}/actions",
         headers={"X-Player-Token": token},
-        json={"accion": "A", "params": {"tipo_harina": "Blanca"}},
+        json={"accion": "A", "params": {"harina": {"Blanca": 10}}},
     )
     assert r.status_code == 200, r.text
 
@@ -214,7 +214,7 @@ def test_accion_gratuita_y_deshacer_no_alteran_el_log_de_eventos() -> None:
     cliente.post(
         f"/games/{room_id}/actions",
         headers={"X-Player-Token": token},
-        json={"accion": "A", "params": {"tipo_harina": "Blanca"}},
+        json={"accion": "A", "params": {"harina": {"Blanca": 10}}},
     )
     assert len(sesion.engine.eventos) == antes
 

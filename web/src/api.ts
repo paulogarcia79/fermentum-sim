@@ -40,8 +40,31 @@ export interface CrearSalaResultado {
   max_jugadores: number
 }
 
-export function crearSala(nombre: string, color: string, maxJugadores: number): Promise<CrearSalaResultado> {
-  return pedir('/games', conJson({ nombre, color, max_jugadores: maxJugadores }))
+export function crearSala(
+  nombre: string,
+  color: string,
+  maxJugadores: number,
+  privada: boolean,
+): Promise<CrearSalaResultado> {
+  return pedir('/games', conJson({ nombre, color, max_jugadores: maxJugadores, privada }))
+}
+
+/** Una fila del listado publico de salas abiertas (`GET /games`). */
+export interface SalaAbierta {
+  room_id: string
+  max_jugadores: number
+  /** Cuanto lleva abierta, calculado por el servidor -- ver server/app.py. */
+  segundos_abierta: number
+  seats: { player_index: number; nombre: string; color: string }[]
+}
+
+/**
+ * Las salas en las que se puede entrar ahora mismo. Publica: sin token, igual
+ * que `verSala`. El servidor ya filtra las privadas, las llenas y las
+ * empezadas, asi que toda fila que llega es una a la que unirse va a funcionar.
+ */
+export function listarSalas(): Promise<{ salas: SalaAbierta[] }> {
+  return pedir('/games')
 }
 
 export interface UnirseSalaResultado {
@@ -57,6 +80,7 @@ export interface SalaMetadata {
   room_id: string
   status: 'lobby' | 'en_curso' | 'terminada'
   max_jugadores: number
+  privada: boolean
   seats: { player_index: number; nombre: string; color: string }[]
 }
 

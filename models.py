@@ -132,12 +132,33 @@ VITALIDAD_INICIAL: int = 2
 Vitalidad del cultivo base de todo jugador al empezar la partida (PLAYER_STATE.md §2).
 
 Es 2 y no 1 por una razón concreta: el desgaste metabólico de la Fase III resta -1 y
-la Acción A repone +1 una vez al día, de modo que un jugador que alimenta a diario
-ORBITA en su valor inicial. Partiendo de 1, la carta «Aletargamiento Invernal» (-2, dos
-copias en un mazo de 30) lo dejaba en 0 -> contaminación inevitable, sin jugada posible
-que la evitara: no era una decisión mal tomada, era el barajado. Partiendo de 2 la misma
-carta lo deja en 1, y la contaminación vuelve a castigar lo que debe castigar, que es
-descuidar el mantenimiento. Ver CLIMATE_LOGIC.md.
+el escalón barato de la Acción A repone +1 una vez al día, de modo que un jugador que
+alimenta a diario ORBITA en su valor inicial. Partiendo de 1, la carta «Aletargamiento
+Invernal» (-2, dos copias en un mazo de 30) lo dejaba en 0 -> contaminación inevitable,
+sin jugada posible que la evitara: no era una decisión mal tomada, era el barajado.
+Partiendo de 2 la misma carta lo deja en 1, y la contaminación vuelve a castigar lo que
+debe castigar, que es descuidar el mantenimiento. El escalón de +2 (ver
+``HARINA_ALIMENTAR``) permite además contrarrestar esa carta pagando harina, pero la
+Vitalidad inicial no cuenta con él: quien no pueda pagarlo sigue sobreviviendo desde 2.
+Ver CLIMATE_LOGIC.md.
+"""
+
+HARINA_ALIMENTAR: Dict[int, int] = {1: 10, 2: 30}
+"""
+Acción A (Alimentar el Cultivo): Vitalidad ganada -> harina gastada, en porcentaje
+(ACTIONS_REGISTRY.md §3). Una sola acción al día, y en ella el jugador elige el escalón.
+
+Escalera creciente al margen (10 y luego 20 por el segundo punto), no un precio plano:
+el escalón de +2 es lo que deja contrarrestar el -2 de «Aletargamiento Invernal», y con
++1 neto al día contra el desgaste estándar es también el camino a la inmunidad frente a
+la contaminación, así que el freno es el precio. La harina puede ser de un solo tipo o
+mezclada (siempre en múltiplos de 10, que es el token físico). La cantidad de puntos se
+DERIVA de la suma de harina entregada, igual que ``PRECIO_PLIEGUES`` deriva el precio
+de la suma del reparto: un ``pasos`` aparte sería un segundo número libre de contradecir
+al primero.
+
+Vive en ``models`` y no en ``actions`` porque ``engine._jugador_elegible`` lo lee y
+``engine`` no puede importar ``actions`` (mismo motivo que ``AMPLIACION_OPTIMA_MODULO``).
 """
 
 DATOS_HORAS_EXTRAS: int = 1
@@ -862,6 +883,19 @@ class Player:
     Cada unidad representa un 5% de hidratación (ej. 12 tokens = 60%).
     """
 
+    patrocinio: Optional[PatrocinioCard] = None
+    """
+    Carta de Patrocinio repartida a este jugador en el setup (ver
+    ``bootstrap.create_game``), conservada SOLO como registro para la interfaz:
+    la app la enseña al arrancar la partida junto con la posición del Día 1 que
+    se deriva de su ``iniciativa``. Ninguna regla la lee después del Día 1 — en
+    la mesa física la carta vuelve a la caja, y aquí sus recursos ya están
+    volcados en ``reserva_harina`` / ``reserva_agua`` / ``monedas`` /
+    ``datos_investigacion``. ``None`` en jugadores construidos sin carta (tests
+    con tableros degenerados). Sin este campo la carta no se podía recuperar:
+    ``create_game`` la desmenuzaba en ``crear_dia_1`` y la tiraba.
+    """
+
     # ------------------------------------------------------------------
     # Zona 2: Estaciones de Fermentación (3 ranuras)
     # ------------------------------------------------------------------
@@ -988,6 +1022,7 @@ class Player:
         agua_inicial: int = 0,
         monedas_iniciales: int = 0,
         datos_iniciales: int = 0,
+        patrocinio: Optional[PatrocinioCard] = None,
     ) -> "Player":
         """
         Crea e inicializa un jugador con el estado exacto descrito en PLAYER_STATE.md §2.
@@ -998,13 +1033,14 @@ class Player:
           · carpeta_proyectos = [receta_inicial]
           · todas las tecnologías inactivas
 
-        Los recursos iniciales (harina, agua, monedas) provienen de la Carta de
-        Patrocinio repartida en el setup (GDD v0.0.2, Módulo I §6.4 / Anexo B) —
-        ver `bootstrap.create_game()`, que reparte `PATROCINIO_CATALOG` y pasa los
-        valores de la carta de cada jugador a estos parámetros. `datos_iniciales`
-        es 0 para todos los jugadores bajo el setup actual (la tabla de Patrocinios
-        no incluye Datos de Investigación); se deja como parámetro explícito para
-        no romper otros puntos de construcción directa de `Player`.
+        Los recursos iniciales (harina, agua, monedas y Datos) provienen de la
+        Carta de Patrocinio repartida en el setup (GDD v0.0.2, Módulo I §6.4 /
+        Anexo B) — ver `bootstrap.create_game()`, que reparte `PATROCINIO_CATALOG`
+        y pasa los valores de la carta de cada jugador a estos parámetros. Los
+        Datos van en sentido inverso a las Monedas de la carta (0, 1 o 2; ver
+        `PatrocinioCard.datos`). Los cuatro se reciben como parámetros sueltos y
+        no se derivan de `patrocinio` para que los tests que construyen un
+        `Player` directamente, sin carta, sigan pudiendo fijar recursos a mano.
 
         Args:
             nombre: Nombre o identificador del investigador.
@@ -1016,6 +1052,9 @@ class Player:
             agua_inicial: Tokens de agua (5% c/u) otorgados por la Carta de Patrocinio.
             monedas_iniciales: Monedas otorgadas por la Carta de Patrocinio.
             datos_iniciales: Datos de Investigación iniciales (0 por defecto).
+            patrocinio: La carta repartida, guardada en `Player.patrocinio` como
+                registro para la interfaz (ver ese campo). `None` si el jugador
+                se construye sin carta.
 
         Returns:
             Instancia de Player completamente configurada para el inicio de partida.
@@ -1035,6 +1074,7 @@ class Player:
             agua_inicial=agua_inicial,
             monedas_iniciales=monedas_iniciales,
             datos_iniciales=datos_iniciales,
+            patrocinio=patrocinio,
         )
         return player
 
@@ -1045,6 +1085,7 @@ class Player:
         agua_inicial: int = 0,
         monedas_iniciales: int = 0,
         datos_iniciales: int = 0,
+        patrocinio: Optional[PatrocinioCard] = None,
     ) -> None:
         """Aplica los valores de inicialización del Día 1 (PLAYER_STATE.md §2)."""
         reserva_harina: Dict[str, int] = {"Blanca": 0, "Centeno": 0, "Integral": 0}
@@ -1059,6 +1100,7 @@ class Player:
         self.puntos_accion = 0  # Se asignan 2 al llegar a la Fase II del primer día
         self.reserva_harina = reserva_harina
         self.reserva_agua = agua_inicial
+        self.patrocinio = patrocinio
         self.tecnologias = Technologies()
         self.estaciones_fermentacion = [None, None, None]
         self.carpeta_proyectos = [receta_inicial]
@@ -1197,6 +1239,21 @@ class Player:
         Extras dentro del turno es indiferente.
         """
         return self.horas_extras_usadas and self.espacio_repetido_hoy is None
+
+    @property
+    def puede_alimentar(self) -> bool:
+        """
+        True si el jugador puede pagar el escalón más barato de la Acción A:
+        al menos ``HARINA_ALIMENTAR[1]`` de UN MISMO tipo de harina.
+
+        Es la comprobación que ``ActionManager.accion_A_alimentar`` hace de
+        verdad, y la comparten ``engine._jugador_elegible`` (para no mantener en
+        la rotación a quien no puede alimentar) y ``disponibilidad.py`` (para
+        que la casilla no mienta). Un jugador con 5% + 5% en dos tipos no
+        puede alimentar aunque sume 10. Es un ``@property``, así que
+        ``dataclasses.asdict`` no lo serializa y el snapshot dorado no se mueve.
+        """
+        return any(cant >= HARINA_ALIMENTAR[1] for cant in self.reserva_harina.values())
 
     @property
     def indice_estacion_disponible(self) -> Optional[int]:

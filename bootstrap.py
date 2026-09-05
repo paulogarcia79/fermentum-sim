@@ -51,7 +51,9 @@ def create_game(nombres: List[str], event_sink: Optional[EventSink] = None) -> G
          iniciales (harina, agua, monedas y Datos de Investigación) de cada
          jugador.
       5. Crear los jugadores con ``Player.crear_dia_1()``, ya con sus
-         recursos de Patrocinio.
+         recursos de Patrocinio. La carta misma queda guardada en
+         ``Player.patrocinio`` como registro para la interfaz (la app la
+         revela al arrancar); ninguna regla la vuelve a leer.
       6. Instanciar ``GameEngine`` con inyección de dependencias, pasando el
          orden de turno del Día 1 calculado en el paso 4.
 
@@ -115,6 +117,7 @@ def create_game(nombres: List[str], event_sink: Optional[EventSink] = None) -> G
                 agua_inicial=carta.agua_tokens,
                 monedas_iniciales=carta.monedas,
                 datos_iniciales=carta.datos,
+                patrocinio=carta,
             )
         )
 

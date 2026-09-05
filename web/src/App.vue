@@ -1,18 +1,53 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref } from 'vue'
 import LobbyView from './components/LobbyView.vue'
 import GameView from './components/GameView.vue'
 import { intentarReconectar, store } from './store'
 import { habilitarAudio } from './sonido'
 
+// Perezoso: el reglamento arrastra RULEBOOK.html entero (~84 KB de texto), y
+// la mayoria de las sesiones no lo abren. Vite le da su propio chunk, que se
+// pide la primera vez que hace falta. Se importa el COMPONENTE y no solo la
+// cadena para no tener que inventar un estado de carga.
+const ReglamentoView = defineAsyncComponent(() => import('./components/ReglamentoView.vue'))
+
 const reconectando = ref(true)
+
+// La unica "ruta" de la app: el hash. No hay vue-router (ni una sola
+// dependencia mas que vue), y para una vista extra no hace falta -- el mismo
+// patron que la lectura de `?sala=` en LobbyView. Formato: `#reglamento` o
+// `#reglamento/s7` para abrir por una seccion.
+const hash = ref(window.location.hash)
+
+function alCambiarHash() {
+  hash.value = window.location.hash
+}
+
+const rutaReglamento = computed(() => {
+  const [vista, seccion] = hash.value.replace(/^#/, '').split('/')
+  return vista === 'reglamento' ? { seccion: seccion || undefined } : null
+})
+
+function cerrarReglamento() {
+  // `pushState` y no `history.back()`: quien llegue por un enlace directo al
+  // reglamento no tiene ninguna entrada anterior a la que volver.
+  history.pushState(null, '', window.location.pathname + window.location.search)
+  hash.value = ''
+}
 
 // Si cerraste el navegador a mitad de partida, la sesión (sala + tu token)
 // sigue en localStorage -- se intenta recuperar una sola vez al arrancar,
 // antes de decidir si mostrar el lobby o el tablero directamente.
 onMounted(async () => {
+  // `hashchange` ya cubre atras/adelante entre hashes; añadir `popstate`
+  // ademas haria que cada navegacion se procesara dos veces.
+  window.addEventListener('hashchange', alCambiarHash)
   await intentarReconectar()
   reconectando.value = false
+})
+
+onUnmounted(() => {
+  window.removeEventListener('hashchange', alCambiarHash)
 })
 
 // Los navegadores exigen un gesto del usuario antes de permitir audio -- se
@@ -30,7 +65,16 @@ const enPartida = computed(() => store.sesion !== null && store.estado !== null)
   <main class="app-shell" :class="{ centrado: !enPartida }">
     <p v-if="reconectando" class="reconectando">Cargando…</p>
     <template v-else>
+      <!-- Una partida viva gana al hash: si estas jugando, el reglamento se
+           abre superpuesto desde la cabecera de GameView, no sustituyendo el
+           tablero. -->
       <GameView v-if="enPartida" />
+      <ReglamentoView
+        v-else-if="rutaReglamento"
+        modo="pagina"
+        :seccion="rutaReglamento.seccion"
+        @cerrar="cerrarReglamento"
+      />
       <LobbyView v-else />
     </template>
   </main>

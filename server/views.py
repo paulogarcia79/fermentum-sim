@@ -205,6 +205,13 @@ def game_state_view(sesion: "GameSession") -> Dict[str, Any]:
         for posicion, jugador in engine.calcular_ranking_final()
     ]
     estado["votos_fin_anticipado"] = sorted(sesion.votos_fin_anticipado)
+    # Campo de sala, no de partida -- como `color` y los votos, solo esta vista
+    # puede adjuntarlo porque recibe la GameSession entera. Lo necesita
+    # `store.ts:crearSalaNueva`: la revancha reutiliza nombre, color y numero de
+    # jugadores de la partida que acaba de terminar, y tiene que heredar tambien
+    # la privacidad. Sin esto, la revancha de un grupo privado saldria listada
+    # en la portada sin que nadie lo pidiera.
+    estado["privada"] = sesion.privada
     # True si el jugador activo puede deshacer su visita en curso (hay un
     # checkpoint tomado en esta misma visita) -- ver POST /games/{id}/undo.
     # Es informacion publica inofensiva: solo dice "el jugador activo ya

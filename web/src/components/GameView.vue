@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onUnmounted, ref, watch } from 'vue'
 import {
   alternarPanel,
   confirmarFinAnticipado,
@@ -20,12 +20,23 @@ import BarraAcciones from './BarraAcciones.vue'
 import RegistroEventos from './RegistroEventos.vue'
 import FermentationReportModal from './FermentationReportModal.vue'
 import InicioDiaModal from './InicioDiaModal.vue'
+import PatrocinioModal from './PatrocinioModal.vue'
 import FinAnticipadoModal from './FinAnticipadoModal.vue'
 import ResultadoHorneadoModal from './ResultadoHorneadoModal.vue'
 import RankingView from './RankingView.vue'
 import DockPaneles from './DockPaneles.vue'
 import PanelOcultable from './PanelOcultable.vue'
 import type { IdPanel } from '../data/panelesTablero'
+
+// Perezoso, igual que en App.vue: el reglamento arrastra RULEBOOK.html entero
+// y la mayoria de las partidas no lo abren.
+const ReglamentoView = defineAsyncComponent(() => import('./ReglamentoView.vue'))
+
+// Estado de vista, no de partida: no va al store ni se persiste. Que el
+// tablero siga montado detras es el punto de que sea un superpuesto y no un
+// cambio de vista -- consultar una regla no debe costar el scroll de un panel
+// ni un tooltip abierto.
+const reglamentoAbierto = ref(false)
 
 const estado = computed(() => store.estado!)
 const miIndice = computed(() => store.sesion!.playerIndex)
@@ -172,8 +183,33 @@ onUnmounted(() => detenerTransmisionEnVivo())
         >
           {{ store.preferencias.sonido ? '🔊' : '🔇' }}
         </button>
+        <button
+          class="interruptor-sonido boton-reglamento"
+          title="Abrir el reglamento sin salir de la partida"
+          aria-haspopup="dialog"
+          :aria-expanded="reglamentoAbierto"
+          @click="reglamentoAbierto = true"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M4 4.5h6a2.5 2.5 0 0 1 2 1 2.5 2.5 0 0 1 2-1h6v14h-6a2.5 2.5 0 0 0-2 1 2.5 2.5 0 0 0-2-1H4z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+            />
+            <path d="M12 5.5v13" fill="none" stroke="currentColor" stroke-width="1.5" />
+          </svg>
+          <span class="sr-only">Reglamento</span>
+        </button>
       </div>
     </header>
+
+    <ReglamentoView
+      v-if="reglamentoAbierto"
+      modo="superpuesto"
+      @cerrar="reglamentoAbierto = false"
+    />
 
     <!-- Aviso persistente, no un modal: saber que hoy es el último día cambia
          cada decisión que queda (hornear ya aunque sea en Pre-fermento, vender
@@ -301,9 +337,13 @@ onUnmounted(() => detenerTransmisionEnVivo())
 
     <!-- El resultado del propio horneado va primero: es la respuesta
          inmediata a lo que el jugador acaba de hacer. Si el mismo snapshot
-         tambien cerro el dia, el reporte de Fase III espera a que lo cierre. -->
+         tambien cerro el dia, el reporte de Fase III espera a que lo cierre.
+         La revelacion del Patrocinio va delante del modal del dia: en el Dia 1
+         los dos primeros nunca estan pendientes, asi que es lo primero que ve
+         un jugador al arrancar, y las cartas del dia vienen justo despues. -->
     <ResultadoHorneadoModal v-if="store.resultadoHorneado" />
     <FermentationReportModal v-else-if="store.reporteDiaPendiente !== null" />
+    <PatrocinioModal v-else-if="store.patrocinioPendiente" />
     <InicioDiaModal v-else-if="store.inicioDiaPendiente" />
     <FinAnticipadoModal v-else-if="store.finAnticipadoPendiente" />
   </div>
@@ -418,6 +458,36 @@ onUnmounted(() => detenerTransmisionEnVivo())
 
 .interruptor-sonido.apagado {
   opacity: 0.55;
+}
+
+/* Mismo cuadro que el interruptor de sonido, pero con un SVG dentro: los
+   iconos estructurales de esta app se dibujan a mano (ver los Icono*.vue), y
+   el emoji del sonido es deuda vieja, no el patron a seguir. */
+.boton-reglamento {
+  display: grid;
+  place-items: center;
+  color: var(--tinta-tenue);
+  cursor: pointer;
+}
+
+.boton-reglamento:hover {
+  color: var(--tinta);
+}
+
+.boton-reglamento svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* --- Regiones ------------------------------------------------------------ */

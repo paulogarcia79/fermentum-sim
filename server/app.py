@@ -38,6 +38,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import time
 from typing import Any, AsyncIterator, Dict, List, Tuple, Type, Union
 
 from starlette.applications import Starlette
@@ -207,6 +208,23 @@ def _requerir_max_jugadores(cuerpo: Dict[str, Any]) -> int:
     return crudo
 
 
+def _requerir_privada(cuerpo: Dict[str, Any]) -> bool:
+    """
+    Chequeo de forma, igual que ``_requerir_max_jugadores``. Opcional: por
+    defecto ``False`` --la sala se lista--, que es el comportamiento de toda
+    sala creada antes de que este campo existiera y el que quiere cualquier
+    llamador que no se plantee la cuestion.
+
+    Se exige un ``bool`` de verdad y no un valor "veraz": aceptar la cadena
+    ``"no"`` (que en Python es veraz) marcaria privada justo la sala que el
+    host queria publica, y en silencio.
+    """
+    crudo = cuerpo.get("privada", False)
+    if not isinstance(crudo, bool):
+        raise InvalidActionError("'privada' debe ser true o false.")
+    return crudo
+
+
 def _avanzar_fase_si_corresponde(sesion: GameSession) -> None:
     """
     Si la ronda de Fase II se agotó tras la última acción o pase, resuelve
@@ -317,7 +335,8 @@ def crear_app() -> Starlette:
             nombre = _requerir_nombre(cuerpo)
             color = _requerir_color(cuerpo)
             max_jugadores = _requerir_max_jugadores(cuerpo)
-            sesion, asiento = salas.crear_sala(nombre, color, max_jugadores)
+            privada = _requerir_privada(cuerpo)
+            sesion, asiento = salas.crear_sala(nombre, color, max_jugadores, privada)
         except (FermentumError, RoomError) as exc:
             return _respuesta_error(exc)
         return JSONResponse(
@@ -356,6 +375,43 @@ def crear_app() -> Starlette:
             return _respuesta_error(exc)
         return JSONResponse(vista)
 
+    async def listar_salas(request: Request) -> JSONResponse:
+        """
+        GET /games -- las salas abiertas que esperan jugadores. Publica: sin
+        token, igual que ``ver_sala``.
+
+        Manda EXACTAMENTE lo que hace falta para decidir si entrar: el codigo,
+        quien esta sentado y cuanto lleva abierta. Ni ``host_token``, ni los
+        ``Seat.token``, que son la identidad de cada jugador -- esta ruta la
+        puede pedir cualquiera.
+
+        ``segundos_abierta`` va calculado en el servidor en vez de mandar
+        ``creado_en``: el cliente solo quiere decir "hace 3 min", y restar dos
+        relojes distintos da respuestas raras en cuanto uno de los dos va
+        desajustado.
+        """
+        del request  # ruta sin parametros
+        return JSONResponse(
+            {
+                "salas": [
+                    {
+                        "room_id": sesion.id,
+                        "max_jugadores": sesion.max_jugadores,
+                        "segundos_abierta": int(time.time() - sesion.creado_en),
+                        "seats": [
+                            {
+                                "player_index": a.player_index,
+                                "nombre": a.nombre,
+                                "color": a.color,
+                            }
+                            for a in sesion.seats
+                        ],
+                    }
+                    for sesion in salas.salas_abiertas()
+                ]
+            }
+        )
+
     async def ver_sala(request: Request) -> JSONResponse:
         room_id = request.path_params["room_id"]
         try:
@@ -367,6 +423,9 @@ def crear_app() -> Starlette:
                 "room_id": sesion.id,
                 "status": sesion.status.value,
                 "max_jugadores": sesion.max_jugadores,
+                # Para que la sala de espera pueda recordarle al host por que
+                # nadie la encuentra en el listado.
+                "privada": sesion.privada,
                 "seats": [
                     {"player_index": a.player_index, "nombre": a.nombre, "color": a.color}
                     for a in sesion.seats
@@ -723,6 +782,7 @@ def crear_app() -> Starlette:
 
     aplicacion = Starlette(
         routes=[
+            Route("/games", listar_salas, methods=["GET"]),
             Route("/games", crear_sala, methods=["POST"]),
             Route("/games/{room_id}", ver_sala, methods=["GET"]),
             Route("/games/{room_id}/join", unirse_sala, methods=["POST"]),

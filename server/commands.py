@@ -168,9 +168,11 @@ def _despachar(
     params: Dict[str, Any],
 ) -> Any:
     if accion == "A":
+        # El reparto viaja crudo: ActionManager valida tipos, múltiplos y
+        # escalón, y sigue siendo la única autoridad de reglas.
         return manager.accion_A_alimentar(
             player,
-            tipo_harina=params.get("tipo_harina"),
+            harina=params.get("harina"),
         )
 
     if accion == "descarte":
@@ -473,7 +475,13 @@ def _frase_accion(
         Una frase en español, sin el nombre del jugador.
     """
     if accion == "A":
-        return f"Alimentó el cultivo con {params.get('tipo_harina')}"
+        harina = params.get("harina") or {}
+        # El caso corriente (+1 con un solo tipo) conserva la frase de siempre;
+        # cualquier otro reparto nombra cantidades y lo que rindió.
+        if resultado == 1 and len(harina) == 1:
+            return f"Alimentó el cultivo con {next(iter(harina))}"
+        partes = [f"{cantidad}% {tipo}" for tipo, cantidad in harina.items()]
+        return f"Alimentó el cultivo con {' y '.join(partes)} (+{resultado} Vitalidad)"
 
     if accion == "descarte":
         operacion = params.get("operacion")

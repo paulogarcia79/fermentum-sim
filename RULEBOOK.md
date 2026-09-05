@@ -12,7 +12,9 @@
     4. RULEBOOK.html         — el gemelo
 
   Ya se olvidó dos veces en silencio (ver CLAUDE.md, "Every rules change MUST update
-  the rulebooks"). Ningún test lee estos ficheros.
+  the rulebooks"). tests/test_reglamento_al_dia.py vigila la mitad mecánica (todo
+  número derivable del código, y que los dos ficheros coincidan entre sí); la prosa
+  sigue siendo revisión humana.
 
   Fermentum_ GDDv0.0.2.pdf es LEGADO y NO es autoritativo. No es fuente de verdad.
 -->
@@ -195,12 +197,13 @@ Cada jugador arranca, sin importar su carta de Patrocinio, con: **Vitalidad 2**,
 de Inóculo, 0 Puntos de Acción, todas las Tecnologías desactivadas, y 1 receta Básica aleatoria en
 su Carpeta de Proyectos. Los Datos de Investigación iniciales sí dependen de la carta (ver tabla).
 
-> **Por qué la Vitalidad empieza en 2.** El Desgaste Metabólico resta 1 cada noche y Alimentar el
-> Cultivo repone 1 una vez al día, así que quien alimenta a diario **se mantiene en el nivel con
-> el que empezó**. Si ese nivel fuera 1, la carta de clima «Aletargamiento Invernal» (−2 de
-> Vitalidad) provocaría una contaminación imposible de evitar jugando bien. Empezando en 2, esa
-> carta te deja en 1: duele, pero se sobrevive. La contaminación castiga descuidar el cultivo, no
-> tener mala suerte con el mazo.
+> **Por qué la Vitalidad empieza en 2.** El Desgaste Metabólico resta 1 cada noche y el escalón
+> barato de Alimentar el Cultivo repone 1 una vez al día, así que quien alimenta a diario **se
+> mantiene en el nivel con el que empezó**. Si ese nivel fuera 1, la carta de clima
+> «Aletargamiento Invernal» (−2 de Vitalidad) provocaría una contaminación imposible de evitar
+> jugando bien. Empezando en 2, esa carta te deja en 1: duele, pero se sobrevive (y con harina de
+> sobra puedes pagar el escalón de +2 y ni siquiera bajar). La contaminación castiga descuidar el
+> cultivo, no tener mala suerte con el mazo.
 
 A partir de la Ronda 2, el orden de turno vuelve a calcularse cada Fase I según la regla estándar
 de Jerarquía (ver más abajo) — la Iniciativa de las Cartas de Patrocinio solo determina el Día 1.
@@ -608,9 +611,18 @@ Atender el mostrador solo gasta un Punto de Acción y te deja en la rotación.
 
 #### A. Alimentar el Cultivo (Mantenimiento)
 
-**Límite:** una vez por Día de Laboratorio. Se gasta **1 token de harina — 1 (10%)** (de cualquier
-tipo) por **+1 Vitalidad** (máximo Nivel 6). Repone exactamente el -1 que el Metabolismo resta cada
-Fase III, así que quien alimenta a diario orbita su Vitalidad inicial.
+**Límite:** una vez por Día de Laboratorio, y en esa única acción eliges cuánto alimentas:
+
+| Harina gastada | Vitalidad ganada |
+| --- | --- |
+| **1 token — 1 (10%)** de un mismo tipo | **+1 Vitalidad** |
+| **3 tokens — 3 (30%)**, de un tipo o mezclados | **+2 Vitalidad** |
+
+Siempre hasta el máximo de Nivel 6. Con **+1** repones exactamente el -1 que el Metabolismo resta
+cada Fase III, así que quien alimenta a diario orbita su Vitalidad inicial. El escalón de **+2**
+cuesta tres tokens por dos puntos (el segundo punto sale a dos tokens): es lo que te deja
+contrarrestar el −2 de «Aletargamiento Invernal», o subir un punto neto pagando esa prima. Las
+mezclas van siempre en tokens enteros (múltiplos de 10%).
 
 Esta acción **no toca la Acidez**. Todo el control voluntario de la Acidez vive en la acción
 **Descarte**, que la mueve en los dos sentidos.
@@ -927,9 +939,10 @@ Al final de la Fase III, todos los cultivos base sufren desgaste:
   con la acción gratuita «Estasis Biológica» (§7); la Fase III reactiva la Estasis al terminar.
 
 > **La cuenta que conviene tener presente.** El desgaste resta 1 y Alimentar el Cultivo repone 1
-> una vez al día, así que **quien alimenta a diario se queda donde empezó**: en Vitalidad 2. Desde
-> ahí, un Aletargamiento Invernal (−2) te deja en 1 y sobrevives. Si te saltas la alimentación un
-> solo día y cae esa carta, llegas a 0. Eso es exactamente lo que la Contaminación castiga.
+> por un token una vez al día, así que **quien alimenta a diario se queda donde empezó**: en
+> Vitalidad 2. Desde ahí, un Aletargamiento Invernal (−2) te deja en 1 y sobrevives; y si ese día
+> pagas el escalón de +2 (3 tokens), te quedas en 2. Si te saltas la alimentación un solo día y cae
+> esa carta, llegas a 0. Eso es exactamente lo que la Contaminación castiga.
 
 La Vitalidad nunca desciende por debajo de 0. Si un jugador llega a Vitalidad 0 en cualquier
 momento (por desgaste, por un evento, o al inicio del turno), sufre una penalización inmediata de

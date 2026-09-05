@@ -20,5 +20,23 @@ export default defineConfig({
     proxy: {
       '/games': 'http://127.0.0.1:8000',
     },
+    // RULEBOOK.html vive en la raiz del repo, no dentro de web/, y
+    // ReglamentoView.vue lo importa con `?raw` para renderarlo dentro de la
+    // app. Vite solo sirve su "workspace root" -- que aqui es web/, porque la
+    // raiz no tiene ni pnpm-workspace.yaml ni lerna.json ni un package.json
+    // con `workspaces`, y .git no cuenta -- y ademas trata un id `?raw` como
+    // lectura de fichero, no como modulo: lo vuelve a comprobar contra esta
+    // lista aunque la importacion sea estatica. Sin esto, `npm run dev`
+    // responde 403 (la build de produccion no pasa por aqui y funcionaria,
+    // que es la forma mas incomoda de descubrirlo).
+    //
+    // Tiene que ser un DIRECTORIO: una entrada de fichero suelto no vale,
+    // porque la segunda comprobacion se hace con el `?raw` todavia pegado al
+    // id y "…/RULEBOOK.html" nunca es igual a "…/RULEBOOK.html?raw".
+    //
+    // El `fs.deny` por defecto (.env*, certificados, **/.git/**) sigue en pie.
+    fs: {
+      allow: ['..'],
+    },
   },
 })

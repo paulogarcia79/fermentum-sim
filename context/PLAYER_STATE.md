@@ -53,6 +53,7 @@ Ambos tipos de token cuentan **1:1** en la penalización por desperdicio del fin
 * `carpeta_proyectos` (List[Receta]): Recetas investigadas pendientes de iniciar. Límite estricto: Máximo 3 cartas.
 * `archivo_horneado_exitoso` (List[Receta]): Recetas completadas con puntaje positivo. (Gatillo de fin de juego).
 * `archivo_colapsos` (List[Receta]): Recetas sobre-fermentadas retiradas por emergencia con puntaje negativo.
+* `patrocinio` (Optional[PatrocinioCard]): La Carta de Patrocinio repartida a este jugador en el setup (§2), conservada **solo como registro para la interfaz**: la app la revela al arrancar la partida junto con la posición del Día 1 que su `iniciativa` determina, y `OrdenTurnoPanel` explica con ella el orden del Día 1. Ninguna regla la lee después del Día 1 — sus recursos ya están volcados en `reserva_harina`/`reserva_agua`/`monedas`/`datos_investigacion`. `None` en jugadores construidos sin reparto (tests). Es un campo y no un derivado porque, sin él, la carta no se podía reconstruir: `bootstrap.create_game` la desmenuzaba al crear al jugador y solo sobrevivía la permutación del Día 1.
 
 ---
 
@@ -61,8 +62,8 @@ Al iniciar la simulación (Día 1), el setup baraja el mazo de 8 Cartas de Patro
 
 * **Reglas base para todos:** `vitalidad` = **2** (`models.VITALIDAD_INICIAL`), `acidez` = 1, `dados_inoculo` = 3, `puntos_accion` = 0, se entrega 1 Receta "Básica" aleatoria, y `tecnologias_activas` inician en `False`. `datos_investigacion` **ya no es 0 para todos**: lo fija la Carta de Patrocinio (ver tabla abajo).
 
-  La Vitalidad inicial es 2 y no 1 por una razón concreta: el desgaste de la Fase III resta -1 y la Acción A repone +1 una vez al día, así que un jugador que alimenta a diario **orbita en su valor inicial**. Partiendo de 1, la carta «Aletargamiento Invernal» (-2, dos copias en un mazo de 30) lo dejaba en 0 → contaminación inevitable, sin jugada posible que la evitara: no era una decisión mal tomada, era el barajado. Partiendo de 2 la misma carta lo deja en 1, y la contaminación vuelve a castigar lo que debe castigar, que es descuidar el mantenimiento. Ver CLIMATE_LOGIC.md.
-* **Asignación según Carta de Patrocinio** (`reserva_harina`, `reserva_agua`, `monedas` y `datos_investigacion` provienen íntegramente de la carta repartida a ese jugador; tras el despliegue de insumos las cartas vuelven a la caja):
+  La Vitalidad inicial es 2 y no 1 por una razón concreta: el desgaste de la Fase III resta -1 y el escalón barato de la Acción A (10% de harina, ver `models.HARINA_ALIMENTAR`) repone +1 una vez al día, así que un jugador que alimenta a diario **orbita en su valor inicial**; el escalón de +2 (30%) existe, pero la Vitalidad inicial no depende de poder pagarlo. Partiendo de 1, la carta «Aletargamiento Invernal» (-2, dos copias en un mazo de 30) lo dejaba en 0 → contaminación inevitable, sin jugada posible que la evitara: no era una decisión mal tomada, era el barajado. Partiendo de 2 la misma carta lo deja en 1, y la contaminación vuelve a castigar lo que debe castigar, que es descuidar el mantenimiento. Ver CLIMATE_LOGIC.md.
+* **Asignación según Carta de Patrocinio** (`reserva_harina`, `reserva_agua`, `monedas` y `datos_investigacion` provienen íntegramente de la carta repartida a ese jugador; en la mesa física, tras el despliegue de insumos las cartas vuelven a la caja — la simulación la conserva en `Player.patrocinio` únicamente para poder enseñársela al jugador, ver §1):
 
   | Iniciativa | Harina — Tokens (%) | Agua — Tokens (%) | Monedas Iniciales | Datos Iniciales |
   |---|---|---|---|---|

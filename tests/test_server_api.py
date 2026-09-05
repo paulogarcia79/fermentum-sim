@@ -359,3 +359,91 @@ def test_fin_anticipado_por_votacion_y_vuelta_al_lobby() -> None:
     estado = r.json()
     assert estado["environment"]["dia_actual"] == 1
     assert estado["votos_fin_anticipado"] == []
+
+
+def _crear(cliente: TestClient, nombre: str, color: str, **extra: Any) -> Dict[str, Any]:
+    r = cliente.post("/games", json={"nombre": nombre, "color": color, **extra})
+    assert r.status_code == 201, r.text
+    return r.json()
+
+
+def _codigos_listados(cliente: TestClient) -> list:
+    r = cliente.get("/games")
+    assert r.status_code == 200, r.text
+    return [sala["room_id"] for sala in r.json()["salas"]]
+
+
+def test_el_listado_solo_ofrece_salas_a_las_que_se_puede_entrar() -> None:
+    """`GET /games` es lo que ve alguien que llega sin codigo. Cada fila tiene
+    que ser un sitio donde `unirse` vaya a funcionar: una sala llena, una ya
+    empezada o una privada ofrecerian un boton que solo puede fallar."""
+    cliente = _cliente()
+    assert _codigos_listados(cliente) == []
+
+    publica = _crear(cliente, "Alba", "rojo", max_jugadores=3)
+    privada = _crear(cliente, "Nil", "verde", privada=True)
+    llena = _crear(cliente, "Sol", "azul", max_jugadores=1)
+
+    listadas = _codigos_listados(cliente)
+    assert publica["room_id"] in listadas
+    assert privada["room_id"] not in listadas, "una sala privada no se anuncia"
+    assert llena["room_id"] not in listadas, "el host ya ocupa el unico asiento"
+
+    # Al llenarse, desaparece.
+    cliente.post(
+        f"/games/{publica['room_id']}/join", json={"nombre": "Bru", "color": "cian"}
+    )
+    cliente.post(
+        f"/games/{publica['room_id']}/join", json={"nombre": "Cal", "color": "morado"}
+    )
+    assert publica["room_id"] not in _codigos_listados(cliente)
+
+
+def test_una_sala_desaparece_del_listado_al_empezar() -> None:
+    cliente = _cliente()
+    sala = _crear(cliente, "Alba", "rojo", max_jugadores=4)
+    assert sala["room_id"] in _codigos_listados(cliente)
+
+    cliente.post(
+        f"/games/{sala['room_id']}/start", headers={"X-Player-Token": sala["host_token"]}
+    )
+    assert _codigos_listados(cliente) == []
+
+
+def test_el_listado_no_filtra_ningun_token() -> None:
+    """Es una ruta publica: cualquiera puede pedirla. Si se colara un
+    `host_token` o el `token` de un asiento, un desconocido podria iniciar la
+    partida o jugar el turno de otro."""
+    cliente = _cliente()
+    creada = _crear(cliente, "Alba", "rojo", max_jugadores=2)
+
+    crudo = cliente.get("/games").text
+    assert creada["host_token"] not in crudo
+    assert creada["player_token"] not in crudo
+    assert "token" not in crudo
+
+    fila = cliente.get("/games").json()["salas"][0]
+    assert set(fila) == {"room_id", "max_jugadores", "segundos_abierta", "seats"}
+    assert fila["seats"] == [{"player_index": 0, "nombre": "Alba", "color": "rojo"}]
+    assert fila["segundos_abierta"] >= 0
+
+
+def test_privada_tiene_que_ser_booleano() -> None:
+    """Aceptar un valor "veraz" marcaria privada, en silencio, justo la sala que
+    el host queria publica: la cadena "no" es veraz en Python."""
+    cliente = _cliente()
+    r = cliente.post("/games", json={"nombre": "Alba", "color": "rojo", "privada": "no"})
+    assert r.status_code == 400, r.text
+
+    # Omitirlo sigue siendo valido y deja la sala listada.
+    sala = _crear(cliente, "Alba", "rojo")
+    assert sala["room_id"] in _codigos_listados(cliente)
+
+
+def test_ver_sala_informa_de_si_es_privada() -> None:
+    cliente = _cliente()
+    privada = _crear(cliente, "Nil", "verde", privada=True)
+    publica = _crear(cliente, "Alba", "rojo")
+
+    assert cliente.get(f"/games/{privada['room_id']}").json()["privada"] is True
+    assert cliente.get(f"/games/{publica['room_id']}").json()["privada"] is False

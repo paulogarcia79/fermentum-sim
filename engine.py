@@ -1421,10 +1421,12 @@ class GameEngine:
         Un jugador que ejecutó ``pasar_turno`` este día nunca vuelve a ser
         elegible (cede el resto del día, incluidas sus acciones gratuitas
         pendientes). En caso contrario, es elegible si tiene PA disponibles,
-        si aún no ha usado la Acción A, si aún no ha usado las Horas Extras **y
-        puede pagarlas** (la cláusula medía sólo la bandera, así que un jugador
-        sin Datos volvía a la rotación toda la ronda por una acción que no podía
-        permitirse — el resto de cláusulas sí comprueban el bolsillo), si aún
+        si aún no ha usado la Acción A **y puede pagar su escalón barato**
+        (``Player.puede_alimentar``: 10% de un mismo tipo — la cláusula medía
+        sólo la bandera, así que un jugador sin harina volvía a la rotación
+        toda la ronda por una acción que no podía permitirse), si aún no ha
+        usado las Horas Extras **y puede pagarlas** (mismo defecto, misma
+        corrección — el resto de cláusulas sí comprueban el bolsillo), si aún
         puede pagar
         un Pedido de Urgencia (0 PA, sin límite por ronda, sin flag de "ya
         usado" — se autolimita por Datos de Investigación disponibles), si
@@ -1440,7 +1442,7 @@ class GameEngine:
         player = self._players[indice]
         return (
             player.puntos_accion > 0
-            or not player.accion_alimentar_usada
+            or (not player.accion_alimentar_usada and player.puede_alimentar)
             or (
                 not player.horas_extras_usadas
                 and player.datos_investigacion >= DATOS_HORAS_EXTRAS

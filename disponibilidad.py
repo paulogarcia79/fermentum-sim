@@ -44,7 +44,7 @@ from engine import (
     PRECIO_RECETA,
     PRECIO_RECETA_MAZO,
 )
-from models import DATOS_HORAS_EXTRAS, Player, Recipe
+from models import DATOS_HORAS_EXTRAS, HARINA_ALIMENTAR, Player, Recipe
 
 
 def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, Any]]:
@@ -57,8 +57,9 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
     """
     contaminado = player.en_estado_contaminacion
     tiene_pa = player.puntos_accion > 0
+    # Suma entre tipos: la lee la Acción H, que sí acepta harina mezclada. La
+    # Acción A NO la usa (exige un mismo tipo, ver Player.puede_alimentar).
     harina_total = sum(player.reserva_harina.values())
-    tiene_recurso_alimentar = harina_total >= 10 or player.reserva_agua >= 2
     hay_estacion_activa = len(player.masas_activas) > 0
     # Una masa en crecimiento no se puede hornear (la Acción F la rechaza). Se mide
     # contra las zonas EFECTIVAS, igual que ActionManager, para que el botón y la
@@ -112,10 +113,16 @@ def acciones_disponibles(engine: GameEngine, player: Player) -> List[Dict[str, A
             {"id": id_, "habilitada": habilitada, "motivo": "" if habilitada else motivo_si_no}
         )
 
+    # La Acción A se paga SOLO en harina y exige el escalón barato de UN MISMO
+    # tipo — la misma comprobación que hace ActionManager (Player.puede_alimentar).
+    # Hubo aquí un `or reserva_agua >= 2` heredado de cuando la acción tenía una
+    # mitad de agua: encendía la casilla a un jugador sin harina.
     agregar(
         "A",
-        not player.accion_alimentar_usada and tiene_recurso_alimentar,
-        "Ya se usó hoy" if player.accion_alimentar_usada else "Sin harina ni agua suficiente",
+        not player.accion_alimentar_usada and player.puede_alimentar,
+        "Ya se usó hoy"
+        if player.accion_alimentar_usada
+        else f"Sin harina: necesitas {HARINA_ALIMENTAR[1]}% de un mismo tipo",
     )
 
     agregar(

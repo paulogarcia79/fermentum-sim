@@ -110,6 +110,20 @@ export interface Technologies {
   comerciante: boolean
 }
 
+/** models.PatrocinioCard -- la carta repartida en el setup. Solo su
+ * `iniciativa` tiene efecto (fija el orden del Día 1); los recursos ya están
+ * volcados en el jugador cuando llega el primer snapshot. */
+export interface PatrocinioCard {
+  iniciativa: number
+  tipo_harina: TipoHarina
+  /** Porcentaje, como reserva_harina (100 = 1 bolsa = 10 tokens). */
+  harina_pct: number
+  /** Conteo de tokens, como reserva_agua (1 token = 5%). */
+  agua_tokens: number
+  monedas: number
+  datos: number
+}
+
 export interface Player {
   nombre: string
   /** Id de la paleta fija en data/coloresJugador.ts, elegido en el lobby
@@ -128,6 +142,12 @@ export interface Player {
    * harina que no pasa por la Bolsa. Campo de models.Player, llega por
    * serialization.snapshot como cualquier otro. */
   contrato_molino: TipoHarina | null
+  /** Carta de Patrocinio que le tocó en el setup, conservada como registro
+   * para la interfaz (PatrocinioModal.vue la revela al arrancar,
+   * OrdenTurnoPanel.vue explica con ella el orden del Día 1). Campo de
+   * models.Player, llega por serialization.snapshot. `null` solo en tableros
+   * construidos sin reparto (tests). */
+  patrocinio: PatrocinioCard | null
   accion_alimentar_usada: boolean
   reserva_agua: number
   estaciones_fermentacion: (FermentationSlot | null)[]
@@ -257,6 +277,9 @@ export interface GameStateView {
   /** Índices de jugador que confirmaron terminar la partida antes de
    * tiempo -- ver GameView.vue. No hay forma de retirar un voto. */
   votos_fin_anticipado: number[]
+  /** Campo de sala, no de partida: lo usa crearSalaNueva() para que una
+   *  revancha herede la privacidad de la sala que acaba de terminar. */
+  privada: boolean
   /** True si el jugador activo puede deshacer su visita en curso (ya hizo
    * alguna accion gratuita esta visita) -- ver POST /games/{id}/undo y el
    * boton Deshacer en BarraAcciones.vue. */

@@ -240,6 +240,17 @@ class GameSession:
     ``iniciar`` (el host puede empezar con menos jugadores que el
     objetivo, igual que hoy) y sobrevive sin cambios a
     ``reiniciar_a_lobby`` (misma sala, mismo objetivo)."""
+    privada: bool = False
+    """Si es True, la sala no aparece en ``RoomManager.salas_abiertas`` y solo
+    se entra tecleando su codigo. Lo elige el host al crearla y sobrevive sin
+    cambios a ``reiniciar_a_lobby`` (misma sala, misma decision), igual que
+    ``max_jugadores``.
+
+    El defecto es False --listada-- a proposito: con el listado publico, un
+    codigo deja de ser un secreto salvo que el host lo pida. Es la opcion
+    correcta para un servidor entre conocidos, donde el problema real era no
+    poder encontrar una partida abierta; una lista que hay que recordar
+    activar estaria vacia casi siempre."""
     status: RoomStatus = RoomStatus.LOBBY
     seats: List[Seat] = field(default_factory=list)
     engine: Optional[GameEngine] = None
@@ -530,7 +541,11 @@ class RoomManager:
         self._salas: Dict[str, GameSession] = {}
 
     def crear_sala(
-        self, nombre_host: str, color: str, max_jugadores: int = MAX_JUGADORES
+        self,
+        nombre_host: str,
+        color: str,
+        max_jugadores: int = MAX_JUGADORES,
+        privada: bool = False,
     ) -> Tuple[GameSession, Seat]:
         """
         Crea una sala nueva en estado LOBBY con el host como primer asiento.
@@ -546,7 +561,10 @@ class RoomManager:
         _validar_color(color, tomados=[])
         room_id = self._generar_codigo_unico()
         sesion = GameSession(
-            id=room_id, host_token=secrets.token_urlsafe(32), max_jugadores=max_jugadores
+            id=room_id,
+            host_token=secrets.token_urlsafe(32),
+            max_jugadores=max_jugadores,
+            privada=privada,
         )
         asiento = Seat(
             player_index=0, nombre=nombre_host, token=secrets.token_urlsafe(32), color=color
@@ -565,6 +583,30 @@ class RoomManager:
         if sesion is None:
             raise RoomNotFoundError(f"No existe ninguna sala con código {room_id!r}.")
         return sesion
+
+    def salas_abiertas(self) -> List[GameSession]:
+        """
+        Las salas a las que un desconocido puede entrar ahora mismo: en LOBBY,
+        no privadas y con algun asiento libre.
+
+        Los tres filtros son los que hacen que la lista no mienta. Una sala
+        EN_CURSO o TERMINADA rechazaria el join (``unirse`` exige LOBBY), y una
+        llena tambien (``RoomFullError``): ofrecer cualquiera de las dos seria
+        enseñar un boton que solo puede fallar.
+
+        Devuelve las mas recientes primero. Es una lectura pura --no toca
+        ``lock``, igual que ``obtener``--: el diccionario solo se muta desde el
+        hilo del bucle de eventos.
+        """
+        abiertas = [
+            sesion
+            for sesion in self._salas.values()
+            if sesion.status == RoomStatus.LOBBY
+            and not sesion.privada
+            and len(sesion.seats) < sesion.max_jugadores
+        ]
+        abiertas.sort(key=lambda sesion: sesion.creado_en, reverse=True)
+        return abiertas
 
     def unirse(self, room_id: str, nombre: str, color: str) -> Tuple[GameSession, Seat]:
         """

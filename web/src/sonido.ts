@@ -108,6 +108,34 @@ export function reproducirSonido(sonido: Sonido): void {
   }
 }
 
+/**
+ * Aviso de que acaba de aparecer una sala abierta en la portada.
+ *
+ * Vive aqui y no en `data/sonidosAccion.ts` por el mismo motivo que la
+ * fanfarria de fin de partida: esa tabla es un `Record<IdSonido, Sonido>`
+ * exhaustivo sobre los ids de accion del protocolo, y esto no es la accion de
+ * nadie -- es un cambio en la lista de salas que el cliente detecta sondeando.
+ *
+ * Dos decisiones de timbre, ambas por contraste con sonidos que ya existen:
+ *
+ *   - Mas grave y mas flojo que `reproducirNotificacionTurno` (E5-A5 a 0.16 de
+ *     ganancia, contra A5-C#6 a 0.22). "Te toca jugar" es una afirmacion mas
+ *     fuerte que "ha aparecido algo", y si sonaran igual el aviso mas urgente
+ *     del juego perderia su significado.
+ *   - `sine` y no `sawtooth`: la onda de sierra es el timbre de los Protocolos
+ *     de Emergencia (ver SONIDOS_ACCION.H/I), y se leeria como que algo ha
+ *     fallado.
+ *
+ * Suena UNA vez por sondeo aunque aparezcan varias salas a la vez: el
+ * disparador (FormularioSala.vue) llama a esto una sola vez por tanda.
+ */
+export function reproducirAvisoSalaNueva(): void {
+  tocarTonos([
+    { frecuencia: 659.25, retraso: 0, duracion: 0.12, onda: 'sine', ganancia: 0.16 },
+    { frecuencia: 880, retraso: 0.1, duracion: 0.14, onda: 'sine', ganancia: 0.16 },
+  ])
+}
+
 /** Timbre corto de dos tonos (subida rapida) para avisar que llego el turno. */
 export function reproducirNotificacionTurno(retraso = 0): void {
   tocarTonos([

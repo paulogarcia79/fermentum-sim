@@ -488,6 +488,41 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   modal in `web/src/data/preciosPliegues.ts`, following the `preciosHarina.ts` precedent. Tests:
   `tests/test_pliegues_monedas.py`.
 
+  **Acción A (Alimentar) — a +1/+2 ladder, and the tile that lied.** A paid a flat 10% for +1,
+  so «Aletargamiento Invernal» (−2) always netted −1 for a player who did everything right;
+  and `disponibilidad.py` lit the tile on `harina_total >= 10 or reserva_agua >= 2` — the
+  water half a leftover from when A also refreshed with water — so a player with 2 water and
+  no flour saw it enabled and only learned otherwise after Confirmar. Now
+  `models.HARINA_ALIMENTAR = {1: 10, 2: 30}`: one action per day, and in it the player picks
+  +1 for 10% of a **single** type or +2 for 30% mixable across types, every day regardless of
+  climate (the user's call, made with the trade stated: +2 daily is +1 net against the −1
+  decay, so the marginal 20 is the brake, not a cap tied to the card). Four things carry weight:
+  - **The wire is only the flour map** `{harina: {"Blanca": 20, "Centeno": 10}}`, and the
+    points are **derived** from its sum (the rung whose price matches); 20% is rejected. A
+    separate `pasos` would be a second number free to contradict the first — the
+    `reparto`/`PRECIO_PLIEGUES` argument, inverted. Multiples of 10 only, because that is the
+    physical token.
+  - **`accion_alimentar_usada` stays a bool.** Choosing +1 forfeits the +2 for the day, so
+    no counter, no persisted-shape change, **no `VERSION_FORMATO` bump**, and the bot still
+    sends `{tipo: 10}` so the golden snapshot passed **unregenerated** — the proof the refactor
+    is behaviour-preserving on the old path.
+  - **`Player.puede_alimentar` (≥10% of one type) is the one predicate** read by the action,
+    `disponibilidad.py` and `engine._jugador_elegible`, which had the same bare-flag looseness
+    as the Horas Extras clause once had: a flourless player stayed in the rotation all round
+    for an action they could not take. 5%+5% across two types is not enough. The constant
+    lives in `models`, not `actions`, because engine reads it (the `AMPLIACION_OPTIMA_MODULO`
+    precedent). Acción H keeps summing across types — that is its own rule.
+  - **`_frase_accion` keeps the exact old sentence for the common case** ("Alimentó el cultivo
+    con Blanca", pinned by `test_registro_acciones`) and names quantities and yield otherwise.
+
+  `web/src/data/alimentar.ts` mirrors the ladder (the `preciosPliegues.ts` precedent);
+  `ModalA.vue` is a rung radio plus one token stepper per flour type with a greedy default
+  reparto, the `ModalE` pattern; the projection line uses `vitalidad_prevista - vitalidad` as
+  the night's decay, so no climate rule is mirrored. `climaTexto.ts` names the counter-move on
+  the Aletargamiento card. Tests: `tests/test_alimentar_escalones.py`, plus
+  `test_reglamento_al_dia.py::test_alimentar_cultivo_tiene_dos_escalones` (verified by mutation
+  on both documents — a changed figure and a deleted `.html` row).
+
   **Pedido de Urgencia — both parcels are fixed, and the water one wasn't.** The action took
   `agua_tokens_urgencia: int` with no upper bound, forwarded verbatim by `server/commands.py` from
   a bare `<input type="number" min="1">`. Flour had been pinned at `HARINA_PEDIDO_URGENCIA = 50`
@@ -1476,6 +1511,218 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   they exist so an automatic collapse can't go unseen — and hidden chips carry no "something
   changed" badge, since the state view is refetched wholesale and a per-panel diff would be a
   feature of its own.
+
+  **El reglamento dentro de la app (`ReglamentoView.vue` + `data/reglamento.ts`) — the rules are
+  imported, never rewritten.** The client never mentioned that a rulebook exists: `RULEBOOK.html`
+  sat in the repo root, the backend serves no static files, and nothing linked to it. Writing a
+  "cómo se juega" page in Vue would have created a **fifth** rules surface free to contradict the
+  other four (see "Every rules change MUST update the rulebooks") and the only one no test reads.
+  Instead `data/reglamento.ts` does `import html from '../../../RULEBOOK.html?raw'`, `DOMParser`s
+  it **once at module load**, keeps `main.innerHTML`, and throws away the file's own `<style>`,
+  masthead, rail and footer; `ReglamentoView.vue` renders that with `v-html` and repaints ~20
+  rulebook classes onto the board tokens. A rule now reaches players by editing the reglamento,
+  which is mandatory anyway. `v-html` needs no sanitising and a comment says why: it is a repo
+  file inlined at build time, the same trust level as the source tree. Six things carry weight:
+  - **The `?raw` import needs `server.fs.allow: ['..']`, and its failure mode is the nasty kind.**
+    Vite's workspace root resolves to `web/` (the repo root has no `pnpm-workspace.yaml`, no
+    `lerna.json`, no `workspaces`, and `.git` does not count), and it re-checks `?raw` ids against
+    that allow-list *even for a static import* — so **`vite build` works and `npm run dev` returns
+    403**. The entry must be a **directory**: the second check runs with `?raw` still glued to the
+    id, so a single-file entry never matches (`"…/RULEBOOK.html"` ≠ `"…/RULEBOOK.html?raw"`).
+  - **The component is deliberately NOT `scoped`.** Its root is a `<Teleport>`, and Vue does not
+    stamp `data-v-*` on teleported content, so in `modo="superpuesto"` **none** of the scoped CSS
+    applied — the overlay rendered unpositioned and shoved the board down. Page mode looked
+    perfect throughout, because there the teleport is disabled, which is exactly what made it easy
+    to miss. Every selector in that file therefore hangs off `.reglamento`, and that is
+    load-bearing rather than tidy: bare `.cuerpo` and `.cerrar` would collide with `GameView.vue`
+    and `ModalShell.vue`.
+  - **Two hosts, one component.** `modo="pagina"` is `App.vue`'s third branch, driven by
+    `location.hash` (`#reglamento`, or `#reglamento/s7` to deep-link a section) with a **single**
+    `hashchange` listener — adding `popstate` too would double-fire. No `vue-router`, matching the
+    existing `?sala=` precedent, so `vue` stays the only runtime dependency.
+    `modo="superpuesto"` is a full-screen `role="dialog"` opened from GameView's header that
+    leaves the board mounted, so consulting a rule costs neither a panel's scroll position nor an
+    open tooltip. **A live game beats the hash**: `enPartida` is checked first.
+  - **In-content links are rewritten at parse time to `#reglamento/<id>`, but clicks are
+    intercepted.** The rewrite is what makes copying or middle-clicking a link work; letting the
+    click navigate would fire App's `hashchange` and, mid-game, rewrite the URL of a partida in
+    progress. Overlay mode never touches the URL at all. Modified clicks (ctrl/cmd/shift) are
+    left alone. The body holds 45 internal links and two of them point at an `h3` id, so the
+    scheme accepts any id, not just `s\d+`.
+  - **The TOC is rebuilt from `section.rule`, not copied from the file's `<nav class="rail">`.**
+    A Vue `v-for` gets `@click`, `aria-current` and the `<details>` collapse as ordinary template
+    code instead of DOM surgery on a `v-html` subtree, and it cannot drift from the sections that
+    actually exist. The rail stays in the file for the standalone `file://` page.
+  - **Both hosts use `defineAsyncComponent`**, so the ~84 KB of rulebook HTML rides its own chunk
+    (≈30 KB gzipped) instead of the boot bundle, fetched on first open with no hand-rolled
+    loading state. Lazily importing the raw string alone would add state for no gain.
+
+  Accessibility of the overlay follows the existing modals: focus moves to the ✕ on open and is
+  restored on close, Escape closes (the `Tooltip.vue` precedent), body scroll is locked, and
+  `scroll-behavior: smooth` is turned off under `prefers-reduced-motion` — the global rule in
+  `App.vue` only zeroes transitions and animations, so a JS/CSS smooth scroll falls outside that
+  net and is the one place the preference must be handled by hand. Careful with the focus
+  capture: it happens in the **setup body**, before the component moves focus itself, or it saves
+  an element inside the overlay that is destroyed on close and the focus lands on `<body>`.
+
+  This is not a rules change, so `context/*.md` and the reglamento's *content* are untouched —
+  only the two maintenance comments, which claimed no test reads those files. Tests:
+  `tests/test_reglamento_al_dia.py::test_el_html_tiene_la_estructura_que_la_app_renderiza` pins
+  the structure the client parses (exactly one `<main>`, `s1..s12` in order with their printed
+  ordinals, the rail agreeing, unique ids, no dangling internal link, and no
+  `<script>`/`<style>`/`on*` inside `<main>`). It strips HTML comments first, the way a browser
+  does — without that, a maintenance note that merely *mentions* `<main>` counts as a second tag,
+  which is exactly how the test first failed. Verified by mutation: renaming a section id,
+  removing `<main>`, and breaking an internal link each fail it. A break there leaves the in-game
+  rulebook empty while the standalone file still opens perfectly, and nothing under `web/` would
+  notice.
+
+  **Portada y sala de espera — the pre-game screens.** `LobbyView.vue` was one 577-line component
+  holding both the landing and the waiting room, clamped to 480px inside a shell that allows
+  1100px, whose only art was a 🍞 in the `h1` and three emoji bullets, and whose single form gave
+  "Crear sala" and "Unirse a sala" identical weight. It is now a three-line switch over
+  `LandingView.vue` and `SalaEsperaView.vue`, with `FormularioSala.vue` and `TarjetasFases.vue`
+  beside them. Four things carry weight:
+  - **The invite-link ordering bug is the lesson to carry to the next component split.** Children
+    mount **before** the parent's `onMounted`, so reading `?sala=` there left `FormularioSala`
+    already set up with a null prop: the invite link opened the "Crear sala" tab with an empty
+    code field. It is read in `LobbyView`'s **setup body** instead. The 577-line monolith could
+    not have this bug; splitting it created it, and it is invisible to every test in the repo
+    because nothing under `web/` is tested automatically.
+  - **Copy lives in `web/src/data/copyLanding.ts`, and it holds no rule numbers.** No prices, no
+    PA, no thresholds, no deck sizes — the only figure is "1–4 jugadores", a property of the
+    product (`server/sessions.py:MAX_JUGADORES`) rather than a rule. A number on the portada would
+    be a sixth copy nobody checks, and `test_reglamento_al_dia.py` cannot see this file. Voice is
+    second person and gender-neutral (the old text said "investigadora jefa"), with the descriptor
+    and the spec strip in third person as the box-back. `web/src/data/salas.ts` mirrors
+    `UMBRAL_LIMPIEZA_LOBBY_SEGUNDOS` so the waiting room can say a room expires — until now it
+    simply stopped existing with no warning, which is the kind of thing you only discover by
+    leaving a lobby open over lunch.
+  - **One primary action on screen at a time.** `FormularioSala.vue` replaces the "Crear … o …
+    Unirse" stack with a segmented control; name and colour are shared, and only the selected
+    mode's fields render. Typing a full code live-previews the room over the public
+    `GET /games/{id}` (seats, count, and greying the colours already taken), and says which of
+    "no existe" / "ya empezó" it is — three situations the old single error line conflated. Colour
+    selection carries a **check glyph**, not just a ring: a selector *of colours* cannot signal
+    its state with colour alone. Errors sit under the field they belong to rather than in one
+    shared line at the bottom.
+  - **`SalaEsperaView.vue` draws `max_jugadores` cells, filled or dashed-empty**, so "faltan dos"
+    is visible without reading a counter, and the room code is `--fuente-dato` at display size
+    because it is the one string that gets dictated aloud. `TarjetasFases.vue` is one component
+    used by **both** screens deliberately: what you read while waiting is the same thing that
+    explained the game before you joined, not a second wording free to drift.
+
+  Not a rules change, so `context/*.md` and the rulebooks are untouched. `web/` has no automated
+  tests (`vue-tsc -b` + a clean build is the whole check), so all of this was verified in a real
+  browser: the two-column landing collapsing to form-first under 720px, create → waiting room →
+  join from a second session → seat appearing within the 1.5 s poll → start, plus the three
+  code-field states and the per-field validation.
+
+  **Salas abiertas (`GET /games`) — the listing, and the privacy trade it makes.** The only way
+  into a room was being told its six-letter code out of band, so someone opening the site without
+  an invite met an empty code field and no way forward. `RoomManager.salas_abiertas()` returns
+  the rooms a stranger can actually enter and `GET /games` publishes them; `SalasAbiertas.vue`
+  renders them above the code field. Five things carry weight:
+  - **Listed by default, with a "Sala privada" opt-out — and that means a code is no longer a
+    secret unless the host asks.** Stated rather than buried, because it is a real change in what
+    the code protects. The alternative (opt-in "Sala pública") was rejected for being empty in
+    practice: a list you have to remember to switch on is a list nobody sees. `GameSession.privada`
+    survives `reiniciar_a_lobby` like `max_jugadores`, and `views.py` ships it so
+    `store.ts:crearSalaNueva` makes a **rematch inherit the privacy** — otherwise a private
+    group's next game would quietly appear on the front page.
+  - **The three filters are what stop the list from lying.** LOBBY, not private, and a free seat:
+    `unirse` rejects a started room and a full one, so listing either would be offering a button
+    that can only fail. `test_el_listado_solo_ofrece_salas_a_las_que_se_puede_entrar` covers all
+    three, verified by mutation (dropping any one filter fails it).
+  - **The route ships no tokens, and a test asserts the exact key set.** It is public, so a
+    leaked `host_token` would let a stranger start someone's game and a leaked `Seat.token` would
+    let them play another person's turn. `test_el_listado_no_filtra_ningun_token` greps the raw
+    body for both and pins `{room_id, max_jugadores, segundos_abierta, seats}` — a whitelist, so
+    a future field has to be added deliberately.
+  - **`segundos_abierta` is computed server-side rather than shipping `creado_en`.** The client
+    only wants to say "hace 3 min", and subtracting two different clocks gives nonsense as soon
+    as one of them drifts. Same reasoning as `vitalidad_prevista` and `renta_diaria`.
+  - **The poll lives in `FormularioSala`, not in `SalasAbiertas`.** The panel unmounts with the
+    Crear/Unirse tab, but the count rides in the *tab label* ("Unirse · 2") precisely so someone
+    on Crear learns rooms are waiting without switching — putting the interval in the panel would
+    switch off exactly the counter that makes the feature discoverable. 3 s interval, cleared in
+    `onUnmounted`, the `SalaEsperaView` precedent. A failed poll leaves the previous list alone:
+    it is supporting information, not worth an error banner over the form.
+
+  `_requerir_privada` demands a real `bool` rather than a truthy value, because the string
+  `"no"` is truthy in Python and would mark private exactly the room the host wanted public.
+  `VERSION_FORMATO` went to 19: a restored pickle without the attribute would break the whole
+  listing route, not just its own row (`tests/test_robustness.py::test_privada_sobrevive_al_viaje_por_disco`).
+  Tests: the five cases in `tests/test_server_api.py` plus that round-trip.
+
+  **Aviso de sala nueva — four channels, because no single one reaches everybody.** A row quietly
+  appearing in that list is easy to miss, and the player most likely to be waiting for a room is
+  the one who tabbed away. Detection is a set difference over room ids in `refrescarSalas()`, and
+  it fires: a short sound, a copper wash + "nueva" chip on the row for 6 s, a pulse on the tab
+  badge, and the open-room count in `document.title`. Four things carry weight:
+  - **Seed the first poll, never announce it.** Rooms that already existed when the page loaded
+    are not an event; announcing them on load would confuse "this just happened" with "this was
+    already here". It is the same rule `store.ts` applies to the turn chime and the endgame
+    fanfare through `sembrarEstadoSinSonido` — a reconnect is not a live transition.
+  - **The title is the only channel that reaches a background tab, and the sound is the one that
+    may never work.** `sonido.ts` has no `AudioContext` until the first `pointerdown` in the tab
+    (`habilitarAudio`, wired in `App.vue`), so a player who opened the landing and never clicked
+    gets silence and a `console.debug` line — by design, not a bug. The title badge and the row
+    highlight exist precisely to cover that player, which is why this is four channels and not
+    just a ding.
+  - **The sound came with a mute button, and that was not optional.** The only sound toggle lived
+    in `GameView`'s header, i.e. nowhere near the landing. Making a screen emit sound with no
+    visible way to silence it is the worse of the two failure modes, so `SalasAbiertas.vue`'s
+    header carries one, writing the same durable `store.preferencias.sonido` through
+    `establecerSonido`. Muting silences only the audio: the row, the badge and the title still
+    announce, since they were never the intrusive part.
+  - **One sound per poll, not per room**, or three rooms appearing together would chain three
+    dings and read as an error. The timbre is E5→A5 at 0.16 gain, deliberately lower and quieter
+    than the turn chime (A5→C#6 at 0.22): "it's your move" is a stronger claim than "something
+    appeared", and if they sounded alike the more urgent one would lose its meaning. `sine`, not
+    the `sawtooth` of the Emergencia protocols, which reads as "something failed".
+
+  Both animations are `@keyframes`, so the global `prefers-reduced-motion` rule in `App.vue`
+  clamps them for free (the `ConfetiPanes.vue` precedent) — and because the row's copper border
+  and its chip are *not* animated, a reduced-motion player still gets the cue after the wash is
+  clamped away. `reproducirAvisoSalaNueva` lives in `sonido.ts` beside the endgame sounds rather
+  than in `data/sonidosAccion.ts`, whose exhaustive `Record<IdSonido, Sonido>` is keyed by wire
+  action ids this is not. Nothing persisted changed shape: no `VERSION_FORMATO` bump.
+
+  **Revelación del Patrocinio — the card survives the deal, so the app can show it.** The
+  reglamento deals a Patrocinio card face down, reveals all of them at once and orders Día 1 by
+  their Iniciativa; in the app none of that was visible, because `bootstrap.create_game` splatted
+  the card into `Player.crear_dia_1` and kept only the permutation. A player started with
+  resources they could not explain, in a position `OrdenTurnoPanel` attributed to a "Jefatura
+  libre" nobody could have claimed. Now `Player.patrocinio: Optional[PatrocinioCard]` keeps the
+  card, and `PatrocinioModal.vue` reveals it first thing. Four things carry weight:
+  - **It is a `Player` field, not a view injection, because there is nothing to inject from.**
+    `views.py` injects derived values (`renta_diaria`, `vitalidad_prevista`); the card is not
+    derivable, it is *destroyed* at deal time. Being a frozen dataclass nested in a field it
+    rides `serialization.snapshot` and the pickle for free, hence **`VERSION_FORMATO` 20** and a
+    regenerated golden snapshot whose diff is exactly one `patrocinio` key per player (verified
+    by stripping the key and comparing against the old file). No rule reads it after Día 1; the
+    physical rule "the cards go back to the box" still holds for the *game*, and
+    `PLAYER_STATE.md` says so.
+  - **It goes ahead of `InicioDiaModal` in `GameView.vue`'s chain.** Both flags light up in the
+    same first snapshot (Fase I has already run when `/start` returns, see
+    `RoomManager.iniciar`), and the reveal is the only ordering where "what you have" precedes
+    "what the weather does to it". The Día-1 position is read off `turno_orden`, not recomputed
+    by sorting initiatives client-side — the engine already applied that rule.
+  - **Once per tab per game, and deliberately not seeded on reconnect.** `store.ts`'s
+    `patrocinioMostrado` follows `ultimaCartaClimaId`, not `jugadorEnTurnoAnterior`: a reload on
+    Día 1 re-shows the reveal, since it is "your starting situation" rather than a transition you
+    missed. Reset in both `cerrarSesion()` and `volverAVistaDeLobby()`, so a rematch shows it
+    again, and gated on `dia_actual === 1` so it never fires later.
+  - **`OrdenTurnoPanel` gets a Día-1 mode.** Each row carries its card's initiative and the note
+    says the order came from the cards; the claim-the-Jefatura note still wins when someone has
+    actually claimed it, which can happen on Día 1.
+
+  The same commit fixed two stale doc lines in this exact area: `models.py`'s `crear_dia_1`
+  docstring still claimed Datos were always 0, and `RULEBOOK.html`'s setup callout said
+  "Vitalidad 1, 0 Datos" while the `.md` twin was right — prose `test_reglamento_al_dia.py` cannot
+  see. Tests: `tests/test_patrocinio.py` (the deal-to-player mapping had never been asserted),
+  plus a disk round-trip in `tests/test_robustness.py`.
 
 ### Error handling
 
