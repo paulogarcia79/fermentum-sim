@@ -2,6 +2,7 @@
 // fuente única de verdad, adaptada de context/ACTIONS_REGISTRY.md. También
 // se reutilizan como el texto de los ModalConfirmacion de H/I/horas_extras
 // en vez de mantener una segunda copia escrita a mano.
+import { HARINA_ALIMENTAR } from './alimentar'
 import { AGUA_PEDIDO_URGENCIA_TOKENS, HARINA_PEDIDO_URGENCIA_PCT } from './pedidoUrgencia'
 import { MAX_DATOS_PONENCIA, PRECIO_DATO_SIMPOSIO } from './datosSimposio'
 import { PRECIO_RECETA_MAZO } from './preciosReceta'
@@ -40,7 +41,7 @@ export type IdAccion =
 export type IdMovimiento = IdAccion | 'pasar' | 'deshacer' | 'pase_forzado'
 
 export const descripcionesAcciones: Record<IdAccion, string> = {
-  A: 'Gratis, una vez por día. Resta 1 token de Harina (10%, cualquier tipo) por +1 Vitalidad (máx. 6). Repone exactamente el -1 que el desgaste metabólico quita cada noche. Ya no toca la Acidez: eso es ahora la acción «Descarte».',
+  A: `Gratis, una vez por día. ${fmtHarina(HARINA_ALIMENTAR[1])} de un mismo tipo por +1 Vitalidad, o ${fmtHarina(HARINA_ALIMENTAR[2])} (de un tipo o mezclados) por +2 (máx. 6). El +1 repone exactamente el -1 que el desgaste metabólico quita cada noche; el +2 contrarresta el -2 de Aletargamiento Invernal o sube un punto neto pagando la prima. Ya no toca la Acidez: eso es ahora la acción «Descarte».`,
   B: 'Consume 10 tokens de Harina de un tipo (100%, una bolsa entera) + los tokens de Agua exactos que pida la receta (1 token = 5% de hidratación). Sella tu Vitalidad (dado de inóculo) y, si tu Acidez cae en el rango de bono de la receta, también tu Acidez.',
   C: 'Compra y/o vende Harina (Blanca, Integral o Centeno) contra el visor de precio compartido de la Bolsa de Harinas, y/o compra un lote de Agua al precio de la temperatura actual (los lotes son de 2 tokens (10%), 6 (30%), 12 (60%) o 20 (100%)). Cada compra o venta de harina mueve una bolsa entera de 10 tokens (100%) o media bolsa de 5 (50%); la media cuesta la mitad del precio visible redondeando hacia arriba al comprar y hacia abajo al vender, y mueve el visor una casilla igual que una bolsa entera. Puedes combinar varias transacciones en la misma visita, pero como máximo una por tipo de recurso (no puedes comprar y vender la misma harina, ni comprar dos veces). Aquí se firma también el Contrato con el Molino: un pago único (Blanca 3, Integral 4, Centeno 6 Monedas) por el que el molino te entrega 2 tokens (20%) de esa harina cada Fase III, para siempre y sin mover el visor. Uno solo por partida, sin cambio ni cancelación; se amortiza a la cuarta noche. Es la única harina que no compras, y por eso la única que puedes vender sin haberla pagado antes al precio de la Bolsa.',
   D: 'Gasta Datos de Investigación en una mejora permanente de laboratorio: Incubadora (3 Datos, ajusta la temperatura local ±5°C), Cámara B (4 Datos, desbloquea Estación 03 y mejora Pliegues), Módulo Analítico (4 Datos, ensancha la Zona Óptima una casilla por lado —y retrasa el colapso con ella—, y sube el horneado óptimo a 2 Datos, 3 en el centro exacto) o Criopreservación (2 Datos, ignora el desgaste metabólico de Vitalidad en Fase III). Cada mejora solo puede instalarse una vez, pero puedes llegar a instalar varias distintas a lo largo de la partida. Ninguna mejora desbloquea recetas: ninguna carta está restringida por tecnología.',

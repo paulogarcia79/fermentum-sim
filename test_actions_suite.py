@@ -75,24 +75,24 @@ p1.puntos_accion = 2
 p1.accion_alimentar_usada = False
 v0, a0 = p1.vitalidad, p1.acidez
 
-manager.accion_A_alimentar(p1, tipo_harina="Blanca")
+manager.accion_A_alimentar(p1, harina={"Blanca": 10})
 check("A: +1 vit", lambda: None if p1.vitalidad == v0 + 1 else (_ for _ in ()).throw(AssertionError()))
 # La Accion A ya NO toca la Acidez: todo el control voluntario vive en «Descarte».
 check("A: no toca acidez", lambda: None if p1.acidez == a0 else (_ for _ in ()).throw(AssertionError()))
 
-xraises(InvalidActionError, "A doble uso en mismo dia", lambda: manager.accion_A_alimentar(p1, tipo_harina="Blanca"))
+xraises(InvalidActionError, "A doble uso en mismo dia", lambda: manager.accion_A_alimentar(p1, harina={"Blanca": 10}))
 
 p1.accion_alimentar_usada = False
 xraises(InvalidActionError, "A sin tipo de harina", lambda: manager.accion_A_alimentar(p1))
 
 # Accion A es gratuita (0 PA, ACTIONS_REGISTRY.md SS3) -- debe funcionar incluso sin PA.
 p1.puntos_accion = 0
-manager.accion_A_alimentar(p1, tipo_harina="Blanca")
+manager.accion_A_alimentar(p1, harina={"Blanca": 10})
 check("A funciona con 0 PA (accion gratuita)", lambda: None if p1.accion_alimentar_usada else (_ for _ in ()).throw(AssertionError()))
 
 p1.accion_alimentar_usada = False
 p1.reserva_harina["Blanca"] = 0
-xraises(MissingResourceError, "A harina insuficiente", lambda: manager.accion_A_alimentar(p1, tipo_harina="Blanca"))
+xraises(MissingResourceError, "A harina insuficiente", lambda: manager.accion_A_alimentar(p1, harina={"Blanca": 10}))
 p1.reserva_harina["Blanca"] = 100
 
 # ========================================================================

@@ -3,6 +3,7 @@
 // CartaClima.vue (recuadro de efecto en la carta) y InicioDiaModal.vue
 // (lista de detalle), para que ambos usen exactamente la misma redaccion.
 import type { ClimateCard } from './types'
+import { HARINA_ALIMENTAR } from './data/alimentar'
 
 export function efectoBiologicoTexto(carta: ClimateCard): string | null {
   switch (carta.efecto_biologico) {
@@ -20,7 +21,10 @@ export function efectoPasivoTexto(carta: ClimateCard): string | null {
     case 'Alta Humedad':
       return 'Iniciar Receta (Acción B) cuesta 1 token de Agua menos hoy (−5% de hidratación).'
     case 'Aletargamiento Invernal':
-      return 'Al final del día, el cultivo base de cada jugador pierde 2 de Vitalidad en vez de 1.'
+      return (
+        'Al final del día, el cultivo base de cada jugador pierde 2 de Vitalidad en vez de 1. ' +
+        `Alimentar el Cultivo puede reponer +2 por ${HARINA_ALIMENTAR[2]}% de harina.`
+      )
     default:
       return null
   }

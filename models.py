@@ -132,12 +132,33 @@ VITALIDAD_INICIAL: int = 2
 Vitalidad del cultivo base de todo jugador al empezar la partida (PLAYER_STATE.md §2).
 
 Es 2 y no 1 por una razón concreta: el desgaste metabólico de la Fase III resta -1 y
-la Acción A repone +1 una vez al día, de modo que un jugador que alimenta a diario
-ORBITA en su valor inicial. Partiendo de 1, la carta «Aletargamiento Invernal» (-2, dos
-copias en un mazo de 30) lo dejaba en 0 -> contaminación inevitable, sin jugada posible
-que la evitara: no era una decisión mal tomada, era el barajado. Partiendo de 2 la misma
-carta lo deja en 1, y la contaminación vuelve a castigar lo que debe castigar, que es
-descuidar el mantenimiento. Ver CLIMATE_LOGIC.md.
+el escalón barato de la Acción A repone +1 una vez al día, de modo que un jugador que
+alimenta a diario ORBITA en su valor inicial. Partiendo de 1, la carta «Aletargamiento
+Invernal» (-2, dos copias en un mazo de 30) lo dejaba en 0 -> contaminación inevitable,
+sin jugada posible que la evitara: no era una decisión mal tomada, era el barajado.
+Partiendo de 2 la misma carta lo deja en 1, y la contaminación vuelve a castigar lo que
+debe castigar, que es descuidar el mantenimiento. El escalón de +2 (ver
+``HARINA_ALIMENTAR``) permite además contrarrestar esa carta pagando harina, pero la
+Vitalidad inicial no cuenta con él: quien no pueda pagarlo sigue sobreviviendo desde 2.
+Ver CLIMATE_LOGIC.md.
+"""
+
+HARINA_ALIMENTAR: Dict[int, int] = {1: 10, 2: 30}
+"""
+Acción A (Alimentar el Cultivo): Vitalidad ganada -> harina gastada, en porcentaje
+(ACTIONS_REGISTRY.md §3). Una sola acción al día, y en ella el jugador elige el escalón.
+
+Escalera creciente al margen (10 y luego 20 por el segundo punto), no un precio plano:
+el escalón de +2 es lo que deja contrarrestar el -2 de «Aletargamiento Invernal», y con
++1 neto al día contra el desgaste estándar es también el camino a la inmunidad frente a
+la contaminación, así que el freno es el precio. La harina puede ser de un solo tipo o
+mezclada (siempre en múltiplos de 10, que es el token físico). La cantidad de puntos se
+DERIVA de la suma de harina entregada, igual que ``PRECIO_PLIEGUES`` deriva el precio
+de la suma del reparto: un ``pasos`` aparte sería un segundo número libre de contradecir
+al primero.
+
+Vive en ``models`` y no en ``actions`` porque ``engine._jugador_elegible`` lo lee y
+``engine`` no puede importar ``actions`` (mismo motivo que ``AMPLIACION_OPTIMA_MODULO``).
 """
 
 DATOS_HORAS_EXTRAS: int = 1
@@ -1218,6 +1239,21 @@ class Player:
         Extras dentro del turno es indiferente.
         """
         return self.horas_extras_usadas and self.espacio_repetido_hoy is None
+
+    @property
+    def puede_alimentar(self) -> bool:
+        """
+        True si el jugador puede pagar el escalón más barato de la Acción A:
+        al menos ``HARINA_ALIMENTAR[1]`` de UN MISMO tipo de harina.
+
+        Es la comprobación que ``ActionManager.accion_A_alimentar`` hace de
+        verdad, y la comparten ``engine._jugador_elegible`` (para no mantener en
+        la rotación a quien no puede alimentar) y ``disponibilidad.py`` (para
+        que la casilla no mienta). Un jugador con 5% + 5% en dos tipos no
+        puede alimentar aunque sume 10. Es un ``@property``, así que
+        ``dataclasses.asdict`` no lo serializa y el snapshot dorado no se mueve.
+        """
+        return any(cant >= HARINA_ALIMENTAR[1] for cant in self.reserva_harina.values())
 
     @property
     def indice_estacion_disponible(self) -> Optional[int]:

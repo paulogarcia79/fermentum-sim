@@ -145,8 +145,12 @@
 
 ### A. Mantenimiento del Cultivo (Alimentación)
 * **Costo:** 0 PA.
-* **Límite:** 1 vez por ronda (valida `accion_alimentar_usada == False`).
-* **Efecto:** Restar **1 Token de Harina — 1 (10%)** (de cualquier tipo) = **+1 Vitalidad** (Máx 6). Repone exactamente el -1 del desgaste metabólico de Fase III, de modo que quien alimenta a diario orbita su Vitalidad inicial.
+* **Límite:** 1 vez por ronda (valida `accion_alimentar_usada == False`). En esa única acción el jugador elige el escalón; elegir +1 renuncia al +2 por ese día.
+* **Efecto:** escalera `models.HARINA_ALIMENTAR = {1: 10, 2: 30}` (Vitalidad ganada → harina gastada, en %), siempre con tope 6:
+  * **10%** (1 token) **de un mismo tipo** = **+1 Vitalidad**. Repone exactamente el -1 del desgaste metabólico de Fase III, de modo que quien alimenta a diario orbita su Vitalidad inicial.
+  * **30%** (3 tokens), **de un tipo o mezclados** = **+2 Vitalidad**. Creciente al margen (el segundo punto cuesta 20): es lo que contrarresta el -2 de «Aletargamiento Invernal», o compra +1 neto al día pagando la prima; el freno es el precio.
+* **Wire / firma:** `accion_A_alimentar(player, harina={tipo: pct})`. La harina viaja como un reparto en múltiplos de 10; los puntos se **derivan** de la suma (el escalón cuyo precio coincide) y una suma que no sea escalón (p. ej. 20) se rechaza con `InvalidActionError`. No hay un `pasos` aparte: sería un segundo número libre de contradecir al reparto (el argumento de `PRECIO_PLIEGUES`, invertido). Un faltante nombra **todos** los tipos que faltan.
+* **Disponibilidad:** `Player.puede_alimentar` (≥10% de un mismo tipo) es lo que consultan `disponibilidad.py` y `engine._jugador_elegible`; 5% + 5% en dos tipos no vale, y el agua no participa (hubo un `or reserva_agua >= 2` heredado de la mitad de agua retirada que encendía la casilla sin harina).
 * **Ya NO toca la Acidez.** Tuvo una mitad de agua que daba +1 Acidez, pero mientras la Acidez sólo sabía subir esa mitad era un trinquete — y encima uno que convenía accionar siempre, porque la Madurez premiaba el nivel bruto. Todo el control voluntario de la Acidez vive ahora en la acción **Descarte**, abajo; la Acción A quedó reducida a lo único que hacía sin ambigüedad.
 
 ### Descarte (Refresco del Cultivo)

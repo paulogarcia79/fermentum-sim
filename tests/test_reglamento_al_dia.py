@@ -66,6 +66,7 @@ from models import (
     COPIAS_POR_GRADO,
     DATOS_HORAS_EXTRAS,
     Grado,
+    HARINA_ALIMENTAR,
     PATROCINIO_CATALOG,
     Player,
     RECIPE_CATALOG,
@@ -628,6 +629,30 @@ def test_coste_del_protocolo_h(docs, doc) -> None:
 # imprimen SIEMPRE la notacion canonica `N (P%)`, asi que el test necesita el
 # factor para construir la cifra que deberia leerse.
 PCT_POR_TOKEN_AGUA = 5
+
+
+@AMBOS
+def test_alimentar_cultivo_tiene_dos_escalones(docs, doc) -> None:
+    """La Accion A se paga en harina segun HARINA_ALIMENTAR (10% = +1, 30% = +2).
+
+    Los dos escalones son reglas de balance: el barato es lo que hace que quien
+    alimenta a diario orbite su Vitalidad inicial (la razon de VITALIDAD_INICIAL),
+    y el caro es el freno — creciente al margen — de un +1 neto al dia. Se exige
+    cada pareja `P%` / `+N` dentro de la seccion de la accion, y que la seccion
+    no siga anunciando el limite viejo de un unico token.
+    """
+    bloque = _normalizar(_seccion(docs[doc], "Alimentar el Cultivo", largo=1500))
+
+    for puntos, pct in HARINA_ALIMENTAR.items():
+        assert f"({pct}%)" in bloque, (
+            f"{doc}: Alimentar el Cultivo deberia cobrar {pct}% por +{puntos} Vitalidad"
+        )
+        assert f"+{puntos} Vitalidad" in bloque, (
+            f"{doc}: Alimentar el Cultivo deberia anunciar el escalon de +{puntos} Vitalidad"
+        )
+    assert "cualquier tipo" not in bloque, (
+        f"{doc}: el escalon de +1 exige un MISMO tipo de harina, no «cualquier tipo»"
+    )
 
 
 @AMBOS

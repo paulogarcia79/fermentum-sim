@@ -81,7 +81,7 @@ def _accion(cliente, room_id, token, accion, params=None):
 
 
 def _alimentar(cliente, room_id, token):
-    return _accion(cliente, room_id, token, "A", {"tipo_harina": "Blanca"})
+    return _accion(cliente, room_id, token, "A", {"harina": {"Blanca": 10}})
 
 
 def _ids(sesion) -> List[str]:
@@ -116,7 +116,7 @@ def test_accion_rechazada_no_agrega_nada() -> None:
     cliente, room_id, tokens, sesion = _partida_2p()
     token = _token_en_turno(cliente, room_id, tokens)
 
-    r = _accion(cliente, room_id, token, "A", {"tipo_harina": "Trigo Sarraceno"})
+    r = _accion(cliente, room_id, token, "A", {"harina": {"Trigo Sarraceno": 10}})
 
     assert r.status_code >= 400
     assert sesion.registro_acciones == []

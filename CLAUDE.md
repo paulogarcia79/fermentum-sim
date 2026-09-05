@@ -488,6 +488,41 @@ Strict separation enforced by `context/ARCHITECTURE.md`, and followed by the fou
   modal in `web/src/data/preciosPliegues.ts`, following the `preciosHarina.ts` precedent. Tests:
   `tests/test_pliegues_monedas.py`.
 
+  **Acción A (Alimentar) — a +1/+2 ladder, and the tile that lied.** A paid a flat 10% for +1,
+  so «Aletargamiento Invernal» (−2) always netted −1 for a player who did everything right;
+  and `disponibilidad.py` lit the tile on `harina_total >= 10 or reserva_agua >= 2` — the
+  water half a leftover from when A also refreshed with water — so a player with 2 water and
+  no flour saw it enabled and only learned otherwise after Confirmar. Now
+  `models.HARINA_ALIMENTAR = {1: 10, 2: 30}`: one action per day, and in it the player picks
+  +1 for 10% of a **single** type or +2 for 30% mixable across types, every day regardless of
+  climate (the user's call, made with the trade stated: +2 daily is +1 net against the −1
+  decay, so the marginal 20 is the brake, not a cap tied to the card). Four things carry weight:
+  - **The wire is only the flour map** `{harina: {"Blanca": 20, "Centeno": 10}}`, and the
+    points are **derived** from its sum (the rung whose price matches); 20% is rejected. A
+    separate `pasos` would be a second number free to contradict the first — the
+    `reparto`/`PRECIO_PLIEGUES` argument, inverted. Multiples of 10 only, because that is the
+    physical token.
+  - **`accion_alimentar_usada` stays a bool.** Choosing +1 forfeits the +2 for the day, so
+    no counter, no persisted-shape change, **no `VERSION_FORMATO` bump**, and the bot still
+    sends `{tipo: 10}` so the golden snapshot passed **unregenerated** — the proof the refactor
+    is behaviour-preserving on the old path.
+  - **`Player.puede_alimentar` (≥10% of one type) is the one predicate** read by the action,
+    `disponibilidad.py` and `engine._jugador_elegible`, which had the same bare-flag looseness
+    as the Horas Extras clause once had: a flourless player stayed in the rotation all round
+    for an action they could not take. 5%+5% across two types is not enough. The constant
+    lives in `models`, not `actions`, because engine reads it (the `AMPLIACION_OPTIMA_MODULO`
+    precedent). Acción H keeps summing across types — that is its own rule.
+  - **`_frase_accion` keeps the exact old sentence for the common case** ("Alimentó el cultivo
+    con Blanca", pinned by `test_registro_acciones`) and names quantities and yield otherwise.
+
+  `web/src/data/alimentar.ts` mirrors the ladder (the `preciosPliegues.ts` precedent);
+  `ModalA.vue` is a rung radio plus one token stepper per flour type with a greedy default
+  reparto, the `ModalE` pattern; the projection line uses `vitalidad_prevista - vitalidad` as
+  the night's decay, so no climate rule is mirrored. `climaTexto.ts` names the counter-move on
+  the Aletargamiento card. Tests: `tests/test_alimentar_escalones.py`, plus
+  `test_reglamento_al_dia.py::test_alimentar_cultivo_tiene_dos_escalones` (verified by mutation
+  on both documents — a changed figure and a deleted `.html` row).
+
   **Pedido de Urgencia — both parcels are fixed, and the water one wasn't.** The action took
   `agua_tokens_urgencia: int` with no upper bound, forwarded verbatim by `server/commands.py` from
   a bare `<input type="number" min="1">`. Flour had been pinned at `HARINA_PEDIDO_URGENCIA = 50`
